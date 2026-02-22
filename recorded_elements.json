@@ -838,6 +838,63 @@
         "srcset": "https://akam.cdn.jdmagicbox.com/images/icons/newwap/newhotkey/homedecor.svg?w=48&q=75 1x, https://akam.cdn.jdmagicbox.com/images/icons/newwap/newhotkey/homedecor.svg?w=96&q=75 2x"
       },
       "custom_xpath": "//img[@title='Home Decor in Mumbai']"
+    },
+    "mobile_number_inputbox": {
+      "tagName": "input",
+      "className": "jsx-c21ded63fbf3c5d8 login_input font18 fw500 color111",
+      "innerText": null,
+      "rect": {
+        "x": 698,
+        "y": 352,
+        "width": 397,
+        "height": 53
+      },
+      "attributes": {
+        "autocomplete": "off",
+        "tabindex": "0",
+        "aria-label": "Enter Mobile Number mandatory feild",
+        "type": "text",
+        "name": "mobile",
+        "maxlength": "10",
+        "id": "fmobile",
+        "class": "jsx-c21ded63fbf3c5d8 login_input font18 fw500 color111"
+      },
+      "custom_xpath": "//input[@id='fmobile']"
+    },
+    "login_with_otp": {
+      "tagName": "button",
+      "className": "jsx-c21ded63fbf3c5d8 login_input_button bluefill_animate font18 fw600 colorFFF ",
+      "innerText": "Login with OTP",
+      "rect": {
+        "x": 696,
+        "y": 499,
+        "width": 400,
+        "height": 46
+      },
+      "attributes": {
+        "id": "loginOtpTriggerBtn",
+        "class": "jsx-c21ded63fbf3c5d8 login_input_button bluefill_animate font18 fw600 colorFFF "
+      },
+      "custom_xpath": "//button[@id='loginOtpTriggerBtn']"
+    },
+    "maybe_later_recorded_element": {
+      "tagName": "a",
+      "className": "jsx-c21ded63fbf3c5d8 font12 color111 pointer login_anchor",
+      "innerText": "Maybe Later",
+      "rect": {
+        "x": 860,
+        "y": 595,
+        "width": 71,
+        "height": 18
+      },
+      "attributes": {
+        "href": "javascript:void(0)",
+        "role": "button",
+        "aria-label": "May be later",
+        "tabindex": "0",
+        "class": "jsx-c21ded63fbf3c5d8 font12 color111 pointer login_anchor"
+      },
+      "custom_xpath": "//a[@aria-label='May be later']"
     }
   }
 }

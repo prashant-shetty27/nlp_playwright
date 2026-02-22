@@ -3,13 +3,14 @@ import sys
 import re
 import json
 import logging
+import actions  # CRITICAL ARCHITECTURAL REQUIREMENT
 
 # Local Framework Modules
 import actions
 from clean_locators import sanitize_database
 from sync_snippets import sync_locators_to_snippets 
 from command_parser import parse_step
-
+from registry import ACTION_REGISTRY
 logger = logging.getLogger(__name__)
 
 # --- GLOBAL STATE ---
@@ -187,3 +188,23 @@ def run_steps(file_path):
 if __name__ == "__main__":
     flow_file = sys.argv[1] if len(sys.argv) > 1 else "steps.flow"
     run_steps(flow_file)
+def execute_nlp_step(snippet_name: str, page, locator_value=None):
+    """
+    Dynamically routes the NLP string to the correct Python function.
+    """
+    # 1. Look up the snippet in our dynamic dictionary
+    target_function = ACTION_REGISTRY.get(snippet_name)
+
+    if not target_function:
+        raise ValueError(f"[-] Architecture Error: '{snippet_name}' is not registered. Did you forget the @codeless_snippet decorator?")
+
+    # 2. Execute the function dynamically based on its required arguments
+    print(f"[*] Executing dynamically: {snippet_name}")
+    if locator_value:
+        target_function(page, locator_value)
+    else:
+        target_function(page)
+
+# --- How you generate the auto-updating list for your UI/Snippet Manager ---
+def get_available_snippets():
+    return list(ACTION_REGISTRY.keys())    

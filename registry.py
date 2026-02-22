@@ -5,6 +5,9 @@ from typing import Callable, Dict
 ACTION_REGISTRY: Dict[str, Callable] = {}
 
 def codeless_snippet(snippet_name: str):
+    """
+    Decorator that automatically registers a function into the ACTION_REGISTRY.
+    """
     def decorator(func: Callable):
         ACTION_REGISTRY[snippet_name] = func
         return func
