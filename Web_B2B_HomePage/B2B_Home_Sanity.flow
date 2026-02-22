@@ -1,0 +1,5 @@
+OPEN JUSTDIAL
+click on element b2b_hotkey
+wait for b2b home page to load
+verify Events is present on page, scroll 0, stop false
+CLOSE BROWSER

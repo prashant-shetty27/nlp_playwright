@@ -1,0 +1,5 @@
+open justdial
+wait 2 seconds
+search for lawyers
+wait 5 seconds
+verify [Rating] is not present on page, scroll 0, stop true

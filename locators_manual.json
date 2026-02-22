@@ -1,0 +1,52 @@
+{
+  "home_page": {
+    "maybe_later_link": "//a[@aria-label='May be later']",
+    "search_box": "role=combobox[name='Search']",
+    "b2b_hotkey": "//img[@title='JDmart - B2B marketplace']",
+    "Enter_Mobile_Number": "role=textbox[name='Enter Mobile Number mandatory']",
+    "wedding_Hotkey": "//img[@title='Wedding']",
+    "beautySpa_Hotkey": "//div[normalize-space()='Beauty Spa']"
+
+  },
+  "result_page": {
+    "first_result": "(//div[contains(@class,'result')]//a)[1]",
+    "business_name": "//h3[contains(@class,'resultbox_title_anchor') and not(@aria-hidden='true')]",
+    "heading_popular_items": "role=heading[name*='Popular']",
+    "start_date_input": "role=textbox[name='Start Date']",
+    "end_date_input": "role=textbox[name='End Date']",
+    "sort_by_filter": "text=Sort by",
+    "star_rating_filter": "text=Star Rating",
+    "budget_filter": "text=Budget",
+    "hotel_view_filter": "text=Hotel View",
+    "pets_essential_filter": "text=Pets Essential",
+    "filter_navigation": "#filter_prev_next",
+    "all_filters_btn": "text=All Filters",
+    "price_display": "text=per night",
+    "ratings_info": "role=presentation[name^='Ratings']",
+    "whatsapp_container": "div.jsx-da112b0f0664a117.resultbox_btn_wpr",
+    "whatsapp_btn": "text=WhatsApp",
+    "get_best_deal_btn": "text=Get Best Deal",
+    "lead_form_name": "role=textbox[name='Name']",
+    "lead_form_mobile": "role=textbox[name='Mobile Number']",
+    "i_agree_checkbox": "text=I Agree to",
+    "terms_link": "role=link[name*='Terms']",
+    "apply_button": "role=button[name='Apply']",
+    "paid_banner": "(//img[@id='slides0'])[1]"
+  },
+  "search_box": {
+    "selectors": [
+      {"type": "css", "value": "input[name='q']"},
+      {"type": "xpath", "value": "//input[@name='q']"},
+      {"type": "css", "value": "#srchbx"}
+    ],
+    "last_success": "css"
+  },
+  "login_button": {
+    "selectors": [
+      {"type": "css", "value": "button.login"},
+      {"type": "xpath", "value": "//button[contains(text(),'Login')]"},
+      {"type": "css", "value": ".signin-btn"}
+    ],
+    "last_success": "xpath"
+  }
+} 
