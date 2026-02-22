@@ -1,0 +1,20 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Run NiceGUI UI Builder",
+			"type": "shell",
+			"command": "python3 ui_builder.py"
+		},
+		{
+			"label": "Run NiceGUI UI Builder",
+			"type": "shell",
+			"command": "/Users/prashantshetty/nlp_playwright/.venv/bin/python ui_builder.py"
+		},
+		{
+			"label": "Run NiceGUI UI Builder (venv)",
+			"type": "shell",
+			"command": "/Users/prashantshetty/nlp_playwright/.venv/bin/python ui_builder.py"
+		}
+	]
+}

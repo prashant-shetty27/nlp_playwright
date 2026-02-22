@@ -896,5 +896,359 @@
       },
       "custom_xpath": "//a[@aria-label='May be later']"
     }
+  },
+  "result_page": {
+    "first_result_img": {
+      "tagName": "img",
+      "className": null,
+      "innerText": null,
+      "rect": {
+        "x": 41,
+        "y": 356,
+        "width": 150,
+        "height": 180
+      },
+      "attributes": {
+        "alt": "Slide 1 Image of Hotel Praveen Kannamwar Nagar Vikhroli East, Mumbai",
+        "title": "Slide 1 Image of Hotel Praveen Kannamwar Nagar Vikhroli East, Mumbai",
+        "src": "https://content.jdmagicbox.com/comp/service_catalogue/restaurants-attr-serves-breakfast-res75-4-250.jpg?w=640&q=75",
+        "decoding": "async",
+        "data-nimg": "intrinsic",
+        "style": "position: absolute; inset: 0px; box-sizing: border-box; padding: 0px; border: none; margin: auto; display: block; width: 0px; height: 0px; min-width: 100%; max-width: 100%; min-height: 100%; max-height: 100%;",
+        "srcset": "https://content.jdmagicbox.com/comp/service_catalogue/restaurants-attr-serves-breakfast-res75-4-250.jpg?w=256&q=75 1x, https://content.jdmagicbox.com/comp/service_catalogue/restaurants-attr-serves-breakfast-res75-4-250.jpg?w=640&q=75 2x"
+      },
+      "custom_xpath": "//img[@title='Slide 1 Image of Hotel Praveen Kannamwar Nagar Vikhroli East, Mumbai']"
+    },
+    "business_name": {
+      "tagName": "span",
+      "className": "jsx-da112b0f0664a117 resultbox_title_anchor font22 fw500 color111 line_clamp_1 ",
+      "innerText": "Hotel Praveen",
+      "rect": {
+        "x": 239,
+        "y": 356,
+        "width": 147,
+        "height": 33
+      },
+      "attributes": {
+        "class": "jsx-da112b0f0664a117 resultbox_title_anchor font22 fw500 color111 line_clamp_1 "
+      },
+      "custom_xpath": "//span[contains(@class, 'jsx-da112b0f0664a117') and contains(@class, 'resultbox_title_anchor') and contains(@class, 'fw500') and contains(@class, 'color111') and contains(@class, 'line_clamp_1')]"
+    },
+    "sort_by_filter_tab": {
+      "tagName": "span",
+      "className": "jsx-2394d511e76092fb font15 fw500 mr-6 block-item",
+      "innerText": "Sort by",
+      "rect": {
+        "x": 207,
+        "y": 292,
+        "width": 53,
+        "height": 23
+      },
+      "attributes": {
+        "id": ":r0:_span",
+        "class": "jsx-2394d511e76092fb font15 fw500 mr-6 block-item"
+      },
+      "custom_xpath": "//span[@id=':r0:_span']"
+    },
+    "price_filter_tab": {
+      "tagName": "span",
+      "className": "jsx-2394d511e76092fb font15 fw500 mr-6 block-item",
+      "innerText": "Price",
+      "rect": {
+        "x": 320,
+        "y": 292,
+        "width": 37,
+        "height": 23
+      },
+      "attributes": {
+        "id": ":r1:_span",
+        "class": "jsx-2394d511e76092fb font15 fw500 mr-6 block-item"
+      },
+      "custom_xpath": "//span[@id=':r1:_span']"
+    },
+    "cuisines_filter_tab": {
+      "tagName": "span",
+      "className": "jsx-2394d511e76092fb font15 fw500 mr-6 block-item",
+      "innerText": "Cuisines",
+      "rect": {
+        "x": 417,
+        "y": 292,
+        "width": 64,
+        "height": 23
+      },
+      "attributes": {
+        "id": ":r2:_span",
+        "class": "jsx-2394d511e76092fb font15 fw500 mr-6 block-item"
+      },
+      "custom_xpath": "//span[@id=':r2:_span']"
+    },
+    "amenities_filter_tab": {
+      "tagName": "span",
+      "className": "jsx-2394d511e76092fb font15 fw500 mr-6 block-item",
+      "innerText": "Amenities",
+      "rect": {
+        "x": 541,
+        "y": 292,
+        "width": 76,
+        "height": 23
+      },
+      "attributes": {
+        "id": ":r3:_span",
+        "class": "jsx-2394d511e76092fb font15 fw500 mr-6 block-item"
+      },
+      "custom_xpath": "//span[@id=':r3:_span']"
+    },
+    "ratings_filter_tab": {
+      "tagName": "span",
+      "className": "jsx-2394d511e76092fb font15 fw500 mr-6 block-item",
+      "innerText": "Ratings",
+      "rect": {
+        "x": 677,
+        "y": 292,
+        "width": 57,
+        "height": 23
+      },
+      "attributes": {
+        "id": ":r4:_span",
+        "class": "jsx-2394d511e76092fb font15 fw500 mr-6 block-item"
+      },
+      "custom_xpath": "//span[@id=':r4:_span']"
+    },
+    "book_a_table_filter_tab": {
+      "tagName": "span",
+      "className": "jsx-2394d511e76092fb font15 fw500 mr-6 block-item",
+      "innerText": "Book a Table",
+      "rect": {
+        "x": 794,
+        "y": 292,
+        "width": 97,
+        "height": 23
+      },
+      "attributes": {
+        "id": ":r5:_span",
+        "class": "jsx-2394d511e76092fb font15 fw500 mr-6 block-item"
+      },
+      "custom_xpath": "//span[@id=':r5:_span']"
+    },
+    "online_ordering_filter_tab": {
+      "tagName": "span",
+      "className": "jsx-2394d511e76092fb font15 fw500 mr-6 block-item",
+      "innerText": "Online Ordering",
+      "rect": {
+        "x": 935,
+        "y": 292,
+        "width": 119,
+        "height": 23
+      },
+      "attributes": {
+        "id": ":r6:_span",
+        "class": "jsx-2394d511e76092fb font15 fw500 mr-6 block-item"
+      },
+      "custom_xpath": "//span[@id=':r6:_span']"
+    },
+    "open_now_filter_tab": {
+      "tagName": "span",
+      "className": "jsx-2394d511e76092fb font15 fw500 mr-6 block-item",
+      "innerText": "Open Now",
+      "rect": {
+        "x": 1098,
+        "y": 292,
+        "width": 78,
+        "height": 23
+      },
+      "attributes": {
+        "id": ":r7:_span",
+        "class": "jsx-2394d511e76092fb font15 fw500 mr-6 block-item"
+      },
+      "custom_xpath": "//span[@id=':r7:_span']"
+    },
+    "trending_filter_tab": {
+      "tagName": "span",
+      "className": "jsx-2394d511e76092fb font15 fw500 mr-6 block-item",
+      "innerText": "Trending",
+      "rect": {
+        "x": 1239,
+        "y": 291,
+        "width": 67,
+        "height": 23
+      },
+      "attributes": {
+        "id": ":r8:_span",
+        "class": "jsx-2394d511e76092fb font15 fw500 mr-6 block-item"
+      },
+      "custom_xpath": "//span[@id=':r8:_span']"
+    },
+    "top_rated_filter_tab": {
+      "tagName": "span",
+      "className": "jsx-2394d511e76092fb font15 fw500 mr-6 block-item",
+      "innerText": "Top Rated",
+      "rect": {
+        "x": 1370,
+        "y": 291,
+        "width": 77,
+        "height": 23
+      },
+      "attributes": {
+        "id": ":r9:_span",
+        "class": "jsx-2394d511e76092fb font15 fw500 mr-6 block-item"
+      },
+      "custom_xpath": "//span[@id=':r9:_span']"
+    },
+    "filter_prev_next__filter_tab": {
+      "tagName": "div",
+      "className": "jsx-2473704798 filter_prev_next filter_next jdicon",
+      "innerText": null,
+      "rect": {
+        "x": 1451,
+        "y": 280,
+        "width": 50,
+        "height": 45
+      },
+      "attributes": {
+        "id": "filter_prev_next",
+        "class": "jsx-2473704798 filter_prev_next filter_next jdicon"
+      },
+      "custom_xpath": "//div[@id='filter_prev_next']"
+    },
+    "all_filters_filter_tab": {
+      "tagName": "span",
+      "className": "jsx-2473704798 ",
+      "innerText": "All Filters",
+      "rect": {
+        "x": 1518,
+        "y": 290,
+        "width": 67,
+        "height": 23
+      },
+      "attributes": {
+        "id": "all_filters_btn",
+        "class": "jsx-2473704798 ",
+        "style": "min-width: 64px;"
+      },
+      "custom_xpath": "//span[@id='all_filters_btn']"
+    },
+    "seo_breadcrumbh": {
+      "tagName": "div",
+      "className": "jsx-a487a86b47d169d9 resultbox_breadcrumb",
+      "innerText": "Mumbai\nRestaurants in Mumbai\nRestaurants in Indira Nagar Vikhroli East\n347+ Listings",
+      "rect": {
+        "x": 176,
+        "y": 214,
+        "width": 1430,
+        "height": 23
+      },
+      "attributes": {
+        "class": "jsx-a487a86b47d169d9 resultbox_breadcrumb",
+        "style": "min-height: 23px;"
+      },
+      "custom_xpath": "//div[contains(@class, 'jsx-a487a86b47d169d9') and contains(@class, 'resultbox_breadcrumb')]"
+    },
+    "paid_banner": {
+      "tagName": "img",
+      "className": "jsx-d1c1bd1e0ad8ca6f result_banner_front_image",
+      "innerText": null,
+      "rect": {
+        "x": 213,
+        "y": 81,
+        "width": 1366,
+        "height": 113
+      },
+      "attributes": {
+        "width": "auto",
+        "height": "113",
+        "id": "slides0",
+        "src": "https://images.jdmagicbox.com/mumbai/e7/022pxx22.xx22.220714122842.g2e7/cbnr/b796bcd92fc298d248f89e49529a396b.jpg",
+        "alt": "Amar Fast Food & Restaurant",
+        "title": "Amar Fast Food & Restaurant",
+        "aria-label": "Amar Fast Food & Restaurant",
+        "class": "jsx-d1c1bd1e0ad8ca6f result_banner_front_image"
+      },
+      "custom_xpath": "//img[@id='slides0']"
+    },
+    "whatsapp_cta": {
+      "tagName": "span",
+      "className": "jsx-da112b0f0664a117",
+      "innerText": "WhatsApp",
+      "rect": {
+        "x": 632,
+        "y": 518,
+        "width": 78,
+        "height": 23
+      },
+      "attributes": {
+        "id": "chat_txt",
+        "class": "jsx-da112b0f0664a117"
+      },
+      "custom_xpath": "//span[@id='chat_txt']"
+    },
+    "order_online_cta": {
+      "tagName": "button",
+      "className": "jsx-da112b0f0664a117 bluefill_animate onlinebtn font15 fw500 mr-15",
+      "innerText": "Order online",
+      "rect": {
+        "x": 603,
+        "y": 766,
+        "width": 125,
+        "height": 35
+      },
+      "attributes": {
+        "id": "Order online_022PXX22.XX22.140805202810.H9G2",
+        "aria-label": "Order online",
+        "style": "min-height:35px",
+        "class": "jsx-da112b0f0664a117 bluefill_animate onlinebtn font15 fw500 mr-15"
+      },
+      "custom_xpath": "//button[@id='Order online_022PXX22.XX22.140805202810.H9G2']"
+    },
+    "menu_cta": {
+      "tagName": "div",
+      "className": "jsx-da112b0f0664a117 outlinebtn bluefill_animate font15 fw500 mr-15",
+      "innerText": "Menu",
+      "rect": {
+        "x": 743,
+        "y": 766,
+        "width": 125,
+        "height": 35
+      },
+      "attributes": {
+        "id": "Menu_022PXX22.XX22.140805202810.H9G2",
+        "role": "button",
+        "aria-label": "Menu",
+        "tabindex": "0",
+        "style": "min-height:35px",
+        "class": "jsx-da112b0f0664a117 outlinebtn bluefill_animate font15 fw500 mr-15"
+      },
+      "custom_xpath": "//div[@id='Menu_022PXX22.XX22.140805202810.H9G2']"
+    },
+    "show_number_cta": {
+      "tagName": "span",
+      "className": "jsx-da112b0f0664a117 callcontent",
+      "innerText": "Show Number",
+      "rect": {
+        "x": 438,
+        "y": 772,
+        "width": 129,
+        "height": 23
+      },
+      "attributes": {
+        "class": "jsx-da112b0f0664a117 callcontent"
+      },
+      "custom_xpath": "//span[contains(@class, 'jsx-da112b0f0664a117') and contains(@class, 'callcontent')]"
+    },
+    "heading_search_title": {
+      "tagName": "h1",
+      "className": "jsx-a487a86b47d169d9 font22 fw500 color111 line_clamp_1",
+      "innerText": "Best Restaurants in Indira Nagar Vikhroli East, Mumbai - Order Food Online",
+      "rect": {
+        "x": 20,
+        "y": 237,
+        "width": 809,
+        "height": 33
+      },
+      "attributes": {
+        "style": "min-height:33px",
+        "class": "jsx-a487a86b47d169d9 font22 fw500 color111 line_clamp_1"
+      },
+      "custom_xpath": "//h1[contains(@class, 'jsx-a487a86b47d169d9') and contains(@class, 'fw500') and contains(@class, 'color111') and contains(@class, 'line_clamp_1')]"
+    }
   }
 }

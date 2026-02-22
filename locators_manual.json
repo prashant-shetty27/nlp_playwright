@@ -1,52 +1,74 @@
 {
   "home_page": {
-    "maybe_later_link": "//a[@aria-label='May be later']",
-    "search_box": "role=combobox[name='Search']",
-    "b2b_hotkey": "//img[@title='JDmart - B2B marketplace']",
-    "Enter_Mobile_Number": "role=textbox[name='Enter Mobile Number mandatory']",
-    "wedding_Hotkey": "//img[@title='Wedding']",
-    "beautySpa_Hotkey": "//div[normalize-space()='Beauty Spa']"
-
+    "maybe_later_link": {
+      "custom_xpath": "//a[@aria-label='May be later']"
+    },
+    "search_box": {
+      "custom_xpath": "role=combobox[name='Search']",
+      "selectors": [
+        {"type": "css", "value": "input[name='q']"},
+        {"type": "xpath", "value": "//input[@name='q']"},
+        {"type": "css", "value": "#srchbx"}
+      ],
+      "last_success": "css"
+    },
+    "b2b_hotkey": {
+      "custom_xpath": "//img[@title='JDmart - B2B marketplace']"
+    },
+    "enter_mobile_number": {
+      "custom_xpath": "role=textbox[name='Enter Mobile Number mandatory']"
+    },
+    "wedding_hotkey": {
+      "custom_xpath": "//img[@title='Wedding']"
+    },
+    "beautyspa_hotkey": {
+      "custom_xpath": "//div[normalize-space()='Beauty Spa']"
+    },
+    "login_button": {
+      "custom_xpath": "//button[contains(text(),'Login')]",
+      "selectors": [
+        {"type": "css", "value": "button.login"},
+        {"type": "xpath", "value": "//button[contains(text(),'Login')]"},
+        {"type": "css", "value": ".signin-btn"}
+      ],
+      "last_success": "xpath"
+    }
   },
   "result_page": {
-    "first_result": "(//div[contains(@class,'result')]//a)[1]",
-    "business_name": "//h3[contains(@class,'resultbox_title_anchor') and not(@aria-hidden='true')]",
-    "heading_popular_items": "role=heading[name*='Popular']",
-    "start_date_input": "role=textbox[name='Start Date']",
-    "end_date_input": "role=textbox[name='End Date']",
-    "sort_by_filter": "text=Sort by",
-    "star_rating_filter": "text=Star Rating",
-    "budget_filter": "text=Budget",
-    "hotel_view_filter": "text=Hotel View",
-    "pets_essential_filter": "text=Pets Essential",
-    "filter_navigation": "#filter_prev_next",
-    "all_filters_btn": "text=All Filters",
-    "price_display": "text=per night",
-    "ratings_info": "role=presentation[name^='Ratings']",
-    "whatsapp_container": "div.jsx-da112b0f0664a117.resultbox_btn_wpr",
-    "whatsapp_btn": "text=WhatsApp",
-    "get_best_deal_btn": "text=Get Best Deal",
-    "lead_form_name": "role=textbox[name='Name']",
-    "lead_form_mobile": "role=textbox[name='Mobile Number']",
-    "i_agree_checkbox": "text=I Agree to",
-    "terms_link": "role=link[name*='Terms']",
-    "apply_button": "role=button[name='Apply']",
-    "paid_banner": "(//img[@id='slides0'])[1]"
-  },
-  "search_box": {
-    "selectors": [
-      {"type": "css", "value": "input[name='q']"},
-      {"type": "xpath", "value": "//input[@name='q']"},
-      {"type": "css", "value": "#srchbx"}
-    ],
-    "last_success": "css"
-  },
-  "login_button": {
-    "selectors": [
-      {"type": "css", "value": "button.login"},
-      {"type": "xpath", "value": "//button[contains(text(),'Login')]"},
-      {"type": "css", "value": ".signin-btn"}
-    ],
-    "last_success": "xpath"
+    "first_result_img": {
+      "custom_xpath": "(//div[contains(@class,'jsx-da112b0f0664a117 resultbox_info')]//a)[1]"
+    },
+    "business_name": {
+      "custom_xpath": "//h3[contains(@class,'resultbox_title_anchor') and not(@aria-hidden='true')]"
+    },
+    "heading_popular_items": {
+      "custom_xpath": "role=heading[name*='Popular']"
+    },
+    "sort_by_filter": {
+      "custom_xpath": "text=Sort by"
+    },
+    "whatsapp_btn": {
+      "custom_xpath": "text=WhatsApp"
+    },
+    "paid_banner": {
+      "custom_xpath": "(//img[@id='slides0'])[1]"
+    },
+    "heading_search_title": {
+      "tagName": "h1",
+      "className": "jsx-a487a86b47d169d9 font22 fw500 color111 line_clamp_1",
+      "innerText": "Best Restaurants in Indira Nagar Vikhroli East, Mumbai - Order Food Online",
+      "rect": {
+        "x": 20,
+        "y": 237,
+        "width": 809,
+        "height": 33
+      },
+      "attributes": {
+        "style": "min-height:33px",
+        "class": "jsx-a487a86b47d169d9 font22 fw500 color111 line_clamp_1"
+      },
+      "custom_xpath": "//h1[contains(@class, 'jsx-a487a86b47d169d9') and contains(@class, 'fw500') and contains(@class, 'color111') and contains(@class, 'line_clamp_1')]"
+    }
+
   }
-} 
+}
