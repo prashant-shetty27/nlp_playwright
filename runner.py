@@ -45,7 +45,6 @@ def execute_json_flow(json_path: str):
                     resolved_params[key] = resolve_variables(val)
                 else:
                     resolved_params[key] = val
-                    
             # Execute the function using the resolved, injected data
             target_function(page=page, **resolved_params)
             

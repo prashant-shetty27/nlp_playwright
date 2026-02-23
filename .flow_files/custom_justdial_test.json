@@ -6,28 +6,21 @@
         }
     },
     {
-        "action": "Store Variable (Text / String)",
-        "parameters": {
-            "raw_text_or_variable": "hotels",
-            "save_to_variable_name": "search_text"
-        }
-    },
-    {
-        "action": "Search for Category / Company / Product",
-        "parameters": {
-            "text_to_search": "search_text"
-        }
-    },
-    {
         "action": "Wait X Seconds",
         "parameters": {
-            "seconds": "3"
+            "seconds": "6"
         }
     },
     {
-        "action": "Store Current Page URL",
+        "action": "Click Element",
         "parameters": {
-            "save_to_variable_name": "result_url"
+            "locator": "maybe_later_recorded_element"
+        }
+    },
+    {
+        "action": "Click Element",
+        "parameters": {
+            "locator": "dentist_hotkey"
         }
     }
 ]

@@ -895,6 +895,48 @@
         "class": "jsx-c21ded63fbf3c5d8 font12 color111 pointer login_anchor"
       },
       "custom_xpath": "//a[@aria-label='May be later']"
+    },
+    "dentist_hotkey": {
+      "tagName": "img",
+      "className": null,
+      "innerText": null,
+      "rect": {
+        "x": 519,
+        "y": 675,
+        "width": 45,
+        "height": 45
+      },
+      "attributes": {
+        "alt": "Dentists in Mumbai",
+        "title": "Dentists in Mumbai",
+        "src": "https://akam.cdn.jdmagicbox.com/images/icons/newwap/newhotkey/dentist_2023.svg?w=96&q=75",
+        "decoding": "async",
+        "data-nimg": "intrinsic",
+        "style": "position: absolute; inset: 0px; box-sizing: border-box; padding: 0px; border: none; margin: auto; display: block; width: 0px; height: 0px; min-width: 100%; max-width: 100%; min-height: 100%; max-height: 100%;",
+        "srcset": "https://akam.cdn.jdmagicbox.com/images/icons/newwap/newhotkey/dentist_2023.svg?w=48&q=75 1x, https://akam.cdn.jdmagicbox.com/images/icons/newwap/newhotkey/dentist_2023.svg?w=96&q=75 2x"
+      },
+      "custom_xpath": "//img[@title='Dentists in Mumbai']"
+    },
+    "driving_schools_hotkey": {
+      "tagName": "img",
+      "className": null,
+      "innerText": null,
+      "rect": {
+        "x": 1085,
+        "y": 675,
+        "width": 45,
+        "height": 45
+      },
+      "attributes": {
+        "alt": "Driving Schools in Mumbai",
+        "title": "Driving Schools in Mumbai",
+        "src": "https://akam.cdn.jdmagicbox.com/images/icons/newwap/newhotkey/driving_school_2023.svg?w=96&q=75",
+        "decoding": "async",
+        "data-nimg": "intrinsic",
+        "style": "position: absolute; inset: 0px; box-sizing: border-box; padding: 0px; border: none; margin: auto; display: block; width: 0px; height: 0px; min-width: 100%; max-width: 100%; min-height: 100%; max-height: 100%;",
+        "srcset": "https://akam.cdn.jdmagicbox.com/images/icons/newwap/newhotkey/driving_school_2023.svg?w=48&q=75 1x, https://akam.cdn.jdmagicbox.com/images/icons/newwap/newhotkey/driving_school_2023.svg?w=96&q=75 2x"
+      },
+      "custom_xpath": "//img[@title='Driving Schools in Mumbai']"
     }
   },
   "result_page": {
