@@ -552,6 +552,24 @@
         "class": "jsx-c77816fa1038cbdb headnav_item_text pl-5 font14 fw400 color111"
       },
       "custom_xpath": "//div[contains(@class, 'jsx-c77816fa1038cbdb') and contains(@class, 'headnav_item_text') and contains(@class, 'pl-5') and contains(@class, 'fw400') and contains(@class, 'color111')]"
+    },
+    "freelisting_banner_cross_button": {
+      "tagName": "span",
+      "className": "jsx-953ea8b54d39d45 floatbanner_close jdicon",
+      "innerText": null,
+      "rect": {
+        "x": 1697,
+        "y": 634,
+        "width": 20,
+        "height": 20
+      },
+      "attributes": {
+        "role": "button",
+        "aria-label": "Close Banner",
+        "tabindex": "0",
+        "class": "jsx-953ea8b54d39d45 floatbanner_close jdicon"
+      },
+      "custom_xpath": "//span[@aria-label='Close Banner']"
     }
   },
   "home_page": {
@@ -1291,6 +1309,210 @@
         "class": "jsx-a487a86b47d169d9 font22 fw500 color111 line_clamp_1"
       },
       "custom_xpath": "//h1[contains(@class, 'jsx-a487a86b47d169d9') and contains(@class, 'fw500') and contains(@class, 'color111') and contains(@class, 'line_clamp_1')]"
+    }
+  },
+  "global_context": {
+    "welcome_login_f": {
+      "tagName": "section",
+      "className": "jsx-c21ded63fbf3c5d8 jd_modal new__login_pop loginPop",
+      "innerText": "Welcome\nLogin for a seamless experience\n+91\nEnter Mobile Number\nI Agree to Terms and Conditions\nT&C's Privacy Policy\nLogin with OTP\nMaybe Later",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 1792,
+        "height": 879
+      },
+      "attributes": {
+        "id": "loginPop",
+        "class": "jsx-c21ded63fbf3c5d8 jd_modal new__login_pop loginPop"
+      },
+      "custom_xpath": "//section[@id='loginPop']"
+    },
+    "maybe_later": {
+      "tagName": "a",
+      "className": "jsx-c21ded63fbf3c5d8 font12 color111 pointer login_anchor",
+      "innerText": "Maybe Later",
+      "rect": {
+        "x": 860,
+        "y": 595,
+        "width": 71,
+        "height": 18
+      },
+      "attributes": {
+        "href": "javascript:void(0)",
+        "role": "button",
+        "aria-label": "May be later",
+        "tabindex": "0",
+        "class": "jsx-c21ded63fbf3c5d8 font12 color111 pointer login_anchor"
+      },
+      "custom_xpath": "//a[@aria-label='May be later']"
+    },
+    "img": {
+      "tagName": "img",
+      "className": "card3_image",
+      "innerText": null,
+      "rect": {
+        "x": 40,
+        "y": 200,
+        "width": 242,
+        "height": 242
+      },
+      "attributes": {
+        "alt": "Image of Transporters",
+        "title": "Image of Transporters",
+        "src": "https://akam.cdn.jdmagicbox.com/images/icons/iphone/newfilter/ip-transporters-web.png?t=1?w=256&q=75",
+        "decoding": "async",
+        "data-nimg": "intrinsic",
+        "class": "card3_image",
+        "srcset": "https://akam.cdn.jdmagicbox.com/images/icons/iphone/newfilter/ip-transporters-web.png?t=1?w=128&q=75 1x, https://akam.cdn.jdmagicbox.com/images/icons/iphone/newfilter/ip-transporters-web.png?t=1?w=256&q=75 2x",
+        "style": "position: absolute; inset: 0px; box-sizing: border-box; padding: 0px; border: none; margin: auto; display: block; width: 0px; height: 0px; min-width: 100%; max-width: 100%; min-height: 100%; max-height: 100%;"
+      },
+      "custom_xpath": "//img[@title='Image of Transporters']"
+    },
+    "top_ranked_cate": {
+      "tagName": "span",
+      "className": "font22 fw600 color111",
+      "innerText": "Top-Ranked Categories For You",
+      "rect": {
+        "x": 206,
+        "y": 442,
+        "width": 350,
+        "height": 33
+      },
+      "attributes": {
+        "class": "font22 fw600 color111"
+      },
+      "custom_xpath": "//span[contains(@class, 'fw600') and contains(@class, 'color111')]"
+    },
+    "div": {
+      "tagName": "div",
+      "className": "jdmart_modal_close jdmart_icon",
+      "innerText": null,
+      "rect": {
+        "x": 1279,
+        "y": 238,
+        "width": 27,
+        "height": 27
+      },
+      "attributes": {
+        "class": "jdmart_modal_close jdmart_icon"
+      },
+      "custom_xpath": "//div[contains(@class, 'jdmart_modal_close') and contains(@class, 'jdmart_icon')]"
+    },
+    "span": {
+      "tagName": "span",
+      "className": "jsx-953ea8b54d39d45 floatbanner_close jdicon",
+      "innerText": null,
+      "rect": {
+        "x": 1697,
+        "y": 634,
+        "width": 20,
+        "height": 20
+      },
+      "attributes": {
+        "role": "button",
+        "aria-label": "Close Banner",
+        "tabindex": "0",
+        "class": "jsx-953ea8b54d39d45 floatbanner_close jdicon"
+      },
+      "custom_xpath": "//span[@aria-label='Close Banner']"
+    },
+    "packers___mover": {
+      "tagName": "div",
+      "className": "font14 color111 fw400",
+      "innerText": "Packers & Movers",
+      "rect": {
+        "x": 899,
+        "y": 744,
+        "width": 75,
+        "height": 36
+      },
+      "attributes": {
+        "class": "font14 color111 fw400"
+      },
+      "custom_xpath": "//div[contains(@class, 'color111') and contains(@class, 'fw400')]"
+    },
+    "popular_transpo": {
+      "tagName": "h1",
+      "className": "jsx-a487a86b47d169d9 font22 fw500 color111 line_clamp_1",
+      "innerText": "Popular Transporters For Intercity in Mumbai",
+      "rect": {
+        "x": 20,
+        "y": 237,
+        "width": 483,
+        "height": 33
+      },
+      "attributes": {
+        "class": "jsx-a487a86b47d169d9 font22 fw500 color111 line_clamp_1",
+        "style": "min-height: 33px;"
+      },
+      "custom_xpath": "//h1[contains(@class, 'jsx-a487a86b47d169d9') and contains(@class, 'fw500') and contains(@class, 'color111') and contains(@class, 'line_clamp_1')]"
+    },
+    "national_trans": {
+      "tagName": "span",
+      "className": "jsx-da112b0f0664a117 resultbox_title_anchor font22 fw500 color111 line_clamp_1 ",
+      "innerText": "National Trans INDIA",
+      "rect": {
+        "x": 239,
+        "y": 356,
+        "width": 215,
+        "height": 33
+      },
+      "attributes": {
+        "class": "jsx-da112b0f0664a117 resultbox_title_anchor font22 fw500 color111 line_clamp_1 "
+      },
+      "custom_xpath": "//span[contains(@class, 'jsx-da112b0f0664a117') and contains(@class, 'resultbox_title_anchor') and contains(@class, 'fw500') and contains(@class, 'color111') and contains(@class, 'line_clamp_1')]"
+    },
+    "download_app": {
+      "tagName": "div",
+      "className": "jsx-55162c602a57c0bf getapp_button fw500 font13 color111",
+      "innerText": "Download App",
+      "rect": {
+        "x": 1431,
+        "y": 120,
+        "width": 140,
+        "height": 31
+      },
+      "attributes": {
+        "class": "jsx-55162c602a57c0bf getapp_button fw500 font13 color111"
+      },
+      "custom_xpath": "//div[contains(@class, 'jsx-55162c602a57c0bf') and contains(@class, 'getapp_button') and contains(@class, 'fw500') and contains(@class, 'color111')]"
+    },
+    "freelisting_banner_close": {
+      "tagName": "span",
+      "className": "jsx-953ea8b54d39d45 floatbanner_close jdicon",
+      "innerText": null,
+      "rect": {
+        "x": 1697,
+        "y": 634,
+        "width": 20,
+        "height": 20
+      },
+      "attributes": {
+        "role": "button",
+        "aria-label": "Close Banner",
+        "tabindex": "0",
+        "class": "jsx-953ea8b54d39d45 floatbanner_close jdicon"
+      },
+      "custom_xpath": "//span[@aria-label='Close Banner']"
+    },
+    "freelisting_banner_cross_button": {
+      "tagName": "span",
+      "className": "jsx-953ea8b54d39d45 floatbanner_close jdicon",
+      "innerText": null,
+      "rect": {
+        "x": 1697,
+        "y": 634,
+        "width": 20,
+        "height": 20
+      },
+      "attributes": {
+        "role": "button",
+        "aria-label": "Close Banner",
+        "tabindex": "0",
+        "class": "jsx-953ea8b54d39d45 floatbanner_close jdicon"
+      },
+      "custom_xpath": "//span[@aria-label='Close Banner']"
     }
   }
 }

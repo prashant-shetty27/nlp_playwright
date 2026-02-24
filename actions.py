@@ -1,3 +1,4 @@
+from utils import with_retry
 import os
 import re
 import json
@@ -5,6 +6,7 @@ import logging
 import tempfile
 
 from datetime import datetime
+from urllib.parse import urlparse
 
 # Third-party Image & ML Libraries
 import cv2
@@ -31,6 +33,89 @@ _playwright_instance = None
 _browser = None
 _context = None
 RUNTIME_VARIABLES = {} 
+
+# ==========================================
+# CORE CONFIGURATION MANAGER
+# ==========================================
+def load_auth_registry(config_path: str = "env_config.json") -> dict:
+    if not os.path.exists(config_path):
+        logging.warning(f"⚠️ Auth registry '{config_path}' missing. Proceeding without environment credentials.")
+        return {}
+    
+    try:
+        with open(config_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except json.JSONDecodeError as e:
+        # Crash early if the configuration file is mangled.
+        raise ValueError(f"Architecture Error: '{config_path}' is corrupted or contains invalid JSON. {e}")
+
+# Load into memory once during module initialization to prevent repetitive disk I/O
+AUTH_REGISTRY = load_auth_registry()
+
+# Apply the decorator to automatically retry this specific function up to 3 times
+@with_retry(max_attempts=3, delay=2.0)
+def open_site(page, url: str):
+    # --- PHASE 1: Sanitization & Structural Validation ---
+    if not url or not isinstance(url, str):
+        raise ValueError("Validation Error: 'url' parameter must be a non-empty string.")
+    
+    # ... (The rest of your exact open_site logic remains untouched here) ...
+# ==========================================
+# ACTION: OPEN SITE
+# ==========================================
+def open_site(page, url: str):
+    # --- PHASE 1: Sanitization & Structural Validation ---
+    if not url or not isinstance(url, str):
+        raise ValueError("Validation Error: 'url' parameter must be a non-empty string.")
+
+    raw_url = url.strip()
+
+    if " " in raw_url:
+        raise ValueError(f"Validation Error: URL cannot contain spaces. Received: '{raw_url}'")
+        
+    if "." not in raw_url:
+        raise ValueError(f"Routing Error: '{raw_url}' lacks a domain structure (e.g., '.com'). Single words are rejected.")
+
+    # Enforce secure protocol by default
+    if not raw_url.startswith(("http://", "https://")):
+        sanitized_url = f"https://{raw_url}"
+    else:
+        sanitized_url = raw_url
+
+    parsed_url = urlparse(sanitized_url)
+    target_domain = parsed_url.netloc
+
+    if not target_domain:
+        raise ValueError(f"Validation Error: '{sanitized_url}' could not be parsed into a valid domain.")
+
+    # --- PHASE 2: Contextual Authentication ---
+    if target_domain in AUTH_REGISTRY:
+        credentials = AUTH_REGISTRY[target_domain]
+        username = credentials.get("username")
+        password = credentials.get("password")
+
+        if not username or not password:
+            raise ValueError(f"Security Error: Incomplete credentials found for domain '{target_domain}' in registry.")
+
+        logging.info(f"🔒 Secure domain '{target_domain}' detected. Injecting Playwright HTTP credentials.")
+        
+        # Playwright natively intercepts the 401 challenge and answers with these credentials
+        page.context.set_http_credentials({
+            "username": username,
+            "password": password
+        })
+    else:
+        # Purge credentials if navigating to an unsecured domain to prevent credential leakage
+        page.context.set_http_credentials(None)
+
+    # --- PHASE 3: Navigation Execution ---
+    logging.info(f"🌐 Navigating to: {sanitized_url}")
+    
+    try:
+        # Enforce a strict timeout (30 seconds) to prevent hanging the runner
+        page.goto(sanitized_url, wait_until="domcontentloaded", timeout=30000)
+    except Exception as e:
+        raise RuntimeError(f"Navigation Error: Failed to load '{sanitized_url}'. Details: {e}")
 
 def resolve_variables(text):
     """
@@ -415,10 +500,16 @@ def store_specific_data_type(raw_value, data_type, variable_name):
 # --- STRING MANIPULATION & MATH ---
 
 def replace_special_chars(source_text, chars_to_remove, target_variable):
+    # 1. Extract the specific characters
     pattern = f"[{re.escape(chars_to_remove)}]"
-    cleaned_text = re.sub(pattern, "", source_text)
-    RUNTIME_VARIABLES[target_variable] = cleaned_text
-    logger.info(f"💾 Cleaned Text: '{cleaned_text}' -> Stored as '${target_variable}'")
+    cleaned_text = re.sub(pattern, "", str(source_text))
+    
+    # 2. Architectural Whitespace Normalization
+    normalized_text = re.sub(r'\s+', ' ', cleaned_text).strip()
+    
+    # 3. Store the finalized state
+    RUNTIME_VARIABLES[target_variable] = normalized_text
+    logger.info(f"💾 Cleaned Text: '{normalized_text}' -> Stored as '${target_variable}'")
 
 def split_and_store_text(source_text, delimiter, index, target_variable):
     parts = source_text.split(delimiter)

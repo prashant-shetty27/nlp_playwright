@@ -1,26 +1,28 @@
 [
     {
+        "action": "Replace Special Characters",
+        "parameters": {
+            "source_text_or_variable": "packers & movers",
+            "characters_to_remove": "&",
+            "save_to_variable_name": "packers_movers"
+        }
+    },
+    {
         "action": "Open Site",
         "parameters": {
             "target_url_or_key": "justdial"
         }
     },
     {
+        "action": "Search for Category / Company / Product",
+        "parameters": {
+            "text_to_search": "packers_movers"
+        }
+    },
+    {
         "action": "Wait X Seconds",
         "parameters": {
-            "seconds": "6"
-        }
-    },
-    {
-        "action": "Click Element",
-        "parameters": {
-            "locator": "maybe_later_recorded_element"
-        }
-    },
-    {
-        "action": "Click Element",
-        "parameters": {
-            "locator": "dentist_hotkey"
+            "seconds": "2"
         }
     }
 ]
