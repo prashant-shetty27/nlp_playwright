@@ -175,7 +175,8 @@ function showShadowModal(smartLocator, elementDNA) {
         
         const targetSchema = dbSchema[normalizedPage] || dbSchema[pageVal];
         if (targetSchema) {
-            targetSchema.forEach(loc => {
+            // ARCHITECTURAL FIX: Extract keys from the Object instead of treating it as an Array
+            Object.keys(targetSchema).forEach(loc => {
                 const opt = document.createElement('option');
                 opt.value = loc;
                 locatorList.appendChild(opt);
@@ -242,7 +243,26 @@ function showShadowModal(smartLocator, elementDNA) {
         elementDNA.userPageName = finalPage;
         elementDNA.userLocatorName = finalLocator;
 
-        chrome.runtime.sendMessage({ action: "SAVE_ELEMENT", data: elementDNA }).catch(() => {});
+    chrome.runtime.sendMessage(
+    { action: "SAVE_ELEMENT", data: elementDNA },
+    (response) => {
+
+        if (chrome.runtime.lastError) {
+
+            console.error(
+                "SAVE_ELEMENT error:",
+                chrome.runtime.lastError
+            );
+
+            return;
+        }
+
+        console.log(
+            "SAVE_ELEMENT response:",
+            response
+        );
+    }
+);    
         closeModal(); // This now cleanly destroys the UI and all global listeners
     });
 

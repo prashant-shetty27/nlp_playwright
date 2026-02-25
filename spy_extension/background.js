@@ -4,8 +4,14 @@
 // 1. GLOBAL CONFIGURATION (The Control Panel)
 // ==========================================
 const CONFIG = {
-    SERVER_URL: "http://localhost:8080",
+    // Change this if you ever deploy your Python UI to a remote server
+    SERVER_URL: "http://127.0.0.1:8080",    
+    // TOGGLE INCOGNITO MODE HERE:
+    // true = Clean session (good for public sites)
+    // false = Uses normal browser cookies (mandatory for sites requiring Login/2FA)
     USE_INCOGNITO: false, 
+    
+    // NETWORK RELIABILITY
     MAX_RETRIES: 3,
     RETRY_DELAY_MS: 500 
 };
@@ -23,6 +29,8 @@ async function fetchWithRetry(url, options, retriesLeft = CONFIG.MAX_RETRIES) {
     } catch (error) {
         if (retriesLeft > 0) {
             console.warn(`[API] ⚠️ Connection failed. Retrying... (${retriesLeft} attempts left)`);
+            
+            // Wait for the specified delay before trying again
             await new Promise(resolve => setTimeout(resolve, CONFIG.RETRY_DELAY_MS));
             return fetchWithRetry(url, options, retriesLeft - 1);
         } else {
@@ -53,9 +61,10 @@ async function startRecordingSession(startUrl) {
         const newWindow = await chrome.windows.create({
             url: startUrl,
             state: "maximized",
-            incognito: CONFIG.USE_INCOGNITO 
+            incognito: CONFIG.USE_INCOGNITO // Now dynamically controlled by your config
         });
         
+        // Persist the ID to session storage to survive worker sleep
         await chrome.storage.session.set({ activeRecordingWindowId: newWindow.id });
         console.log(`🔒 Recording locked to Window ID: ${newWindow.id} | Incognito: ${CONFIG.USE_INCOGNITO}`);
         
@@ -72,9 +81,12 @@ chrome.action.onClicked.addListener(async (tab) => {
 // ==========================================
 // 4. THE MESSAGE ROUTER & GATEKEEPER
 // ==========================================
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    
+    console.log("MESSAGE RECEIVED:", message);
     // --- ROUTE 1: GET_LOCATORS (Schema Fetcher) ---
+    // This MUST be checked before validating sender.tab, because the popup 
+    // might request this data right as the page is initializing.
     if (message.action === "GET_LOCATORS") {
         (async () => {
             try {
@@ -87,16 +99,22 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 sendResponse({ status: "error", data: {} });
             }
         })();
-        return true; 
+        return true; // Keep message channel open for async response
     }
 
-    if (!sender.tab) return false;
+    // Guardrail: Ensure the sender is actually a webpage tab
+    if (!sender.tab) {
+    console.warn("Message without tab context ignored");
+    return;
+}
 
     // --- ROUTE 2: SAVE_ELEMENT (Data Ingestion) ---
     (async () => {
         try {
+            // Retrieve resilient state
             const storage = await chrome.storage.session.get("activeRecordingWindowId");
             
+            // The Firewall: Ignore clicks happening outside our dedicated recording window
             if (sender.tab.windowId !== storage.activeRecordingWindowId) {
                 return sendResponse({ status: "ignored", reason: "outside_isolated_window" });
             }
@@ -112,5 +130,5 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         }
     })();
     
-    return true; 
+    return true; // Keep message channel open for async response
 });

@@ -1,0 +1,14 @@
+[
+    {
+        "action": "Open Site",
+        "parameters": {
+            "target_url_or_key": "justdial"
+        }
+    },
+    {
+        "action": "Click Element",
+        "parameters": {
+            "locator": "freelisting_banner_cross_button"
+        }
+    }
+]
