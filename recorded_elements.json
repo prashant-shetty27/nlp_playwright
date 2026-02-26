@@ -665,6 +665,28 @@
         "class": "jsx-c77816fa1038cbdb headnav_item_text pl-5 font14 fw400 color451"
       },
       "custom_xpath": "//span[contains(@class,'jsx-c77816fa1038cbdb') and contains(@class,'headnav_item_text') and contains(@class,'pl-5') and contains(@class,'fw400') and contains(@class,'color451')]"
+    },
+    "b2b_hotkey": {
+      "tagName": "img",
+      "className": "home_banner_img_btm",
+      "innerText": null,
+      "rect": {
+        "x": 871,
+        "y": 208,
+        "width": 166,
+        "height": 252
+      },
+      "attributes": {
+        "alt": "JDmart - B2B marketplace",
+        "title": "JDmart - B2B marketplace",
+        "src": "https://akam.cdn.jdmagicbox.com/images/icontent/newwap/web2022/b2b_square_hotkey.webp?w=3840&q=75",
+        "decoding": "async",
+        "data-nimg": "fill",
+        "class": "home_banner_img_btm",
+        "style": "position: absolute; inset: 0px; box-sizing: border-box; padding: 0px; border: none; margin: auto; display: block; width: 0px; height: 0px; min-width: 100%; max-width: 100%; min-height: 100%; max-height: 100%;",
+        "sizes": "100vw"
+      },
+      "custom_xpath": "//img[@title='JDmart - B2B marketplace']"
     }
   },
   "home_page": {
@@ -1665,25 +1687,23 @@
         "aria-autocomplete": "list",
         "aria-controls": "react-autowhatever-1",
         "class": "jdmart_search_input",
-        "placeholder": "Search \"Egg\"",
+        "placeholder": "Search \"CCTV Camera\"",
         "aria-label": "search input"
       },
       "custom_xpath": "//input[@id='cpinput']"
     },
     "cctv_autosuggestion": {
-      "tagName": "div",
-      "className": "jdmart_serach_text font14 fw400 color111 mr-5",
-      "innerText": "Cctv",
+      "tagName": "b",
+      "className": null,
+      "innerText": "tv",
       "rect": {
-        "x": 597,
+        "x": 615,
         "y": 113,
-        "width": 56,
-        "height": 21
+        "width": 13,
+        "height": 20
       },
-      "attributes": {
-        "class": "jdmart_serach_text font14 fw400 color111 mr-5"
-      },
-      "custom_xpath": "//div[contains(@class,'jdmart_serach_text') and contains(@class,'fw400') and contains(@class,'color111') and contains(@class,'mr-5')]"
+      "attributes": {},
+      "custom_xpath": "//b[normalize-space(text())='tv']"
     }
   },
   "web_b2b_prp": {
@@ -1701,6 +1721,322 @@
         "class": "font22 fw500 color111 new__results__pageheading fadeIn"
       },
       "custom_xpath": "//h1[contains(@class,'fw500') and contains(@class,'color111') and contains(@class,'new__results__pageheading') and contains(@class,'fadeIn')]"
+    },
+    "product_1st": {
+      "tagName": "h2",
+      "className": "resultbox__title font22 fw500 color111",
+      "innerText": "CP Plus-CP-GPC-D24L2-S CCTV Dome Camera",
+      "rect": {
+        "x": 457,
+        "y": 369,
+        "width": 772,
+        "height": 29
+      },
+      "attributes": {
+        "class": "resultbox__title font22 fw500 color111"
+      },
+      "custom_xpath": "//h2[contains(@class,'resultbox__title') and contains(@class,'fw500') and contains(@class,'color111')]"
+    },
+    "gbp_popup_cross_button": {
+      "tagName": "div",
+      "className": "jsx-a48ae3b7f7c83c3c jdmart_modal_close jdmart_icon",
+      "innerText": null,
+      "rect": {
+        "x": 1338,
+        "y": 199,
+        "width": 22,
+        "height": 22
+      },
+      "attributes": {
+        "class": "jsx-a48ae3b7f7c83c3c jdmart_modal_close jdmart_icon"
+      },
+      "custom_xpath": "//div[contains(@class,'jsx-a48ae3b7f7c83c3c') and contains(@class,'jdmart_modal_close') and contains(@class,'jdmart_icon')]"
+    },
+    "video_thumbnail": {
+      "tagName": "video",
+      "className": null,
+      "innerText": null,
+      "rect": {
+        "x": 217,
+        "y": 370,
+        "width": 220,
+        "height": 220
+      },
+      "attributes": {
+        "preload": "auto",
+        "poster": "https://stream.jdmagicbox.com/thumbnail/mp-0jqx6c8dqptvsgs-cp-plus-cp-gpc-d24l2-s-cctv-dome-camera-185819838/jd-Ott_720x540_Thumbnail.0000005.jpg",
+        "controlslist": "nofullscreen",
+        "style": "width: 100%; height: 100%;",
+        "src": "blob:https://www.justdial.com/a5a06aec-ffa8-4e23-b9a1-79beec352926"
+      },
+      "custom_xpath": "//video"
+    }
+  },
+  "web_b2b_pdp": {
+    "productname": {
+      "tagName": "h1",
+      "className": "dcomppro_title font22 color414 fw600",
+      "innerText": "CP Plus-CP-GPC-D24L2-S CCTV Dome Camera",
+      "rect": {
+        "x": 597,
+        "y": 190,
+        "width": 599,
+        "height": 40
+      },
+      "attributes": {
+        "class": "dcomppro_title font22 color414 fw600"
+      },
+      "custom_xpath": "//h1[contains(@class,'dcomppro_title') and contains(@class,'color414') and contains(@class,'fw600')]"
+    },
+    "seller_name_rhs_card": {
+      "tagName": "div",
+      "className": "dcomp_name font16 fw600 color111",
+      "innerText": "Smart Eye Vision",
+      "rect": {
+        "x": 1395,
+        "y": 208,
+        "width": 185,
+        "height": 22
+      },
+      "attributes": {
+        "class": "dcomp_name font16 fw600 color111"
+      },
+      "custom_xpath": "//div[contains(@class,'dcomp_name') and contains(@class,'fw600') and contains(@class,'color111')]"
+    }
+  },
+  "web_b2b_catalogue": {
+    "smart_eye_vision_seller_name": {
+      "tagName": "h1",
+      "className": "jsx-a614deb88c926a86 compney font23 fw500 color111",
+      "innerText": "Smart Eye Vision",
+      "rect": {
+        "x": 350,
+        "y": 130,
+        "width": 184,
+        "height": 28
+      },
+      "attributes": {
+        "class": "jsx-a614deb88c926a86 compney font23 fw500 color111"
+      },
+      "custom_xpath": "//h1[contains(@class,'jsx-a614deb88c926a86') and contains(@class,'compney') and contains(@class,'fw500') and contains(@class,'color111')]"
+    },
+    "login_sign_up_button": {
+      "tagName": "div",
+      "className": "jsx-c77816fa1038cbdb headnav_item_text font14 fw500 colorFFF",
+      "innerText": "Login / Sign Up",
+      "rect": {
+        "x": 1477,
+        "y": 29,
+        "width": 108,
+        "height": 21
+      },
+      "attributes": {
+        "class": "jsx-c77816fa1038cbdb headnav_item_text font14 fw500 colorFFF"
+      },
+      "custom_xpath": "//div[contains(@class,'jsx-c77816fa1038cbdb') and contains(@class,'headnav_item_text') and contains(@class,'fw500') and contains(@class,'colorFFF')]"
+    },
+    "fmobile": {
+      "tagName": "input",
+      "className": "jsx-c21ded63fbf3c5d8 login_input font18 fw500 color111",
+      "innerText": null,
+      "rect": {
+        "x": 698,
+        "y": 311,
+        "width": 397,
+        "height": 53
+      },
+      "attributes": {
+        "autocomplete": "off",
+        "tabindex": "0",
+        "aria-label": "Enter Mobile Number mandatory feild",
+        "type": "text",
+        "name": "mobile",
+        "maxlength": "10",
+        "id": "fmobile",
+        "class": "jsx-c21ded63fbf3c5d8 login_input font18 fw500 color111"
+      },
+      "custom_xpath": "//input[@id='fmobile']"
+    },
+    "login_with_otp": {
+      "tagName": "button",
+      "className": "jsx-c21ded63fbf3c5d8 login_input_button bluefill_animate font18 fw600 colorFFF ",
+      "innerText": "Login with OTP",
+      "rect": {
+        "x": 696,
+        "y": 457,
+        "width": 400,
+        "height": 46
+      },
+      "attributes": {
+        "id": "loginOtpTriggerBtn",
+        "class": "jsx-c21ded63fbf3c5d8 login_input_button bluefill_animate font18 fw600 colorFFF "
+      },
+      "custom_xpath": "//button[@id='loginOtpTriggerBtn']"
+    },
+    "0": {
+      "tagName": "input",
+      "className": "jsx-c21ded63fbf3c5d8 otpfield",
+      "innerText": null,
+      "rect": {
+        "x": 696,
+        "y": 418,
+        "width": 57,
+        "height": 69
+      },
+      "attributes": {
+        "id": "0",
+        "type": "tel",
+        "autocomplete": "off",
+        "tabindex": "0",
+        "name": "o1",
+        "data-input-index": "1",
+        "aria-label": "OTP field 1",
+        "title": "OTP field 1",
+        "maxlength": "1",
+        "placeholder": "_",
+        "class": "jsx-c21ded63fbf3c5d8 otpfield"
+      },
+      "custom_xpath": "//input[@id='0']"
+    },
+    "1": {
+      "tagName": "input",
+      "className": "jsx-c21ded63fbf3c5d8 otpfield",
+      "innerText": null,
+      "rect": {
+        "x": 765,
+        "y": 418,
+        "width": 57,
+        "height": 69
+      },
+      "attributes": {
+        "id": "1",
+        "type": "tel",
+        "autocomplete": "off",
+        "tabindex": "0",
+        "name": "o2",
+        "data-input-index": "2",
+        "aria-label": "OTP field 2",
+        "title": "OTP field 2",
+        "maxlength": "1",
+        "placeholder": "_",
+        "class": "jsx-c21ded63fbf3c5d8 otpfield"
+      },
+      "custom_xpath": "//input[@id='1']"
+    },
+    "2": {
+      "tagName": "input",
+      "className": "jsx-c21ded63fbf3c5d8 otpfield",
+      "innerText": null,
+      "rect": {
+        "x": 833,
+        "y": 418,
+        "width": 57,
+        "height": 69
+      },
+      "attributes": {
+        "id": "2",
+        "type": "tel",
+        "autocomplete": "off",
+        "tabindex": "0",
+        "name": "o3",
+        "data-input-index": "3",
+        "aria-label": "OTP field 3",
+        "title": "OTP field 3",
+        "maxlength": "1",
+        "placeholder": "_",
+        "class": "jsx-c21ded63fbf3c5d8 otpfield"
+      },
+      "custom_xpath": "//input[@id='2']"
+    },
+    "3": {
+      "tagName": "input",
+      "className": "jsx-c21ded63fbf3c5d8 otpfield",
+      "innerText": null,
+      "rect": {
+        "x": 902,
+        "y": 418,
+        "width": 57,
+        "height": 69
+      },
+      "attributes": {
+        "id": "3",
+        "type": "tel",
+        "autocomplete": "off",
+        "tabindex": "0",
+        "name": "o4",
+        "data-input-index": "4",
+        "aria-label": "OTP field 4",
+        "title": "OTP field 4",
+        "maxlength": "1",
+        "placeholder": "_",
+        "class": "jsx-c21ded63fbf3c5d8 otpfield"
+      },
+      "custom_xpath": "//input[@id='3']"
+    },
+    "4": {
+      "tagName": "input",
+      "className": "jsx-c21ded63fbf3c5d8 otpfield",
+      "innerText": null,
+      "rect": {
+        "x": 971,
+        "y": 418,
+        "width": 57,
+        "height": 69
+      },
+      "attributes": {
+        "id": "4",
+        "type": "tel",
+        "autocomplete": "off",
+        "tabindex": "0",
+        "name": "o5",
+        "data-input-index": "5",
+        "aria-label": "OTP field 5",
+        "title": "OTP field 5",
+        "maxlength": "1",
+        "placeholder": "_",
+        "class": "jsx-c21ded63fbf3c5d8 otpfield"
+      },
+      "custom_xpath": "//input[@id='4']"
+    },
+    "5": {
+      "tagName": "input",
+      "className": "jsx-c21ded63fbf3c5d8 otpfield",
+      "innerText": null,
+      "rect": {
+        "x": 1039,
+        "y": 418,
+        "width": 57,
+        "height": 69
+      },
+      "attributes": {
+        "id": "5",
+        "type": "tel",
+        "autocomplete": "off",
+        "tabindex": "0",
+        "name": "o6",
+        "data-input-index": "6",
+        "aria-label": "OTP field 6",
+        "title": "OTP field 6",
+        "maxlength": "1",
+        "placeholder": "_",
+        "class": "jsx-c21ded63fbf3c5d8 otpfield"
+      },
+      "custom_xpath": "//input[@id='5']"
+    },
+    "your_friend_text": {
+      "tagName": "span",
+      "className": "jsx-a614deb88c926a86 font15 fw500",
+      "innerText": "Your friend Prashant rated 4/5",
+      "rect": {
+        "x": 353,
+        "y": 215,
+        "width": 224,
+        "height": 22
+      },
+      "attributes": {
+        "class": "jsx-a614deb88c926a86 font15 fw500"
+      },
+      "custom_xpath": "//span[contains(@class,'jsx-a614deb88c926a86') and contains(@class,'fw500')]"
     }
   }
 }

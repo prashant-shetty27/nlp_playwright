@@ -6,7 +6,7 @@ import shutil
 import threading
 from fastapi import Request
 from fastapi.middleware.cors import CORSMiddleware
-from nicegui import app, ui
+from nicegui import app, ui, Client
 
 # Framework Imports (Ensure these files exist in your directory)
 import actions
@@ -128,7 +128,10 @@ def persist_element_to_disk(element_dna):
             data[safe_page_name] = {}
 
         existing_locators = list(data[safe_page_name].keys())
-        safe_locator_name = sanitize_and_match_identifier(raw_locator, existing_locators)
+        clean_locator = re.sub(r'[\s\-]+', '_', raw_locator.strip().lower())
+        clean_locator = re.sub(r'[^a-z0-9_]', '', clean_locator)
+
+        safe_locator_name = clean_locator
 
         element_dna["custom_xpath"] = generate_safe_xpath(element_dna)
 
@@ -190,15 +193,14 @@ async def receive_recorded_element(request: Request):
 
         test_script_payload.append(step_payload)
         
-        # ARCHITECTURAL FIX: Fixed f-string formatting
         logging.info(f"Recorded element → {locator_name}")
 
-        # ARCHITECTURAL FIX: Safely trigger UI update from the background API thread
-        ui.run_later(render_script_builder.refresh)
+        # ARCHITECTURAL FIX: Broadcast the update to all connected WebSockets natively
+        for client in Client.instances.values():
+            with client:
+                render_script_builder.refresh()
 
-        # ARCHITECTURAL FIX: Restored proper indentation to keep inside the try block
         return {"status": "success"}
-        
     except Exception:
         logging.exception("Recording failure")
         return {"status": "error"}
@@ -208,7 +210,51 @@ async def receive_recorded_element(request: Request):
 # 6. UI BOOTSTRAP & SCRIPT BUILDER
 # =====================================================
 
+# =====================================================
+# 6. UI BOOTSTRAP & SCRIPT BUILDER
+# =====================================================
+
 ui.label("Codeless Script Builder").classes("text-3xl font-bold mb-6")
+
+# --- MANUAL STEP DIALOG ENGINE ---
+with ui.dialog() as manual_step_dialog, ui.card().classes('w-96 border-2 border-green-500'):
+    ui.label('Add Manual Action').classes('text-xl font-bold text-green-700 mb-2')
+    
+    action_dropdown = ui.select(
+        ['Go To URL', 'Type Text', 'Press Key', 'Wait (Seconds)', 'Click Element'], 
+        value='Type Text', label='Action Type'
+    ).classes('w-full mb-2')
+    
+    
+    manual_locator_input = ui.input('Target Locator (Optional)').classes('w-full mb-2').tooltip("Leave blank for URL or Wait actions")
+    action_data_input = ui.input('Input Value / Data').classes('w-full mb-4')
+    
+    def save_manual_step():
+        if not action_data_input.value and action_dropdown.value != 'Click Element':
+            ui.notify("Input Value cannot be empty for this action!", color="red")
+            return
+            
+        step = {
+            "action": action_dropdown.value,
+            "parameters": {
+                "locator": manual_locator_input.value or "N/A",
+                "data": action_data_input.value or ""
+            }
+        }
+        test_script_payload.append(step)
+        render_script_builder.refresh()
+        manual_step_dialog.close()
+        
+        # Reset inputs for next use
+        manual_locator_input.value = ""
+        action_data_input.value = ""
+        ui.notify(f"Manual step added: {step['action']}", color="green")
+        
+        
+    with ui.row().classes('w-full justify-end'):
+        ui.button('Cancel', color='gray', on_click=manual_step_dialog.close)
+        ui.button('Add Step', color='green', on_click=save_manual_step)
+
 
 @ui.refreshable
 def render_script_builder():
@@ -219,7 +265,7 @@ def render_script_builder():
         
         # 1. Empty State Handling
         if not test_script_payload:
-            ui.label("No steps recorded yet. Alt+Click an element in the browser to start...").classes("text-gray-500 italic py-8 text-center w-full")
+            ui.label("No steps recorded yet. Alt+Click (Windows) or option+click(MAC) an element in the browser to start...").classes("text-gray-500 italic py-8 text-center w-full")
             return
 
         # 2. Render Existing Steps
@@ -231,20 +277,36 @@ def render_script_builder():
                 
                 parameters = step.get("parameters") or {}
                 locator_name = parameters.get("locator", "N/A")
-                ui.label(locator_name).classes("font-mono text-sm bg-gray-200 px-2 py-1 rounded text-gray-700")
+                action_data = parameters.get("data", "")
+                
+                with ui.column().classes("items-end"):
+                    ui.label(locator_name).classes("font-mono text-sm bg-gray-200 px-2 py-1 rounded text-gray-700")
+                    if action_data:
+                        ui.label(f"Data: {action_data}").classes("text-xs text-gray-500 italic")
 
 # --- SCRIPT CONTROLS ---
 with ui.row().classes("w-full max-w-4xl mx-auto mt-4 justify-between"):
     with ui.row().classes("gap-2"):
-        ui.button("➕ Add Manual Step", color="green", on_click=lambda: ui.notify("Manual step dialog coming next!"))
+        # ARCHITECTURAL FIX: Wired the manual step button to open the dialog
+        ui.button("➕ Add Manual Step", color="green", on_click=manual_step_dialog.open)
         ui.button("▶️ Run Playwright Script", color="primary", on_click=lambda: ui.notify("Execution engine not wired yet!"))
-        
-    def clear_script():
+last_payload_count = {"value": 0}
+
+def sync_ui():
+
+        if last_payload_count["value"] != len(test_script_payload):
+
+            render_script_builder.refresh()
+
+        last_payload_count["value"] = len(test_script_payload)
+
+        ui.timer(1.0, sync_ui)        
+def clear_script():
         test_script_payload.clear()
         render_script_builder.refresh()
         ui.notify("Script cleared.")
 
-    ui.button("🗑️ Clear Script", color="red", on_click=clear_script).classes("ml-auto")            
+        ui.button("🗑️ Clear Script", color="red", on_click=clear_script).classes("ml-auto")       
 
 # 3. Initial Draw
 render_script_builder()
