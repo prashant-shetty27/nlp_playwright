@@ -27,4 +27,3 @@ def run_flow(path, logger):
             logger.info("🧹 Cleaning up browser session")
             context.close()
             browser.close()
-    

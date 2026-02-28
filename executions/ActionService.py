@@ -48,16 +48,16 @@ class ActionService:
     # ---------------------------------
     # WAIT
     # ---------------------------------
-def wait(self, seconds: float):
-    try:
-        seconds = float(seconds)
-        if seconds < 0:
-            raise ValueError("Wait time must be non-negative")
-    except Exception:
-        raise ValueError("Wait command requires a numeric value")
+    def wait(self, seconds: float):
+        try:
+            seconds = float(seconds)
+            if seconds < 0:
+                raise ValueError("Wait time must be non-negative")
+        except Exception:
+            raise ValueError("Wait command requires a numeric value")
 
-    def action():
-        self.page.wait_for_timeout(seconds * 1000)
+        def action():
+            self.page.wait_for_timeout(seconds * 1000)
 
-    self._safe(f"wait {seconds:.1f}s", action)
+        self._safe(f"wait {seconds:.1f}s", action)
 

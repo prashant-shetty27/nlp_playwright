@@ -1,0 +1,27 @@
+{
+  "Wait: Static Wait": {
+    "prefix": "wait",
+    "body": ["wait for ${1:seconds} seconds"],
+    "description": "Static wait for specified seconds"
+  },
+  "Wait: Sleep": {
+    "prefix": "sleep",
+    "body": ["sleep for ${1:seconds} seconds"],
+    "description": "Sleep for specified seconds"
+  },
+  "Wait: Pause": {
+    "prefix": "pause",
+    "body": ["pause for ${1:seconds} seconds"],
+    "description": "Pause for specified seconds"
+  },
+  "Wait: Force Wait": {
+    "prefix": "force wait",
+    "body": ["force wait ${1:seconds} seconds"],
+    "description": "Force wait for specified seconds"
+  },
+  "Wait: Static Wait Function": {
+    "prefix": "static wait",
+    "body": ["static wait ${1:seconds} seconds"],
+    "description": "Static wait function for specified seconds"
+  }
+}

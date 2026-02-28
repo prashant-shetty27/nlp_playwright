@@ -3,10 +3,8 @@ import sys
 import re
 import json
 import logging
-import actions  # CRITICAL ARCHITECTURAL REQUIREMENT
-
 # Local Framework Modules
-import actions
+import actions  # CRITICAL ARCHITECTURAL REQUIREMENT
 from clean_locators import sanitize_database
 from sync_snippets import sync_locators_to_snippets 
 from command_parser import parse_step
@@ -185,9 +183,6 @@ def run_steps(file_path):
     except Exception as e:
         logger.warning("⚠️ Snippet sync failed: %s", e)
 
-if __name__ == "__main__":
-    flow_file = sys.argv[1] if len(sys.argv) > 1 else "steps.flow"
-    run_steps(flow_file)
 def execute_nlp_step(snippet_name: str, page, locator_value=None):
     """
     Dynamically routes the NLP string to the correct Python function.
@@ -207,4 +202,8 @@ def execute_nlp_step(snippet_name: str, page, locator_value=None):
 
 # --- How you generate the auto-updating list for your UI/Snippet Manager ---
 def get_available_snippets():
-    return list(ACTION_REGISTRY.keys())    
+    return list(ACTION_REGISTRY.keys())
+
+if __name__ == "__main__":
+    flow_file = sys.argv[1] if len(sys.argv) > 1 else "steps.flow"
+    run_steps(flow_file)

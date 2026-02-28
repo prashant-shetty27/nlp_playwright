@@ -214,6 +214,17 @@ async def receive_recorded_element(request: Request):
 # 6. UI BOOTSTRAP & SCRIPT BUILDER
 # =====================================================
 
+with ui.card().classes("mb-4 p-4 bg-gray-100 border-l-4 border-purple-500"):
+    ui.label("Credits & Technologies Used").classes("text-xl font-bold text-purple-700 mb-2")
+    ui.markdown("""
+**AI & Frameworks:**
+- OpenAI GPT (Copilot, LLMs)
+- NiceGUI (UI Framework)
+- Playwright (Browser Automation)
+- FastAPI (API Backend)
+- Custom NLP & Healer Engines
+- Python 3.x
+""").classes("text-sm text-gray-700")
 ui.label("Codeless Script Builder").classes("text-3xl font-bold mb-6")
 
 # --- MANUAL STEP DIALOG ENGINE ---
@@ -287,7 +298,6 @@ def render_script_builder():
 # --- SCRIPT CONTROLS ---
 with ui.row().classes("w-full max-w-4xl mx-auto mt-4 justify-between"):
     with ui.row().classes("gap-2"):
-        # ARCHITECTURAL FIX: Wired the manual step button to open the dialog
         ui.button("➕ Add Manual Step", color="green", on_click=manual_step_dialog.open)
         ui.button("▶️ Run Playwright Script", color="primary", on_click=lambda: ui.notify("Execution engine not wired yet!"))
 last_payload_count = {"value": 0}

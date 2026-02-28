@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "ML Codeless Spy",
+  "version": "1.0",
+  "description": "Captures element DNA for ML-driven test automation.",
+  "permissions": [
+    "storage",
+    "tabs"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1:8080/*",
+    "http://localhost:8080/*",
+    "<all_urls>"
+  ],
+  "action": {
+    "default_title": "Start Codeless Recording"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "incognito": "spanning"
+}

@@ -1,3 +1,6 @@
-open justdial
-search for restaurants
-verify "restaurant" is present in 
+open https://www.justdial.com
+wait 6 seconds
+click on element maybe_later_link
+wait 2 seconds
+search for restaurant
+wait 5 seconds

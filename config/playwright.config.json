@@ -1,0 +1,12 @@
+{
+  "use": {
+    "headless": false,
+    "actionTimeout": 15000,
+    "navigationTimeout": 30000,
+    "resolution_mode": "auto"
+  },
+  "run": {
+    "default_scroll_count": 20,
+    "stop_on_failure": false
+  }
+}
