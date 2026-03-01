@@ -5,7 +5,7 @@
 // ==========================================
 const CONFIG = {
     // Change this if you ever deploy your Python UI to a remote server
-    SERVER_URL: "http://127.0.0.1:8080",    
+    SERVER_URL: "http://127.0.0.1:5050",    
     // TOGGLE INCOGNITO MODE HERE:
     // true = Clean session (good for public sites)
     // false = Uses normal browser cookies (mandatory for sites requiring Login/2FA)

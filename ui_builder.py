@@ -10,8 +10,9 @@ from nicegui import app, ui, Client
 
 # Framework Imports (Ensure these files exist in your directory)
 import execution.action_service as actions
-from registry import ACTION_REGISTRY
+from core.registry import ACTION_REGISTRY
 from locators.manager import get_all_locators
+from config.settings import RECORDED_ELEMENTS_FILE
 
 # =====================================================
 # 1. ENTERPRISE CONFIGURATION
@@ -23,7 +24,7 @@ logging.basicConfig(
 )
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_FILE = os.path.join(BASE_DIR, "recorded_elements.json")
+DB_FILE = RECORDED_ELEMENTS_FILE
 
 db_lock = threading.Lock()
 

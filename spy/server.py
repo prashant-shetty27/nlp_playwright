@@ -5,13 +5,19 @@ Moved from root spy_server.py.
 """
 import json
 import os
+import sys
+
+# Allow running as `python spy/server.py` from project root
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from config.settings import RECORDED_ELEMENTS_FILE
 
 app = Flask(__name__)
 CORS(app)
 
-DB_FILE = "recorded_elements.json"
+DB_FILE = RECORDED_ELEMENTS_FILE
 
 
 def generate_custom_xpath(element_dna):
@@ -71,7 +77,7 @@ def save_to_database(element_dna):
     return f"{page_name} -> {locator_name}", is_update
 
 
-@app.route('/record', methods=['POST'])
+@app.route('/api/record-element', methods=['POST'])
 def record_element():
     element_dna = request.json
     saved_name, is_update = save_to_database(element_dna)
@@ -85,6 +91,20 @@ def record_element():
     print("=" * 40 + "\n")
 
     return jsonify({"status": "Success", "message": f"Processed {saved_name}"})
+
+
+@app.route('/api/get-database-schema', methods=['GET'])
+def get_database_schema():
+    """Return the full locator DB so the extension popup can display it."""
+    if os.path.exists(DB_FILE):
+        with open(DB_FILE, "r") as f:
+            try:
+                data = json.load(f)
+            except json.JSONDecodeError:
+                data = {}
+    else:
+        data = {}
+    return jsonify(data)
 
 
 if __name__ == '__main__':
