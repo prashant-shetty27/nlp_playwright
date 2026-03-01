@@ -31,6 +31,7 @@ class AndroidAdapter(BaseAdapter):
         """
         try:
             from appium import webdriver as appium_driver
+            from appium.options.common.base import AppiumOptions
         except ImportError:
             raise ImportError(
                 "Appium Python client not installed. Run: pip install Appium-Python-Client"
@@ -43,8 +44,9 @@ class AndroidAdapter(BaseAdapter):
                 "Set ANDROID_CAPABILITIES in config/settings.py or provide via argument."
             )
 
+        options = AppiumOptions().load_capabilities(caps)
         server_url = settings.APPIUM_SERVER_URL
-        self._driver = appium_driver.Remote(server_url, caps)
+        self._driver = appium_driver.Remote(server_url, options=options)
         logger.info("🤖 Android adapter launched. Device: %s", caps.get("deviceName", "unknown"))
         return self._driver
 

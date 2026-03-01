@@ -11,6 +11,7 @@ from core.registry import codeless_snippet
 from locators.manager import get_locator_and_dna
 from nlp.variable_manager import resolve_variables
 from execution.browser_manager import open_browser, close_browser
+from execution.session import TestSession
 from execution.retry import with_retry
 from config import settings
 
@@ -27,18 +28,21 @@ class WebAdapter(BaseAdapter):
 
     def __init__(self):
         self._page = None
+        self._session = None
 
     def launch(self, **kwargs):
         """Launches a desktop browser session."""
-        self._page = open_browser(**kwargs)
+        self._session = TestSession()
+        self._page = open_browser(self._session)
         logger.info("🌐 Web adapter launched.")
         return self._page
 
     def quit(self, label: str = "web_session"):
         """Closes the browser session."""
         if self._page:
-            close_browser(self._page, label)
+            close_browser(self._page, label, self._session)
             self._page = None
+            self._session = None
             logger.info("🌐 Web adapter closed.")
 
     def navigate(self, url: str):
