@@ -241,34 +241,29 @@ def _build_blocks(result: PlanResult) -> list[dict]:
         result.finished_at.strftime("%d %b %Y  %H:%M:%S")
         if result.finished_at else "—"
     )
-    blocks.append(_section("*📊  Test Execution Summary*"))
-    blocks.append({
-        "type": "section",
-        "fields": [
-            {"type": "mrkdwn", "text": f"*📋 Total Scripts*\n{result.total_scripts}"},
-            {"type": "mrkdwn", "text": f"*✅ Passed*\n{result.total_passed}"},
-            {"type": "mrkdwn", "text": f"*❌ Failed*\n{result.total_failed}"},
-            {"type": "mrkdwn", "text": f"*⏭ Skipped*\n{result.total_skipped}"},
-            {"type": "mrkdwn", "text": f"*🕐 Start Time*\n{started_disp}"},
-            {"type": "mrkdwn", "text": f"*🏁 End Time*\n{finished_disp}"},
-            {"type": "mrkdwn", "text": f"*⏱ Duration*\n{_fmt_duration(result.duration_s)}"},
-            {"type": "mrkdwn", "text": f"*🌍 Environment*\n{result.environment.upper()}"},
-        ]
-    })
+    blocks.append(_section(
+        "*📊  Test Execution Summary*\n"
+        f"📋 *Total Scripts:* {result.total_scripts}   │   "
+        f"✅ *Passed:* {result.total_passed}   │   "
+        f"❌ *Failed:* {result.total_failed}   │   "
+        f"⏭ *Skipped:* {result.total_skipped}\n"
+        f"🕐 *Start:* {started_disp}   │   "
+        f"🏁 *End:* {finished_disp}\n"
+        f"⏱ *Duration:* {_fmt_duration(result.duration_s)}   │   "
+        f"🌍 *Environment:* {result.environment.upper()}"
+    ))
     blocks.append(_divider())
 
     # ── 5. Execution Configuration ────────────────────────────────────────────
-    retry_val = f"ON  (max {result.max_retries}×)" if result.retry_on_failure else "OFF"
-    blocks.append(_section("*⚙️  Execution Configuration*"))
-    blocks.append({
-        "type": "section",
-        "fields": [
-            {"type": "mrkdwn", "text": f"*⚡ Parallel*\n{'ON' if result.parallel else 'OFF'}"},
-            {"type": "mrkdwn", "text": f"*🔁 Retry on Failure*\n{retry_val}"},
-            {"type": "mrkdwn", "text": f"*♻️ Rerun Suite on Fail*\n{'ON' if result.rerun_on_failure else 'OFF'}"},
-            {"type": "mrkdwn", "text": f"*📌 Platform*\n{_PLATFORM_LABELS.get(result.platform, result.platform.title())}"},
-        ]
-    })
+    retry_val = f"ON (max {result.max_retries}×)" if result.retry_on_failure else "OFF"
+    platform_label = _PLATFORM_LABELS.get(result.platform, result.platform.title())
+    blocks.append(_section(
+        "*⚙️  Execution Configuration*\n"
+        f"⚡ *Parallel:* {'ON' if result.parallel else 'OFF'}   │   "
+        f"🔁 *Retry on Failure:* {retry_val}   │   "
+        f"♻️ *Rerun Suite on Fail:* {'ON' if result.rerun_on_failure else 'OFF'}   │   "
+        f"📌 *Platform:* {platform_label}"
+    ))
 
     # ── 6. Report location ────────────────────────────────────────────────────
     if result.report_json_path:
