@@ -328,6 +328,8 @@ def run_plan(plan_path: str, suite_overrides: list[str] = None, dry_run: bool = 
                 reason=sc.failure_reason or None,
             )
     json_path, txt_path = report_mgr.generate_report()
+    plan_result.report_json_path = json_path
+    plan_result.report_txt_path  = txt_path
     logger.info("📁  Report saved: %s", json_path)
     logger.info("📁  Report saved: %s", txt_path)
 

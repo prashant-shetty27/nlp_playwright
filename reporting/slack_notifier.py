@@ -17,6 +17,7 @@ Activate: set NOTIFY_ON_SLACK=true and SLACK_WEBHOOK_URL in .env
 """
 import json
 import logging
+import os
 import urllib.request
 import urllib.error
 from datetime import datetime
@@ -108,6 +109,8 @@ class PlanResult:
         self.started_at = started_at or datetime.now()
         self.finished_at: Optional[datetime] = None
         self.suites: list[SuiteResult] = []
+        self.report_json_path: str = ""
+        self.report_txt_path: str = ""
 
     def add_suite(self, suite: SuiteResult):
         self.suites.append(suite)
@@ -165,52 +168,102 @@ def _context(text: str) -> dict:
 def _build_blocks(result: PlanResult) -> list[dict]:
     blocks: list[dict] = []
 
-    # ── Header ────────────────────────────────────────────────────────────────
+    # ── 1. Header ─────────────────────────────────────────────────────────────
     overall = "ALL PASSED" if result.total_failed == 0 else "FAILURES DETECTED"
     blocks.append(_header(f"{result.overall_icon}  {result.plan_name}  —  {overall}"))
 
-    # ── Plan metadata row ─────────────────────────────────────────────────────
-    meta_parts = [
-        f"🌍 *Env:* {result.environment.upper()}",
-        f"⚡ *Parallel:* {'ON' if result.parallel else 'OFF'}",
-        f"🔁 *Retry:* {'ON (' + str(result.max_retries) + 'x)' if result.retry_on_failure else 'OFF'}",
-        f"♻️ *Rerun:* {'ON' if result.rerun_on_failure else 'OFF'}",
-    ]
-    if result.owner:
-        meta_parts.append(f"👤 *Owner:* {result.owner}")
-    blocks.append(_section("  |  ".join(meta_parts)))
+    # ── 2. Plan meta line ─────────────────────────────────────────────────────
+    ts = result.started_at.strftime("%d %b %Y  %H:%M:%S")
+    owner_part = f"   •   👤  *{result.owner}*" if result.owner else ""
+    blocks.append(_section(f"🌍  *{result.environment.upper()}*{owner_part}   •   🕐  *{ts}*"))
     blocks.append(_divider())
 
-    # ── Per-suite breakdown ───────────────────────────────────────────────────
+    # ── 3. Execution config — 2-column fields ─────────────────────────────────
+    retry_val = f"ON  (max {result.max_retries}×)" if result.retry_on_failure else "OFF"
+    blocks.append(_section("*⚙️  Execution Configuration*"))
+    blocks.append({
+        "type": "section",
+        "fields": [
+            {"type": "mrkdwn", "text": f"*⚡ Parallel*\n{'ON' if result.parallel else 'OFF'}"},
+            {"type": "mrkdwn", "text": f"*🔁 Retry on Failure*\n{retry_val}"},
+            {"type": "mrkdwn", "text": f"*♻️ Rerun Suite on Fail*\n{'ON' if result.rerun_on_failure else 'OFF'}"},
+            {"type": "mrkdwn", "text": f"*🌍 Environment*\n{result.environment.upper()}"},
+        ]
+    })
+    blocks.append(_divider())
+
+    # ── 4. Per-suite breakdown ─────────────────────────────────────────────────
     for suite in result.suites:
-        blocks.append(_section(f"📦  *Suite: {suite.suite_name}*  —  {suite.overall_status}"))
+        # Suite title with pass/fail badge
+        if suite.skipped == suite.total and suite.total > 0:
+            badge = f"⏭ SKIPPED  (0/{suite.total})"
+        elif suite.failed == 0:
+            badge = f"✅ PASSED  ({suite.passed}/{suite.total})"
+        else:
+            badge = f"❌ FAILED  ({suite.passed}/{suite.total} passed,  {suite.failed} failed)"
 
-        script_lines = []
+        blocks.append(_section(f"📦  *Suite: {suite.suite_name}*   ›   {badge}"))
+
+        # Fixed-width table inside a code block
+        W = 32
+        col_hdr = f"{'Script':<{W}}  {'Status':<14}  {'Duration':>8}  {'Retries':>7}"
+        sep     = "─" * len(col_hdr)
+        rows    = [sep, col_hdr, sep]
         for sc in suite.scripts:
-            name = sc.script.split("/")[-1]          # basename only
-            dots = "." * max(2, 40 - len(name))
-            dur  = f"{sc.duration_s:.1f}s"
-            retry_tag = f"  ↩ retried {sc.retries}x" if sc.retries > 0 else ""
-            fail_tag  = f"\n>  _{sc.failure_reason}_" if sc.failure_reason else ""
-            script_lines.append(
-                f"{sc.icon}  `{name}` {dots} *{sc.status.upper()}*  ({dur}){retry_tag}{fail_tag}"
-            )
+            name     = sc.script.split("/")[-1][:W]
+            status   = f"{sc.icon} {sc.status.upper()}"
+            duration = f"{sc.duration_s:.1f}s"
+            retries  = f"↩ {sc.retries}×" if sc.retries > 0 else "—"
+            rows.append(f"{name:<{W}}  {status:<14}  {duration:>8}  {retries:>7}")
+        rows.append(sep)
+        table_text = "\n".join(rows)
+        blocks.append(_section(f"```\n{table_text}\n```"))
 
-        blocks.append(_section("\n".join(script_lines)))
+        # Failure detail block — only when failures exist
+        failed_scripts = [sc for sc in suite.scripts if sc.status == "failed"]
+        if failed_scripts:
+            lines = ["*🔍  Failure Details*"]
+            for sc in failed_scripts:
+                reason = sc.failure_reason or "No reason captured"
+                lines.append(f">  *{sc.script.split('/')[-1]}*")
+                lines.append(f">  _{reason}_")
+            blocks.append(_section("\n".join(lines)))
+
         blocks.append(_divider())
 
-    # ── Summary totals ────────────────────────────────────────────────────────
-    dur_str = f"{result.duration_s:.1f}s"
-    ts_str  = result.started_at.strftime("%d %b %Y  %H:%M:%S")
-    summary = (
-        f"📊  *TOTAL: {result.total_scripts}*   "
-        f"✅ {result.total_passed} PASSED   "
-        f"❌ {result.total_failed} FAILED   "
-        f"⏭ {result.total_skipped} SKIPPED\n"
-        f"⏱  *Duration:* {dur_str}   🕐 *Started:* {ts_str}"
+    # ── 5. Final summary — 2-row fields grid ──────────────────────────────────
+    finished = (
+        result.finished_at.strftime("%d %b %Y  %H:%M:%S")
+        if result.finished_at else "—"
     )
-    blocks.append(_section(summary))
-    blocks.append(_context("_Sent by NLP-Playwright Automation Framework_"))
+    blocks.append(_section("*📊  Test Execution Summary*"))
+    blocks.append({
+        "type": "section",
+        "fields": [
+            {"type": "mrkdwn", "text": f"*📋 Total Scripts*\n{result.total_scripts}"},
+            {"type": "mrkdwn", "text": f"*✅ Passed*\n{result.total_passed}"},
+            {"type": "mrkdwn", "text": f"*❌ Failed*\n{result.total_failed}"},
+            {"type": "mrkdwn", "text": f"*⏭ Skipped*\n{result.total_skipped}"},
+            {"type": "mrkdwn", "text": f"*⏱ Total Duration*\n{result.duration_s:.1f}s"},
+            {"type": "mrkdwn", "text": f"*🏁 Completed At*\n{finished}"},
+        ]
+    })
+
+    # ── 6. Report location ────────────────────────────────────────────────────
+    if result.report_json_path:
+        report_name = os.path.basename(result.report_json_path)
+        blocks.append(_divider())
+        blocks.append(_section(
+            f"📁  *Report File:*  `{report_name}`\n"
+            f"📂  *Full Path:*    `{result.report_json_path}`"
+        ))
+
+    # ── 7. Footer ─────────────────────────────────────────────────────────────
+    blocks.append(_context(
+        f"_NLP-Playwright Automation Framework_   •   "
+        f"_Plan: {result.plan_name}_   •   "
+        f"_{result.started_at.strftime('%d %b %Y')}_"
+    ))
 
     return blocks
 
