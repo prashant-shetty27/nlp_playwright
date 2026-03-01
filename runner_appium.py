@@ -44,13 +44,24 @@ def _adb_cmd(device_id: str | None, args: list[str]) -> list[str]:
     return cmd
 
 
-def _run_adb(device_id: str | None, args: list[str], check: bool = False) -> subprocess.CompletedProcess:
-    return subprocess.run(
-        _adb_cmd(device_id, args),
-        check=check,
-        capture_output=True,
-        text=True,
-    )
+def _run_adb(
+    device_id: str | None,
+    args: list[str],
+    check: bool = False,
+    timeout_seconds: int = 25,
+) -> subprocess.CompletedProcess:
+    cmd = _adb_cmd(device_id, args)
+    try:
+        return subprocess.run(
+            cmd,
+            check=check,
+            capture_output=True,
+            text=True,
+            timeout=timeout_seconds,
+        )
+    except subprocess.TimeoutExpired:
+        logger.warning("⏱️  adb command timed out after %ss: %s", timeout_seconds, " ".join(cmd))
+        return subprocess.CompletedProcess(cmd, 124, stdout="", stderr="timeout")
 
 
 def _prepare_android_app(caps: dict) -> dict:
@@ -104,18 +115,23 @@ def _prepare_android_app(caps: dict) -> dict:
 
     if app_package:
         # Always force-stop before run (required by user).
-        _run_adb(device_id, ["shell", "am", "force-stop", app_package], check=False)
+        _run_adb(device_id, ["shell", "am", "force-stop", app_package], check=False, timeout_seconds=10)
         logger.info("🛑 Force-stopped app before run: %s", app_package)
 
         if reset_device_permission:
             # Best effort: reset app ops to default, then global permission reset command.
-            _run_adb(device_id, ["shell", "cmd", "appops", "reset", app_package], check=False)
-            _run_adb(device_id, ["shell", "pm", "reset-permissions"], check=False)
+            _run_adb(device_id, ["shell", "cmd", "appops", "reset", app_package], check=False, timeout_seconds=12)
+            _run_adb(device_id, ["shell", "pm", "reset-permissions"], check=False, timeout_seconds=15)
             logger.info("🔐 Reset app/device permission state (best effort): %s", app_package)
 
         if clear_cache:
             # Best effort: Android command support varies by device/OS.
-            cache_res = _run_adb(device_id, ["shell", "pm", "clear", "--cache-only", app_package], check=False)
+            cache_res = _run_adb(
+                device_id,
+                ["shell", "pm", "clear", "--cache-only", app_package],
+                check=False,
+                timeout_seconds=8,
+            )
             out = ((cache_res.stdout or "") + (cache_res.stderr or "")).strip().lower()
             if cache_res.returncode == 0 and ("success" in out or not out):
                 logger.info("🧹 Cleared app cache: %s", app_package)
@@ -123,14 +139,14 @@ def _prepare_android_app(caps: dict) -> dict:
                 logger.warning("⚠️  clear_cache requested but cache-only clear may be unsupported on this device")
 
         if clear_storage:
-            _run_adb(device_id, ["shell", "pm", "clear", app_package], check=False)
+            _run_adb(device_id, ["shell", "pm", "clear", app_package], check=False, timeout_seconds=20)
             logger.info("🧽 Cleared app storage/data: %s", app_package)
 
     if app_install:
         logger.info("♻️  app_install=true → fresh install mode enabled")
 
         if app_package:
-            uninstall = _run_adb(device_id, ["uninstall", app_package], check=False)
+            uninstall = _run_adb(device_id, ["uninstall", app_package], check=False, timeout_seconds=120)
             uninstall_out = (uninstall.stdout or uninstall.stderr or "").strip()
             if uninstall_out:
                 logger.info("🗑️  Uninstall result: %s", uninstall_out)
@@ -151,7 +167,7 @@ def _prepare_android_app(caps: dict) -> dict:
             logger.warning("⚠️  existing_app_present=false with app_update=true — update expects an installed base app")
 
         if app_path:
-            update_res = _run_adb(device_id, ["install", "-r", app_path], check=False)
+            update_res = _run_adb(device_id, ["install", "-r", app_path], check=False, timeout_seconds=180)
             update_out = ((update_res.stdout or "") + (update_res.stderr or "")).strip()
             if update_out:
                 logger.info("📦 Update install result: %s", update_out)

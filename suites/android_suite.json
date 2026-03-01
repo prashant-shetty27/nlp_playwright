@@ -24,14 +24,14 @@
     "appium:appActivity":  "com.justdial.search.SplashScreenNewActivity",
 
     "_comment_install_mode": "Modes: app_install=true (fresh reinstall), app_update=true (in-place update keep user data), else existing app mode",
-    "app_install": false,
+    "app_install": true,
     "app_update": false,
     "new_apk_shared": false,
     "existing_app_present": true,
 
     "_comment_data_controls": "Granular controls used before launch",
-    "clear_cache": false,
-    "clear_storage": false,
+    "clear_cache": true,
+    "clear_storage": true,
     "reset_device_permission": false,
 
     "appium:newCommandTimeout": 120,

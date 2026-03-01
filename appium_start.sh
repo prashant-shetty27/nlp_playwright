@@ -58,14 +58,22 @@ fi
 
 # ── Set ANDROID_HOME if not already set ──────────────────
 if [[ -z "${ANDROID_HOME:-}" ]]; then
-  # Detect brew-installed platform-tools (macOS)
-  BREW_PT=$(ls /usr/local/Caskroom/android-platform-tools/ 2>/dev/null | sort -V | tail -1)
-  if [[ -n "$BREW_PT" ]]; then
-    export ANDROID_HOME="/usr/local/Caskroom/android-platform-tools/${BREW_PT}"
+  # Prefer a full SDK root that includes build-tools (aapt2 required by Appium)
+  if [[ -d "/usr/local/share/android-commandlinetools/build-tools" ]]; then
+    export ANDROID_HOME="/usr/local/share/android-commandlinetools"
     export ANDROID_SDK_ROOT="$ANDROID_HOME"
-    echo "✅  ANDROID_HOME auto-set: $ANDROID_HOME"
+    echo "✅  ANDROID_HOME auto-set (full SDK): $ANDROID_HOME"
   else
-    echo "⚠️   ANDROID_HOME not set. Export it before running this script."
+    # Fallback: platform-tools path (limited; may fail for APK parsing)
+    BREW_PT=$(ls /usr/local/Caskroom/android-platform-tools/ 2>/dev/null | sort -V | tail -1)
+    if [[ -n "$BREW_PT" ]]; then
+      export ANDROID_HOME="/usr/local/Caskroom/android-platform-tools/${BREW_PT}"
+      export ANDROID_SDK_ROOT="$ANDROID_HOME"
+      echo "⚠️   ANDROID_HOME fallback set (platform-tools only): $ANDROID_HOME"
+      echo "⚠️   Fresh APK install may fail without build-tools/aapt2."
+    else
+      echo "⚠️   ANDROID_HOME not set. Export full Android SDK root before running this script."
+    fi
   fi
 else
   echo "✅  ANDROID_HOME: $ANDROID_HOME"
