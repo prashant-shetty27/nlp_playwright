@@ -17,7 +17,7 @@ from execution.browser_manager import (
 )
 from nlp.variable_manager import RUNTIME_VARIABLES, resolve_variables
 from locators.manager import get_locator_and_dna
-from healing.healer import ml_heal_element
+from core.healer import ml_heal_element
 from core.registry import codeless_snippet
 from config.settings import SITES
 from config import settings
