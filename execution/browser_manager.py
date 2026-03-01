@@ -66,11 +66,13 @@ def get_default_scroll_count() -> int:
 # ─────────────────────────────────────────────────────────────────────────────
 # BROWSER LIFECYCLE
 # ─────────────────────────────────────────────────────────────────────────────
-def open_browser(session: TestSession | None = None):
+def open_browser(session: TestSession | None = None, record_video: bool = False):
     """
     Launches Chromium and returns the Playwright Page object.
     If a TestSession is provided, stores state on it.
     For backward compatibility, also works without a session (uses module-level state).
+    Pass record_video=True to enable Playwright video recording; files land in
+    data/videos/raw/ and are moved to data/videos/completed/ on close_browser().
     """
     full_config = load_playwright_config()
     use = full_config.get("use", {})
@@ -83,10 +85,19 @@ def open_browser(session: TestSession | None = None):
         headless=use.get("headless", settings.HEADLESS),
         args=["--start-maximized", "--disable-infobars"],
     )
-    context = browser.new_context(
+
+    ctx_kwargs: dict = dict(
         no_viewport=True,
         permissions=use.get("permissions", []),
     )
+    if record_video:
+        raw_dir = os.path.join(settings.VIDEOS_DIR, "raw")
+        _ensure_dir(raw_dir)
+        ctx_kwargs["record_video_dir"] = raw_dir
+        ctx_kwargs["record_video_size"] = {"width": w, "height": h}
+        logger.info("🎥 Video recording ON — raw dir: %s", raw_dir)
+
+    context = browser.new_context(**ctx_kwargs)
     context.set_default_timeout(use.get("actionTimeout", settings.ACTION_TIMEOUT_MS))
     page = context.new_page()
 

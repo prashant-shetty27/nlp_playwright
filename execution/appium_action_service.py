@@ -127,12 +127,32 @@ def _timestamp() -> str:
 # ACTION IMPLEMENTATIONS
 # ─────────────────────────────────────────────────────────────────────────────
 
-def launch_app(driver):
+def launch_app(driver, fallback_caps: dict | None = None):
     """Bring app to foreground (activate the app)."""
     try:
-        driver.activate_app(driver.capabilities.get("appPackage")
-                            or driver.capabilities.get("appium:bundleId", ""))
-        logger.info("🚀 App launched / brought to foreground")
+        caps = getattr(driver, "capabilities", {}) or {}
+        merged = dict(fallback_caps or {})
+        merged.update(caps)
+
+        app_package = merged.get("appPackage") or merged.get("appium:appPackage")
+        app_activity = merged.get("appActivity") or merged.get("appium:appActivity")
+        bundle_id = merged.get("bundleId") or merged.get("appium:bundleId")
+
+        if app_package and app_activity:
+            try:
+                driver.start_activity(app_package, app_activity)
+                logger.info("🚀 App started via activity: %s/%s", app_package, app_activity)
+                return
+            except Exception:
+                # fallback to activate_app below
+                pass
+
+        app_id = app_package or bundle_id or ""
+        if app_id:
+            driver.activate_app(app_id)
+            logger.info("🚀 App launched / brought to foreground: %s", app_id)
+        else:
+            logger.warning("⚠️  launch_app: no appPackage/bundleId in capabilities")
     except Exception as e:
         logger.warning("⚠️  launch_app: %s", e)
 
@@ -322,6 +342,9 @@ def store_variable(value: str, variable: str):
 def take_screenshot(driver, name: str):
     """Save a screenshot to data/screenshots/."""
     name = resolve_variables(name)
+    if not settings.ENABLE_SCREENSHOTS:
+        logger.info("📵 Screenshots are disabled (ENABLE_SCREENSHOTS=false). Skipping capture '%s'.", name)
+        return
     _ensure_dir(settings.SCREENSHOTS_DIR)
     filename = os.path.join(settings.SCREENSHOTS_DIR, f"{name}_{_timestamp()}.png")
     driver.save_screenshot(filename)

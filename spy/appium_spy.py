@@ -26,7 +26,9 @@ import argparse
 import json
 import logging
 import os
+import subprocess
 import sys
+import time
 import xml.etree.ElementTree as ET
 from datetime import datetime
 
@@ -207,16 +209,16 @@ def _parse_elements(xml_source: str, platform: str) -> list[dict]:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _start_appium_session(platform: str, caps_override: dict | None = None):
-    """Start an Appium session and return the driver."""
+    """Start an Appium session and return (driver, effective_caps)."""
     try:
         from appium import webdriver as appium_webdriver
-        from appium.options.common.base import AppiumOptions
     except ImportError:
         logger.error("❌ Appium Python client not installed. Run: pip install Appium-Python-Client")
         sys.exit(1)
 
     sys.path.insert(0, BASE_DIR)
     from config import settings
+    import glob
 
     caps = caps_override or (
         settings.ANDROID_CAPABILITIES if platform == "android"
@@ -232,16 +234,175 @@ def _start_appium_session(platform: str, caps_override: dict | None = None):
         )
         sys.exit(1)
 
+    # ── Auto-set ANDROID_HOME if missing (prefer full SDK with build-tools) ─
+    if platform == "android" and not os.environ.get("ANDROID_HOME"):
+        preferred_roots = [
+            "/usr/local/share/android-commandlinetools",  # brew android-commandlinetools cask
+            os.path.expanduser("~/Library/Android/sdk"),   # Android Studio default
+        ]
+        sdk_root = ""
+        for root in preferred_roots:
+            if os.path.exists(os.path.join(root, "build-tools")):
+                sdk_root = root
+                break
+
+        if not sdk_root:
+            candidates = glob.glob("/usr/local/Caskroom/android-platform-tools/*/platform-tools/adb")
+            if candidates:
+                sdk_root = os.path.dirname(os.path.dirname(sorted(candidates)[-1]))
+
+        if sdk_root:
+            os.environ["ANDROID_HOME"] = sdk_root
+            os.environ["ANDROID_SDK_ROOT"] = sdk_root
+            logger.info("✅ ANDROID_HOME auto-set: %s", sdk_root)
+
     server_url = settings.APPIUM_SERVER_URL
     logger.info("🔗 Connecting to Appium at %s ...", server_url)
     logger.info("📱 Platform   : %s", platform.upper())
-    logger.info("📱 Device     : %s", caps.get("deviceName", caps.get("appium:deviceName", "unknown")))
+    logger.info("📱 Device     : %s", caps.get("deviceName", caps.get("appium:deviceName", caps.get("udid", caps.get("appium:udid", "unknown")))))
 
-    options = AppiumOptions().load_capabilities(caps)
-    driver  = appium_webdriver.Remote(server_url, options=options)
+    # ── Build options using platform-specific Options class (Appium 5.x) ───
+    if platform == "android":
+        from appium.options.android.uiautomator2.base import UiAutomator2Options
+        options = UiAutomator2Options()
+    else:
+        from appium.options.ios.xcuitest.base import XCUITestOptions
+        options = XCUITestOptions()
+
+    for key, val in caps.items():
+        clean = key.replace("appium:", "")
+        try:
+            setattr(options, clean, val)
+        except Exception:
+            options.set_capability(key, val)
+
+    driver = appium_webdriver.Remote(server_url, options=options)
 
     logger.info("✅ Session started — session_id: %s", driver.session_id)
-    return driver
+    return driver, caps
+
+
+def _maybe_activate_target_app(driver, platform: str, caps: dict) -> None:
+    """Try to bring the intended app to foreground after session starts."""
+    try:
+        if platform == "android":
+            app_pkg = caps.get("appium:appPackage") or caps.get("appPackage")
+            if app_pkg:
+                driver.activate_app(app_pkg)
+                logger.info("✅ Activated app package: %s", app_pkg)
+            try:
+                logger.info("📌 Current package: %s", driver.current_package)
+            except Exception:
+                pass
+        else:
+            bundle_id = caps.get("appium:bundleId") or caps.get("bundleId")
+            if bundle_id:
+                driver.activate_app(bundle_id)
+                logger.info("✅ Activated iOS bundle: %s", bundle_id)
+    except Exception as e:
+        logger.warning("⚠️ Could not activate target app automatically: %s", e)
+
+
+def _apply_runtime_cap_overrides(platform: str, base_caps: dict, args) -> dict:
+    """Merge CLI app/runtime overrides into capabilities for recording."""
+    caps = dict(base_caps or {})
+
+    # Device override
+    if args.udid:
+        caps["appium:udid"] = args.udid
+        caps["appium:deviceName"] = args.udid
+
+    # App binary override (APK/IPA path)
+    if args.app_file:
+        app_abs = os.path.abspath(os.path.expanduser(args.app_file))
+        if not os.path.exists(app_abs):
+            logger.error("❌ App file not found: %s", app_abs)
+            sys.exit(1)
+
+        caps["appium:app"] = app_abs
+        # For file-based install/launch we should not preserve stale app state.
+        caps["appium:noReset"] = False
+        caps.setdefault("appium:autoGrantPermissions", True)
+
+        # Let Appium infer launch info from app manifest unless explicitly passed.
+        if platform == "android":
+            if not args.app_id:
+                caps.pop("appium:appPackage", None)
+                caps.pop("appPackage", None)
+            if not args.app_activity:
+                caps.pop("appium:appActivity", None)
+                caps.pop("appActivity", None)
+        else:
+            if not args.app_id:
+                caps.pop("appium:bundleId", None)
+                caps.pop("bundleId", None)
+
+        if platform == "android" and not app_abs.lower().endswith(".apk"):
+            logger.warning("⚠️ Android app file usually should be .apk (got: %s)", os.path.basename(app_abs))
+        if platform == "ios" and not app_abs.lower().endswith(".ipa"):
+            logger.warning("⚠️ iOS app file usually should be .ipa (got: %s)", os.path.basename(app_abs))
+
+    # Explicit app identifiers
+    if platform == "android":
+        if args.app_id:
+            caps["appium:appPackage"] = args.app_id
+        if args.app_activity:
+            caps["appium:appActivity"] = args.app_activity
+    else:
+        if args.app_id:
+            caps["appium:bundleId"] = args.app_id
+
+    return caps
+
+
+def _get_connected_adb_devices() -> list[str]:
+    """Return list of adb-connected device IDs in 'device' state."""
+    try:
+        out = subprocess.check_output(["adb", "devices"], text=True, stderr=subprocess.STDOUT)
+    except Exception:
+        return []
+
+    devices: list[str] = []
+    for line in out.splitlines()[1:]:
+        line = line.strip()
+        if not line or "\t" not in line:
+            continue
+        serial, state = line.split("\t", 1)
+        if state.strip() == "device":
+            devices.append(serial.strip())
+    return devices
+
+
+def _ensure_android_device_available(caps: dict, wait_seconds: int = 0) -> None:
+    """Ensure an Android device is connected before Appium session start."""
+    target_udid = (
+        caps.get("appium:udid")
+        or caps.get("udid")
+        or caps.get("appium:deviceName")
+        or caps.get("deviceName")
+        or ""
+    ).strip()
+
+    deadline = time.time() + max(wait_seconds, 0)
+    while True:
+        connected = _get_connected_adb_devices()
+        if connected:
+            if not target_udid or target_udid in connected:
+                logger.info("✅ ADB connected device(s): %s", ", ".join(connected))
+                return
+            logger.warning("⚠️ Connected device(s): %s (target '%s' not present)", ", ".join(connected), target_udid)
+
+        if time.time() >= deadline:
+            break
+
+        logger.info("⏳ Waiting for Android device via ADB...")
+        time.sleep(2)
+
+    logger.error("❌ No usable Android device connected.")
+    logger.error("   adb devices should show at least one '<serial>\tdevice'")
+    logger.error("   Current connected: %s", ", ".join(_get_connected_adb_devices()) or "none")
+    logger.error("   If using USB: keep screen unlocked and accept USB debugging prompt.")
+    sys.exit(1)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -259,6 +420,45 @@ def _print_elements(elements: list[dict]) -> None:
         print(f"  {el['index']:<5} {tag_short:<30} {hint:<30} {clickable}")
     print("═" * 70)
     print(f"  Total: {len(elements)} elements   (C = clickable)\n")
+
+
+def _find_live_element(driver, locator: dict, platform: str):
+    """Resolve an element from a recorded locator dict with fallback strategies."""
+    from appium.webdriver.common.appiumby import AppiumBy
+
+    tries: list[tuple[str, str]] = []
+
+    if locator.get("accessibility_id"):
+        tries.append((AppiumBy.ACCESSIBILITY_ID, locator["accessibility_id"]))
+    if platform == "android" and locator.get("resource_id"):
+        tries.append((AppiumBy.ID, locator["resource_id"]))
+    if platform == "android" and locator.get("text"):
+        text = locator["text"].replace('"', '\\"')
+        tries.append((AppiumBy.ANDROID_UIAUTOMATOR, f'new UiSelector().text("{text}")'))
+    if platform == "ios" and locator.get("label"):
+        label = locator["label"].replace('"', '\\"')
+        tries.append((AppiumBy.IOS_PREDICATE, f'label == "{label}"'))
+    if locator.get("xpath"):
+        tries.append((AppiumBy.XPATH, locator["xpath"]))
+    if locator.get("class_name"):
+        tries.append((AppiumBy.CLASS_NAME, locator["class_name"]))
+
+    last_error = None
+    for by, value in tries:
+        try:
+            return driver.find_element(by, value)
+        except Exception as e:
+            last_error = e
+
+    raise RuntimeError(f"Could not resolve element with known locator strategies. Last error: {last_error}")
+
+
+def _get_element_by_index(elements: list[dict], idx_text: str) -> dict | None:
+    """Return element dict by 1-based index string."""
+    if not idx_text.isdigit():
+        return None
+    idx = int(idx_text)
+    return next((e for e in elements if e["index"] == idx), None)
 
 
 def _record_session(driver, platform: str, screen_name: str) -> dict:
@@ -283,15 +483,20 @@ def _record_session(driver, platform: str, screen_name: str) -> dict:
             _print_elements(elements)
 
         print("Commands:")
-        print("  <number>       — record element by number")
-        print("  screenshot     — take a screenshot of current screen")
-        print("  source         — dump raw page source to /tmp/page_source.xml")
-        print("  refresh        — reload page source (after navigating to new screen)")
-        print("  done / exit    — finish recording this screen")
+        print("  <number>               — record element by number")
+        print("  tap <number>           — tap element by number (user-like navigation)")
+        print("  type <number> <text>   — type into element by number")
+        print("  back                   — press Android back")
+        print("  wait <seconds>         — pause briefly")
+        print("  screenshot             — take a screenshot of current screen")
+        print("  source                 — dump raw page source to /tmp/page_source.xml")
+        print("  refresh                — reload page source (after navigating to new screen)")
+        print("  done / exit            — finish recording this screen")
         print()
 
         try:
-            cmd = input("▶  Enter command: ").strip().lower()
+            cmd_raw = input("▶  Enter command: ").strip()
+            cmd = cmd_raw.lower()
         except (KeyboardInterrupt, EOFError):
             print("\n👋 Recording cancelled.")
             break
@@ -302,6 +507,63 @@ def _record_session(driver, platform: str, screen_name: str) -> dict:
 
         elif cmd == "refresh":
             print("🔄 Refreshing page source...")
+            continue
+
+        elif cmd.startswith("tap "):
+            parts = cmd_raw.split(maxsplit=1)
+            target = parts[1].strip() if len(parts) > 1 else ""
+            match = _get_element_by_index(elements, target)
+            if not match:
+                print("⚠️  Usage: tap <number>   (example: tap 13)")
+                continue
+            try:
+                live_el = _find_live_element(driver, match["locator"], platform)
+                live_el.click()
+                print(f"👆 Tapped #{match['index']} ({match['hint']})")
+            except Exception as e:
+                print(f"⚠️  Tap failed for #{match['index']}: {e}")
+            continue
+
+        elif cmd.startswith("type "):
+            parts = cmd_raw.split(maxsplit=2)
+            if len(parts) < 3:
+                print("⚠️  Usage: type <number> <text>   (example: type 5 hello)")
+                continue
+            match = _get_element_by_index(elements, parts[1].strip())
+            if not match:
+                print("⚠️  Invalid element number for type command.")
+                continue
+            text_value = parts[2]
+            try:
+                live_el = _find_live_element(driver, match["locator"], platform)
+                live_el.click()
+                try:
+                    live_el.clear()
+                except Exception:
+                    pass
+                live_el.send_keys(text_value)
+                print(f"⌨️  Typed into #{match['index']}: {text_value}")
+            except Exception as e:
+                print(f"⚠️  Type failed for #{match['index']}: {e}")
+            continue
+
+        elif cmd == "back":
+            try:
+                driver.back()
+                print("↩️  Back pressed")
+            except Exception as e:
+                print(f"⚠️  Back failed: {e}")
+            continue
+
+        elif cmd.startswith("wait "):
+            parts = cmd.split(maxsplit=1)
+            try:
+                sec = float(parts[1]) if len(parts) > 1 else 1.0
+                sec = max(0.1, sec)
+            except Exception:
+                sec = 1.0
+            print(f"⏱️  Waiting {sec:.1f}s ...")
+            time.sleep(sec)
             continue
 
         elif cmd == "screenshot":
@@ -372,6 +634,32 @@ def main():
         default=None,
         help="Path to a JSON file with Appium capabilities (overrides .env).",
     )
+    parser.add_argument(
+        "--app-file", "-a",
+        default=None,
+        help="Path to app binary to install+launch for recording (.apk for Android, .ipa for iOS).",
+    )
+    parser.add_argument(
+        "--app-id",
+        default=None,
+        help="Android appPackage or iOS bundleId to activate/open after session starts.",
+    )
+    parser.add_argument(
+        "--app-activity",
+        default=None,
+        help="Android appActivity (optional, used with --app-id).",
+    )
+    parser.add_argument(
+        "--udid",
+        default=None,
+        help="Device UDID override (adb devices / xcrun simctl list).",
+    )
+    parser.add_argument(
+        "--wait-device-seconds",
+        type=int,
+        default=25,
+        help="Wait time for adb device to appear before failing (Android only).",
+    )
     args = parser.parse_args()
 
     # Load capabilities from JSON file if provided
@@ -383,13 +671,28 @@ def main():
         with open(args.caps, "r") as f:
             caps_override = json.load(f)
 
+    # Build effective capabilities with runtime overrides (APK/IPA, app id, udid)
+    if caps_override is None:
+        sys.path.insert(0, BASE_DIR)
+        from config import settings
+        caps_override = (
+            dict(settings.ANDROID_CAPABILITIES or {})
+            if args.platform == "android"
+            else dict(settings.IOS_CAPABILITIES or {})
+        )
+    caps_override = _apply_runtime_cap_overrides(args.platform, caps_override, args)
+
+    if args.platform == "android":
+        _ensure_android_device_available(caps_override, wait_seconds=args.wait_device_seconds)
+
     print("\n" + "═" * 70)
     print("  🕵️  Appium Element Spy")
     print(f"  Platform : {args.platform.upper()}")
     print("═" * 70)
 
     # Start Appium session
-    driver = _start_appium_session(args.platform, caps_override)
+    driver, effective_caps = _start_appium_session(args.platform, caps_override)
+    _maybe_activate_target_app(driver, args.platform, effective_caps)
 
     try:
         # Ask for screen name if not provided

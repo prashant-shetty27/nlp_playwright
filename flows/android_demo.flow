@@ -1,49 +1,33 @@
 # flows/android_demo.flow
-# JustDial Android App — Search Demo
-# Element names must be recorded first with: python spy/appium_spy.py --platform android
+# JustDial Android App — Login Screen Smoke (uses recorded Appium locators)
 #
-# Replace element names below with what YOU recorded.
-# ──────────────────────────────────────────────────────────────────────────────
+# Recorded names used:
+#   close_popup_button
+#   skip_button
+#   mobile_number_input
+#   login_with_otp_button
 
-# Wait for app to load
 wait 3 seconds
+take screenshot as android_launch
 
-# Take screenshot of home screen
-take screenshot as android_home
-
-# Tap the search box and type
-tap on search_box
-type "${search_term}" into search_box
-
-# Wait for suggestions to appear
-wait 2 seconds
-
-# Tap the first suggestion
-tap on first_suggestion
-
-# Wait for results
-wait 3 seconds
-
-# Scroll down to see more results
-scroll down
-wait 1 seconds
-scroll down
+# Dismiss Google phone number chooser popup (if visible in this build)
+click if exists close_popup_button
 wait 1 seconds
 
-# Verify key texts appear on the results screen
-verify text "${verify_keyword}"
-verify text "${search_term}"
-verify texts "${search_term}", "${verify_keyword}"
+# Handle optional Android permission dialogs (may appear before/after skip)
+click if exists permission_while_using_button
+wait 1 seconds
+click if exists permission_allow_button
+wait 1 seconds
 
-# Store current result count label text
-store text of result_count_label as result_count
+# Continue on app login screen if skip is shown
+click if exists skip_button
+wait 1 seconds
 
-# Take screenshot of results
-take screenshot as android_results
+type if exists "9987996046" into mobile_number_input
+wait 1 seconds
 
-# Scroll to find footer text
-scroll until text "JustDial" visible, scroll count 5, scroll wait 1
-
-# Press back to go home
-press back
+click if exists login_with_otp_button
 wait 2 seconds
+
+take screenshot as android_after_login_tap

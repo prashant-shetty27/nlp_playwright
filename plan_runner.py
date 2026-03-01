@@ -28,6 +28,7 @@ import logging
 import os
 import sys
 import time
+from typing import Optional
 
 # ── Ensure project root is on the path when run directly ──────────────────────
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -42,6 +43,7 @@ from reporting.report_manager import TestReportManager
 from runner import run_nlp_flow_collect as _run_web_flow
 from runner_appium import run_appium_flow_collect as _run_appium_flow
 from config import settings as _cfg
+from config import execution_preferences as _prefs
 
 _APPIUM_PLATFORMS = {"android", "ios", "hybrid"}
 
@@ -247,7 +249,67 @@ def _run_suite(
 # MAIN ENTRY POINT
 # ─────────────────────────────────────────────────────────────────────────────
 
-def run_plan(plan_path: str, suite_overrides: list[str] = None, dry_run: bool = False) -> int:
+def _resolve_and_apply_runtime_preferences(
+    profile_name: Optional[str],
+    ask_config: bool,
+    save_profile_name: Optional[str],
+) -> dict:
+    """Resolve runtime execution preferences and apply to global settings."""
+    selected = _prefs.current_preferences()
+    has_saved_profile = False
+
+    if profile_name:
+        prof = _prefs.get_profile(profile_name)
+        if prof is None:
+            raise ValueError(f"Profile not found: {profile_name}")
+        selected.update(prof)
+        logger.info("🧩 Using profile: %s", profile_name)
+    else:
+        last_name = _prefs.get_last_used_profile_name()
+        if last_name:
+            prof = _prefs.get_profile(last_name)
+            if prof is not None:
+                selected.update(prof)
+                has_saved_profile = True
+                logger.info("🧩 Using last saved profile: %s", last_name)
+
+    should_prompt = ask_config or (not profile_name and not has_saved_profile)
+    if should_prompt and sys.stdin.isatty():
+        selected = _prefs.prompt_preferences(selected)
+
+    applied = _prefs.apply_preferences(selected)
+
+    if save_profile_name:
+        _prefs.save_profile(save_profile_name, applied, set_as_last_used=True)
+        logger.info("💾 Saved profile: %s", save_profile_name)
+    elif should_prompt and sys.stdin.isatty():
+        suggested = input("Save these settings as profile (blank to skip): ").strip()
+        if suggested:
+            _prefs.save_profile(suggested, applied, set_as_last_used=True)
+            logger.info("💾 Saved profile: %s", suggested)
+
+    logger.info(
+        "⚙️  Active runtime config | target=%s | rerun_on_failure=%s | report=%s | screenshots=%s | video=%s | slack=%s | email=%s | headless=%s",
+        _cfg.EXECUTION_TARGET,
+        _cfg.RERUN_ON_FAILURE,
+        _cfg.ENABLE_REPORTING,
+        _cfg.ENABLE_SCREENSHOTS,
+        _cfg.ENABLE_VIDEO_RECORDING,
+        _cfg.NOTIFY_ON_SLACK,
+        _cfg.NOTIFY_ON_EMAIL,
+        _cfg.HEADLESS,
+    )
+    return applied
+
+
+def run_plan(
+    plan_path: str,
+    suite_overrides: list[str] = None,
+    dry_run: bool = False,
+    profile_name: Optional[str] = None,
+    ask_config: bool = False,
+    save_profile_name: Optional[str] = None,
+) -> int:
     """
     Execute a test plan.
 
@@ -265,7 +327,19 @@ def run_plan(plan_path: str, suite_overrides: list[str] = None, dry_run: bool = 
         logger.error("❌ %s", e)
         return 1
 
+    try:
+        _resolve_and_apply_runtime_preferences(
+            profile_name=profile_name,
+            ask_config=ask_config,
+            save_profile_name=save_profile_name,
+        )
+    except ValueError as e:
+        logger.error("❌ %s", e)
+        return 1
+
     exec_cfg = plan["execution"]
+    # Global override from runtime profile/controllers for rerun behavior.
+    exec_cfg["rerun_on_failure"] = bool(_cfg.RERUN_ON_FAILURE)
 
     # Resolve which suite files to run
     candidates = suite_overrides or plan["selected_suites"] or plan["suites"]
@@ -274,7 +348,7 @@ def run_plan(plan_path: str, suite_overrides: list[str] = None, dry_run: bool = 
         return 1
 
     logger.info("📋  Plan      : %s", plan["plan_name"])
-    logger.info("🌍  Env       : %s", plan["environment"])
+    logger.info("🌍  Env       : %s", _cfg.EXECUTION_TARGET)
     logger.info("⚡  Parallel  : %s", exec_cfg["parallel"])
     logger.info("🔁  Retry     : %s (max %sx)", exec_cfg["retry_on_failure"], exec_cfg["max_retries"])
     logger.info("♻️   Rerun     : %s", exec_cfg["rerun_on_failure"])
@@ -283,7 +357,7 @@ def run_plan(plan_path: str, suite_overrides: list[str] = None, dry_run: bool = 
 
     plan_result = PlanResult(
         plan_name        = plan["plan_name"],
-        environment      = plan["environment"],
+        environment      = _cfg.EXECUTION_TARGET,
         platform         = plan.get("platform", _cfg.PLATFORM),
         parallel         = exec_cfg["parallel"],
         retry_on_failure = exec_cfg["retry_on_failure"],
@@ -333,22 +407,25 @@ def run_plan(plan_path: str, suite_overrides: list[str] = None, dry_run: bool = 
     logger.info("=" * 70)
 
     # ── Write report files ────────────────────────────────────────────────────
-    report_mgr = TestReportManager(
-        testplan_name=plan["plan_name"],
-        executer_name=plan.get("owner", "plan_runner"),
-    )
-    for suite in plan_result.suites:
-        for sc in suite.scripts:
-            report_mgr.add_result(
-                test_name=f"[{suite.suite_name}] {sc.script.split('/')[-1]}",
-                status=sc.status,
-                reason=sc.failure_reason or None,
-            )
-    json_path, txt_path = report_mgr.generate_report()
-    plan_result.report_json_path = json_path
-    plan_result.report_txt_path  = txt_path
-    logger.info("📁  Report saved: %s", json_path)
-    logger.info("📁  Report saved: %s", txt_path)
+    if _cfg.ENABLE_REPORTING:
+        report_mgr = TestReportManager(
+            testplan_name=plan["plan_name"],
+            executer_name=plan.get("owner", "plan_runner"),
+        )
+        for suite in plan_result.suites:
+            for sc in suite.scripts:
+                report_mgr.add_result(
+                    test_name=f"[{suite.suite_name}] {sc.script.split('/')[-1]}",
+                    status=sc.status,
+                    reason=sc.failure_reason or None,
+                )
+        json_path, txt_path = report_mgr.generate_report()
+        plan_result.report_json_path = json_path
+        plan_result.report_txt_path  = txt_path
+        logger.info("📁  Report saved: %s", json_path)
+        logger.info("📁  Report saved: %s", txt_path)
+    else:
+        logger.info("📵 Report generation disabled (ENABLE_REPORTING=false).")
 
     # ── Notifications ─────────────────────────────────────────────────────────
     notify_cfg   = plan.get("notifications", {})
@@ -388,7 +465,7 @@ Examples:
   python plan_runner.py plans/example_plan.json --suites suites/search_suite.json suites/navigation_suite.json
         """,
     )
-    parser.add_argument("plan", help="Path to plan JSON file  (e.g. plans/example_plan.json)")
+    parser.add_argument("plan", nargs="?", help="Path to plan JSON file  (e.g. plans/example_plan.json)")
     parser.add_argument(
         "--suites", nargs="+", metavar="SUITE",
         help="Override suite selection — one or more suite JSON paths",
@@ -397,7 +474,42 @@ Examples:
         "--dry-run", action="store_true",
         help="Print what would run + Slack Block Kit preview without executing anything",
     )
+    parser.add_argument("--profile", help="Use saved execution profile name")
+    parser.add_argument("--save-profile", help="Save current runtime config as profile name")
+    parser.add_argument("--ask-config", action="store_true", help="Interactively ask runtime execution options")
+    parser.add_argument("--list-profiles", action="store_true", help="List saved execution profiles")
+    parser.add_argument("--delete-profile", help="Delete a saved execution profile by name")
 
     args = parser.parse_args()
-    exit_code = run_plan(args.plan, suite_overrides=args.suites, dry_run=args.dry_run)
+
+    if args.list_profiles:
+        names = _prefs.list_profiles()
+        if not names:
+            print("No saved profiles.")
+        else:
+            print("Saved profiles:")
+            for n in names:
+                print(f"- {n}")
+        sys.exit(0)
+
+    if args.delete_profile:
+        deleted = _prefs.delete_profile(args.delete_profile)
+        if deleted:
+            print(f"Deleted profile: {args.delete_profile}")
+            sys.exit(0)
+        print(f"Profile not found: {args.delete_profile}")
+        sys.exit(1)
+
+    if not args.plan:
+        print("Usage: python plan_runner.py <plan.json> [options]")
+        sys.exit(1)
+
+    exit_code = run_plan(
+        args.plan,
+        suite_overrides=args.suites,
+        dry_run=args.dry_run,
+        profile_name=args.profile,
+        ask_config=args.ask_config,
+        save_profile_name=args.save_profile,
+    )
     sys.exit(exit_code)

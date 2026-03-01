@@ -7,7 +7,7 @@
 #   ./appium_start.sh --ios        # xcuitest only
 #   ./appium_start.sh --port 4724  # custom port
 
-set -euo pipefail
+set -uo pipefail
 
 PORT=4723
 PLATFORM="all"
@@ -56,6 +56,34 @@ if [[ "$PLATFORM" == "all" || "$PLATFORM" == "ios" ]]; then
   install_if_missing xcuitest
 fi
 
+# ── Set ANDROID_HOME if not already set ──────────────────
+if [[ -z "${ANDROID_HOME:-}" ]]; then
+  # Detect brew-installed platform-tools (macOS)
+  BREW_PT=$(ls /usr/local/Caskroom/android-platform-tools/ 2>/dev/null | sort -V | tail -1)
+  if [[ -n "$BREW_PT" ]]; then
+    export ANDROID_HOME="/usr/local/Caskroom/android-platform-tools/${BREW_PT}"
+    export ANDROID_SDK_ROOT="$ANDROID_HOME"
+    echo "✅  ANDROID_HOME auto-set: $ANDROID_HOME"
+  else
+    echo "⚠️   ANDROID_HOME not set. Export it before running this script."
+  fi
+else
+  echo "✅  ANDROID_HOME: $ANDROID_HOME"
+fi
+
+# ── Set JAVA_HOME if not already set ─────────────────────
+if [[ -z "${JAVA_HOME:-}" ]]; then
+  DETECTED_JAVA=$(/usr/libexec/java_home 2>/dev/null || true)
+  if [[ -n "$DETECTED_JAVA" ]]; then
+    export JAVA_HOME="$DETECTED_JAVA"
+    echo "✅  JAVA_HOME auto-set: $JAVA_HOME"
+  else
+    echo "⚠️   JAVA_HOME not set and java_home not found."
+  fi
+else
+  echo "✅  JAVA_HOME: $JAVA_HOME"
+fi
+
 # ── Android env check ─────────────────────────────────────
 if [[ "$PLATFORM" == "all" || "$PLATFORM" == "android" ]]; then
   if command -v adb &>/dev/null; then
@@ -79,8 +107,17 @@ if [[ "$PLATFORM" == "all" || "$PLATFORM" == "ios" ]]; then
 fi
 
 echo ""
-echo "🚀  Starting Appium on port $PORT ..."
-echo "    Stop with Ctrl+C"
+echo "🚀  Starting Appium on port $PORT (background, log: data/logs/appium.log)"
+echo "    Stop with: kill \$(cat /tmp/appium.pid)"
 echo "═══════════════════════════════════════════════════════"
 
-appium --port "$PORT" --log-level info
+mkdir -p "$(dirname "$0")/data/logs"
+nohup appium --port "$PORT" --log-level info \
+  > "$(dirname "$0")/data/logs/appium.log" 2>&1 &
+echo $! > /tmp/appium.pid
+echo "✅  Appium started — PID: $(cat /tmp/appium.pid)"
+echo "    Waiting for server to be ready..."
+sleep 5
+curl -s "http://localhost:${PORT}/status" | grep -o '"ready":[a-z]*' \
+  && echo "✅  Appium is ready!" \
+  || echo "⚠️  Appium may still be starting — check data/logs/appium.log"

@@ -17,7 +17,7 @@
     "viewport_height": 1080,
     "locale": "en-IN",
     "timezone_id": "Asia/Kolkata",
-    "record_video": false,
+    "record_video": true,
     "slow_mo_ms": 0
   },
 

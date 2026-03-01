@@ -14,14 +14,25 @@
     "platformName":        "Android",
     "appium:automationName": "UiAutomator2",
 
-    "_comment_device": "Change deviceName to your device UDID or emulator name (adb devices)",
-    "appium:deviceName":   "emulator-5554",
-    "appium:platformVersion": "13.0",
+    "_comment_device": "Vivo V2130 — Android 14 — USB connected",
+    "appium:deviceName":   "13913975860014O",
+    "appium:platformVersion": "14",
 
-    "_comment_app": "Choose ONE: app path (local APK) OR appPackage+appActivity (already installed app)",
-    "appium:app":          "",
+    "_comment_app": "Default reinstall APK (keep this path unless a new APK is shared)",
+    "appium:app":          "/Users/prashantshetty/Desktop/Desktop/Android_Live_Pointing_Build.apk",
     "appium:appPackage":   "com.justdial.search",
-    "appium:appActivity":  "com.justdial.search.splashui.SplashActivity",
+    "appium:appActivity":  "com.justdial.search.SplashScreenNewActivity",
+
+    "_comment_install_mode": "Modes: app_install=true (fresh reinstall), app_update=true (in-place update keep user data), else existing app mode",
+    "app_install": false,
+    "app_update": false,
+    "new_apk_shared": false,
+    "existing_app_present": true,
+
+    "_comment_data_controls": "Granular controls used before launch",
+    "clear_cache": false,
+    "clear_storage": false,
+    "reset_device_permission": false,
 
     "appium:newCommandTimeout": 120,
     "appium:autoGrantPermissions": true,

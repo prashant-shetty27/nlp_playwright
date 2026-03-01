@@ -100,11 +100,36 @@ def parse_step(step: str) -> Command:
         return Command(type="refresh")
 
     # =============================
+    # OPTIONAL CLICK/TAP COMMAND
+    # click if exists <target>
+    # tap if exists <target>
+    # =============================
+    m = re.match(r'^(?:click|tap)\s+if\s+exists\s+(?:on\s+)?(.*)$', s, re.I)
+    if m:
+        target = (m.group(1) or "").strip()
+        return Command(type="click_if_exists", target=target)
+
+    # =============================
+    # OPTIONAL TYPE/FILL COMMAND
+    # type if exists "text" into <target>
+    # fill if exists "text" in <target>
+    # =============================
+    m = re.match(r'^(?:type|fill)\s+if\s+exists\s+"(.*?)"\s+(?:into|in)\s+(.*)$', s, re.I)
+    if m:
+        text_to_type, target = m.groups()
+        return Command(type="fill_if_exists", text=text_to_type, target=target.strip())
+
+    # =============================
     # CLICK COMMAND
     # =============================
     if s.lower().startswith("click "):
         target = re.sub(r"^click\s+(on\s+)?(element\s+)?", "", s, flags=re.IGNORECASE).strip()
         return Command(type="click", target=target)
+
+    # TAP COMMAND (alias of click)
+    if s.lower().startswith("tap "):
+        target = re.sub(r"^tap\s+(on\s+)?(element\s+)?", "", s, flags=re.IGNORECASE).strip()
+        return Command(type="tap", target=target)
 
     # =============================
     # FILL / TYPE COMMAND

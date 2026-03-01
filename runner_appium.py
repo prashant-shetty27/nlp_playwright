@@ -15,6 +15,7 @@ import sys
 import json
 import logging
 import time
+import subprocess
 
 from nlp.parser import parse_step
 from nlp.variable_manager import RUNTIME_VARIABLES, resolve_variables
@@ -23,6 +24,153 @@ from config import settings
 logger = logging.getLogger(__name__)
 
 _STOP_ON_FAILURE: bool = False
+
+
+def _as_bool(value, default: bool = False) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    return str(value).strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def _adb_cmd(device_id: str | None, args: list[str]) -> list[str]:
+    cmd = ["adb"]
+    if device_id:
+        cmd += ["-s", device_id]
+    cmd += args
+    return cmd
+
+
+def _run_adb(device_id: str | None, args: list[str], check: bool = False) -> subprocess.CompletedProcess:
+    return subprocess.run(
+        _adb_cmd(device_id, args),
+        check=check,
+        capture_output=True,
+        text=True,
+    )
+
+
+def _prepare_android_app(caps: dict) -> dict:
+    """Apply Android pre-session app lifecycle policy.
+
+    Supported control flags (suite/env capabilities):
+      - app_install (bool): fresh install path (uninstall old, install from APK)
+      - app_update / new_apk_shared (bool): upgrade existing install with APK while preserving data
+      - clear_cache (bool): clear app cache only (best effort)
+      - clear_storage (bool): clear app data+cache via pm clear
+      - reset_device_permission (bool): reset app ops/permissions (best effort)
+      - existing_app_present (bool): hints whether app is expected to already exist
+    """
+    prepared = dict(caps or {})
+
+    # Control flags (support plain and appium-prefixed keys)
+    app_install = _as_bool(
+        prepared.pop("app_install", prepared.pop("appium:appInstall", settings.ANDROID_APP_INSTALL_DEFAULT)),
+        default=settings.ANDROID_APP_INSTALL_DEFAULT,
+    )
+    app_update = _as_bool(
+        prepared.pop("app_update", prepared.pop("appium:appUpdate",
+                     prepared.pop("new_apk_shared", prepared.pop("appium:newApkShared", settings.ANDROID_NEW_APK_SHARED_DEFAULT)))),
+        default=settings.ANDROID_APP_UPDATE_DEFAULT,
+    )
+    clear_cache = _as_bool(
+        prepared.pop("clear_cache", prepared.pop("appium:clearCache", settings.ANDROID_CLEAR_CACHE_DEFAULT)),
+        default=settings.ANDROID_CLEAR_CACHE_DEFAULT,
+    )
+    clear_storage = _as_bool(
+        prepared.pop("clear_storage", prepared.pop("appium:clearStorage", settings.ANDROID_CLEAR_STORAGE_DEFAULT)),
+        default=settings.ANDROID_CLEAR_STORAGE_DEFAULT,
+    )
+    reset_device_permission = _as_bool(
+        prepared.pop("reset_device_permission", prepared.pop("appium:resetDevicePermission", settings.ANDROID_RESET_DEVICE_PERMISSION_DEFAULT)),
+        default=settings.ANDROID_RESET_DEVICE_PERMISSION_DEFAULT,
+    )
+    existing_app_present = _as_bool(
+        prepared.pop("existing_app_present", prepared.pop("appium:existingAppPresent", settings.ANDROID_EXISTING_APP_PRESENT_DEFAULT)),
+        default=settings.ANDROID_EXISTING_APP_PRESENT_DEFAULT,
+    )
+
+    device_id = (
+        prepared.get("appium:udid")
+        or prepared.get("udid")
+        or prepared.get("appium:deviceName")
+        or prepared.get("deviceName")
+    )
+    app_package = prepared.get("appium:appPackage") or prepared.get("appPackage")
+    app_path = prepared.get("appium:app") or prepared.get("app")
+
+    if app_package:
+        # Always force-stop before run (required by user).
+        _run_adb(device_id, ["shell", "am", "force-stop", app_package], check=False)
+        logger.info("🛑 Force-stopped app before run: %s", app_package)
+
+        if reset_device_permission:
+            # Best effort: reset app ops to default, then global permission reset command.
+            _run_adb(device_id, ["shell", "cmd", "appops", "reset", app_package], check=False)
+            _run_adb(device_id, ["shell", "pm", "reset-permissions"], check=False)
+            logger.info("🔐 Reset app/device permission state (best effort): %s", app_package)
+
+        if clear_cache:
+            # Best effort: Android command support varies by device/OS.
+            cache_res = _run_adb(device_id, ["shell", "pm", "clear", "--cache-only", app_package], check=False)
+            out = ((cache_res.stdout or "") + (cache_res.stderr or "")).strip().lower()
+            if cache_res.returncode == 0 and ("success" in out or not out):
+                logger.info("🧹 Cleared app cache: %s", app_package)
+            else:
+                logger.warning("⚠️  clear_cache requested but cache-only clear may be unsupported on this device")
+
+        if clear_storage:
+            _run_adb(device_id, ["shell", "pm", "clear", app_package], check=False)
+            logger.info("🧽 Cleared app storage/data: %s", app_package)
+
+    if app_install:
+        logger.info("♻️  app_install=true → fresh install mode enabled")
+
+        if app_package:
+            uninstall = _run_adb(device_id, ["uninstall", app_package], check=False)
+            uninstall_out = (uninstall.stdout or uninstall.stderr or "").strip()
+            if uninstall_out:
+                logger.info("🗑️  Uninstall result: %s", uninstall_out)
+
+        if not app_path:
+            logger.warning(
+                "⚠️  app_install=true but no app binary path set ('appium:app'). "
+                "Fresh install requires appium:app=/absolute/path/to/app.apk"
+            )
+
+        # Fresh install semantics.
+        prepared["appium:noReset"] = False
+        prepared["appium:fullReset"] = False
+
+    elif app_update:
+        logger.info("⬆️  app_update=true → in-place upgrade mode enabled")
+        if not existing_app_present:
+            logger.warning("⚠️  existing_app_present=false with app_update=true — update expects an installed base app")
+
+        if app_path:
+            update_res = _run_adb(device_id, ["install", "-r", app_path], check=False)
+            update_out = ((update_res.stdout or "") + (update_res.stderr or "")).strip()
+            if update_out:
+                logger.info("📦 Update install result: %s", update_out)
+
+            # Keep user state like Play Store update. Avoid duplicate reinstall in Appium session.
+            prepared["appium:noReset"] = True
+            prepared.pop("appium:app", None)
+            prepared.pop("app", None)
+        else:
+            logger.warning("⚠️  app_update=true but no APK path set in 'appium:app'")
+
+    else:
+        # Existing install mode: keep user state and avoid unnecessary reinstall if app path exists.
+        if existing_app_present:
+            prepared.setdefault("appium:noReset", True)
+            prepared.pop("appium:app", None)
+            prepared.pop("app", None)
+
+    return prepared
 
 # ─────────────────────────────────────────────────────────────────────────────
 # LOGGING
@@ -45,7 +193,6 @@ def _start_session(capabilities: dict, platform: str):
     """Start an Appium WebDriver session. Returns the driver."""
     try:
         from appium import webdriver as appium_webdriver
-        from appium.options.common.base import AppiumOptions
     except ImportError:
         raise ImportError(
             "Appium Python client not installed. Run: pip install Appium-Python-Client"
@@ -61,12 +208,64 @@ def _start_session(capabilities: dict, platform: str):
             f"  Set ANDROID_CAPABILITIES or IOS_CAPABILITIES in .env"
         )
 
+    # Copy to avoid mutating shared config objects.
+    caps = dict(caps)
+
+    # ── Auto-set ANDROID_HOME if missing (prefer full SDK with build-tools) ─
+    if platform == "android" and not os.environ.get("ANDROID_HOME"):
+        import glob
+        preferred_roots = [
+            "/usr/local/share/android-commandlinetools",  # brew android-commandlinetools cask
+            os.path.expanduser("~/Library/Android/sdk"),   # Android Studio default
+        ]
+        sdk_root = ""
+        for root in preferred_roots:
+            if os.path.exists(os.path.join(root, "build-tools")):
+                sdk_root = root
+                break
+
+        if not sdk_root:
+            candidates = glob.glob("/usr/local/Caskroom/android-platform-tools/*/platform-tools/adb")
+            if candidates:
+                sdk_root = os.path.dirname(os.path.dirname(sorted(candidates)[-1]))
+
+        if sdk_root:
+            os.environ["ANDROID_HOME"] = sdk_root
+            os.environ["ANDROID_SDK_ROOT"] = sdk_root
+            logger.info("✅ ANDROID_HOME auto-set: %s", sdk_root)
+
+    # Android app lifecycle policy (app_install + force-stop).
+    if platform == "android":
+        caps = _prepare_android_app(caps)
+
     server_url = settings.APPIUM_SERVER_URL
     logger.info("🔗 Connecting to Appium at %s [platform=%s]", server_url, platform.upper())
 
-    options = AppiumOptions().load_capabilities(caps)
-    driver  = appium_webdriver.Remote(server_url, options=options)
+    # ── Build options using platform-specific Options class (Appium 5.x) ───
+    if platform == "android":
+        from appium.options.android.uiautomator2.base import UiAutomator2Options
+        options = UiAutomator2Options()
+    else:
+        from appium.options.ios.xcuitest.base import XCUITestOptions
+        options = XCUITestOptions()
+
+    for key, val in caps.items():
+        clean = key.replace("appium:", "")
+        try:
+            setattr(options, clean, val)
+        except Exception:
+            options.set_capability(key, val)
+
+    driver = appium_webdriver.Remote(server_url, options=options)
     logger.info("🚀 Appium session started — id: %s", driver.session_id)
+
+    # Ensure target app is foregrounded immediately.
+    try:
+        import execution.appium_action_service as svc
+        svc.launch_app(driver, fallback_caps=caps)
+    except Exception as e:
+        logger.warning("⚠️  Auto launch_app after session start failed: %s", e)
+
     return driver
 
 
@@ -99,8 +298,12 @@ def _execute_step(cmd, driver, platform: str):
         # ── Interaction ───────────────────────────────────────────────────
         "click":                     lambda: svc.tap_element(driver, target, platform),
         "tap":                       lambda: svc.tap_element(driver, target, platform),
+        "click_if_exists":           lambda: _tap_if_exists(svc, driver, target, platform),
+        "tap_if_exists":             lambda: _tap_if_exists(svc, driver, target, platform),
         "fill":                      lambda: svc.fill_element(driver, target, text, platform),
         "type":                      lambda: svc.fill_element(driver, target, text, platform),
+        "fill_if_exists":            lambda: _fill_if_exists(svc, driver, target, text, platform),
+        "type_if_exists":            lambda: _fill_if_exists(svc, driver, target, text, platform),
         "clear":                     lambda: svc.clear_element(driver, target, platform),
         "press_back":                lambda: svc.press_back(driver),
         "press_home":                lambda: svc.press_home(driver),
@@ -143,6 +346,22 @@ def _execute_step(cmd, driver, platform: str):
         logger.warning("⚠️  Unsupported command for Appium: '%s' — skipping", cmd.type)
         return
     handler()
+
+
+def _tap_if_exists(svc, driver, target: str, platform: str):
+    """Tap element if present; continue if not found."""
+    try:
+        svc.tap_element(driver, target, platform)
+    except Exception:
+        logger.info("ℹ️  Optional element not found, skipping tap: '%s'", target)
+
+
+def _fill_if_exists(svc, driver, target: str, text: str, platform: str):
+    """Fill element if present; continue if not found."""
+    try:
+        svc.fill_element(driver, target, text, platform)
+    except Exception:
+        logger.info("ℹ️  Optional element not found, skipping fill: '%s'", target)
 
 
 def _store_value(value: str, variable: str):

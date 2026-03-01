@@ -1,0 +1,43 @@
+{
+  "runtime": {
+    "platform": "web",
+    "execution_target": "local",
+    "execution_target_options": [
+      "local",
+      "cloud"
+    ]
+  },
+  "browser": {
+    "headless": false,
+    "action_timeout_ms": 15000,
+    "navigation_timeout_ms": 30000,
+    "default_scroll_count": 20,
+    "wait_timeout_ms": 3000
+  },
+  "capture": {
+    "screenshots_enabled": false,
+    "video_enabled": false
+  },
+  "reporting": {
+    "enabled": false
+  },
+  "execution_defaults": {
+    "rerun_on_failure": false
+  },
+  "notifications": {
+    "slack_enabled": false,
+    "email_enabled": false
+  },
+  "mobile": {
+    "appium_server_url": "http://localhost:4723"
+  },
+  "android_lifecycle_defaults": {
+    "app_install": false,
+    "app_update": false,
+    "new_apk_shared": false,
+    "existing_app_present": true,
+    "clear_cache": false,
+    "clear_storage": false,
+    "reset_device_permission": false
+  }
+}

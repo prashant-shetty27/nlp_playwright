@@ -659,6 +659,9 @@ def scroll_until_text_visible(page, text, max_scrolls=None, scroll_wait=2):
 
 def take_screenshot(page_obj, label="capture"):
     import os
+    if not settings.ENABLE_SCREENSHOTS:
+        logger.info("📵 Screenshots are disabled (ENABLE_SCREENSHOTS=false). Skipping capture '%s'.", label)
+        return
     _ensure_dir(settings.SCREENSHOTS_DIR)
     filename = os.path.join(settings.SCREENSHOTS_DIR, f"{label}_{_timestamp()}.png")
     page_obj.screenshot(path=filename, full_page=True)

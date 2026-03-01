@@ -1,3 +1,4 @@
+
 """
 runner.py  —  Unified CLI entry point
 Usage:
@@ -10,6 +11,7 @@ import os
 import sys
 import json
 import logging
+import argparse
 
 # Trigger @codeless_snippet registration (must import before ACTION_REGISTRY is used)
 import execution.action_service  # noqa: F401
@@ -21,12 +23,61 @@ from execution.browser_manager import open_browser, close_browser
 from execution.session import TestSession
 from nlp.variable_manager import RUNTIME_VARIABLES, VariableManager, resolve_variables
 from registry import ACTION_REGISTRY
+from config import settings
+from config import execution_preferences as _prefs
 
 logger = logging.getLogger(__name__)
 
 # ── NLP-flow per-session stop flag ────────────────────────────────────────────
 # Variables now live in nlp.variable_manager.RUNTIME_VARIABLES (shared with action_service)
 _STOP_ON_FAILURE: bool = False
+
+
+def _apply_runtime_config(profile_name: str | None, ask_config: bool, save_profile_name: str | None) -> None:
+    selected = _prefs.current_preferences()
+    has_saved_profile = False
+
+    if profile_name:
+        prof = _prefs.get_profile(profile_name)
+        if prof is None:
+            raise ValueError(f"Profile not found: {profile_name}")
+        selected.update(prof)
+        logger.info("🧩 Using profile: %s", profile_name)
+    else:
+        last_name = _prefs.get_last_used_profile_name()
+        if last_name:
+            prof = _prefs.get_profile(last_name)
+            if prof is not None:
+                selected.update(prof)
+                has_saved_profile = True
+                logger.info("🧩 Using last saved profile: %s", last_name)
+
+    should_prompt = ask_config or (not profile_name and not has_saved_profile)
+    if should_prompt and sys.stdin.isatty():
+        selected = _prefs.prompt_preferences(selected)
+
+    applied = _prefs.apply_preferences(selected)
+
+    if save_profile_name:
+        _prefs.save_profile(save_profile_name, applied, set_as_last_used=True)
+        logger.info("💾 Saved profile: %s", save_profile_name)
+    elif should_prompt and sys.stdin.isatty():
+        suggested = input("Save these settings as profile (blank to skip): ").strip()
+        if suggested:
+            _prefs.save_profile(suggested, applied, set_as_last_used=True)
+            logger.info("💾 Saved profile: %s", suggested)
+
+    logger.info(
+        "⚙️  Active runtime config | target=%s | rerun_on_failure=%s | report=%s | screenshots=%s | video=%s | slack=%s | email=%s | headless=%s",
+        settings.EXECUTION_TARGET,
+        settings.RERUN_ON_FAILURE,
+        settings.ENABLE_REPORTING,
+        settings.ENABLE_SCREENSHOTS,
+        settings.ENABLE_VIDEO_RECORDING,
+        settings.NOTIFY_ON_SLACK,
+        settings.NOTIFY_ON_EMAIL,
+        settings.HEADLESS,
+    )
 
 
 def _setup_logging():
@@ -206,10 +257,15 @@ def run_nlp_flow(file_path: str):
         logger.warning("⚠️ Snippet sync failed: %s", e)
 
 
-def run_nlp_flow_collect(file_path: str) -> dict:
+def run_nlp_flow_collect(file_path: str, capabilities: dict | None = None) -> dict:
     """
     Like run_nlp_flow() but *returns* stats instead of printing to stdout.
     Used by plan_runner.py to programmatically collect pass/fail counts.
+
+    Args:
+        file_path:    path to .flow script
+        capabilities: optional desired_capabilities dict from suite JSON
+                      (supports: record_video, headless, slow_mo_ms, …)
 
     Returns:
         {"passed": int, "failed": int, "log": list[str]}
@@ -221,12 +277,14 @@ def run_nlp_flow_collect(file_path: str) -> dict:
     run_cfg = _load_run_config()
     _STOP_ON_FAILURE = bool(run_cfg.get("stop_on_failure", False))
 
+    caps = capabilities or {}
     session = TestSession()
     page = None   # guard: open_browser may raise; close_browser handles page=None safely
     stats: dict = {"passed": 0, "failed": 0, "log": []}
 
     try:
-        page = open_browser(session)
+        should_record_video = settings.ENABLE_VIDEO_RECORDING and bool(caps.get("record_video", False))
+        page = open_browser(session, record_video=should_record_video)
         logger.info("🚀 Starting flow (collect mode): %s", file_path)
         stats = _execute_nlp_flow_core(file_path, page)
     except FileNotFoundError as e:
@@ -302,11 +360,44 @@ def run_json_flow(json_path: str):
 
 # ── Entry point ────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
+    parser = argparse.ArgumentParser(description="Unified flow runner (.flow / .json)")
+    parser.add_argument("target", nargs="?", help="Path to .flow or .json file")
+    parser.add_argument("--profile", help="Use saved execution profile name")
+    parser.add_argument("--save-profile", help="Save current runtime config as profile name")
+    parser.add_argument("--ask-config", action="store_true", help="Interactively ask runtime execution options")
+    parser.add_argument("--list-profiles", action="store_true", help="List saved execution profiles")
+    parser.add_argument("--delete-profile", help="Delete a saved execution profile by name")
+    args = parser.parse_args()
+
+    if args.list_profiles:
+        names = _prefs.list_profiles()
+        if not names:
+            print("No saved profiles.")
+        else:
+            print("Saved profiles:")
+            for n in names:
+                print(f"- {n}")
+        sys.exit(0)
+
+    if args.delete_profile:
+        deleted = _prefs.delete_profile(args.delete_profile)
+        if deleted:
+            print(f"Deleted profile: {args.delete_profile}")
+            sys.exit(0)
+        print(f"Profile not found: {args.delete_profile}")
+        sys.exit(1)
+
+    if not args.target:
         print("Usage: python runner.py <file.flow | file.json>")
         sys.exit(1)
 
-    target = sys.argv[1]
+    try:
+        _apply_runtime_config(args.profile, args.ask_config, args.save_profile)
+    except ValueError as e:
+        print(str(e))
+        sys.exit(1)
+
+    target = args.target
     if target.endswith(".json"):
         run_json_flow(target)
     else:

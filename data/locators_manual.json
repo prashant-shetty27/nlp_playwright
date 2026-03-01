@@ -6,9 +6,18 @@
     "search_box": {
       "custom_xpath": "role=combobox[name='Search']",
       "selectors": [
-        {"type": "css", "value": "input[name='q']"},
-        {"type": "xpath", "value": "//input[@name='q']"},
-        {"type": "css", "value": "#srchbx"}
+        {
+          "type": "css",
+          "value": "input[name='q']"
+        },
+        {
+          "type": "xpath",
+          "value": "//input[@name='q']"
+        },
+        {
+          "type": "css",
+          "value": "#srchbx"
+        }
       ],
       "last_success": "css"
     },
@@ -27,9 +36,18 @@
     "login_button": {
       "custom_xpath": "//button[contains(text(),'Login')]",
       "selectors": [
-        {"type": "css", "value": "button.login"},
-        {"type": "xpath", "value": "//button[contains(text(),'Login')]"},
-        {"type": "css", "value": ".signin-btn"}
+        {
+          "type": "css",
+          "value": "button.login"
+        },
+        {
+          "type": "xpath",
+          "value": "//button[contains(text(),'Login')]"
+        },
+        {
+          "type": "css",
+          "value": ".signin-btn"
+        }
       ],
       "last_success": "xpath"
     }
@@ -69,6 +87,62 @@
       },
       "custom_xpath": "//h1[contains(@class, 'jsx-a487a86b47d169d9') and contains(@class, 'fw500') and contains(@class, 'color111') and contains(@class, 'line_clamp_1')]"
     }
-
+  },
+  "android": {
+    "home_screen": {
+      "close_popup_button": {
+        "accessibility_id": "Cancel",
+        "resource_id": "com.google.android.gms:id/cancel",
+        "class_name": "android.widget.ImageView",
+        "xpath": "//android.widget.ImageView[@resource-id='com.google.android.gms:id/cancel']",
+        "bounds": "[948,1789][1014,1855]"
+      },
+      "phone_number_container": {
+        "resource_id": "com.justdial.search:id/registeration_phone_number",
+        "class_name": "android.widget.LinearLayout",
+        "xpath": "//android.widget.LinearLayout[@resource-id='com.justdial.search:id/registeration_phone_number']",
+        "bounds": "[83,1100][997,1243]"
+      },
+      "skip_button": {
+        "accessibility_id": "Skip",
+        "resource_id": "com.justdial.search:id/tvSkip",
+        "text": "Skip",
+        "class_name": "android.widget.Button",
+        "xpath": "//android.widget.Button[@resource-id='com.justdial.search:id/tvSkip']",
+        "bounds": "[879,121][1025,204]"
+      },
+      "mobile_number_input": {
+        "accessibility_id": "Mobile Number (+91)",
+        "resource_id": "com.justdial.search:id/registration_phone_number_value",
+        "text": "Enter Mobile Number",
+        "class_name": "android.widget.EditText",
+        "xpath": "//android.widget.EditText[@resource-id='com.justdial.search:id/registration_phone_number_value']",
+        "bounds": "[286,1101][997,1243]"
+      },
+      "login_with_otp_button": {
+        "resource_id": "com.justdial.search:id/tvLoginWithOtp",
+        "text": "Login with OTP",
+        "class_name": "android.widget.Button",
+        "xpath": "//android.widget.Button[@resource-id='com.justdial.search:id/tvLoginWithOtp']",
+        "bounds": "[83,1287][997,1430]"
+      }
+    },
+    "otp_screen": {},
+    "permissions_screen": {
+      "permission_while_using_button": {
+        "resource_id": "com.android.permissioncontroller:id/permission_allow_foreground_only_button",
+        "text": "While using the app",
+        "class_name": "android.widget.Button",
+        "xpath": "//android.widget.Button[@resource-id='com.android.permissioncontroller:id/permission_allow_foreground_only_button']",
+        "bounds": "[137,1357][943,1511]"
+      },
+      "permission_allow_button": {
+        "resource_id": "com.android.permissioncontroller:id/permission_allow_button",
+        "text": "Allow",
+        "class_name": "android.widget.Button",
+        "xpath": "//android.widget.Button[@resource-id='com.android.permissioncontroller:id/permission_allow_button']",
+        "bounds": "[137,1191][943,1345]"
+      }
+    }
   }
 }
