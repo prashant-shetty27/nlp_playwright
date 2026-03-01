@@ -78,11 +78,15 @@ def open_site(page, url: str):
         raise ValueError("Validation Error: 'url' parameter must be a non-empty string.")
 
     raw_url = url.strip()
+
+    # Resolve site aliases (e.g. "justdial" → "https://www.justdial.com")
+    raw_url = SITES.get(raw_url.lower(), raw_url)
+
     if " " in raw_url:
         raise ValueError(f"Validation Error: URL cannot contain spaces. Received: '{raw_url}'")
     if "." not in raw_url:
         raise ValueError(
-            f"Routing Error: '{raw_url}' lacks a domain structure. Single words are rejected."
+            f"Routing Error: '{raw_url}' is not a known site alias and lacks a domain structure."
         )
 
     sanitized_url = raw_url if raw_url.startswith(("http://", "https://")) else f"https://{raw_url}"
@@ -100,13 +104,20 @@ def open_site(page, url: str):
         if not username or not password:
             raise ValueError(f"Security Error: Incomplete credentials for domain '{target_domain}'.")
         logger.info(f"🔒 Secure domain '{target_domain}' detected. Injecting HTTP credentials.")
-        page.context.set_http_credentials({"username": username, "password": password})
-    else:
-        page.context.set_http_credentials(None)
+        # Playwright requires credentials embedded in URL for HTTP Basic Auth
+        parsed_url = parsed_url._replace(
+            netloc=f"{username}:{password}@{target_domain}"
+        )
+        sanitized_url = parsed_url.geturl()
 
     logger.info(f"🌐 Navigating to: {sanitized_url}")
     try:
         page.goto(sanitized_url, wait_until="domcontentloaded", timeout=30000)
+        # Let dynamic elements finish rendering
+        try:
+            page.wait_for_load_state("networkidle", timeout=10000)
+        except Exception:
+            pass  # networkidle timeout is non-fatal
     except Exception as e:
         raise RuntimeError(f"Navigation Error: Failed to load '{sanitized_url}'. Details: {e}")
 
@@ -268,8 +279,13 @@ def create_custom_variable(value, variable_name):
 def search(page_obj, text: str):
     term = str(text).strip()
     selectors = [
-        "#srchbx", "#main_search", "input[name='search']",
-        "input.search-input", "input[placeholder*='Search']",
+        "#main-auto",                        # justdial
+        "#srchbx", "#main_search",
+        "input[name='search']", "input[name='q']",
+        "input[type='search']",
+        "input.search-input",
+        "input[placeholder*='Search' i]",    # case-insensitive
+        "input[placeholder*='search' i]",
     ]
     search_box = None
 
