@@ -9,9 +9,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from nicegui import app, ui, Client
 
 # Framework Imports (Ensure these files exist in your directory)
-import actions
+import execution.action_service as actions
 from registry import ACTION_REGISTRY
-from locator_utils import get_all_locators
+from locators.manager import get_all_locators
 
 # =====================================================
 # 1. ENTERPRISE CONFIGURATION

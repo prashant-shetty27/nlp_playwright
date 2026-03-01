@@ -33,3 +33,13 @@ watchdog
 # Web API (Phase 2 — server.py)
 fastapi
 uvicorn[standard]
+
+# Interactive reporting
+questionary
+
+# Spy server
+flask
+flask-cors
+
+# Mobile adapters
+Appium-Python-Client

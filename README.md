@@ -23,7 +23,7 @@ This project provides a modular, NLP-driven automation framework using Playwrigh
 ## Usage
 - **Run a test flow:**
   ```sh
-  python run.py steps.flow
+  python runner.py steps.flow
   # or
   ./run.sh
   ```
@@ -31,32 +31,39 @@ This project provides a modular, NLP-driven automation framework using Playwrigh
   Edit `locators_manual.json` and re-run your flows.
 - **Sync VS Code snippets:**
   ```sh
-  python sync_snippets.py
+  python -m reporting.snippet_sync
   ```
 - **Visual regression:**
-  Use image_utils.py for template matching and SSIM-based checks.
+  Use `core/image_utils.py` for template matching and SSIM-based checks.
 
 ## Project Structure
-- `engine.py` - NLP interpreter and test runner
-- `actions.py` - Playwright actions and helpers
-- `locator_manager.py` - Locator storage and retrieval
-- `nlp_keywords.py` - Keyword mapping
-- `sync_snippets.py` - VS Code snippet generator
-- `image_utils.py` - Image comparison utilities
+- `runner.py` - Unified NLP/JSON flow runner
+- `execution/action_service.py` - Core Playwright actions and snippet bindings
+- `locators/manager.py` - Locator storage and retrieval
+- `nlp/parser.py` - NLP command parser
+- `reporting/snippet_sync.py` - VS Code snippet generator
+- `core/image_utils.py` - Image comparison utilities
 - `requirements.txt` - Python dependencies
 - `steps.flow` - Example test flow
 
 ## Adding New Steps
-- Add new keywords to `nlp_keywords.py` and implement corresponding functions in `actions.py`.
-- Update `sync_snippets.py` to expose new actions as snippets.
+- Add parser syntax in `nlp/parser.py` and implement action handlers in `execution/action_service.py`.
+- Update `reporting/snippet_sync.py` to expose new actions as snippets.
 
 ## Contributing
 - Please ensure all new code is documented and tested.
 - Run `pytest` for backend tests (add tests in a `tests/` folder).
 
 ## Troubleshooting
-- If locators are not found, check `locators_manual.json` and run `python clean_locators.py`.
+- If locators are not found, check `locators_manual.json` and use `locators/cleaner.py`.
 - For Playwright errors, ensure browsers are installed with `playwright install`.
 
 ## License
 MIT
+
+<!-- 
+M = modified
+U = untracked (new file)
+A = added (staged new file)
+D = deleted
+R = renamed -->

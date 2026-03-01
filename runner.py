@@ -40,13 +40,13 @@ def _setup_logging():
 
 
 def _load_run_config() -> dict:
-    for path in ("config/playwright.config.json", "config.json"):
-        if os.path.exists(path):
-            try:
-                with open(path, "r") as f:
-                    return json.load(f).get("run", {})
-            except Exception as e:
-                logger.warning("⚠️ Failed to load %s: %s", path, e)
+    path = "config/playwright.config.json"
+    if os.path.exists(path):
+        try:
+            with open(path, "r") as f:
+                return json.load(f).get("run", {})
+        except Exception as e:
+            logger.warning("⚠️ Failed to load %s: %s", path, e)
     return {}
 
 

@@ -118,3 +118,39 @@ def get_locator_and_dna(locator_name: str) -> tuple:
             logger.error("❌ Error reading locators_manual.json: %s", e)
 
     return None, None
+
+
+def get_all_locators() -> dict:
+    """
+    Loads and merges locator names from manual + recorded databases for UI dropdowns.
+    Returns: {locator_name: "PAGE ➔ locator_name"}
+    """
+    locator_mapping: dict = {}
+
+    # Manual locators
+    manual_path = settings.MANUAL_LOCATORS_FILE
+    if os.path.exists(manual_path):
+        try:
+            with open(manual_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            for page_name, locators in (data or {}).items():
+                if isinstance(locators, dict):
+                    for element_name in locators.keys():
+                        locator_mapping[element_name] = f"{str(page_name).upper()} ➔ {element_name}"
+        except Exception as e:
+            logger.warning("Could not read manual locator DB for dropdowns: %s", e)
+
+    # Recorded/ML locators
+    recorded_path = settings.RECORDED_ELEMENTS_FILE
+    if os.path.exists(recorded_path):
+        try:
+            with open(recorded_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            for page_name, locators in (data or {}).items():
+                if isinstance(locators, dict):
+                    for element_name in locators.keys():
+                        locator_mapping[element_name] = f"{str(page_name).upper()} ➔ {element_name}"
+        except Exception as e:
+            logger.warning("Could not read recorded locator DB for dropdowns: %s", e)
+
+    return locator_mapping
