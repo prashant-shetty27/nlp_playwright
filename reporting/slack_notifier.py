@@ -208,20 +208,15 @@ def _build_blocks(result: PlanResult) -> list[dict]:
 
         blocks.append(_section(f"📦  *Suite: {suite.suite_name}*   ›   {badge}"))
 
-        # Fixed-width monospace table
-        W = 32
-        col_hdr = f"{'Script':<{W}}  {'Status':<14}  {'Duration':>9}  {'Retries':>7}"
-        sep     = "─" * len(col_hdr)
-        rows    = [sep, col_hdr, sep]
+        # ── Per-script rows — one block each so mobile wraps cleanly ──────────
         for sc in suite.scripts:
-            name     = sc.script.split("/")[-1][:W]
-            status   = f"{sc.icon} {sc.status.upper()}"
+            name     = sc.script.split("/")[-1]
             duration = _fmt_duration(sc.duration_s)
-            retries  = f"↩ {sc.retries}×" if sc.retries > 0 else "—"
-            rows.append(f"{name:<{W}}  {status:<14}  {duration:>9}  {retries:>7}")
-        rows.append(sep)
-        table_text = "\n".join(rows)
-        blocks.append(_section(f"```\n{table_text}\n```"))
+            retry_tag = f"   ↩ retried {sc.retries}×" if sc.retries > 0 else ""
+            blocks.append(_section(
+                f"{sc.icon}  *{name}*\n"
+                f">  Status: *{sc.status.upper()}*   │   ⏱ {duration}{retry_tag}"
+            ))
 
         # Failure detail block — only shown when there are failures
         failed_scripts = [sc for sc in suite.scripts if sc.status == "failed"]
