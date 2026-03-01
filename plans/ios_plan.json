@@ -1,0 +1,19 @@
+{
+  "plan_name": "JustDial iOS Plan",
+  "description": "Runs JustDial iOS app regression suite.",
+  "environment": "local",
+  "platform": "ios",
+  "owner": "QA Team",
+
+  "execution": {
+    "parallel": false,
+    "retry_on_failure": true,
+    "max_retries": 1,
+    "rerun_on_failure": false,
+    "stop_on_first_failure": false
+  },
+
+  "selected_suites": [
+    "suites/ios_suite.json"
+  ]
+}

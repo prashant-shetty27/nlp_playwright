@@ -1,0 +1,34 @@
+{
+  "_comment": "iOS Test Suite — edit desired_capabilities to match your simulator/device.",
+
+  "suite_name": "JustDial iOS Suite",
+  "description": "Covers JustDial iOS app: search, verify results.",
+  "platform": "ios",
+
+  "scripts": [
+    "flows/ios_demo.flow"
+  ],
+
+  "desired_capabilities": {
+    "platform":              "ios",
+    "platformName":          "iOS",
+    "appium:automationName": "XCUITest",
+
+    "_comment_device": "Change deviceName to your simulator name (xcrun simctl list) or real device UDID",
+    "appium:deviceName":     "iPhone 15",
+    "appium:platformVersion": "17.0",
+
+    "_comment_app": "Choose ONE: bundleId (installed app) OR app (local .ipa / simulator .app path)",
+    "appium:bundleId":       "com.justdial.justdial",
+    "appium:app":            "",
+
+    "appium:newCommandTimeout": 120,
+    "appium:noReset": true,
+    "appium:autoAcceptAlerts": true
+  },
+
+  "parameters": [
+    { "name": "search_term",    "type": "string", "value": "Restaurants" },
+    { "name": "verify_keyword", "type": "string", "value": "Mumbai" }
+  ]
+}

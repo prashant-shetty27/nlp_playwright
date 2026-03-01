@@ -1,0 +1,35 @@
+{
+  "_comment": "Android Test Suite — edit desired_capabilities to match your device/emulator.",
+
+  "suite_name": "JustDial Android Suite",
+  "description": "Covers JustDial Android app: search, verify results.",
+  "platform": "android",
+
+  "scripts": [
+    "flows/android_demo.flow"
+  ],
+
+  "desired_capabilities": {
+    "platform":            "android",
+    "platformName":        "Android",
+    "appium:automationName": "UiAutomator2",
+
+    "_comment_device": "Change deviceName to your device UDID or emulator name (adb devices)",
+    "appium:deviceName":   "emulator-5554",
+    "appium:platformVersion": "13.0",
+
+    "_comment_app": "Choose ONE: app path (local APK) OR appPackage+appActivity (already installed app)",
+    "appium:app":          "",
+    "appium:appPackage":   "com.justdial.search",
+    "appium:appActivity":  "com.justdial.search.splashui.SplashActivity",
+
+    "appium:newCommandTimeout": 120,
+    "appium:autoGrantPermissions": true,
+    "appium:noReset": true
+  },
+
+  "parameters": [
+    { "name": "search_term",    "type": "string",  "value": "Restaurants" },
+    { "name": "verify_keyword", "type": "string",  "value": "Mumbai" }
+  ]
+}

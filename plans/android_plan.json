@@ -1,0 +1,19 @@
+{
+  "plan_name": "JustDial Android Plan",
+  "description": "Runs JustDial Android app regression suite.",
+  "environment": "local",
+  "platform": "android",
+  "owner": "QA Team",
+
+  "execution": {
+    "parallel": false,
+    "retry_on_failure": true,
+    "max_retries": 1,
+    "rerun_on_failure": false,
+    "stop_on_first_failure": false
+  },
+
+  "selected_suites": [
+    "suites/android_suite.json"
+  ]
+}

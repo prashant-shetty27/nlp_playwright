@@ -39,8 +39,18 @@ from nlp.variable_manager import RUNTIME_VARIABLES
 from reporting.slack_notifier import PlanResult, SuiteResult, ScriptResult, send_report, preview_blocks
 from reporting import email_notifier
 from reporting.report_manager import TestReportManager
-from runner import run_nlp_flow_collect as _run_flow_file
+from runner import run_nlp_flow_collect as _run_web_flow
+from runner_appium import run_appium_flow_collect as _run_appium_flow
 from config import settings as _cfg
+
+_APPIUM_PLATFORMS = {"android", "ios", "hybrid"}
+
+
+def _run_flow_file(script_path: str, capabilities: dict | None = None, platform: str = "web") -> dict:
+    """Route to the correct runner based on platform."""
+    if platform.lower() in _APPIUM_PLATFORMS:
+        return _run_appium_flow(script_path, capabilities=capabilities, platform=platform.lower())
+    return _run_web_flow(script_path, capabilities=capabilities)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -131,6 +141,8 @@ def _run_script(
     retry_on_failure: bool,
     max_retries: int,
     dry_run: bool,
+    capabilities: dict | None = None,
+    platform: str = "web",
 ) -> ScriptResult:
     """Run one .flow script; retry up to max_retries on failure."""
     attempts = 0
@@ -152,7 +164,7 @@ def _run_script(
 
         try:
             logger.info("  ▶  Running: %s  (attempt %d)", script_path, attempts)
-            stats    = _run_flow_file(script_path)
+            stats    = _run_flow_file(script_path, capabilities=capabilities, platform=platform)
             duration = time.time() - t0
             retries  = attempts - 1
 
@@ -206,10 +218,14 @@ def _run_suite(
     max_ret  = exec_cfg["max_retries"]
     stop     = exec_cfg["stop_on_first_failure"]
 
+    caps     = suite.get("desired_capabilities", {})
+    platform = caps.get("platform", suite.get("platform", _cfg.PLATFORM or "web")).lower()
+    logger.info("    Platform: %s", platform.upper())
+
     def _run_all() -> SuiteResult:
         sr = SuiteResult(suite["suite_name"])
         for script in suite["scripts"]:
-            res = _run_script(script, retry_on, max_ret, dry_run)
+            res = _run_script(script, retry_on, max_ret, dry_run, capabilities=caps, platform=platform)
             sr.add(res)
             if stop and res.status == "failed":
                 logger.warning("  🛑 stop_on_first_failure=true — halting suite.")

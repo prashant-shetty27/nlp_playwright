@@ -1,0 +1,49 @@
+# flows/android_demo.flow
+# JustDial Android App — Search Demo
+# Element names must be recorded first with: python spy/appium_spy.py --platform android
+#
+# Replace element names below with what YOU recorded.
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Wait for app to load
+wait 3 seconds
+
+# Take screenshot of home screen
+take screenshot as android_home
+
+# Tap the search box and type
+tap on search_box
+type "${search_term}" into search_box
+
+# Wait for suggestions to appear
+wait 2 seconds
+
+# Tap the first suggestion
+tap on first_suggestion
+
+# Wait for results
+wait 3 seconds
+
+# Scroll down to see more results
+scroll down
+wait 1 seconds
+scroll down
+wait 1 seconds
+
+# Verify key texts appear on the results screen
+verify text "${verify_keyword}"
+verify text "${search_term}"
+verify texts "${search_term}", "${verify_keyword}"
+
+# Store current result count label text
+store text of result_count_label as result_count
+
+# Take screenshot of results
+take screenshot as android_results
+
+# Scroll to find footer text
+scroll until text "JustDial" visible, scroll count 5, scroll wait 1
+
+# Press back to go home
+press back
+wait 2 seconds
