@@ -1,0 +1,5 @@
+// WDA code signing config for real device (free Apple Developer account)
+DEVELOPMENT_TEAM = 53NR34M72B
+CODE_SIGN_STYLE = Automatic
+CODE_SIGN_IDENTITY = Apple Development
+PROVISIONING_PROFILE_SPECIFIER =

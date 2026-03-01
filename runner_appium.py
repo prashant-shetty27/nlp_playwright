@@ -266,6 +266,8 @@ def _start_session(capabilities: dict, platform: str):
         options = XCUITestOptions()
 
     for key, val in caps.items():
+        if val == "" or val is None or key.startswith("_comment"):
+            continue                       # skip empty / comment keys
         clean = key.replace("appium:", "")
         try:
             setattr(options, clean, val)

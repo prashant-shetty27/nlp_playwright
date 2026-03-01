@@ -1,8 +1,8 @@
 {
-  "_comment": "iOS Test Suite — edit desired_capabilities to match your simulator/device.",
+  "_comment": "iOS Test Suite — Safari demo on simulator (validates full Appium/XCUITest pipeline).",
 
-  "suite_name": "JustDial iOS Suite",
-  "description": "Covers JustDial iOS app: search, verify results.",
+  "suite_name": "Safari iOS Suite",
+  "description": "Opens Safari on iOS simulator, navigates to a URL, verifies content.",
   "platform": "ios",
 
   "scripts": [
@@ -14,21 +14,28 @@
     "platformName":          "iOS",
     "appium:automationName": "XCUITest",
 
-    "_comment_device": "Change deviceName to your simulator name (xcrun simctl list) or real device UDID",
-    "appium:deviceName":     "iPhone 15",
-    "appium:platformVersion": "17.0",
+    "_comment_device": "Using available local simulator runtime/device",
+    "appium:deviceName":     "iPhone 17 Pro",
+    "appium:platformVersion": "26.2",
 
-    "_comment_app": "Choose ONE: bundleId (installed app) OR app (local .ipa / simulator .app path)",
-    "appium:bundleId":       "com.justdial.justdial",
-    "appium:app":            "",
+    "_comment_app": "Safari is pre-installed on every simulator",
+    "appium:bundleId":       "com.apple.mobilesafari",
 
     "appium:newCommandTimeout": 120,
     "appium:noReset": true,
-    "appium:autoAcceptAlerts": true
+    "appium:autoAcceptAlerts": true,
+    "appium:safariInitialUrl": "https://www.google.com",
+
+    "_comment_signing": "No xcodeConfigFile needed for simulator — code signing is skipped",
+    "appium:useNewWDA": true,
+    "appium:useSimpleBuildTest": true,
+    "appium:wdaLaunchTimeout": 180000,
+    "appium:wdaConnectionTimeout": 300000,
+    "appium:showXcodeLog": true
   },
 
   "parameters": [
-    { "name": "search_term",    "type": "string", "value": "Restaurants" },
-    { "name": "verify_keyword", "type": "string", "value": "Mumbai" }
+    { "name": "search_term",    "type": "string", "value": "NLP Playwright automation" },
+    { "name": "verify_keyword", "type": "string", "value": "Google" }
   ]
 }
