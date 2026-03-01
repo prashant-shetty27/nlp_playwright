@@ -1,6 +1,5 @@
 open https://www.justdial.com
 wait 6 seconds
-click on element maybe_later_link
-wait 2 seconds
+click on element maybe_later
 search for restaurant
 wait 5 seconds

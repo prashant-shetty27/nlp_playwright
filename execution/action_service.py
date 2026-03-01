@@ -328,13 +328,12 @@ def _dismiss_modal(page_obj, wait_for_popup_ms: int = 6000):
     # ── 3. Escape key ─────────────────────────────────────────────────────────
     try:
         page_obj.keyboard.press("Escape")
-        page_obj.wait_for_timeout(400)
+        page_obj.wait_for_timeout(500)
         logger.info("🚫 Modal dismissed via Escape key")
-        return
     except Exception:
         pass
 
-    # ── 4. JS force-hide ──────────────────────────────────────────────────────
+    # ── 4. JS force-hide (always run as safety net) ───────────────────────────
     try:
         page_obj.evaluate(
             "[document.querySelector('#login-modal'),"
@@ -345,6 +344,13 @@ def _dismiss_modal(page_obj, wait_for_popup_ms: int = 6000):
         logger.info("🚫 Modal force-hidden via JavaScript")
     except Exception:
         pass
+
+    # ── 5. Confirm modal is gone (up to 1.5 s) ───────────────────────────────
+    for selector in ["#login-modal", "#loginPop", ".jd_modal"]:
+        try:
+            page_obj.wait_for_selector(selector, state="hidden", timeout=1500)
+        except Exception:
+            pass
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -380,6 +386,17 @@ def search(page_obj, text: str):
 
     if not search_box:
         raise Exception("Search input not found")
+
+    # ── Safety net: force-hide any blocking modal before clicking ─────────────
+    try:
+        page_obj.evaluate(
+            "[document.querySelector('#login-modal'),"
+            " document.querySelector('#loginPop'),"
+            " document.querySelector('.jd_modal')]"
+            ".forEach(el => el && (el.style.display = 'none'))"
+        )
+    except Exception:
+        pass
 
     search_box.click()
     search_box.press("Control+A")
