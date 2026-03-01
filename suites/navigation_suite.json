@@ -1,0 +1,30 @@
+{
+  "suite_name": "JustDial Navigation Suite",
+  "description": "Covers refresh, scroll and screenshot capture flows.",
+
+  "scripts": [
+    "flows/full_demo.flow"
+  ],
+
+  "desired_capabilities": {
+    "browser": "chromium",
+    "headless": false,
+    "viewport_width": 1280,
+    "viewport_height": 800,
+    "record_video": false,
+    "slow_mo_ms": 0
+  },
+
+  "parameters": [
+    {
+      "name": "scroll_count",
+      "type": "integer",
+      "value": "5"
+    },
+    {
+      "name": "screenshot_label",
+      "type": "string",
+      "value": "nav_suite_cap"
+    }
+  ]
+}

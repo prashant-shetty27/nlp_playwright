@@ -119,10 +119,48 @@ def _interpret(step: str, page):
     _execute_step_from_command(cmd, page)
 
 
+def _execute_nlp_flow_core(file_path: str, page) -> dict:
+    """
+    Inner execution engine — reads and runs one .flow file.
+
+    Returns:
+        {"passed": int, "failed": int, "log": list[str]}
+
+    Raises:
+        FileNotFoundError  if the flow file doesn't exist.
+    """
+    stats: dict = {"passed": 0, "failed": 0, "log": []}
+
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"Cannot find flow file: {file_path}")
+
+    with open(file_path, "r") as f:
+        lines = f.readlines()
+
+    for line_num, line in enumerate(lines, 1):
+        step = line.strip()
+        if not step or step.startswith("#"):
+            continue
+        try:
+            _interpret(step, page)
+            stats["passed"] += 1
+            stats["log"].append(f"Line {line_num}: ✅ {step}")
+        except Exception as e:
+            stats["failed"] += 1
+            error_msg = str(e).strip()
+            stats["log"].append(f"Line {line_num}: ❌ {step} -> {error_msg}")
+            logger.error("❌ Failure at Line %s: %s", line_num, error_msg)
+            if _STOP_ON_FAILURE:
+                logger.critical("🛑 STOP_ON_FAILURE enabled. Halting.")
+                break
+
+    return stats
+
+
 def run_nlp_flow(file_path: str):
     """
-    Main NLP .flow runner.
-    Reads .flow file line-by-line, interprets each step, reports results.
+    Main NLP .flow runner (CLI entry point).
+    Reads .flow file line-by-line, interprets each step, prints summary.
     """
     _setup_logging()
     global _STOP_ON_FAILURE
@@ -137,31 +175,10 @@ def run_nlp_flow(file_path: str):
 
     try:
         logger.info("🚀 Starting session: %s", file_path)
-        if not os.path.exists(file_path):
-            raise FileNotFoundError(f"Cannot find flow file: {file_path}")
-
-        with open(file_path, "r") as f:
-            lines = f.readlines()
-
-        for line_num, line in enumerate(lines, 1):
-            step = line.strip()
-            if not step or step.startswith("#"):
-                continue
-            try:
-                _interpret(step, page)
-                stats["passed"] += 1
-                stats["log"].append(f"Line {line_num}: ✅ {step}")
-            except Exception as e:
-                stats["failed"] += 1
-                error_msg = str(e).strip()
-                stats["log"].append(f"Line {line_num}: ❌ {step} -> {error_msg}")
-                logger.error("❌ Failure at Line %s: %s", line_num, error_msg)
-                if _STOP_ON_FAILURE:
-                    logger.critical("🛑 STOP_ON_FAILURE enabled. Halting.")
-                    break
-
+        stats = _execute_nlp_flow_core(file_path, page)
     except Exception as e:
         logger.error("❌ Critical Engine Error: %s", e)
+        stats["log"].append(f"❌ {e}")
 
     test_label = os.path.basename(file_path).split(".")[0]
 
@@ -187,6 +204,51 @@ def run_nlp_flow(file_path: str):
         logger.info("🔄 VS Code Snippets synchronized.")
     except Exception as e:
         logger.warning("⚠️ Snippet sync failed: %s", e)
+
+
+def run_nlp_flow_collect(file_path: str) -> dict:
+    """
+    Like run_nlp_flow() but *returns* stats instead of printing to stdout.
+    Used by plan_runner.py to programmatically collect pass/fail counts.
+
+    Returns:
+        {"passed": int, "failed": int, "log": list[str]}
+    """
+    _setup_logging()
+    global _STOP_ON_FAILURE
+
+    sanitize_database()
+    run_cfg = _load_run_config()
+    _STOP_ON_FAILURE = bool(run_cfg.get("stop_on_failure", False))
+
+    session = TestSession()
+    page = None   # guard: open_browser may raise; close_browser handles page=None safely
+    stats: dict = {"passed": 0, "failed": 0, "log": []}
+
+    try:
+        page = open_browser(session)
+        logger.info("🚀 Starting flow (collect mode): %s", file_path)
+        stats = _execute_nlp_flow_core(file_path, page)
+    except FileNotFoundError as e:
+        logger.error("❌ %s", e)
+        stats["failed"] += 1
+        stats["log"].append(f"❌ {e}")
+    except Exception as e:
+        logger.error("❌ Critical Engine Error: %s", e)
+        stats["failed"] += 1
+        stats["log"].append(f"❌ {e}")
+    finally:
+        test_label = os.path.basename(file_path).split(".")[0]
+        try:
+            close_browser(page, test_label, session)
+        except Exception as e:
+            logger.error("Browser close failed: %s", e)
+        try:
+            sync_locators_to_snippets()
+        except Exception as e:
+            logger.warning("⚠️ Snippet sync failed: %s", e)
+
+    return stats
 
 
 # ── JSON / codeless flow ────────────────────────────────────────────────────────

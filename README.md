@@ -7,8 +7,8 @@ This project provides a modular, NLP-driven automation framework using Playwrigh
 - Visual regression (image comparison)
 - Robust error handling and logging
 - Extensible snippet and keyword system
-
-## Setup
+# .venv/bin/python runner.py flows/full_demo.flow 2>&1
+ ## Setup
 1. **Clone the repository**
 2. **Install dependencies:**
    ```sh

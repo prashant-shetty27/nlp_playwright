@@ -1,0 +1,53 @@
+{
+  "_comment": "Test Suite — contains one or more .flow scripts, desired capabilities and input parameters.",
+
+  "suite_name": "JustDial Search Suite",
+  "description": "Covers homepage open, modal dismiss, search and result verification.",
+
+  "scripts": [
+    "flows/steps.flow",
+    "flows/full_demo.flow"
+  ],
+
+  "desired_capabilities": {
+    "browser": "chromium",
+    "_browser_options": ["chromium", "firefox", "webkit"],
+    "headless": false,
+    "viewport_width": 1920,
+    "viewport_height": 1080,
+    "locale": "en-IN",
+    "timezone_id": "Asia/Kolkata",
+    "record_video": false,
+    "slow_mo_ms": 0
+  },
+
+  "parameters": [
+    {
+      "name": "base_url",
+      "type": "string",
+      "value": "https://www.justdial.com"
+    },
+    {
+      "name": "search_term",
+      "type": "string",
+      "value": "Restaurants"
+    },
+    {
+      "name": "max_results",
+      "type": "integer",
+      "value": "10"
+    },
+    {
+      "name": "verify_keyword",
+      "type": "string",
+      "value": "Mumbai"
+    },
+    {
+      "name": "headless_override",
+      "type": "boolean",
+      "value": "false"
+    }
+  ],
+
+  "_parameter_types": ["string", "integer", "decimal", "boolean", "list"]
+}

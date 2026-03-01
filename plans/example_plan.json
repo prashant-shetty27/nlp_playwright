@@ -1,0 +1,51 @@
+{
+  "_comment": "Test Plan — top-level orchestrator. Contains test suites, execution settings and schedule config.",
+
+  "plan_name": "JustDial Regression Plan",
+  "description": "Full regression covering search, navigation and verification flows.",
+  "owner": "QA Team",
+
+  "environment": "local",
+  "_environment_options": ["local", "cloud"],
+
+  "execution": {
+    "parallel": false,
+    "_parallel_note": "true = run suites concurrently; false = sequential",
+
+    "max_wait_seconds": 300,
+    "_max_wait_note": "Global wall-clock timeout for the entire plan run",
+
+    "retry_on_failure": true,
+    "max_retries": 2,
+    "_retry_note": "Retry each failed step up to max_retries times before marking failed",
+
+    "rerun_on_failure": false,
+    "_rerun_note": "If true, re-execute the entire failed suite from scratch after all suites finish",
+
+    "stop_on_first_failure": false,
+    "_stop_note": "If true, halt the whole plan the moment any step fails"
+  },
+
+  "notifications": {
+    "slack": true,
+    "email": false,
+    "_note": "Overrides .env NOTIFY_ON_SLACK / NOTIFY_ON_EMAIL for this specific plan"
+  },
+
+  "suites": [
+    "suites/search_suite.json",
+    "suites/navigation_suite.json"
+  ],
+
+  "selected_suites": [
+    "suites/search_suite.json"
+  ],
+  "_selected_note": "Leave empty [] to run ALL suites. Populate to run a subset only.",
+
+  "schedule": {
+    "enabled": false,
+    "cron": "0 9 * * 1-5",
+    "_cron_note": "Standard cron expression — runs Mon-Fri at 09:00. Requires scheduler (APScheduler/cron).",
+    "timezone": "Asia/Kolkata"
+  }
+}

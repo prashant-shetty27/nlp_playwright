@@ -1,0 +1,38 @@
+Phase 4: Plan/Suite orchestration + Slack Block Kit notifications
+
+plan_runner.py: Full orchestrator (load plan -> run suites -> collect results -> notify)
+  - Retry logic per script (retry_on_failure / max_retries)
+  - Whole-suite rerun (rerun_on_failure)
+  - stop_on_first_failure at both script and suite level
+  - --dry-run mode: validates + prints Block Kit preview, no browser
+  - --suites override: run specific suites ignoring plan selection
+  - Writes JSON + text reports to data/logs/
+  - Graceful error handling: missing/corrupt plan/suite -> exit 1 with clear message
+
+runner.py: Refactored NLP flow execution
+  - _execute_nlp_flow_core(): shared inner loop (file read + step execution)
+  - run_nlp_flow(): CLI entry point (unchanged public interface)
+  - run_nlp_flow_collect(): returns stats dict for programmatic use by plan_runner
+  - page=None guard in collect variant so browser-launch failure is safe
+
+reporting/slack_notifier.py: Slack Incoming Webhook with Block Kit
+  - Data model: ScriptResult / SuiteResult / PlanResult
+  - send_report(): posts formatted Block Kit payload via urllib (no new deps)
+  - preview_blocks(): dry-run JSON preview
+
+reporting/email_notifier.py: HTML email stub (SMTP ready to wire)
+  - Full HTML template with colored header + per-suite table
+  - _send_smtp() raises NotImplementedError (implementation commented inline)
+
+plans/example_plan.json: plan schema with all execution/schedule options
+suites/search_suite.json + navigation_suite.json: suite schema with
+  desired_capabilities and typed parameters (string/integer/boolean)
+config/settings.py: PLANS_DIR, SUITES_DIR, Slack + email env settings
+.env.example: Slack + email sections documented
+
+Edge cases verified (5/5):
+  - missing plan file -> exit 1 + clear error
+  - corrupt JSON -> exit 1 + JSONDecodeError detail
+  - missing .flow script in dry-run -> passes (dry-run always passes)
+  - missing suite JSON -> skipped gracefully, shown in Block Kit
+  - empty plan (no suites) -> exit 1 + clear error

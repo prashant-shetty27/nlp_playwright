@@ -58,6 +58,23 @@ RECORDED_ELEMENTS_FILE: str = os.path.join(DATA_DIR, "recorded_elements.json")
 SITES_FILE: str = os.path.join(os.path.dirname(__file__), "sites.json")
 PLAYWRIGHT_CONFIG_FILE: str = os.path.join(os.path.dirname(__file__), "playwright.config.json")
 FLOWS_DIR: str = os.path.join(BASE_DIR, "flows")
+PLANS_DIR: str = os.path.join(BASE_DIR, "plans")
+SUITES_DIR: str = os.path.join(BASE_DIR, "suites")
+
+# ── Notifications ──────────────────────────────────────────────────────────────
+NOTIFY_ON_SLACK: bool = os.getenv("NOTIFY_ON_SLACK", "false").lower() in ("1", "true", "yes")
+SLACK_WEBHOOK_URL: str = os.getenv("SLACK_WEBHOOK_URL", "")
+SLACK_CHANNEL: str = os.getenv("SLACK_CHANNEL", "#test-results")
+SLACK_USERNAME: str = os.getenv("SLACK_USERNAME", "NLP-Playwright Bot")
+SLACK_ICON_EMOJI: str = os.getenv("SLACK_ICON_EMOJI", ":robot_face:")
+
+# Email (future — stub ready, SMTP not yet wired)
+NOTIFY_ON_EMAIL: bool = os.getenv("NOTIFY_ON_EMAIL", "false").lower() in ("1", "true", "yes")
+EMAIL_SMTP_HOST: str = os.getenv("EMAIL_SMTP_HOST", "")
+EMAIL_SMTP_PORT: int = int(os.getenv("EMAIL_SMTP_PORT", "587"))
+EMAIL_SENDER: str = os.getenv("EMAIL_SENDER", "")
+EMAIL_PASSWORD: str = os.getenv("EMAIL_PASSWORD", "")
+EMAIL_RECIPIENTS: str = os.getenv("EMAIL_RECIPIENTS", "")  # comma-separated
 
 # ── Sites Registry ─────────────────────────────────────────────────────────
 def load_sites() -> dict:
