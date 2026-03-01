@@ -274,10 +274,89 @@ def create_custom_variable(value, variable_name):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# MODAL DISMISSAL HELPER  (used by search and any future action that needs it)
+# ─────────────────────────────────────────────────────────────────────────────
+def _dismiss_modal(page_obj, wait_for_popup_ms: int = 6000):
+    """
+    Waits for a blocking modal (e.g. JustDial login popup) and dismisses it.
+
+    Strategy (in priority order):
+      1. Use the stored `maybe_later_link` manual locator (XPath from locators_manual.json)
+      2. Try common close-button CSS selectors as a fallback
+      3. Press Escape
+      4. Force-hide via JavaScript
+    """
+    # Give the popup time to appear (JustDial fires it ~5 s after page load)
+    page_obj.wait_for_timeout(wait_for_popup_ms)
+
+    # ── 1. Try the manual locator ─────────────────────────────────────────────
+    MODAL_LOCATOR_NAMES = ["maybe_later_link"]
+    for locator_name in MODAL_LOCATOR_NAMES:
+        xpath, _ = get_locator_and_dna(locator_name)
+        if xpath:
+            try:
+                el = page_obj.locator(xpath).first
+                if el.is_visible(timeout=1500):
+                    el.click(timeout=2000)
+                    logger.info("🚫 Modal dismissed via manual locator '%s'", locator_name)
+                    page_obj.wait_for_timeout(500)
+                    return
+            except Exception as e:
+                logger.debug("Manual locator '%s' not clickable: %s", locator_name, e)
+
+    # ── 2. Generic close-button CSS fallback ─────────────────────────────────
+    FALLBACK_SELECTORS = [
+        "//a[@aria-label='May be later']",         # JustDial — direct XPath
+        "//button[@aria-label='May be later']",
+        "#loginPop .close",
+        "#login-modal [aria-label*='lose' i]",
+        "button.modal-close",
+        ".jd_modal .close",
+        "[data-dismiss='modal']",
+    ]
+    for sel in FALLBACK_SELECTORS:
+        try:
+            el = page_obj.locator(sel).first
+            if el.is_visible(timeout=600):
+                el.click(timeout=1500)
+                logger.info("🚫 Modal dismissed via fallback selector: %s", sel)
+                page_obj.wait_for_timeout(400)
+                return
+        except Exception:
+            pass
+
+    # ── 3. Escape key ─────────────────────────────────────────────────────────
+    try:
+        page_obj.keyboard.press("Escape")
+        page_obj.wait_for_timeout(400)
+        logger.info("🚫 Modal dismissed via Escape key")
+        return
+    except Exception:
+        pass
+
+    # ── 4. JS force-hide ──────────────────────────────────────────────────────
+    try:
+        page_obj.evaluate(
+            "[document.querySelector('#login-modal'),"
+            " document.querySelector('#loginPop'),"
+            " document.querySelector('.jd_modal')]"
+            ".forEach(el => el && (el.style.display = 'none'))"
+        )
+        logger.info("🚫 Modal force-hidden via JavaScript")
+    except Exception:
+        pass
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # SEARCH
 # ─────────────────────────────────────────────────────────────────────────────
 def search(page_obj, text: str):
     term = str(text).strip()
+
+    # ── Dismiss any modal/overlay using stored manual locators first ────────────
+    # Wait up to 6 s for JustDial's login popup to appear (it fires ~5 s after load)
+    _dismiss_modal(page_obj)
+
     selectors = [
         "#main-auto",                        # justdial
         "#srchbx", "#main_search",
@@ -435,15 +514,17 @@ def execute_math(num1, operator, num2, target_variable):
 # ─────────────────────────────────────────────────────────────────────────────
 # VERIFICATION ENGINES
 # ─────────────────────────────────────────────────────────────────────────────
-def verify_global_exact_text(page, text: str, ignore_case=False):
+def verify_global_exact_text(page, text: str, ignore_case=False, exact_match=False):
     ignore_casing = _parse_boolean(ignore_case)
-    logger.info(f"🔎 Verifying EXACT text exists globally: '{text}' (Ignore Case: {ignore_casing})")
+    match_mode = "EXACT" if exact_match else "CONTAINS"
+    logger.info(f"🔎 Verifying {match_mode} text globally: '{text}' (Ignore Case: {ignore_casing})")
     if ignore_casing:
-        loc = page.get_by_text(re.compile(f"^{re.escape(str(text))}$", re.IGNORECASE)).first
+        pattern = f"^{re.escape(str(text))}$" if exact_match else re.escape(str(text))
+        loc = page.get_by_text(re.compile(pattern, re.IGNORECASE)).first
     else:
-        loc = page.get_by_text(str(text), exact=True).first
+        loc = page.get_by_text(str(text), exact=exact_match).first
     expect(loc).to_be_visible(timeout=5000)
-    logger.info("Global exact match confirmed.")
+    logger.info(f"Global {match_mode.lower()} match confirmed.")
 
 
 def verify_element_exact_text(page, locator_name, expected_text, ignore_case=False):
@@ -477,9 +558,9 @@ def verify_multiple_global_texts(page, comma_separated_texts: str, ignore_case=F
             continue
         try:
             if ignore_casing:
-                loc = page.get_by_text(re.compile(f"^{re.escape(text)}$", re.IGNORECASE)).first
+                loc = page.get_by_text(re.compile(re.escape(text), re.IGNORECASE)).first
             else:
-                loc = page.get_by_text(text, exact=True).first
+                loc = page.get_by_text(text, exact=False).first
             expect(loc).to_be_visible(timeout=5000)
             logger.info(f"Found: '{text}'")
         except AssertionError:

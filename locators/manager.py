@@ -110,10 +110,22 @@ def get_locator_and_dna(locator_name: str) -> tuple:
                 manual_data = json.load(f)
             for page, elements in manual_data.items():
                 if locator_name in elements:
-                    xpath = elements[locator_name]
-                    if isinstance(xpath, dict):
-                        xpath = xpath.get("xpath") or xpath.get("value")
-                    return xpath, None
+                    entry = elements[locator_name]
+                    if isinstance(entry, dict):
+                        # Priority: custom_xpath > xpath > value > first selector value
+                        xpath = (
+                            entry.get("custom_xpath")
+                            or entry.get("custom_xpath_P")
+                            or entry.get("xpath")
+                            or entry.get("value")
+                        )
+                        if not xpath:
+                            # Fall back to first entry in selectors list
+                            selectors = entry.get("selectors", [])
+                            if selectors:
+                                xpath = selectors[0].get("value")
+                        return xpath, entry  # return full dict as DNA for healing
+                    return entry, None  # plain string
         except Exception as e:
             logger.error("❌ Error reading locators_manual.json: %s", e)
 

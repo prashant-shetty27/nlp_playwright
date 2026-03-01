@@ -26,3 +26,6 @@ class Command:
     threshold: Optional[float] = None
     # Platform hint (web, mobile, android, ios, hybrid, device)
     platform: Optional[str] = None
+    # Extract / store operations
+    variable_name: Optional[str] = None   # target runtime variable name
+    attribute: Optional[str] = None       # HTML attribute name (e.g. "href")

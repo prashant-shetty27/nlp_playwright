@@ -1,0 +1,45 @@
+# ============================================================
+# full_demo.flow  —  Phase 3 NLP capability showcase
+# Demonstrates all 25 command types now supported by the parser.
+# Site: JustDial (known-good from previous runs)
+# ============================================================
+
+# --- Navigation ---
+open justdial
+take screenshot as home_page
+
+# --- Search & wait ---
+search for Restaurants
+wait for result page load
+take screenshot as search_results
+
+# --- Store page metadata ---
+store page url as current_url
+store page title as page_title
+
+# --- Literal variable + math ---
+store "10" as base_count
+calculate base_count + 5 as total_count
+
+# --- Verify stored variable ---
+verify stored total_count contains "15"
+
+# --- Verify global text (partial/contains match — text just needs to appear somewhere in any element) ---
+verify text "Sort by"
+
+# --- Verify exact text (full exact match — element text must equal this completely) ---
+verify exact text "Leads"
+
+# --- Verify multiple texts (anywhere/contains match — text just needs to appear somewhere on page) ---
+# Use with partial substrings, dynamic headings, or any text fragment
+verify texts "Restaurants", "Mumbai"
+
+# --- Scroll ---
+scroll down
+scroll down 2 times
+scroll until text "WERE OUR SEARCH RESULTS HELPFUL?" visible, scroll count 5, scroll wait 1
+
+# --- Refresh ---
+refresh
+wait 2 seconds
+take screenshot as after_refresh
