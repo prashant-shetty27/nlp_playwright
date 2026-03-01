@@ -92,6 +92,7 @@ class PlanResult:
         self,
         plan_name: str,
         environment: str = "local",
+        platform: str = "web",
         parallel: bool = False,
         retry_on_failure: bool = False,
         max_retries: int = 0,
@@ -101,6 +102,7 @@ class PlanResult:
     ):
         self.plan_name = plan_name
         self.environment = environment
+        self.platform = platform.lower()
         self.parallel = parallel
         self.retry_on_failure = retry_on_failure
         self.max_retries = max_retries
@@ -165,6 +167,22 @@ def _context(text: str) -> dict:
     return {"type": "context", "elements": [{"type": "mrkdwn", "text": text}]}
 
 
+_PLATFORM_LABELS: dict[str, str] = {
+    "web":     "🌐  Website",
+    "mobile":  "📱  Mobile Web",
+    "android": "🤖  Android App",
+    "ios":     "🍎  iOS App",
+    "hybrid":  "🔀  Hybrid App",
+}
+
+
+def _fmt_duration(seconds: float) -> str:
+    """Smart duration: seconds below 60s, minutes (2dp) at 60s+."""
+    if seconds < 60:
+        return f"{seconds:.1f}s"
+    return f"{seconds / 60:.2f} min"
+
+
 def _build_blocks(result: PlanResult) -> list[dict]:
     blocks: list[dict] = []
 
@@ -172,29 +190,15 @@ def _build_blocks(result: PlanResult) -> list[dict]:
     overall = "ALL PASSED" if result.total_failed == 0 else "FAILURES DETECTED"
     blocks.append(_header(f"{result.overall_icon}  {result.plan_name}  —  {overall}"))
 
-    # ── 2. Plan meta line ─────────────────────────────────────────────────────
-    ts = result.started_at.strftime("%d %b %Y  %H:%M:%S")
-    owner_part = f"   •   👤  *{result.owner}*" if result.owner else ""
-    blocks.append(_section(f"🌍  *{result.environment.upper()}*{owner_part}   •   🕐  *{ts}*"))
+    # ── 2. Top meta: Platform  •  Owner  •  Started ───────────────────────────
+    platform_label = _PLATFORM_LABELS.get(result.platform, f"🌐  {result.platform.title()}")
+    started_str    = result.started_at.strftime("%d %b %Y  %H:%M:%S")
+    owner_part     = f"   •   👤  *{result.owner}*" if result.owner else ""
+    blocks.append(_section(f"{platform_label}{owner_part}   •   🕐  *{started_str}*"))
     blocks.append(_divider())
 
-    # ── 3. Execution config — 2-column fields ─────────────────────────────────
-    retry_val = f"ON  (max {result.max_retries}×)" if result.retry_on_failure else "OFF"
-    blocks.append(_section("*⚙️  Execution Configuration*"))
-    blocks.append({
-        "type": "section",
-        "fields": [
-            {"type": "mrkdwn", "text": f"*⚡ Parallel*\n{'ON' if result.parallel else 'OFF'}"},
-            {"type": "mrkdwn", "text": f"*🔁 Retry on Failure*\n{retry_val}"},
-            {"type": "mrkdwn", "text": f"*♻️ Rerun Suite on Fail*\n{'ON' if result.rerun_on_failure else 'OFF'}"},
-            {"type": "mrkdwn", "text": f"*🌍 Environment*\n{result.environment.upper()}"},
-        ]
-    })
-    blocks.append(_divider())
-
-    # ── 4. Per-suite breakdown ─────────────────────────────────────────────────
+    # ── 3. Per-suite breakdown ─────────────────────────────────────────────────
     for suite in result.suites:
-        # Suite title with pass/fail badge
         if suite.skipped == suite.total and suite.total > 0:
             badge = f"⏭ SKIPPED  (0/{suite.total})"
         elif suite.failed == 0:
@@ -204,22 +208,22 @@ def _build_blocks(result: PlanResult) -> list[dict]:
 
         blocks.append(_section(f"📦  *Suite: {suite.suite_name}*   ›   {badge}"))
 
-        # Fixed-width table inside a code block
+        # Fixed-width monospace table
         W = 32
-        col_hdr = f"{'Script':<{W}}  {'Status':<14}  {'Duration':>8}  {'Retries':>7}"
+        col_hdr = f"{'Script':<{W}}  {'Status':<14}  {'Duration':>9}  {'Retries':>7}"
         sep     = "─" * len(col_hdr)
         rows    = [sep, col_hdr, sep]
         for sc in suite.scripts:
             name     = sc.script.split("/")[-1][:W]
             status   = f"{sc.icon} {sc.status.upper()}"
-            duration = f"{sc.duration_s:.1f}s"
+            duration = _fmt_duration(sc.duration_s)
             retries  = f"↩ {sc.retries}×" if sc.retries > 0 else "—"
-            rows.append(f"{name:<{W}}  {status:<14}  {duration:>8}  {retries:>7}")
+            rows.append(f"{name:<{W}}  {status:<14}  {duration:>9}  {retries:>7}")
         rows.append(sep)
         table_text = "\n".join(rows)
         blocks.append(_section(f"```\n{table_text}\n```"))
 
-        # Failure detail block — only when failures exist
+        # Failure detail block — only shown when there are failures
         failed_scripts = [sc for sc in suite.scripts if sc.status == "failed"]
         if failed_scripts:
             lines = ["*🔍  Failure Details*"]
@@ -231,8 +235,9 @@ def _build_blocks(result: PlanResult) -> list[dict]:
 
         blocks.append(_divider())
 
-    # ── 5. Final summary — 2-row fields grid ──────────────────────────────────
-    finished = (
+    # ── 4. Test Execution Summary ─────────────────────────────────────────────
+    started_disp  = result.started_at.strftime("%d %b %Y  %H:%M:%S")
+    finished_disp = (
         result.finished_at.strftime("%d %b %Y  %H:%M:%S")
         if result.finished_at else "—"
     )
@@ -244,8 +249,24 @@ def _build_blocks(result: PlanResult) -> list[dict]:
             {"type": "mrkdwn", "text": f"*✅ Passed*\n{result.total_passed}"},
             {"type": "mrkdwn", "text": f"*❌ Failed*\n{result.total_failed}"},
             {"type": "mrkdwn", "text": f"*⏭ Skipped*\n{result.total_skipped}"},
-            {"type": "mrkdwn", "text": f"*⏱ Total Duration*\n{result.duration_s:.1f}s"},
-            {"type": "mrkdwn", "text": f"*🏁 Completed At*\n{finished}"},
+            {"type": "mrkdwn", "text": f"*🕐 Start Time*\n{started_disp}"},
+            {"type": "mrkdwn", "text": f"*🏁 End Time*\n{finished_disp}"},
+            {"type": "mrkdwn", "text": f"*⏱ Duration*\n{_fmt_duration(result.duration_s)}"},
+            {"type": "mrkdwn", "text": f"*🌍 Environment*\n{result.environment.upper()}"},
+        ]
+    })
+    blocks.append(_divider())
+
+    # ── 5. Execution Configuration ────────────────────────────────────────────
+    retry_val = f"ON  (max {result.max_retries}×)" if result.retry_on_failure else "OFF"
+    blocks.append(_section("*⚙️  Execution Configuration*"))
+    blocks.append({
+        "type": "section",
+        "fields": [
+            {"type": "mrkdwn", "text": f"*⚡ Parallel*\n{'ON' if result.parallel else 'OFF'}"},
+            {"type": "mrkdwn", "text": f"*🔁 Retry on Failure*\n{retry_val}"},
+            {"type": "mrkdwn", "text": f"*♻️ Rerun Suite on Fail*\n{'ON' if result.rerun_on_failure else 'OFF'}"},
+            {"type": "mrkdwn", "text": f"*📌 Platform*\n{_PLATFORM_LABELS.get(result.platform, result.platform.title())}"},
         ]
     })
 

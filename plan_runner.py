@@ -266,13 +266,14 @@ def run_plan(plan_path: str, suite_overrides: list[str] = None, dry_run: bool = 
     logger.info("📦  Suites    : %s", candidates)
 
     plan_result = PlanResult(
-        plan_name       = plan["plan_name"],
-        environment     = plan["environment"],
-        parallel        = exec_cfg["parallel"],
-        retry_on_failure= exec_cfg["retry_on_failure"],
-        max_retries     = exec_cfg["max_retries"],
-        rerun_on_failure= exec_cfg["rerun_on_failure"],
-        owner           = plan.get("owner", ""),
+        plan_name        = plan["plan_name"],
+        environment      = plan["environment"],
+        platform         = plan.get("platform", _cfg.PLATFORM),
+        parallel         = exec_cfg["parallel"],
+        retry_on_failure = exec_cfg["retry_on_failure"],
+        max_retries      = exec_cfg["max_retries"],
+        rerun_on_failure = exec_cfg["rerun_on_failure"],
+        owner            = plan.get("owner", ""),
     )
 
     # ── Run suites ────────────────────────────────────────────────────────────
