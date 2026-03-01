@@ -23,10 +23,11 @@ from playwright.sync_api import sync_playwright, expect
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError, Error as PlaywrightError
 
 # Local Framework Modules
-from config_properties.site_registry import SITES
-from config_properties.constants import default_scroll_limit, wait_timeout_ms
+from config.settings import SITES
+from config.settings import DEFAULT_SCROLL_COUNT as default_scroll_limit
+from config.settings import WAIT_TIMEOUT_MS as wait_timeout_ms
 from locator_manager import get_locator_and_dna, get_locator_path
-from healer import ml_heal_element
+from healing.healer import ml_heal_element
 from registry import codeless_snippet
 
 logger = logging.getLogger(__name__)

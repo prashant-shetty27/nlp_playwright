@@ -1,7 +1,7 @@
 import logging
 from os import name
 from .execution_session import ExecutionSession
-from config_properties.site_registry import SITES
+from config.settings import SITES
 
 class ActionService:
 

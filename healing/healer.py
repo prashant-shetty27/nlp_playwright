@@ -6,7 +6,7 @@ Moved from root healer.py — imports locator_builder for separation of concerns
 import logging
 from playwright.sync_api import Page
 
-from ml_engine import LocatorHealer
+from core.ml_engine import LocatorHealer
 from healing.locator_builder import generate_locator
 
 logger = logging.getLogger(__name__)

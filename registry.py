@@ -1,14 +1,8 @@
-from typing import Callable, Dict
+"""
+registry.py
+Backward-compatible shim — delegates to core.registry.
+Import ACTION_REGISTRY and codeless_snippet from here for legacy compatibility.
+"""
+from core.registry import ACTION_REGISTRY, codeless_snippet, get_available_snippets
 
-# This dictionary serves as the single source of truth for your tool's snippets.
-# It sits in memory and is automatically populated.
-ACTION_REGISTRY: Dict[str, Callable] = {}
-
-def codeless_snippet(snippet_name: str):
-    """
-    Decorator that automatically registers a function into the ACTION_REGISTRY.
-    """
-    def decorator(func: Callable):
-        ACTION_REGISTRY[snippet_name] = func
-        return func
-    return decorator
+__all__ = ["ACTION_REGISTRY", "codeless_snippet", "get_available_snippets"]

@@ -1,14 +1,8 @@
-import json
-import os
+"""
+config_properties/site_registry.py
+Backward-compatible shim — delegates to config.settings.SITES.
+All site URLs are defined in config/sites.json, loaded via config/settings.py.
+"""
+from config.settings import SITES
 
-def load_sites():
-    path = os.path.join(os.path.dirname(__file__), "sites.json")
-
-    if not os.path.exists(path):
-        raise FileNotFoundError(f"sites.json not found at {path}")
-
-    with open(path, "r") as f:
-        return json.load(f)
-
-# Load once at import time
-SITES = load_sites()
+__all__ = ["SITES"]

@@ -18,8 +18,8 @@ from execution.browser_manager import (
 from nlp.variable_manager import RUNTIME_VARIABLES, resolve_variables
 from locators.manager import get_locator_and_dna
 from healing.healer import ml_heal_element
-from registry import codeless_snippet
-from config_properties.site_registry import SITES
+from core.registry import codeless_snippet
+from config.settings import SITES
 from config import settings
 
 logger = logging.getLogger(__name__)
