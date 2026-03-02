@@ -1,12 +1,13 @@
 {
-  "_comment": "iOS Test Suite — Safari demo on simulator (validates full Appium/XCUITest pipeline).",
+  "_comment": "iOS Test Suite — JustDial on real device (iPhone 16 Plus).",
 
-  "suite_name": "Safari iOS Suite",
-  "description": "Opens Safari on iOS simulator, navigates to a URL, verifies content.",
+  "suite_name": "JustDial iOS Suite",
+  "description": "Installs JustDial IPA on real iPhone, launches app, verifies home screen.",
   "platform": "ios",
 
   "scripts": [
-    "flows/ios_demo.flow"
+    "flows/ios_demo.flow",
+    "flows/ios_e2e.flow"
   ],
 
   "desired_capabilities": {
@@ -14,28 +15,39 @@
     "platformName":          "iOS",
     "appium:automationName": "XCUITest",
 
-    "_comment_device": "Using available local simulator runtime/device",
-    "appium:deviceName":     "iPhone 17 Pro",
+    "_comment_device": "Real device — Prashant iPhone (iPhone 16 Plus)",
+    "appium:deviceName":     "Prashant iPhone",
+    "appium:udid":           "00008140-0006295A0AEB001C",
     "appium:platformVersion": "26.2",
 
-    "_comment_app": "Safari is pre-installed on every simulator",
-    "appium:bundleId":       "com.apple.mobilesafari",
+    "_comment_app": "JustDial IPA for real device install",
+    "appium:app":            "/Users/prashantshetty/Desktop/Desktop/ios_Justdial_(15).ipa",
+    "appium:bundleId":       "com.justdial.justdialjd",
 
-    "appium:newCommandTimeout": 120,
-    "appium:noReset": true,
-    "appium:autoAcceptAlerts": true,
-    "appium:safariInitialUrl": "https://www.google.com",
+    "appium:newCommandTimeout": 180,
+    "_comment_noReset": "false = fresh install every run (default). Set true via CLI/override to reuse existing app state.",
+    "appium:noReset": false,
+    "_comment_autoAcceptAlerts": "false = we handle alerts manually via 'dismiss alerts' in flows (deny contacts = no sharing sheet). true = auto-accepts all, grants contacts, triggers JD sharing UI.",
+    "appium:autoAcceptAlerts": false,
+    "_comment_appPushTimeout": "58MB IPA needs more than default 480s; 900s = 15 min covers large IPAs over slow USB",
+    "appium:appPushTimeout": 900000,
 
-    "_comment_signing": "No xcodeConfigFile needed for simulator — code signing is skipped",
-    "appium:useNewWDA": true,
-    "appium:useSimpleBuildTest": true,
-    "appium:wdaLaunchTimeout": 180000,
-    "appium:wdaConnectionTimeout": 300000,
+    "_comment_signing": "Real device requires WDA code signing. xcodeOrgId + xcodeSigningId are the primary signing config; xcodeConfigFile provides xcconfig overrides.",
+    "appium:xcodeOrgId": "53NR34M72B",
+    "appium:xcodeSigningId": "Apple Development",
+    "appium:xcodeConfigFile": "/Users/prashantshetty/nlp_playwright/config/wda_signing.xcconfig",
+    "appium:updatedWDABundleId": "com.prashantshetty.integrationapp",
+    "_comment_useNewWDA": "true = force fresh WDA build and re-sign; set false after first successful run for speed. Bundle ID matches provisioning profiles for team 53NR34M72B.",
+    "appium:useNewWDA": false,
+    "appium:allowProvisioningDeviceRegistration": true,
+    "appium:wdaLaunchTimeout": 600000,
+    "appium:wdaConnectionTimeout": 660000,
+    "appium:wdaLocalPort": 8100,
     "appium:showXcodeLog": true
   },
 
   "parameters": [
-    { "name": "search_term",    "type": "string", "value": "NLP Playwright automation" },
-    { "name": "verify_keyword", "type": "string", "value": "Google" }
+    { "name": "search_term",    "type": "string", "value": "Restaurants" },
+    { "name": "verify_keyword", "type": "string", "value": "Justdial" }
   ]
 }

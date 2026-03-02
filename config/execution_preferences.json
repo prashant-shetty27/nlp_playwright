@@ -1,0 +1,15 @@
+{
+  "last_used_profile": "prashant_config_web",
+  "profiles": {
+    "prashant_config_web": {
+      "execution_target": "local",
+      "rerun_on_failure": false,
+      "report_enabled": true,
+      "screenshots_enabled": true,
+      "video_enabled": true,
+      "slack_enabled": false,
+      "email_enabled": false,
+      "headless": true
+    }
+  }
+}

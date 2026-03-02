@@ -88,6 +88,57 @@
       "custom_xpath": "//h1[contains(@class, 'jsx-a487a86b47d169d9') and contains(@class, 'fw500') and contains(@class, 'color111') and contains(@class, 'line_clamp_1')]"
     }
   },
+  "ios": {
+    "home_screen": {
+      "search_field": {
+        "accessibility_id": "saerchBarHomePage",
+        "xpath": "//XCUIElementTypeTextField[@name='saerchBarHomePage']",
+        "class_name": "XCUIElementTypeTextField"
+      },
+      "search_button": {
+        "accessibility_id": "Search",
+        "xpath": "//XCUIElementTypeButton[@name='Search']"
+      },
+      "agree_and_continue": {
+        "accessibility_id": "Agree and Continue",
+        "xpath": "//XCUIElementTypeButton[@name='Agree and Continue']"
+      },
+      "skip_button": {
+        "accessibility_id": "Skip",
+        "xpath": "//XCUIElementTypeButton[@name='Skip']"
+      },
+      "allow_button": {
+        "accessibility_id": "Allow",
+        "xpath": "//XCUIElementTypeButton[@name='Allow']"
+      },
+      "close_button": {
+        "accessibility_id": "Close",
+        "xpath": "//XCUIElementTypeButton[@name='Close']"
+      },
+      "not_now_button": {
+        "accessibility_id": "Not Now",
+        "xpath": "//XCUIElementTypeButton[@name='Not Now']"
+      },
+      "dont_allow_button": {
+        "_comment": "Contacts sharing dialog — 'Don't Allow' denies contact access without picker",
+        "accessibility_id": "Don't Allow",
+        "xpath": "//XCUIElementTypeButton[@name=\"Don't Allow\"]"
+      },
+      "deny_button": {
+        "_comment": "Generic deny — alternate label on some iOS permission dialogs",
+        "accessibility_id": "Deny",
+        "xpath": "//XCUIElementTypeButton[@name='Deny']"
+      }
+    },
+    "results_screen": {
+      "first_result": {
+        "xpath": "(//XCUIElementTypeCell)[1]"
+      },
+      "first_result_title": {
+        "xpath": "(//XCUIElementTypeStaticText)[2]"
+      }
+    }
+  },
   "android": {
     "home_screen": {
       "close_popup_button": {

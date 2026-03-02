@@ -1,16 +1,35 @@
 # flows/ios_demo.flow
-# Safari iOS Demo — validates full Appium XCUITest pipeline on simulator
-# Opens Safari → Google, types a search, verifies results page.
+# JustDial iOS App — Real Device Demo
+# Validates full Appium XCUITest pipeline: install IPA, launch, verify home screen.
 # ──────────────────────────────────────────────────────────────────────────────
 
-# Wait for Safari + Google page to load
-wait 5 seconds
+# Wait for app to install and load
+wait 8 seconds
 
-# Take screenshot of Safari home
-take screenshot as ios_safari_home
+# Dismiss system permission dialogs — autoAcceptAlerts=false so we control each one.
+# "dismiss" action = "Don't Allow" on permission dialogs (denies contacts, location etc.)
+# Three passes to catch staggered alerts (location fires first, then contacts, etc.)
+dismiss alerts
+wait 1 seconds
+dismiss alerts
+wait 1 seconds
+dismiss alerts
+wait 1 seconds
 
-# Verify Google loaded
+# Dismiss app-level onboarding if present
+tap if exists agree_and_continue
+tap if exists skip_button
+wait 1 seconds
+
+# Take screenshot of home screen
+take screenshot as ios_justdial_home
+
+# Verify the app loaded — look for JustDial branding
 verify text "${verify_keyword}"
 
-# Take screenshot of final state
-take screenshot as ios_safari_done
+# Take screenshot after verification
+take screenshot as ios_justdial_verified
+
+# Wait and take final screenshot
+wait 3 seconds
+take screenshot as ios_justdial_done

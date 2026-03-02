@@ -1,5 +1,10 @@
-// WDA code signing config for real device (free Apple Developer account)
+// WDA code signing config for real device
+// Team ID: 53NR34M72B — Apple Developer account (prashantshetty27@gmail.com)
+// Certificate was auto-synced via -allowProvisioningUpdates on first run.
+// Verify: security find-identity -v -p codesigning | grep "Apple Development"
 DEVELOPMENT_TEAM = 53NR34M72B
 CODE_SIGN_STYLE = Automatic
 CODE_SIGN_IDENTITY = Apple Development
+// Override the SDK-specific identity set in WDA project.pbxproj (which uses old "iPhone Developer" value)
+CODE_SIGN_IDENTITY[sdk=iphoneos*] = Apple Development
 PROVISIONING_PROFILE_SPECIFIER =

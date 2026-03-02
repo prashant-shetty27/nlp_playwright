@@ -24,6 +24,26 @@ from config import settings
 
 logger = logging.getLogger(__name__)
 
+# ─────────────────────────────────────────────────────────────────────────────
+# TAB / WINDOW & IFRAME STATE
+# These module-level refs let NLP steps switch the active tab or iframe context
+# without changing the runner's own page reference.
+# ─────────────────────────────────────────────────────────────────────────────
+_ACTIVE_PAGE = None   # overrides default page when user switches tabs (None = use runner's page)
+_ACTIVE_FRAME = None  # FrameLocator override when inside an iframe (None = use page)
+
+
+def get_active_page(default_page):
+    """Return the active tab page; falls back to the runner's page if no tab switch happened."""
+    return _ACTIVE_PAGE if _ACTIVE_PAGE is not None else default_page
+
+
+def _get_locator_root(page):
+    """Return the iframe FrameLocator when inside one, else the active page."""
+    if _ACTIVE_FRAME is not None:
+        return _ACTIVE_FRAME
+    return get_active_page(page)
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # INTERNAL HELPERS
@@ -51,16 +71,17 @@ def _get_healed_element_locator(page, locator_name):
         raise Exception(f"Locator '{locator_name}' not found in any page.")
 
     primary_xpath = resolve_variables(primary_xpath)
-    loc = page.locator(primary_xpath).first
+    root = _get_locator_root(page)   # frame-aware: uses iframe context when active
+    loc = root.locator(primary_xpath).first
 
     if not loc.is_visible(timeout=3000):
         logger.warning("Verification element not immediately visible. Attempting ML heal...")
         if dna:
             try:
-                healed_xpath = ml_heal_element(page, dna)
+                healed_xpath = ml_heal_element(page, dna)  # ML heal always scans the real page DOM
                 if healed_xpath:
                     logger.info("Healed verification element successfully!")
-                    return page.locator(healed_xpath).first
+                    return root.locator(healed_xpath).first
             except Exception:
                 pass
     return loc
@@ -666,6 +687,93 @@ def take_screenshot(page_obj, label="capture"):
     filename = os.path.join(settings.SCREENSHOTS_DIR, f"{label}_{_timestamp()}.png")
     page_obj.screenshot(path=filename, full_page=True)
     logger.info("📸 Screenshot Saved: %s", filename)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TAB / WINDOW MANAGEMENT (Playwright BrowserContext)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def switch_tab(page, index: int):
+    """Focus a browser tab by 0-based index."""
+    global _ACTIVE_PAGE
+    pages = page.context.pages
+    if index < 0 or index >= len(pages):
+        raise AssertionError(
+            f"❌ Tab index {index} out of range. "
+            f"Open tabs: {len(pages)}  (valid: 0–{len(pages) - 1})"
+        )
+    _ACTIVE_PAGE = pages[index]
+    _ACTIVE_PAGE.bring_to_front()
+    logger.info("🪟 Switched to tab %d — %s", index, _ACTIVE_PAGE.url)
+
+
+def close_tab(page, index=None):
+    """Close a tab by index (or the current active tab when index is None)."""
+    global _ACTIVE_PAGE
+    ctx = page.context
+    pages = ctx.pages
+    if index is not None:
+        if index < 0 or index >= len(pages):
+            raise AssertionError(f"❌ Tab index {index} out of range (0–{len(pages) - 1})")
+        target = pages[index]
+    else:
+        target = _ACTIVE_PAGE or page
+    target.close()
+    remaining = ctx.pages
+    _ACTIVE_PAGE = remaining[0] if remaining else None
+    if _ACTIVE_PAGE:
+        _ACTIVE_PAGE.bring_to_front()
+    logger.info("🗑️  Tab closed. Active tab: %s", _ACTIVE_PAGE.url if _ACTIVE_PAGE else "—")
+
+
+def close_all_tabs(page):
+    """Close every tab except tab 0 and reset focus to tab 0."""
+    global _ACTIVE_PAGE
+    pages = page.context.pages
+    for p in pages[1:]:
+        p.close()
+    _ACTIVE_PAGE = pages[0] if pages else None
+    if _ACTIVE_PAGE:
+        _ACTIVE_PAGE.bring_to_front()
+    logger.info("🗑️  Closed all tabs. Active: %s", _ACTIVE_PAGE.url if _ACTIVE_PAGE else "—")
+
+
+def open_new_tab(page):
+    """Open a blank new tab and switch focus to it."""
+    global _ACTIVE_PAGE
+    _ACTIVE_PAGE = page.context.new_page()
+    logger.info("🪟 Opened new tab (now active).")
+
+
+def list_tabs(page):
+    """Log every open tab with its index, title, and URL."""
+    pages = page.context.pages
+    logger.info("📋 Open tabs (%d):", len(pages))
+    for i, p in enumerate(pages):
+        try:
+            title = p.title()
+        except Exception:
+            title = "—"
+        logger.info("  [%d] %s  —  %s", i, title, p.url)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# IFRAME / FRAME MANAGEMENT (Playwright FrameLocator)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def switch_iframe(page, selector: str):
+    """Switch element-interaction context into an iframe matching the given CSS/XPath selector."""
+    global _ACTIVE_FRAME
+    effective = get_active_page(page)
+    _ACTIVE_FRAME = effective.frame_locator(selector)
+    logger.info("🖼️  Entered iframe: %s", selector)
+
+
+def exit_iframe(_page=None):
+    """Return to the main frame (clear iframe context)."""
+    global _ACTIVE_FRAME
+    _ACTIVE_FRAME = None
+    logger.info("🖼️  Exited iframe — back to main frame.")
 
 
 # ─────────────────────────────────────────────────────────────────────────────

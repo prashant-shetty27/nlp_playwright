@@ -184,8 +184,13 @@ def clear_element(driver, name: str, platform: str):
 
 
 def tap_coordinates(driver, x: int, y: int):
-    """Tap at raw screen coordinates."""
-    driver.execute_script("mobile: clickGesture", {"x": int(x), "y": int(y)})
+    """Tap at raw screen coordinates (works on iOS and Android)."""
+    try:
+        # iOS: mobile:tap with x,y coordinates
+        driver.execute_script("mobile: tap", {"x": int(x), "y": int(y)})
+    except Exception:
+        # Fallback: W3C Appium tap
+        driver.tap([(int(x), int(y))])
     logger.info("👆 Tapped at (%d, %d)", x, y)
 
 
@@ -226,7 +231,7 @@ def scroll_until_text_visible(driver, text: str, max_swipes: int = 8, wait_s: fl
     text = resolve_variables(text)
     from appium.webdriver.common.appiumby import AppiumBy
 
-    for i in range(max_swipes):
+    for _ in range(max_swipes):
         try:
             el = driver.find_element(AppiumBy.ANDROID_UIAUTOMATOR,
                                      f'new UiScrollable(new UiSelector().scrollable(true))'
@@ -255,7 +260,7 @@ def scroll_until_text_visible(driver, text: str, max_swipes: int = 8, wait_s: fl
 def scroll_until_element_visible(driver, name: str, platform: str, max_swipes: int = 8):
     """Swipe until a named element appears."""
     name = resolve_variables(name)
-    for i in range(max_swipes):
+    for _ in range(max_swipes):
         try:
             el = _find_element(driver, name, platform)
             if el.is_displayed():
@@ -269,24 +274,33 @@ def scroll_until_element_visible(driver, name: str, platform: str, max_swipes: i
 
 
 def verify_text(driver, text: str):
-    """Assert that text appears anywhere on the current screen."""
+    """Assert that text appears anywhere on the current screen.
+
+    Strategy: XPath find_elements first (evaluated natively on-device by WDA/UIA2,
+    fast regardless of page size), then page_source as a fallback.
+    Avoids downloading megabytes of XML for pages with hundreds of list cells.
+    """
     text = resolve_variables(text)
     from appium.webdriver.common.appiumby import AppiumBy
 
-    page_source = driver.page_source
-    if text in page_source:
-        logger.info("✅ Text verified: '%s'", text)
-        return
-
-    # Try element search
+    # Primary: native XPath — server-side evaluation, no XML transfer
     try:
         els = driver.find_elements(
             AppiumBy.XPATH,
             f"//*[contains(@text,'{text}') or contains(@content-desc,'{text}') "
-            f"or contains(@label,'{text}') or contains(@value,'{text}')]"
+            f"or contains(@label,'{text}') or contains(@value,'{text}') "
+            f"or contains(@name,'{text}')]"
         )
         if els:
-            logger.info("✅ Text verified (element): '%s'", text)
+            logger.info("✅ Text verified: '%s'", text)
+            return
+    except Exception:
+        pass
+
+    # Fallback: page_source string scan (slow on large pages — avoid for results lists)
+    try:
+        if text in driver.page_source:
+            logger.info("✅ Text verified (page source): '%s'", text)
             return
     except Exception:
         pass
@@ -319,6 +333,51 @@ def verify_element_not_exists(driver, name: str, platform: str):
     except (RuntimeError, ValueError):
         pass  # Not found = expected
     logger.info("✅ Element '{name}' correctly absent")
+
+
+def double_tap(driver, name: str, platform: str):
+    """Double-tap an element."""
+    name = resolve_variables(name)
+    el   = _find_element(driver, name, platform)
+    try:
+        driver.execute_script("mobile: doubleTap", {"element": el.id})
+    except Exception:
+        el.click()
+        import time as _t; _t.sleep(0.1)
+        el.click()
+    logger.info("👆👆 Double-tapped: '%s'", name)
+
+
+def long_press(driver, name: str, platform: str, duration_s: float = 1.5):
+    """Long-press (hold) an element."""
+    name = resolve_variables(name)
+    el   = _find_element(driver, name, platform)
+    try:
+        driver.execute_script("mobile: touchAndHold", {"element": el.id, "duration": duration_s})
+    except Exception:
+        from selenium.webdriver.common.action_chains import ActionChains
+        ActionChains(driver).click_and_hold(el).pause(duration_s).release().perform()
+    logger.info("🤙 Long-pressed: '%s' (%.1fs)", name, duration_s)
+
+
+def wait_for_element(driver, name: str, platform: str, timeout_s: float = 15):
+    """Wait up to timeout_s for a named element to become visible."""
+    import time as _t
+    name     = resolve_variables(name)
+    deadline = _t.time() + timeout_s
+    last_err = None
+    while _t.time() < deadline:
+        try:
+            el = _find_element(driver, name, platform)
+            if el.is_displayed():
+                logger.info("✅ Element appeared: '%s'", name)
+                return
+        except Exception as e:
+            last_err = e
+        _t.sleep(0.5)
+    raise AssertionError(
+        f"❌ Element '{name}' did not appear within {timeout_s:.0f}s. Last error: {last_err}"
+    )
 
 
 def store_element_text(driver, name: str, platform: str, variable: str):
@@ -357,6 +416,69 @@ def wait_seconds(driver, seconds: float):
     time.sleep(float(seconds))
 
 
+def dismiss_alerts(driver, attempts: int = 3):
+    """
+    Dismiss any visible system alerts (permission dialogs, etc.).
+    Tries both 'dismiss' (Don't Allow / Cancel) and 'accept' (Allow).
+    Safe to call even when no alert is showing.
+    """
+    for _ in range(attempts):
+        dismissed = False
+        for action in ("dismiss", "accept"):
+            try:
+                driver.execute_script("mobile: alert", {"action": action})
+                logger.info("🔔 System alert %sed", action)
+                dismissed = True
+                time.sleep(1)
+                break
+            except Exception:
+                pass
+        if not dismissed:
+            break
+
+
+def tap_by_text(driver, text: str):
+    """Tap the first visible element whose label / text / value contains the given text."""
+    text = resolve_variables(text)
+    from appium.webdriver.common.appiumby import AppiumBy
+
+    strategies = [
+        (AppiumBy.ACCESSIBILITY_ID,
+         text),
+        (AppiumBy.XPATH,
+         f"//*[contains(@label,'{text}') or contains(@text,'{text}') "
+         f"or contains(@value,'{text}') or contains(@name,'{text}')]"),
+    ]
+
+    errors = []
+    for by, value in strategies:
+        try:
+            el = driver.find_element(by, value)
+            el.click()
+            logger.info("👆 Tapped by text: '%s'", text)
+            return
+        except Exception as e:
+            errors.append(f"{by}: {e}")
+
+    raise RuntimeError(
+        f"Could not tap text '{text}' on screen.\n"
+        + "\n".join(f"  • {e}" for e in errors)
+    )
+
+
+def type_into_active(driver, text: str):
+    """Type text into whatever element is currently focused (no element lookup needed)."""
+    text = resolve_variables(text)
+    try:
+        # iOS preferred: native typeText avoids keyboard lag
+        driver.execute_script("mobile: typeText", {"text": text})
+        logger.info("⌨️  Typed into active element: '%s'", text)
+    except Exception:
+        # Fallback: send_keys on the active element (works on Android too)
+        driver.switch_to.active_element.send_keys(text)
+        logger.info("⌨️  Typed (send_keys) into active element: '%s'", text)
+
+
 def press_back(driver):
     """Press the Android back button (or iOS swipe back)."""
     try:
@@ -376,11 +498,44 @@ def press_home(driver):
 
 
 def press_enter(driver):
-    """Press enter/return key on the keyboard."""
+    """Press enter/return/search key on the keyboard (iOS and Android)."""
+    from appium.webdriver.common.appiumby import AppiumBy
+
+    # iOS: HID keyboard Return key event (works on real device with XCUITest)
     try:
-        from appium.webdriver.common.appiumby import AppiumBy
-        driver.execute_script("mobile: pressKey", {"keycode": 66})  # KEYCODE_ENTER on Android
-        logger.info("↩️  Pressed enter")
+        driver.execute_script("mobile: performIoHidEvent", {
+            "page": 0x07, "usage": 0x28, "durationSeconds": 0.005
+        })
+        logger.info("↩️  Pressed enter (HID Return key)")
+        return
+    except Exception:
+        pass
+
+    # iOS: tap the visible keyboard Return/Search/Go/Done button
+    for key_name in ("Search", "Go", "Done", "return", "Return"):
+        try:
+            el = driver.find_element(
+                AppiumBy.XPATH,
+                f"//XCUIElementTypeKeyboard//XCUIElementTypeButton[@name='{key_name}']",
+            )
+            el.click()
+            logger.info("↩️  Pressed keyboard key: %s", key_name)
+            return
+        except Exception:
+            pass
+
+    # iOS fallback: typeText newline
+    try:
+        driver.execute_script("mobile: typeText", {"text": "\n"})
+        logger.info("↩️  Pressed enter (typeText \\n)")
+        return
+    except Exception:
+        pass
+
+    # Android: KEYCODE_ENTER
+    try:
+        driver.execute_script("mobile: pressKey", {"keycode": 66})
+        logger.info("↩️  Pressed enter (Android keycode)")
     except Exception as e:
         logger.warning("⚠️  enter(): %s", e)
 

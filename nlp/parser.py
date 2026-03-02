@@ -126,6 +126,24 @@ def parse_step(step: str) -> Command:
         target = re.sub(r"^click\s+(on\s+)?(element\s+)?", "", s, flags=re.IGNORECASE).strip()
         return Command(type="click", target=target)
 
+    # TAP TEXT COMMAND — tap by visible label/text without needing a pre-recorded locator
+    # tap text "Search"  |  click text "Go"
+    m = re.match(r'^(?:tap|click)\s+text\s+"(.*?)"$', s, re.I)
+    if m:
+        return Command(type="tap_text", text=m.group(1))
+
+    # DOUBLE TAP COMMAND — must be before plain "tap" rule
+    # double tap <element>  |  double click <element>
+    m = re.match(r'^double\s+(?:tap|click)\s+(.*)', s, re.I)
+    if m:
+        return Command(type="double_tap", target=m.group(1).strip())
+
+    # LONG PRESS COMMAND — must be before plain "tap" rule
+    # long press <element>  |  long tap <element>  |  hold <element>
+    m = re.match(r'^(?:long\s+(?:press|tap)|hold)\s+(.*)', s, re.I)
+    if m:
+        return Command(type="long_press", target=m.group(1).strip())
+
     # TAP COMMAND (alias of click)
     if s.lower().startswith("tap "):
         target = re.sub(r"^tap\s+(on\s+)?(element\s+)?", "", s, flags=re.IGNORECASE).strip()
@@ -141,6 +159,10 @@ def parse_step(step: str) -> Command:
         if match:
             text_to_type, target = match.groups()
             return Command(type="fill", text=text_to_type, target=target.strip())
+        # type "text"  (no element — types into the currently focused element)
+        m2 = re.match(r'^(?:type|fill)\s+"(.*?)"$', s, re.I)
+        if m2:
+            return Command(type="type_text", text=m2.group(1))
 
     # =============================
     # SCREENSHOT
@@ -163,6 +185,22 @@ def parse_step(step: str) -> Command:
         if direction == "up":
             amount = -amount
         return Command(type="scroll", count=amount)
+
+    # =============================
+    # VERIFY ELEMENT EXISTS
+    # verify element exists <locator>  |  assert element exists <locator>
+    # =============================
+    m = re.match(r'^(?:verify|assert)\s+element\s+exists\s+(\S+)$', s, re.I)
+    if m:
+        return Command(type="verify_element_exists", target=m.group(1))
+
+    # =============================
+    # VERIFY ELEMENT NOT EXISTS
+    # verify element not exists <locator>
+    # =============================
+    m = re.match(r'^(?:verify|assert)\s+element\s+not\s+exists\s+(\S+)$', s, re.I)
+    if m:
+        return Command(type="verify_element_not_exists", target=m.group(1))
 
     # =============================
     # VERIFY ELEMENT EXACT TEXT
@@ -269,6 +307,76 @@ def parse_step(step: str) -> Command:
     if m:
         var_name, partial = m.groups()
         return Command(type="verify_var_contains", target=var_name, text=partial)
+
+    # =============================
+    # ALERT / PERMISSION HANDLING
+    # =============================
+    if re.match(r'^(?:dismiss|accept|handle|clear)\s+alerts?$', s, re.I):
+        return Command(type="dismiss_alerts")
+
+    # WAIT FOR ELEMENT — explicit visibility wait (no scrolling)
+    # wait for element <name>  |  wait until element <name>  |  wait until <name> visible
+    m = re.match(r'^wait\s+(?:for|until)\s+(?:element\s+)?(\S+)(?:\s+(?:visible|appears?))?$', s, re.I)
+    if m:
+        return Command(type="wait_for_element", target=m.group(1).strip())
+
+    # =============================
+    # DEVICE CONTROLS
+    # =============================
+    if re.match(r'^press\s+back$', s, re.I) or s.lower() == "go back":
+        return Command(type="press_back")
+    if re.match(r'^press\s+home$', s, re.I):
+        return Command(type="press_home")
+    if re.match(r'^press\s+(?:enter|return|search)$', s, re.I):
+        return Command(type="press_enter")
+    if re.match(r'^(?:hide|dismiss)\s+keyboard$', s, re.I):
+        return Command(type="hide_keyboard")
+
+    # =============================
+    # SWIPE
+    # =============================
+    if re.match(r'^swipe\s+left$', s, re.I):
+        return Command(type="swipe_left")
+    if re.match(r'^swipe\s+right$', s, re.I):
+        return Command(type="swipe_right")
+
+    # =============================
+    # TAB / WINDOW MANAGEMENT
+    # switch to tab 2 | focus tab 0 | go to window 1
+    # close tab | close tab 2 | close all tabs
+    # open new tab | list tabs
+    # =============================
+    m = re.match(r'^(?:switch\s+to\s+(?:tab|window)|focus\s+(?:tab|window)|go\s+to\s+(?:tab|window))\s+(\d+)$', s, re.I)
+    if m:
+        return Command(type="switch_tab", count=int(m.group(1)))
+
+    m = re.match(r'^close\s+(?:tab|window)\s+(\d+)$', s, re.I)
+    if m:
+        return Command(type="close_tab", count=int(m.group(1)))
+
+    if re.match(r'^close\s+(?:current\s+)?(?:tab|window)$', s, re.I):
+        return Command(type="close_tab")
+
+    if re.match(r'^close\s+all\s+(?:tabs?|windows?)$', s, re.I):
+        return Command(type="close_all_tabs")
+
+    if re.match(r'^open\s+new\s+tab$', s, re.I):
+        return Command(type="open_new_tab")
+
+    if re.match(r'^list\s+(?:tabs?|windows?)$', s, re.I):
+        return Command(type="list_tabs")
+
+    # =============================
+    # IFRAME / FRAME SWITCHING
+    # switch to iframe "selector" | switch to frame <name> | enter iframe <xpath>
+    # exit iframe | exit frame | switch to main frame | switch to default content
+    # =============================
+    m = re.match(r'^(?:switch\s+to|enter)\s+(?:iframe|frame)\s+(.+)$', s, re.I)
+    if m:
+        return Command(type="switch_iframe", target=m.group(1).strip().strip('"'))
+
+    if re.match(r'^(?:exit\s+(?:iframe|frame)|switch\s+to\s+(?:main\s+frame|default\s+content))$', s, re.I):
+        return Command(type="exit_iframe")
 
     # =============================
     # TERMINAL FALLBACK

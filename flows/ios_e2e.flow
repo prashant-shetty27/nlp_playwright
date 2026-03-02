@@ -1,0 +1,65 @@
+# flows/ios_e2e.flow
+# JustDial iOS — End-to-End: Search for Restaurants, verify results
+# ──────────────────────────────────────────────────────────────────
+# Uses: tap text "...", type "...", verify text, scroll, screenshot
+# Parameters (from suite): search_term, verify_keyword
+# ──────────────────────────────────────────────────────────────────
+
+# ── 1. App continues in the same session from ios_demo.flow ───────
+# After ios_demo.flow ends, JD shows a contacts permission dialog, then the Login
+# screen. Dismiss the contacts alert, then skip the login screen to reach home.
+wait 2 seconds
+dismiss alerts
+wait 1 seconds
+tap if exists skip_button
+wait 2 seconds
+take screenshot as ios_e2e_01_home
+
+# ── 2. Tap the actual search text field ───────────────────────────
+tap search_field
+wait 2 seconds
+take screenshot as ios_e2e_03_search_active
+
+# ── 3. Type the search term directly into the field ───────────────
+type "${search_term}" into search_field
+wait 2 seconds
+take screenshot as ios_e2e_04_typed
+
+# ── 4. Submit search (Return key via HID event) ───────────────────
+press enter
+wait 2 seconds
+
+# ── 5. Dismiss contacts sharing dialog (appears after search on iOS) ──
+# JustDial triggers contact access for "friends nearby" on search.
+# This SpringBoard sheet covers the results — must dismiss before verifying.
+tap if exists dont_allow_button
+tap if exists deny_button
+wait 3 seconds
+take screenshot as ios_e2e_05_results
+
+# ── 6. Verify results page loaded (element-based, platform-agnostic) ──
+# Reason: page_source on a results page (100s of cells) is huge XML —
+# scanning it for text takes 120s+ and times out.
+# Element-based check is fast: find_element("first_result") = results loaded.
+# Also avoids platform-specific heading text differences (web vs iOS vs Android).
+verify element exists first_result
+take screenshot as ios_e2e_06_results_verified
+
+# ── 7. Scroll to see more results ─────────────────────────────────
+scroll down
+wait 2 seconds
+take screenshot as ios_e2e_07_scrolled
+
+# ── 8. Tap first result ───────────────────────────────────────────
+tap first_result
+wait 4 seconds
+take screenshot as ios_e2e_08_detail
+
+# ── 9. Verify branding present on detail screen ───────────────────
+verify text "${verify_keyword}"
+take screenshot as ios_e2e_09_detail_verified
+
+# ── 10. Go back to results ────────────────────────────────────────
+press back
+wait 2 seconds
+take screenshot as ios_e2e_10_back_results

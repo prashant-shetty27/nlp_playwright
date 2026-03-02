@@ -42,6 +42,7 @@ from reporting import email_notifier
 from reporting.report_manager import TestReportManager
 from runner import run_nlp_flow_collect as _run_web_flow
 from runner_appium import run_appium_flow_collect as _run_appium_flow
+from runner_appium import run_appium_suite_collect as _run_appium_suite
 from config import settings as _cfg
 from config import execution_preferences as _prefs
 
@@ -224,14 +225,34 @@ def _run_suite(
     platform = caps.get("platform", suite.get("platform", _cfg.PLATFORM or "web")).lower()
     logger.info("    Platform: %s", platform.upper())
 
+    is_appium = platform in _APPIUM_PLATFORMS
+
     def _run_all() -> SuiteResult:
         sr = SuiteResult(suite["suite_name"])
-        for script in suite["scripts"]:
-            res = _run_script(script, retry_on, max_ret, dry_run, capabilities=caps, platform=platform)
-            sr.add(res)
-            if stop and res.status == "failed":
-                logger.warning("  🛑 stop_on_first_failure=true — halting suite.")
-                break
+
+        if is_appium and not dry_run:
+            # ── Shared session: one install, all flows in sequence ────────
+            logger.info("  📱 Appium suite — ONE session for all %d flow(s)", len(suite["scripts"]))
+            flow_results = _run_appium_suite(
+                suite["scripts"],
+                capabilities=caps,
+                platform=platform,
+                stop_on_first_failure=stop,
+            )
+            for fr in flow_results:
+                status   = "passed" if fr["failed"] == 0 else "failed"
+                duration = fr.get("duration_s", 0.0)
+                failure  = next((ln for ln in reversed(fr["log"]) if "❌" in ln), "") if status == "failed" else ""
+                sr.add(ScriptResult(fr["file"], status, duration_s=duration, failure_reason=failure))
+        else:
+            # ── Web / dry-run: one session per flow (original behaviour) ──
+            for script in suite["scripts"]:
+                res = _run_script(script, retry_on, max_ret, dry_run, capabilities=caps, platform=platform)
+                sr.add(res)
+                if stop and res.status == "failed":
+                    logger.warning("  🛑 stop_on_first_failure=true — halting suite.")
+                    break
+
         return sr
 
     # First pass
@@ -309,6 +330,7 @@ def run_plan(
     profile_name: Optional[str] = None,
     ask_config: bool = False,
     save_profile_name: Optional[str] = None,
+    reuse_app: bool = False,
 ) -> int:
     """
     Execute a test plan.
@@ -377,6 +399,11 @@ def run_plan(
             skipped.add(ScriptResult(suite_path, "skipped", failure_reason=str(e)))
             plan_result.add_suite(skipped)
             continue
+
+        # --reuse-app: override noReset=True so Appium skips reinstall
+        if reuse_app:
+            suite.setdefault("desired_capabilities", {})["appium:noReset"] = True
+            logger.info("  ♻️  --reuse-app: noReset=True (skipping reinstall)")
 
         suite_result = _run_suite(suite, exec_cfg, dry_run)
         plan_result.add_suite(suite_result)
@@ -474,6 +501,10 @@ Examples:
         "--dry-run", action="store_true",
         help="Print what would run + Slack Block Kit preview without executing anything",
     )
+    parser.add_argument(
+        "--reuse-app", action="store_true",
+        help="Skip app reinstall — use already-installed app on device (sets noReset=True)",
+    )
     parser.add_argument("--profile", help="Use saved execution profile name")
     parser.add_argument("--save-profile", help="Save current runtime config as profile name")
     parser.add_argument("--ask-config", action="store_true", help="Interactively ask runtime execution options")
@@ -511,5 +542,6 @@ Examples:
         profile_name=args.profile,
         ask_config=args.ask_config,
         save_profile_name=args.save_profile,
+        reuse_app=args.reuse_app,
     )
     sys.exit(exit_code)

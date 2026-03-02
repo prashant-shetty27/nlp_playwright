@@ -105,44 +105,56 @@ def _execute_step_from_command(cmd, page):
     """Routes a parsed Command to the appropriate action function."""
     import execution.action_service as svc
 
+    # Resolve active tab: if user ran "switch to tab N", actions run on that tab
+    ep = svc.get_active_page(page)
+
     dispatch = {
         # ── Navigation ───────────────────────────────────────────────────────
-        "open":                      lambda: svc.open_site(page, cmd.target),
-        "refresh":                   lambda: svc.refresh_page(page),
+        "open":                      lambda: svc.open_site(ep, cmd.target),
+        "refresh":                   lambda: svc.refresh_page(ep),
         # ── Interaction ──────────────────────────────────────────────────────
-        "search":                    lambda: svc.search(page, cmd.text),
-        "click":                     lambda: svc.click_element(page, cmd.target),
-        "fill":                      lambda: svc.fill_element(page, cmd.text, cmd.target),
+        "search":                    lambda: svc.search(ep, cmd.text),
+        "click":                     lambda: svc.click_element(ep, cmd.target),
+        "fill":                      lambda: svc.fill_element(ep, cmd.text, cmd.target),
         # ── Wait / Timing ─────────────────────────────────────────────────────
-        "wait":                      lambda: svc.wait_seconds(page, cmd.wait),
-        "wait_for_result_page_load": lambda: svc.wait_for_result_page_load(page),
+        "wait":                      lambda: svc.wait_seconds(ep, cmd.wait),
+        "wait_for_result_page_load": lambda: svc.wait_for_result_page_load(ep),
         # ── Scroll ────────────────────────────────────────────────────────────
-        "scroll":                    lambda: svc.vertical_scroll(page, cmd.count or 500),
-        "scroll_until_text_visible": lambda: svc.scroll_until_text_visible(page, cmd.text, cmd.count, cmd.wait),
+        "scroll":                    lambda: svc.vertical_scroll(ep, cmd.count or 500),
+        "scroll_until_text_visible": lambda: svc.scroll_until_text_visible(ep, cmd.text, cmd.count, cmd.wait),
         # ── Screenshot ───────────────────────────────────────────────────────
-        "screenshot":                lambda: svc.take_screenshot(page, cmd.target or "capture"),
+        "screenshot":                lambda: svc.take_screenshot(ep, cmd.target or "capture"),
         # ── Verification — Global ────────────────────────────────────────────
-        "verify_text":               lambda: svc.verify_global_exact_text(page, cmd.text, exact_match=False),
-        "verify_exact_text":         lambda: svc.verify_global_exact_text(page, cmd.text, exact_match=True),
-        "verify_multiple_texts":     lambda: svc.verify_multiple_global_texts(page, cmd.text),
+        "verify_text":               lambda: svc.verify_global_exact_text(ep, cmd.text, exact_match=False),
+        "verify_exact_text":         lambda: svc.verify_global_exact_text(ep, cmd.text, exact_match=True),
+        "verify_multiple_texts":     lambda: svc.verify_multiple_global_texts(ep, cmd.text),
         # ── Verification — Element ───────────────────────────────────────────
-        "verify_element_exact":      lambda: svc.verify_element_exact_text(page, cmd.target, cmd.text),
-        "verify_element_contains":   lambda: svc.verify_element_contains_text(page, cmd.target, cmd.text),
+        "verify_element_exact":      lambda: svc.verify_element_exact_text(ep, cmd.target, cmd.text),
+        "verify_element_contains":   lambda: svc.verify_element_contains_text(ep, cmd.target, cmd.text),
         # ── Verification — Variables ─────────────────────────────────────────
         "verify_var_contains":       lambda: svc.verify_stored_variable_contains(cmd.target, cmd.text),
         # ── Extract — Page info ──────────────────────────────────────────────
-        "extract_url":               lambda: svc.extract_page_url(page, cmd.variable_name),
-        "extract_title":             lambda: svc.extract_page_title(page, cmd.variable_name),
+        "extract_url":               lambda: svc.extract_page_url(ep, cmd.variable_name),
+        "extract_title":             lambda: svc.extract_page_title(ep, cmd.variable_name),
         # ── Extract — Element data ───────────────────────────────────────────
-        "extract_text":              lambda: svc.extract_element_text(page, cmd.target, cmd.variable_name),
-        "extract_attribute":         lambda: svc.extract_element_attribute(page, cmd.target, cmd.attribute, cmd.variable_name),
-        "extract_input":             lambda: svc.extract_input_value(page, cmd.target, cmd.variable_name),
-        "extract_count":             lambda: svc.extract_element_count(page, cmd.target, cmd.variable_name),
+        "extract_text":              lambda: svc.extract_element_text(ep, cmd.target, cmd.variable_name),
+        "extract_attribute":         lambda: svc.extract_element_attribute(ep, cmd.target, cmd.attribute, cmd.variable_name),
+        "extract_input":             lambda: svc.extract_input_value(ep, cmd.target, cmd.variable_name),
+        "extract_count":             lambda: svc.extract_element_count(ep, cmd.target, cmd.variable_name),
         # ── Variables / Data ─────────────────────────────────────────────────
         "create_variable":           lambda: svc.create_custom_variable(cmd.text, cmd.target),
         "math":                      lambda: svc.execute_math(cmd.target, cmd.text, cmd.values[0], cmd.variable_name),
         # ── Image ─────────────────────────────────────────────────────────────
         "verify_image":              lambda: None,  # handled in _interpret below
+        # ── Tabs / Windows ───────────────────────────────────────────────────
+        "switch_tab":                lambda: svc.switch_tab(page, int(cmd.count or 0)),
+        "close_tab":                 lambda: svc.close_tab(page, int(cmd.count) if cmd.count is not None else None),
+        "close_all_tabs":            lambda: svc.close_all_tabs(page),
+        "open_new_tab":              lambda: svc.open_new_tab(page),
+        "list_tabs":                 lambda: svc.list_tabs(page),
+        # ── Iframes ──────────────────────────────────────────────────────────
+        "switch_iframe":             lambda: svc.switch_iframe(page, cmd.target),
+        "exit_iframe":               lambda: svc.exit_iframe(),
     }
 
     handler = dispatch.get(cmd.type)

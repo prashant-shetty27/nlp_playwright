@@ -16,6 +16,8 @@ import json
 import logging
 import time
 import subprocess
+import threading
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
 
 from nlp.parser import parse_step
 from nlp.variable_manager import RUNTIME_VARIABLES, resolve_variables
@@ -24,6 +26,90 @@ from config import settings
 logger = logging.getLogger(__name__)
 
 _STOP_ON_FAILURE: bool = False
+
+# ── Timeout configuration (seconds) ──────────────────────────────────────────
+SESSION_START_TIMEOUT   = 1200  # 20 min — max time for WDA build + IPA install + session start (iOS WDA build 8-15 min, large IPA push up to 15 min)
+STEP_TIMEOUT            = 30    # 30 s   — max time for a single step; broken steps should fail fast
+IDLE_WATCHDOG_TIMEOUT   = 60    # 60 s   — abort if no step completes for this long
+DEVICE_KEEPALIVE_INTERVAL = 25  # 25 s   — send keepalive this often to prevent device screen auto-lock
+DEVICE_LOCK_RETRY_TIMEOUT = 60  # 60 s   — retry session start if device is locked (user needs to unlock)
+
+# ── Activity watchdog state ──────────────────────────────────────────────────
+_last_activity: float = 0.0
+_last_keepalive: float = 0.0
+_watchdog_active: bool = False
+_watchdog_driver = None            # reference so watchdog can kill session
+_watchdog_lock = threading.Lock()
+
+
+def _touch_activity():
+    """Mark that something just happened (step started/completed)."""
+    global _last_activity
+    _last_activity = time.time()
+
+
+def _idle_watchdog():
+    """
+    Background thread: checks every 15 s if the runner has gone idle.
+    - Sends a keepalive every DEVICE_KEEPALIVE_INTERVAL seconds to prevent device screen auto-lock.
+    - If no activity for IDLE_WATCHDOG_TIMEOUT seconds, force-quits the driver.
+    """
+    global _watchdog_active, _last_keepalive
+    _last_keepalive = time.time()
+
+    while _watchdog_active:
+        time.sleep(15)
+        if not _watchdog_active:
+            break
+
+        now = time.time()
+
+        # ── Device keepalive — prevent screen auto-lock ───────────────────
+        if now - _last_keepalive >= DEVICE_KEEPALIVE_INTERVAL:
+            with _watchdog_lock:
+                drv = _watchdog_driver
+            if drv:
+                try:
+                    drv.get_window_size()
+                    _last_keepalive = now
+                    logger.debug("💡 Device keepalive sent")
+                except Exception:
+                    pass  # driver may be mid-command; ignore errors
+
+        # ── Idle timeout check ────────────────────────────────────────────
+        elapsed = now - _last_activity
+        if elapsed > IDLE_WATCHDOG_TIMEOUT:
+            logger.error(
+                "⏰ IDLE WATCHDOG: No activity for %.0f s (limit %d s) — aborting session",
+                elapsed, IDLE_WATCHDOG_TIMEOUT,
+            )
+            with _watchdog_lock:
+                if _watchdog_driver:
+                    try:
+                        _watchdog_driver.quit()
+                    except Exception:
+                        pass
+            _watchdog_active = False
+            break
+
+
+def _start_watchdog(driver):
+    """Activate the idle watchdog with a reference to the driver."""
+    global _watchdog_active, _watchdog_driver
+    _touch_activity()
+    with _watchdog_lock:
+        _watchdog_driver = driver
+    _watchdog_active = True
+    t = threading.Thread(target=_idle_watchdog, daemon=True, name="idle-watchdog")
+    t.start()
+
+
+def _stop_watchdog():
+    """Deactivate the idle watchdog."""
+    global _watchdog_active, _watchdog_driver
+    _watchdog_active = False
+    with _watchdog_lock:
+        _watchdog_driver = None
 
 
 def _as_bool(value, default: bool = False) -> bool:
@@ -269,13 +355,62 @@ def _start_session(capabilities: dict, platform: str):
         if val == "" or val is None or key.startswith("_comment"):
             continue                       # skip empty / comment keys
         clean = key.replace("appium:", "")
-        try:
-            setattr(options, clean, val)
-        except Exception:
-            options.set_capability(key, val)
+        # Try the class property setter (for well-known Options properties).
+        # setattr on an unknown attribute silently succeeds but the value is
+        # NOT serialised into the W3C payload — so we verify using set_capability
+        # as a reliable fallback for any key not defined on the Options class.
+        prop = getattr(type(options), clean, None)
+        if prop is not None and isinstance(prop, property) and prop.fset is not None:
+            try:
+                setattr(options, clean, val)
+                continue
+            except Exception:
+                pass
+        # Either not a defined property or setter failed — use set_capability
+        options.set_capability(key, val)
 
-    driver = appium_webdriver.Remote(server_url, options=options)
+    # ── Session creation with timeout + retry on device lock ─────────────
+    logger.info("⏳ Creating session (timeout %d s)…", SESSION_START_TIMEOUT)
+    _touch_activity()
+
+    def _create_driver():
+        return appium_webdriver.Remote(server_url, options=options)
+
+    _lock_deadline = time.time() + DEVICE_LOCK_RETRY_TIMEOUT
+    driver = None
+    while True:
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            future = pool.submit(_create_driver)
+            try:
+                driver = future.result(timeout=SESSION_START_TIMEOUT)
+                break  # session created successfully
+            except FuturesTimeout:
+                future.cancel()
+                raise TimeoutError(
+                    f"⏰ SESSION TIMEOUT: Appium session did not start within "
+                    f"{SESSION_START_TIMEOUT}s — WDA build or device connection may be stuck"
+                )
+            except Exception as exc:
+                err_str = str(exc)
+                is_locked = (
+                    "could not be, unlocked" in err_str
+                    or "device was not" in err_str
+                    or "Locked" in err_str
+                )
+                if is_locked and time.time() < _lock_deadline:
+                    remaining = max(0, int(_lock_deadline - time.time()))
+                    logger.warning(
+                        "🔒 Device locked — please unlock your device. "
+                        "Retrying in 10s (up to %ds remaining)…",
+                        remaining,
+                    )
+                    time.sleep(10)
+                    # loop continues — rebuild the executor and retry
+                else:
+                    raise
+
     logger.info("🚀 Appium session started — id: %s", driver.session_id)
+    _touch_activity()
 
     # Ensure target app is foregrounded immediately.
     try:
@@ -316,13 +451,19 @@ def _execute_step(cmd, driver, platform: str):
         # ── Interaction ───────────────────────────────────────────────────
         "click":                     lambda: svc.tap_element(driver, target, platform),
         "tap":                       lambda: svc.tap_element(driver, target, platform),
+        "tap_text":                  lambda: svc.tap_by_text(driver, text),
+        "dismiss_alerts":            lambda: svc.dismiss_alerts(driver),
         "click_if_exists":           lambda: _tap_if_exists(svc, driver, target, platform),
         "tap_if_exists":             lambda: _tap_if_exists(svc, driver, target, platform),
         "fill":                      lambda: svc.fill_element(driver, target, text, platform),
         "type":                      lambda: svc.fill_element(driver, target, text, platform),
+        "type_text":                 lambda: svc.type_into_active(driver, text),
         "fill_if_exists":            lambda: _fill_if_exists(svc, driver, target, text, platform),
         "type_if_exists":            lambda: _fill_if_exists(svc, driver, target, text, platform),
         "clear":                     lambda: svc.clear_element(driver, target, platform),
+        "double_tap":                lambda: svc.double_tap(driver, target, platform),
+        "long_press":                lambda: svc.long_press(driver, target, platform),
+        "wait_for_element":          lambda: svc.wait_for_element(driver, target, platform),
         "press_back":                lambda: svc.press_back(driver),
         "press_home":                lambda: svc.press_home(driver),
         "press_enter":               lambda: svc.press_enter(driver),
@@ -415,12 +556,13 @@ def _execute_math(cmd):
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _interpret_step(step: str, driver, platform: str) -> None:
-    """Resolve variables in a step then parse and execute it."""
+    """Resolve variables in a step then parse and execute it (with timeout)."""
     step = step.strip()
     if not step or step.startswith("#"):
         return
 
     logger.info("👉 Interpreting: %s", step)
+    _touch_activity()
 
     try:
         resolved = resolve_variables(step)
@@ -432,7 +574,24 @@ def _interpret_step(step: str, driver, platform: str) -> None:
         logger.warning("⚠️  Could not parse step: '%s'", step)
         return
 
-    _execute_step(cmd, driver, platform)
+    # ── Per-step timeout ──────────────────────────────────────────────────
+    # "wait" commands get extra time equal to the wait value itself.
+    step_limit = STEP_TIMEOUT
+    if cmd.type == "wait" and cmd.wait:
+        step_limit += float(cmd.wait)
+
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        future = pool.submit(_execute_step, cmd, driver, platform)
+        try:
+            future.result(timeout=step_limit)
+        except FuturesTimeout:
+            logger.error(
+                "⏰ STEP TIMEOUT: '%s' did not complete within %d s — skipping",
+                step, step_limit,
+            )
+            raise TimeoutError(f"Step timed out after {step_limit}s: {step}")
+
+    _touch_activity()
 
 
 def _load_flow_file(file_path: str) -> list[str]:
@@ -485,6 +644,86 @@ def _run_flow_core(file_path: str, driver, platform: str) -> dict:
 # PUBLIC API  (called by plan_runner.py)
 # ─────────────────────────────────────────────────────────────────────────────
 
+def run_appium_suite_collect(
+    flow_files: list,
+    capabilities: dict | None = None,
+    platform: str = "ios",
+    stop_on_first_failure: bool = False,
+) -> list:
+    """
+    Run multiple .flow files in ONE shared Appium session.
+
+    The app is installed exactly once (at session start). All flows run
+    consecutively in the same session — no reinstall between flows.
+
+    Returns a list of per-flow dicts:
+        [{"file": str, "passed": int, "failed": int, "log": list[str]}, ...]
+    """
+    _setup_logging()
+    global _STOP_ON_FAILURE
+    _STOP_ON_FAILURE = stop_on_first_failure
+
+    try:
+        import json as _json
+        cfg_path = "config/playwright.config.json"
+        if os.path.exists(cfg_path):
+            with open(cfg_path) as f:
+                run_cfg = _json.load(f).get("run", {})
+                _STOP_ON_FAILURE = bool(run_cfg.get("stop_on_failure", False))
+    except Exception:
+        pass
+
+    driver = None
+    all_results: list = []
+
+    try:
+        driver = _start_session(capabilities, platform)
+        _start_watchdog(driver)
+        logger.info(
+            "⏱  Timeouts: session=%ds  step=%ds  idle=%ds",
+            SESSION_START_TIMEOUT, STEP_TIMEOUT, IDLE_WATCHDOG_TIMEOUT,
+        )
+
+        for file_path in flow_files:
+            if not os.path.exists(file_path):
+                logger.error("❌ Flow not found: %s", file_path)
+                all_results.append({
+                    "file": file_path, "passed": 0, "failed": 1,
+                    "duration_s": 0.0, "log": [f"❌ File not found: {file_path}"],
+                })
+                if stop_on_first_failure:
+                    break
+                continue
+
+            logger.info("🚀 Starting flow [%s]: %s", platform.upper(), file_path)
+            t0 = time.time()
+            stats = _run_flow_core(file_path, driver, platform)
+            duration = time.time() - t0
+            all_results.append({"file": file_path, "duration_s": duration, **stats})
+
+            status = "✅ PASSED" if stats["failed"] == 0 else "❌ FAILED"
+            logger.info("  %s: %s  (%.1fs)", status, file_path, duration)
+
+            if stop_on_first_failure and stats["failed"] > 0:
+                logger.warning("🛑 stop_on_first_failure — aborting suite after: %s", file_path)
+                break
+
+    except Exception as e:
+        logger.error("❌ Suite session error: %s", e)
+        ran = {r["file"] for r in all_results}
+        for f in flow_files:
+            if f not in ran:
+                all_results.append({
+                    "file": f, "passed": 0, "failed": 1,
+                    "log": [f"❌ Session lost before this flow ran: {e}"],
+                })
+    finally:
+        _stop_watchdog()
+        _end_session(driver, "suite")
+
+    return all_results
+
+
 def run_appium_flow_collect(
     file_path: str,
     capabilities: dict | None = None,
@@ -519,17 +758,27 @@ def run_appium_flow_collect(
 
     try:
         driver = _start_session(capabilities, platform)
+        _start_watchdog(driver)            # ← activate idle watchdog
         logger.info("🚀 Starting flow [%s]: %s", platform.upper(), file_path)
+        logger.info(
+            "⏱  Timeouts: session=%ds  step=%ds  idle=%ds",
+            SESSION_START_TIMEOUT, STEP_TIMEOUT, IDLE_WATCHDOG_TIMEOUT,
+        )
         stats = _run_flow_core(file_path, driver, platform)
     except FileNotFoundError as e:
         logger.error("❌ %s", e)
         stats["failed"] += 1
         stats["log"].append(f"❌ {e}")
+    except TimeoutError as e:
+        logger.error("⏰ %s", e)
+        stats["failed"] += 1
+        stats["log"].append(f"⏰ {e}")
     except Exception as e:
         logger.error("❌ Appium flow error: %s", e)
         stats["failed"] += 1
         stats["log"].append(f"❌ {e}")
     finally:
+        _stop_watchdog()                   # ← deactivate watchdog
         _end_session(driver, label)
 
     return stats

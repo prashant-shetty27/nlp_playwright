@@ -40,7 +40,7 @@ echo "✅  Appium version: $(appium --version)"
 # ── Install drivers if missing ────────────────────────────
 install_if_missing() {
   local driver="$1"
-  if ! appium driver list --installed 2>/dev/null | grep -q "$driver"; then
+  if ! appium driver list 2>&1 | grep -q "$driver"; then
     echo "📦  Installing driver: $driver ..."
     appium driver install "$driver"
   else
@@ -107,8 +107,33 @@ fi
 if [[ "$PLATFORM" == "all" || "$PLATFORM" == "ios" ]]; then
   if command -v xcrun &>/dev/null; then
     echo ""
-    echo "📱  Available iOS simulators (first 10):"
-    xcrun simctl list devices available | grep -E "iPhone|iPad" | head -10
+    echo "📱  Connected iOS real devices:"
+    xcrun devicectl list devices 2>/dev/null | grep -v "^Name\|^---" | head -5 || true
+    echo ""
+    echo "📱  Available iOS simulators (first 5):"
+    xcrun simctl list devices available | grep -E "iPhone|iPad" | head -5
+    echo ""
+
+    # ── Code-signing pre-flight check (WDA build requires a valid cert) ────────
+    echo "🔐  Code signing check (required for WDA build on real device):"
+    CERT_COUNT=$(security find-identity -v -p codesigning 2>/dev/null \
+                 | grep -cE "Apple Development|iPhone Developer" || true)
+    if [[ "$CERT_COUNT" -gt 0 ]]; then
+      echo "✅  Found $CERT_COUNT Apple Development certificate(s):"
+      security find-identity -v -p codesigning 2>/dev/null \
+        | grep -E "Apple Development|iPhone Developer" | head -5
+    else
+      echo "❌  NO code signing certificates found — WDA build WILL FAIL!"
+      echo "    Fix: Xcode → Settings → Accounts → select Apple ID"
+      echo "         → Manage Certificates → + → Apple Development"
+      echo "    (Installs the cert + private key into your login keychain)"
+    fi
+    echo ""
+
+    # ── iOS tunnel note ────────────────────────────────────────────────────────
+    echo "ℹ️   iOS XPC tunnel: xcuitest driver ≥ v7 manages this automatically."
+    echo "    If tunnel errors appear, accept Xcode license first:"
+    echo "      sudo xcodebuild -license accept"
   else
     echo "⚠️   xcrun not found. Install Xcode from the App Store."
   fi
