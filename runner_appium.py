@@ -22,6 +22,7 @@ from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeou
 from nlp.parser import parse_step
 from nlp.variable_manager import RUNTIME_VARIABLES, resolve_variables
 from config import settings
+from config.settings import _as_bool
 
 logger = logging.getLogger(__name__)
 
@@ -110,16 +111,6 @@ def _stop_watchdog():
     _watchdog_active = False
     with _watchdog_lock:
         _watchdog_driver = None
-
-
-def _as_bool(value, default: bool = False) -> bool:
-    if value is None:
-        return default
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, (int, float)):
-        return bool(value)
-    return str(value).strip().lower() in {"1", "true", "yes", "y", "on"}
 
 
 def _adb_cmd(device_id: str | None, args: list[str]) -> list[str]:
@@ -288,6 +279,61 @@ def _setup_logging():
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# iOS APP LIFECYCLE POLICY
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _is_app_installed_on_simulator(udid: str, bundle_id: str) -> bool:
+    """Return True if the app is already installed on the given simulator UDID."""
+    if not udid or not bundle_id:
+        return False
+    try:
+        result = subprocess.run(
+            ["xcrun", "simctl", "listapps", udid],
+            capture_output=True, text=True, timeout=15
+        )
+        return bundle_id in result.stdout
+    except Exception as e:
+        logger.debug("simctl listapps check failed: %s", e)
+        return False
+
+
+def _prepare_ios_app(caps: dict) -> dict:
+    """
+    iOS pre-session policy:
+    - If the app is already installed on the simulator, remove appium:app
+      so Appium launches it directly without reinstalling.
+    - On a real device, keep appium:app as-is (always install IPA).
+    """
+    prepared = dict(caps)
+
+    udid       = prepared.get("appium:udid") or prepared.get("udid", "")
+    bundle_id  = prepared.get("appium:bundleId") or prepared.get("bundleId", "")
+    app_path   = prepared.get("appium:app") or prepared.get("app", "")
+
+    # Only applies when targeting a simulator (no real-device udid format)
+    # Simulator UDIDs are UUID format; real device UDIDs are 40-char hex or
+    # alphanumeric. Simplest check: if xcrun simctl knows the udid it's a sim.
+    if udid and bundle_id and app_path:
+        if _is_app_installed_on_simulator(udid, bundle_id):
+            logger.info(
+                "✅ iOS simulator: '%s' already installed on %s — skipping reinstall",
+                bundle_id, udid,
+            )
+            prepared.pop("appium:app", None)
+            prepared.pop("app", None)
+            prepared["appium:noReset"] = True
+        else:
+            logger.info(
+                "📦 iOS simulator: '%s' NOT found on %s — will install from: %s",
+                bundle_id, udid, app_path,
+            )
+    elif not app_path and bundle_id:
+        logger.info("✅ iOS: no appium:app set — launching existing install of '%s'", bundle_id)
+
+    return prepared
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # APPIUM SESSION LIFECYCLE
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -339,6 +385,10 @@ def _start_session(capabilities: dict, platform: str):
     # Android app lifecycle policy (app_install + force-stop).
     if platform == "android":
         caps = _prepare_android_app(caps)
+
+    # ── iOS simulator: check if app is already installed; skip appium:app if so ─
+    if platform == "ios":
+        caps = _prepare_ios_app(caps)
 
     server_url = settings.APPIUM_SERVER_URL
     logger.info("🔗 Connecting to Appium at %s [platform=%s]", server_url, platform.upper())
@@ -444,17 +494,34 @@ def _execute_step(cmd, driver, platform: str):
     target = resolve_variables(cmd.target or "")
     text   = resolve_variables(cmd.text   or "")
 
+    # Extract index suffix from target (e.g. "login_btn[last]" → el_index="last")
+    # _find_element handles this internally, but we also expose it for if-visible helpers.
+    _idx_m = __import__("re").match(r'^(.+?)\[([^\]]+)\]$', target)
+    el_index = _idx_m.group(2) if _idx_m else "any"
+
     dispatch = {
         # ── App lifecycle ─────────────────────────────────────────────────
         "open":                      lambda: svc.open_url(driver, text or target),
         "launch_app":                lambda: svc.launch_app(driver),
         # ── Interaction ───────────────────────────────────────────────────
+        # target may carry [index] suffix — _find_element handles it internally
         "click":                     lambda: svc.tap_element(driver, target, platform),
         "tap":                       lambda: svc.tap_element(driver, target, platform),
         "tap_text":                  lambda: svc.tap_by_text(driver, text),
         "dismiss_alerts":            lambda: svc.dismiss_alerts(driver),
+        "dismiss_play_rating":       lambda: svc.dismiss_play_rating(driver),
         "click_if_exists":           lambda: _tap_if_exists(svc, driver, target, platform),
         "tap_if_exists":             lambda: _tap_if_exists(svc, driver, target, platform),
+        # ── If Visible (conditional + optional wait timeout) ──────────────
+        "tap_if_visible":            lambda: _tap_if_visible(svc, driver, target, platform, float(cmd.wait or 0)),
+        "click_if_visible":          lambda: _tap_if_visible(svc, driver, target, platform, float(cmd.wait or 0)),
+        "fill_if_visible":           lambda: _fill_if_visible(svc, driver, target, text, platform, float(cmd.wait or 0)),
+        "type_if_visible":           lambda: _fill_if_visible(svc, driver, target, text, platform, float(cmd.wait or 0)),
+        "verify_if_visible":         lambda: _verify_if_visible(svc, driver, target, platform, float(cmd.wait or 0)),
+        "double_tap_if_visible":     lambda: _double_tap_if_visible(svc, driver, target, platform, float(cmd.wait or 0)),
+        "long_press_if_visible":     lambda: _long_press_if_visible(svc, driver, target, platform, float(cmd.wait or 0)),
+        "store_text_if_visible":     lambda: _store_text_if_visible(svc, driver, target, platform, cmd.variable_name, float(cmd.wait or 0)),
+        # ─────────────────────────────────────────────────────────────────
         "fill":                      lambda: svc.fill_element(driver, target, text, platform),
         "type":                      lambda: svc.fill_element(driver, target, text, platform),
         "type_text":                 lambda: svc.type_into_active(driver, text),
@@ -480,6 +547,7 @@ def _execute_step(cmd, driver, platform: str):
         "scroll_until_element":      lambda: svc.scroll_until_element_visible(
                                          driver, target, platform, int(cmd.count or 8)
                                      ),
+        "scroll_to":                 lambda: svc.scroll_to_element(driver, target, platform),
         # ── Wait / Timing ─────────────────────────────────────────────────
         "wait":                      lambda: svc.wait_seconds(driver, float(cmd.wait or 1)),
         # ── Screenshot ────────────────────────────────────────────────────
@@ -488,16 +556,49 @@ def _execute_step(cmd, driver, platform: str):
         "verify_text":               lambda: svc.verify_text(driver, text),
         "verify_exact_text":         lambda: svc.verify_text(driver, text),
         "verify_multiple_texts":     lambda: svc.verify_texts(driver, cmd.values if hasattr(cmd, "values") and cmd.values else [text]),
-        "verify_element_exists":     lambda: svc.verify_element_exists(driver, target, platform),
-        "verify_element_not_exists": lambda: svc.verify_element_not_exists(driver, target, platform),
+        "verify_element_exists":     lambda: svc.verify_element_exists(driver, target, platform, el_index),
+        "verify_element_not_exists": lambda: svc.verify_element_not_exists(driver, target, platform, el_index),
         "verify_var_contains":       lambda: _verify_var_contains(target, text),
         # ── Variable extraction ───────────────────────────────────────────
-        "extract_text":              lambda: svc.store_element_text(driver, target, platform, cmd.variable_name),
-        "store_text":                lambda: svc.store_element_text(driver, target, platform, cmd.variable_name),
+        "extract_text":              lambda: svc.store_element_text(driver, target, platform, cmd.variable_name, el_index),
+        "store_text":                lambda: svc.store_element_text(driver, target, platform, cmd.variable_name, el_index),
         "extract_url":               lambda: _store_value(str(driver.current_url), cmd.variable_name),
         "extract_title":             lambda: _store_value(str(driver.title), cmd.variable_name),
         "create_variable":           lambda: svc.store_variable(text, target),
         "math":                      lambda: _execute_math(cmd),
+        # ── Fake data generation (faker) ─────────────────────────────────────
+        "generate_fake":             lambda: __import__("execution.action_service", fromlist=["generate_fake_data"]).generate_fake_data(cmd.text, cmd.variable_name),
+        "random_number":             lambda: __import__("execution.action_service", fromlist=["generate_random_number"]).generate_random_number(cmd.target, cmd.text, cmd.variable_name),
+        "random_string":             lambda: __import__("execution.action_service", fromlist=["generate_random_string"]).generate_random_string(cmd.count or 8, cmd.variable_name),
+        # ── Date / Time ───────────────────────────────────────────────────────
+        "get_date":                  lambda: __import__("execution.action_service", fromlist=["get_date_value"]).get_date_value(cmd.text, cmd.variable_name),
+        "format_date":               lambda: __import__("execution.action_service", fromlist=["format_date_value"]).format_date_value(cmd.text, cmd.values[0], cmd.variable_name),
+        # ── HTTP / API ───────────────────────────────────────────────────────
+        "api_get":                   lambda: __import__("execution.action_service", fromlist=["api_get"]).api_get(cmd.text, cmd.variable_name),
+        "api_post":                  lambda: __import__("execution.action_service", fromlist=["api_post"]).api_post(cmd.text, cmd.target, cmd.variable_name),
+        "extract_json":              lambda: __import__("execution.action_service", fromlist=["extract_json_path"]).extract_json_path(cmd.target, cmd.text, cmd.variable_name),
+        # ── Excel / CSV ───────────────────────────────────────────────────────
+        "read_excel_cell":           lambda: __import__("execution.action_service", fromlist=["read_excel_cell"]).read_excel_cell(cmd.text, int(cmd.target), cmd.values[0], cmd.variable_name),
+        "read_excel_row":            lambda: __import__("execution.action_service", fromlist=["read_excel_row"]).read_excel_row(cmd.text, int(cmd.target), cmd.variable_name),
+        "read_csv_cell":             lambda: __import__("execution.action_service", fromlist=["read_csv_cell"]).read_csv_cell(cmd.text, int(cmd.target), cmd.values[0], cmd.variable_name),
+        # -- JavaScript Actions (WebView / mobile-browser context) -----
+        "js_click":     lambda: __import__("execution.action_service", fromlist=["js_click"]).js_click(driver, cmd.target),
+        "js_scroll_to": lambda: __import__("execution.action_service", fromlist=["js_scroll_to"]).js_scroll_to(driver, cmd.target),
+        "js_scroll":    lambda: __import__("execution.action_service", fromlist=["js_scroll"]).js_scroll(driver, cmd.text, cmd.count or 300),
+        "js_type":      lambda: __import__("execution.action_service", fromlist=["js_type"]).js_type(driver, cmd.text, cmd.target),
+        "js_set_value": lambda: __import__("execution.action_service", fromlist=["js_set_value"]).js_set_value(driver, cmd.text, cmd.target),
+        "js_focus":     lambda: __import__("execution.action_service", fromlist=["js_focus"]).js_focus(driver, cmd.target),
+        "js_submit":    lambda: __import__("execution.action_service", fromlist=["js_submit"]).js_submit(driver, cmd.target),
+        "js_dispatch":  lambda: __import__("execution.action_service", fromlist=["js_dispatch_event"]).js_dispatch_event(driver, cmd.text, cmd.target),
+        # ── Windows / Tabs ────────────────────────────────────────────────
+        "switch_tab":                lambda: svc.switch_window(driver, int(cmd.count or 0)),
+        "close_tab":                 lambda: svc.close_window(driver, int(cmd.count) if cmd.count is not None else None),
+        "close_all_tabs":            lambda: svc.close_all_windows(driver),
+        "list_tabs":                 lambda: svc.list_windows(driver),
+        "open_new_tab":              lambda: logger.warning("⚠️  open_new_tab is not supported in native Appium context"),
+        # ── Iframes (WebView / mobile-browser context only) ───────────────
+        "switch_iframe":             lambda: svc.switch_iframe(driver, target),
+        "exit_iframe":               lambda: svc.exit_iframe(driver),
     }
 
     handler = dispatch.get(cmd.type)
@@ -505,6 +606,19 @@ def _execute_step(cmd, driver, platform: str):
         logger.warning("⚠️  Unsupported command for Appium: '%s' — skipping", cmd.type)
         return
     handler()
+
+
+def _execute_single_step(step_text: str, driver, platform: str):
+    """
+    Parse a single flow step string and execute it on the given driver.
+    Used by recorder_ui.py 'Run Flow' feature.
+    Raises on hard failures so the caller can log them.
+    """
+    from nlp.parser import parse_step
+    cmd = parse_step(step_text)
+    if cmd is None:
+        raise ValueError(f"Unrecognised step syntax: {step_text!r}")
+    _execute_step(cmd, driver, platform)
 
 
 def _tap_if_exists(svc, driver, target: str, platform: str):
@@ -521,6 +635,91 @@ def _fill_if_exists(svc, driver, target: str, text: str, platform: str):
         svc.fill_element(driver, target, text, platform)
     except Exception:
         logger.info("ℹ️  Optional element not found, skipping fill: '%s'", target)
+
+
+# ─── IF VISIBLE helpers (conditional + configurable wait timeout) ─────────────
+
+def _wait_for_visible(svc, driver, target: str, platform: str, timeout: float) -> bool:
+    """Returns True if element becomes visible within `timeout` seconds, False otherwise."""
+    if timeout and timeout > 0:
+        try:
+            svc.wait_for_element(driver, target, platform, timeout_s=timeout)
+            return True
+        except Exception:
+            return False
+    else:
+        # Zero timeout — just check if it's already on screen right now (1s max)
+        try:
+            svc.wait_for_element(driver, target, platform, timeout_s=1)
+            return True
+        except Exception:
+            return False
+
+
+def _tap_if_visible(svc, driver, target: str, platform: str, timeout: float = 0):
+    """Tap element only if visible; skip silently otherwise."""
+    if _wait_for_visible(svc, driver, target, platform, timeout):
+        try:
+            svc.tap_element(driver, target, platform)
+        except Exception as e:
+            logger.info("ℹ️  tap_if_visible: element appeared but tap failed (%s): '%s'", e, target)
+    else:
+        logger.info("ℹ️  tap_if_visible: element not visible, skipping: '%s'", target)
+
+
+def _fill_if_visible(svc, driver, target: str, text: str, platform: str, timeout: float = 0):
+    """Type into element only if visible; skip silently otherwise."""
+    if _wait_for_visible(svc, driver, target, platform, timeout):
+        try:
+            svc.fill_element(driver, target, text, platform)
+        except Exception as e:
+            logger.info("ℹ️  fill_if_visible: element appeared but fill failed (%s): '%s'", e, target)
+    else:
+        logger.info("ℹ️  fill_if_visible: element not visible, skipping: '%s'", target)
+
+
+def _verify_if_visible(svc, driver, target: str, platform: str, timeout: float = 0):
+    """Verify element exists only if visible; skip (pass) silently otherwise."""
+    if _wait_for_visible(svc, driver, target, platform, timeout):
+        try:
+            svc.verify_element_exists(driver, target, platform)
+        except Exception as e:
+            logger.info("ℹ️  verify_if_visible: verify failed (%s): '%s'", e, target)
+    else:
+        logger.info("ℹ️  verify_if_visible: element not visible, skipping: '%s'", target)
+
+
+def _double_tap_if_visible(svc, driver, target: str, platform: str, timeout: float = 0):
+    """Double-tap element only if visible; skip silently otherwise."""
+    if _wait_for_visible(svc, driver, target, platform, timeout):
+        try:
+            svc.double_tap(driver, target, platform)
+        except Exception as e:
+            logger.info("ℹ️  double_tap_if_visible: failed (%s): '%s'", e, target)
+    else:
+        logger.info("ℹ️  double_tap_if_visible: element not visible, skipping: '%s'", target)
+
+
+def _long_press_if_visible(svc, driver, target: str, platform: str, timeout: float = 0):
+    """Long-press element only if visible; skip silently otherwise."""
+    if _wait_for_visible(svc, driver, target, platform, timeout):
+        try:
+            svc.long_press(driver, target, platform)
+        except Exception as e:
+            logger.info("ℹ️  long_press_if_visible: failed (%s): '%s'", e, target)
+    else:
+        logger.info("ℹ️  long_press_if_visible: element not visible, skipping: '%s'", target)
+
+
+def _store_text_if_visible(svc, driver, target: str, platform: str, variable_name: str, timeout: float = 0):
+    """Store element text only if visible; skip silently otherwise."""
+    if _wait_for_visible(svc, driver, target, platform, timeout):
+        try:
+            svc.store_element_text(driver, target, platform, variable_name)
+        except Exception as e:
+            logger.info("ℹ️  store_text_if_visible: failed (%s): '%s'", e, target)
+    else:
+        logger.info("ℹ️  store_text_if_visible: element not visible, skipping: '%s'", target)
 
 
 def _store_value(value: str, variable: str):
@@ -684,6 +883,10 @@ def run_appium_suite_collect(
             SESSION_START_TIMEOUT, STEP_TIMEOUT, IDLE_WATCHDOG_TIMEOUT,
         )
 
+        # ── Auto video recording ──────────────────────────────────────────
+        import execution.appium_action_service as _svc_vid
+        _svc_vid.start_recording(driver, platform)
+
         for file_path in flow_files:
             if not os.path.exists(file_path):
                 logger.error("❌ Flow not found: %s", file_path)
@@ -719,6 +922,16 @@ def run_appium_suite_collect(
                 })
     finally:
         _stop_watchdog()
+        # ── Save video recording ──────────────────────────────────────────
+        try:
+            import execution.appium_action_service as _svc_vid
+            if driver:
+                suite_label = os.path.splitext(os.path.basename(
+                    flow_files[0] if flow_files else "suite"
+                ))[0]
+                _svc_vid.stop_recording(driver, label=suite_label, platform=platform)
+        except Exception as _ve:
+            logger.warning("⚠️  Video save error: %s", _ve)
         _end_session(driver, "suite")
 
     return all_results
@@ -764,6 +977,9 @@ def run_appium_flow_collect(
             "⏱  Timeouts: session=%ds  step=%ds  idle=%ds",
             SESSION_START_TIMEOUT, STEP_TIMEOUT, IDLE_WATCHDOG_TIMEOUT,
         )
+        # ── Auto video recording ──────────────────────────────────────────
+        import execution.appium_action_service as _svc_vid
+        _svc_vid.start_recording(driver, platform)
         stats = _run_flow_core(file_path, driver, platform)
     except FileNotFoundError as e:
         logger.error("❌ %s", e)
@@ -779,6 +995,13 @@ def run_appium_flow_collect(
         stats["log"].append(f"❌ {e}")
     finally:
         _stop_watchdog()                   # ← deactivate watchdog
+        # ── Save video recording ──────────────────────────────────────────
+        try:
+            import execution.appium_action_service as _svc_vid
+            if driver:
+                _svc_vid.stop_recording(driver, label=label, platform=platform)
+        except Exception as _ve:
+            logger.warning("⚠️  Video save error: %s", _ve)
         _end_session(driver, label)
 
     return stats
@@ -792,13 +1015,51 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="NLP flow runner for Appium (Android/iOS)")
-    parser.add_argument("flow",     help="Path to .flow file")
+    parser.add_argument("flow",     help="Path to .flow file OR a suite JSON file (suites/*.json)")
     parser.add_argument("--platform", "-p", default="android",
                         choices=["android", "ios"], help="Target platform (default: android)")
     parser.add_argument("--caps", "-c", default=None,
                         help="Path to JSON file with Appium capabilities")
     args = parser.parse_args()
 
+    # ── Suite JSON shortcut: python runner_appium.py suites/android_suite.json ──
+    if args.flow.endswith(".json"):
+        with open(args.flow) as f:
+            suite = json.load(f)
+
+        # Extract fields from the suite JSON
+        flow_files   = suite.get("scripts", [])
+        caps         = suite.get("desired_capabilities", {})
+        platform     = suite.get("platform", args.platform).lower()
+        parameters   = suite.get("parameters", [])
+
+        if not flow_files:
+            print(f"❌ No 'scripts' found in suite file: {args.flow}")
+            sys.exit(1)
+
+        # Inject suite parameters into RUNTIME_VARIABLES
+        for param in parameters:
+            name  = param.get("name", "").strip()
+            value = str(param.get("value", "")).strip()
+            if name:
+                RUNTIME_VARIABLES[name] = value
+                logger.info("  🔑 Param injected: ${%s} = '%s'", name, value)
+
+        results = run_appium_suite_collect(flow_files, caps, platform)
+
+        total_p = sum(r.get("passed", 0) for r in results)
+        total_f = sum(r.get("failed", 0) for r in results)
+        total   = total_p + total_f
+        status  = "✅ PASSED" if total_f == 0 else "❌ FAILED"
+        print(f"\n{status}  {total_p}/{total} steps passed")
+        for r in results:
+            flow_status = "✅" if r.get("failed", 0) == 0 else "❌"
+            print(f"  {flow_status} {r['file']}  ({r.get('passed',0)}/{r.get('passed',0)+r.get('failed',0)} steps)")
+            for msg in r.get("log", []):
+                print(f"      {msg}")
+        sys.exit(0 if total_f == 0 else 1)
+
+    # ── Standard .flow file usage ─────────────────────────────────────────────
     caps = None
     if args.caps:
         with open(args.caps) as f:

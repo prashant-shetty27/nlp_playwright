@@ -98,6 +98,12 @@ def get_locator_and_dna(locator_name: str) -> tuple:
                         or dna.get("custom_xpath_P")
                         or dna.get("absoluteXPath")
                     )
+                    # Fallback: build text-based XPath from innerText if no xpath stored
+                    if not xpath:
+                        inner = (dna.get("innerText") or "").strip()
+                        tag   = dna.get("tagName", "*")
+                        if inner and len(inner) < 80 and "'" not in inner:
+                            xpath = f"//{tag}[normalize-space(.)='{inner}']"
                     return xpath, dna
         except Exception as e:
             logger.error("❌ Error reading recorded_elements.json: %s", e)
@@ -124,6 +130,12 @@ def get_locator_and_dna(locator_name: str) -> tuple:
                             selectors = entry.get("selectors", [])
                             if selectors:
                                 xpath = selectors[0].get("value")
+                        # Last resort: innerText-based XPath
+                        if not xpath:
+                            inner = (entry.get("innerText") or "").strip()
+                            tag   = entry.get("tagName", "*")
+                            if inner and len(inner) < 80 and "'" not in inner:
+                                xpath = f"//{tag}[normalize-space(.)='{inner}']"
                         return xpath, entry  # return full dict as DNA for healing
                     return entry, None  # plain string
         except Exception as e:

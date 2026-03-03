@@ -112,6 +112,8 @@ def _execute_step_from_command(cmd, page):
         # ── Navigation ───────────────────────────────────────────────────────
         "open":                      lambda: svc.open_site(ep, cmd.target),
         "refresh":                   lambda: svc.refresh_page(ep),
+        "press_back":                lambda: ep.go_back(),
+        "go_forward":                lambda: ep.go_forward(),
         # ── Interaction ──────────────────────────────────────────────────────
         "search":                    lambda: svc.search(ep, cmd.text),
         "click":                     lambda: svc.click_element(ep, cmd.target),
@@ -120,6 +122,7 @@ def _execute_step_from_command(cmd, page):
         "wait":                      lambda: svc.wait_seconds(ep, cmd.wait),
         "wait_for_result_page_load": lambda: svc.wait_for_result_page_load(ep),
         # ── Scroll ────────────────────────────────────────────────────────────
+        "scroll_to":                 lambda: svc.scroll_to_element(ep, cmd.target),
         "scroll":                    lambda: svc.vertical_scroll(ep, cmd.count or 500),
         "scroll_until_text_visible": lambda: svc.scroll_until_text_visible(ep, cmd.text, cmd.count, cmd.wait),
         # ── Screenshot ───────────────────────────────────────────────────────
@@ -144,6 +147,30 @@ def _execute_step_from_command(cmd, page):
         # ── Variables / Data ─────────────────────────────────────────────────
         "create_variable":           lambda: svc.create_custom_variable(cmd.text, cmd.target),
         "math":                      lambda: svc.execute_math(cmd.target, cmd.text, cmd.values[0], cmd.variable_name),
+        # ── Fake data generation (faker) ─────────────────────────────────────
+        "generate_fake":             lambda: svc.generate_fake_data(cmd.text, cmd.variable_name),
+        "random_number":             lambda: svc.generate_random_number(cmd.target, cmd.text, cmd.variable_name),
+        "random_string":             lambda: svc.generate_random_string(cmd.count or 8, cmd.variable_name),
+        # ── Date / Time ───────────────────────────────────────────────────────
+        "get_date":                  lambda: svc.get_date_value(cmd.text, cmd.variable_name),
+        "format_date":               lambda: svc.format_date_value(cmd.text, cmd.values[0], cmd.variable_name),
+        # ── HTTP / API ────────────────────────────────────────────────────────
+        "api_get":                   lambda: svc.api_get(cmd.text, cmd.variable_name),
+        "api_post":                  lambda: svc.api_post(cmd.text, cmd.target, cmd.variable_name),
+        "extract_json":              lambda: svc.extract_json_path(cmd.target, cmd.text, cmd.variable_name),
+        # ── Excel / CSV ───────────────────────────────────────────────────────
+        "read_excel_cell":           lambda: svc.read_excel_cell(cmd.text, int(cmd.target), cmd.values[0], cmd.variable_name),
+        "read_excel_row":            lambda: svc.read_excel_row(cmd.text, int(cmd.target), cmd.variable_name),
+        "read_csv_cell":             lambda: svc.read_csv_cell(cmd.text, int(cmd.target), cmd.values[0], cmd.variable_name),
+        # ── JavaScript Actions ──────────────────────────────────────────────────
+        "js_click":                  lambda: svc.js_click(ep, cmd.target),
+        "js_scroll_to":              lambda: svc.js_scroll_to(ep, cmd.target),
+        "js_scroll":                 lambda: svc.js_scroll(ep, cmd.text, cmd.count or 300),
+        "js_type":                   lambda: svc.js_type(ep, cmd.text, cmd.target),
+        "js_set_value":              lambda: svc.js_set_value(ep, cmd.text, cmd.target),
+        "js_focus":                  lambda: svc.js_focus(ep, cmd.target),
+        "js_submit":                 lambda: svc.js_submit(ep, cmd.target),
+        "js_dispatch":               lambda: svc.js_dispatch_event(ep, cmd.text, cmd.target),
         # ── Image ─────────────────────────────────────────────────────────────
         "verify_image":              lambda: None,  # handled in _interpret below
         # ── Tabs / Windows ───────────────────────────────────────────────────
@@ -167,6 +194,13 @@ def _interpret(step: str, page):
     """Pre-processes variables, then parses and executes one NLP step."""
     normalized = step.strip()
     logger.info("👉 Interpreting: %s", normalized)
+
+    # Apply active environment domain replacement to URL steps
+    try:
+        from config.environment_manager import apply_to_flow_steps
+        normalized = apply_to_flow_steps([normalized])[0]
+    except Exception:
+        pass
 
     # Variable injection: ${my_var} → value (shared RUNTIME_VARIABLES from action_service)
     try:

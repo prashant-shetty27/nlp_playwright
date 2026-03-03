@@ -159,7 +159,22 @@ def click_element(page, locator_name):
         logger.info("✅ Click successful.")
         _stabilize_page(page)
     except (PlaywrightTimeoutError, PlaywrightError):
-        logger.warning("⚠️ Primary locator failed. Triggering ML Healer...")
+        # ── Second chance: innerText exact-text locator ───────────────────────
+        inner_text = (dna or {}).get("innerText", "") if dna else ""
+        inner_text = (inner_text or "").strip()
+        if inner_text:
+            try:
+                logger.info("🔤 Primary XPath failed — retrying via innerText: '%s'", inner_text)
+                page.get_by_text(inner_text, exact=True).first.click(timeout=4000)
+                logger.info("✅ Click via innerText successful.")
+                _stabilize_page(page)
+                return
+            except (PlaywrightTimeoutError, PlaywrightError):
+                logger.warning("⚠️ innerText fallback also failed. Triggering ML Healer...")
+        else:
+            logger.warning("⚠️ Primary locator failed. Triggering ML Healer...")
+
+        # ── Third chance: ML self-healer ──────────────────────────────────────
         if not dna:
             raise Exception(f"Element broken and no ML DNA available: {locator_name}")
         try:
@@ -656,6 +671,16 @@ def refresh_page(page):
     page.reload(wait_until="load")
 
 
+def scroll_to_element(page, target: str) -> None:
+    """Scroll until the named element is visible in the viewport."""
+    from locators.manager import get_locator_and_dna
+    xpath, _ = get_locator_and_dna(target)
+    if not xpath:
+        raise Exception(f"Locator '{target}' not found for scroll_to")
+    page.locator(xpath).first.scroll_into_view_if_needed(timeout=8000)
+    logger.info("📜 Scrolled to element: %s", target)
+
+
 def vertical_scroll(page_obj, amount=500):
     page_obj.mouse.wheel(0, int(amount))
     logger.info("📜 Scrolled down by %s pixels", amount)
@@ -774,6 +799,213 @@ def exit_iframe(_page=None):
     global _ACTIVE_FRAME
     _ACTIVE_FRAME = None
     logger.info("🖼️  Exited iframe — back to main frame.")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FAKE DATA GENERATION  (faker)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def generate_fake_data(data_type: str, variable_name: str):
+    """Generate fake test data using Faker and store in RUNTIME_VARIABLES."""
+    from faker import Faker
+    _faker = Faker()
+    _MAP = {
+        "name":      _faker.name,
+        "first name": _faker.first_name,
+        "last name":  _faker.last_name,
+        "email":     _faker.email,
+        "phone":     _faker.phone_number,
+        "uuid":      _faker.uuid4,
+        "number":    lambda: str(_faker.random_int(min=1, max=9999)),
+        "address":   _faker.address,
+        "city":      _faker.city,
+        "country":   _faker.country,
+        "company":   _faker.company,
+        "password":  _faker.password,
+        "username":  _faker.user_name,
+        "url":       _faker.url,
+        "date":      lambda: _faker.date(pattern="%d/%m/%Y"),
+        "text":      _faker.sentence,
+        "paragraph": _faker.paragraph,
+        "postcode":  _faker.postcode,
+        "credit card": _faker.credit_card_number,
+    }
+    fn = _MAP.get(data_type.lower())
+    if not fn:
+        raise ValueError(
+            f"❌ Unknown fake data type: '{data_type}'. "
+            f"Supported: {', '.join(_MAP.keys())}"
+        )
+    value = fn()
+    RUNTIME_VARIABLES[variable_name] = value
+    logger.info("🎲 Fake %s → ${%s} = %s", data_type, variable_name, value)
+
+
+def generate_random_number(min_val, max_val, variable_name: str):
+    """Store a random integer between min_val and max_val."""
+    import random
+    val = random.randint(int(min_val), int(max_val))
+    RUNTIME_VARIABLES[variable_name] = val
+    logger.info("🎲 Random number %s–%s → ${%s} = %d", min_val, max_val, variable_name, val)
+
+
+def generate_random_string(length: int, variable_name: str):
+    """Store a random alphanumeric string of given length."""
+    import random, string
+    val = ''.join(random.choices(string.ascii_letters + string.digits, k=int(length)))
+    RUNTIME_VARIABLES[variable_name] = val
+    logger.info("🎲 Random string len=%d → ${%s} = %s", int(length), variable_name, val)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DATE / TIME  (stdlib — no extra install required)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def get_date_value(mode: str, variable_name: str, fmt: str = "%d/%m/%Y"):
+    """
+    mode: "today" | "timestamp" | "offset:+7" | "offset:-3"
+    Stores result string into RUNTIME_VARIABLES.
+    """
+    from datetime import datetime, timedelta
+    now = datetime.now()
+    if mode == "today":
+        value = now.strftime(fmt)
+    elif mode in ("timestamp", "now"):
+        value = now.strftime("%Y-%m-%d %H:%M:%S")
+    elif mode.startswith("offset:"):
+        days = int(mode.split(":")[1])
+        value = (now + timedelta(days=days)).strftime(fmt)
+    else:
+        value = now.strftime(fmt)
+    RUNTIME_VARIABLES[variable_name] = value
+    logger.info("📅 Date [%s] → ${%s} = %s", mode, variable_name, value)
+
+
+def format_date_value(date_str: str, out_fmt: str, variable_name: str):
+    """Re-format a date string using DD/MM/YYYY-style tokens."""
+    from datetime import datetime
+    resolved = resolve_variables(date_str)
+    _TOKENS = {"YYYY": "%Y", "YY": "%y", "MM": "%m", "DD": "%d",
+               "HH": "%H", "mm": "%M", "ss": "%S"}
+    py_fmt = out_fmt
+    for tok, sf in _TOKENS.items():
+        py_fmt = py_fmt.replace(tok, sf)
+    for in_fmt in ("%d/%m/%Y", "%Y-%m-%d", "%m/%d/%Y", "%d-%m-%Y", "%Y%m%d"):
+        try:
+            value = datetime.strptime(resolved, in_fmt).strftime(py_fmt)
+            RUNTIME_VARIABLES[variable_name] = value
+            logger.info("📅 format_date '%s' → ${%s} = %s", resolved, variable_name, value)
+            return
+        except ValueError:
+            continue
+    raise ValueError(f"❌ Cannot parse date string: '{resolved}'")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# HTTP / API CALLS  (requests — already installed)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def api_get(url: str, variable_name: str, headers: dict | None = None):
+    """HTTP GET → parse JSON response and store in RUNTIME_VARIABLES."""
+    import requests
+    url = resolve_variables(url)
+    r = requests.get(url, headers=headers or {}, timeout=30)
+    r.raise_for_status()
+    try:
+        value = r.json()
+    except Exception:
+        value = r.text
+    RUNTIME_VARIABLES[variable_name] = value
+    logger.info("🌐 API GET %s → %d → ${%s}", url, r.status_code, variable_name)
+
+
+def api_post(url: str, body: str, variable_name: str, headers: dict | None = None):
+    """HTTP POST with JSON/form body → parse response into RUNTIME_VARIABLES."""
+    import requests, json
+    url = resolve_variables(url)
+    body_resolved = resolve_variables(body)
+    try:
+        body_data = json.loads(body_resolved)
+        r = requests.post(url, json=body_data, headers=headers or {}, timeout=30)
+    except (json.JSONDecodeError, TypeError):
+        r = requests.post(url, data=body_resolved, headers=headers or {}, timeout=30)
+    r.raise_for_status()
+    try:
+        value = r.json()
+    except Exception:
+        value = r.text
+    RUNTIME_VARIABLES[variable_name] = value
+    logger.info("🌐 API POST %s → %d → ${%s}", url, r.status_code, variable_name)
+
+
+def extract_json_path(source_var: str, json_path: str, variable_name: str):
+    """
+    Extract a value from a stored JSON object using a dotted path.
+    e.g. source_var='resp' json_path='data.users.0.email'
+    """
+    obj = RUNTIME_VARIABLES.get(source_var)
+    if obj is None:
+        raise ValueError(f"❌ Variable '${{{source_var}}}' not found in memory.")
+    parts = json_path.lstrip("$.").split(".")
+    result = obj
+    for p in parts:
+        try:
+            result = result[int(p)] if isinstance(result, list) else result[p]
+        except (KeyError, IndexError, TypeError) as e:
+            raise ValueError(f"❌ JSON path '{json_path}' failed at key '{p}': {e}") from e
+    RUNTIME_VARIABLES[variable_name] = result
+    logger.info("📦 JSON path '%s' from ${%s} → ${%s} = %s", json_path, source_var, variable_name, result)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# EXCEL / CSV  (openpyxl + stdlib csv)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def read_excel_cell(file_path: str, row: int, col, variable_name: str, sheet: str | None = None):
+    """
+    Read one cell from an .xlsx file and store in RUNTIME_VARIABLES.
+    col can be an integer (1-based) or a column letter ("A", "B", …).
+    """
+    import openpyxl
+    fp = resolve_variables(file_path)
+    wb = openpyxl.load_workbook(fp, data_only=True)
+    ws = wb[sheet] if sheet else wb.active
+    if isinstance(col, str) and col.isalpha():
+        value = ws[f"{col.upper()}{row}"].value
+    else:
+        value = ws.cell(row=int(row), column=int(col)).value
+    RUNTIME_VARIABLES[variable_name] = value
+    logger.info("📊 Excel [%s] row=%s col=%s → ${%s} = %s", fp, row, col, variable_name, value)
+
+
+def read_excel_row(file_path: str, row: int, variable_name: str, sheet: str | None = None):
+    """Read a full row from .xlsx as a list and store in RUNTIME_VARIABLES."""
+    import openpyxl
+    fp = resolve_variables(file_path)
+    wb = openpyxl.load_workbook(fp, data_only=True)
+    ws = wb[sheet] if sheet else wb.active
+    values = [cell.value for cell in ws[int(row)]]
+    RUNTIME_VARIABLES[variable_name] = values
+    logger.info("📊 Excel row %d from %s → ${%s} = %s", row, fp, variable_name, values)
+
+
+def read_csv_cell(file_path: str, row: int, col, variable_name: str):
+    """
+    Read one cell from a CSV file and store in RUNTIME_VARIABLES.
+    row is 1-based; col is 1-based int OR a header name string.
+    """
+    import csv
+    fp = resolve_variables(file_path)
+    with open(fp, newline="", encoding="utf-8") as f:
+        reader = list(csv.DictReader(f) if isinstance(col, str) and not str(col).isdigit()
+                      else csv.reader(f))
+    if isinstance(col, str) and not str(col).isdigit():
+        # col is a header name — DictReader used
+        value = reader[int(row) - 1][col]
+    else:
+        value = reader[int(row) - 1][int(col) - 1]
+    RUNTIME_VARIABLES[variable_name] = value
+    logger.info("📄 CSV [%s] row=%s col=%s → ${%s} = %s", fp, row, col, variable_name, value)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -965,3 +1197,208 @@ def ui_store_boolean(page, raw_text_or_variable, save_to_variable_name):
 @codeless_snippet("Store Variable (Comma-Separated List)")
 def ui_store_list(page, raw_text_or_variable, save_to_variable_name):
     store_specific_data_type(raw_text_or_variable, "list", save_to_variable_name)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# JAVASCRIPT ACTIONS
+# Use when normal Playwright actions fail: shadow-DOM, React-controlled inputs,
+# overlays that intercept clicks, or any element that needs direct JS access.
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _js_selector_script(selector: str, var: str = "el") -> str:
+    """Return the JS expression that resolves a CSS selector or XPath to an element."""
+    if selector.startswith("//") or selector.startswith("(//"):
+        import json as _j
+        return (
+            f'var {var} = document.evaluate({_j.dumps(selector)}, document, null, '
+            f'XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;'
+        )
+    else:
+        import json as _j
+        return f'var {var} = document.querySelector({_j.dumps(selector)});'
+
+
+def _resolve_to_selector(target: str) -> str:
+    """
+    Convert a locator name from the element store to its XPath/CSS string.
+    Falls back to using target as a raw CSS/XPath if lookup fails.
+    """
+    try:
+        from locators.manager import get_locator_and_dna
+        xpath, _ = get_locator_and_dna(target)
+        if xpath:
+            return xpath
+    except Exception:
+        pass
+    return target  # treat target as a raw CSS selector / XPath
+
+
+def js_click(page, target: str) -> None:
+    """
+    Click an element via JavaScript — bypasses overlays, pointer-event:none,
+    and React synthetic event handlers that block normal Playwright .click().
+
+    Usage in .flow:  js click search_button
+    """
+    import json as _j
+    selector = _resolve_to_selector(target)
+    find_js  = _js_selector_script(selector)
+    script = (
+        f'{find_js} '
+        f'if (!el) throw new Error("JS click: element not found — {selector}"); '
+        f'el.click();'
+    )
+    ep = _get_locator_root(page)
+    try:
+        ep.evaluate(script)
+        logger.info("✅ JS click: %s", target)
+    except Exception as e:
+        raise Exception(f"JS click failed on '{target}': {e}") from e
+
+
+def js_scroll_to(page, target: str) -> None:
+    """
+    Scroll an element into the viewport using scrollIntoView.
+
+    Usage in .flow:  js scroll to load_more_btn
+    """
+    import json as _j
+    selector = _resolve_to_selector(target)
+    find_js  = _js_selector_script(selector)
+    script = (
+        f'{find_js} '
+        f'if (el) el.scrollIntoView({{behavior:"smooth",block:"center"}});'
+    )
+    ep = _get_locator_root(page)
+    try:
+        ep.evaluate(script)
+        ep.wait_for_timeout(300)
+        logger.info("✅ JS scroll to: %s", target)
+    except Exception as e:
+        raise Exception(f"JS scroll to failed on '{target}': {e}") from e
+
+
+def js_scroll(page, direction: str = "down", pixels: int = 300) -> None:
+    """
+    Scroll the window by N pixels in the given direction.
+    direction: down | up | top | bottom
+
+    Usage in .flow:
+        js scroll down
+        js scroll up 500
+        js scroll top
+        js scroll bottom
+    """
+    ep = _get_locator_root(page)
+    d = direction.lower()
+    if d == "down":
+        ep.evaluate(f"window.scrollBy(0, {pixels})")
+    elif d == "up":
+        ep.evaluate(f"window.scrollBy(0, -{pixels})")
+    elif d == "top":
+        ep.evaluate("window.scrollTo(0, 0)")
+    elif d == "bottom":
+        ep.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+    else:
+        ep.evaluate(f"window.scrollBy(0, {pixels})")
+    logger.info("✅ JS scroll %s %dpx", direction, pixels)
+
+
+def js_type(page, text: str, target: str) -> None:
+    """
+    Set an input's value via JavaScript and fire React/Vue change events.
+    Use when Playwright .fill() doesn't trigger the framework's state update.
+
+    Usage in .flow:  js type "hello@email.com" into email_field
+    """
+    import json as _j
+    selector  = _resolve_to_selector(target)
+    find_js   = _js_selector_script(selector)
+    text_safe = _j.dumps(text)
+    # Use the native input value setter so React's synthetic onChange fires
+    script = (
+        f'{find_js} '
+        f'if (!el) throw new Error("JS type: element not found — {selector}"); '
+        f'var setter = Object.getOwnPropertyDescriptor('
+        f'  window.HTMLInputElement.prototype, "value") || '
+        f'  Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value"); '
+        f'if (setter && setter.set) setter.set.call(el, {text_safe}); '
+        f'else el.value = {text_safe}; '
+        f'el.dispatchEvent(new Event("input",  {{bubbles:true}})); '
+        f'el.dispatchEvent(new Event("change", {{bubbles:true}}));'
+    )
+    ep = _get_locator_root(page)
+    try:
+        ep.evaluate(script)
+        logger.info("✅ JS type into: %s", target)
+    except Exception as e:
+        raise Exception(f"JS type failed on '{target}': {e}") from e
+
+
+def js_set_value(page, text: str, target: str) -> None:
+    """Alias for js_type — set a field's value via JavaScript."""
+    js_type(page, text, target)
+
+
+def js_focus(page, target: str) -> None:
+    """
+    Focus an element using JavaScript — triggers focus events for custom widgets.
+
+    Usage in .flow:  js focus phone_input
+    """
+    import json as _j
+    selector = _resolve_to_selector(target)
+    find_js  = _js_selector_script(selector)
+    script   = f'{find_js} if (el) el.focus();'
+    ep = _get_locator_root(page)
+    try:
+        ep.evaluate(script)
+        logger.info("✅ JS focus: %s", target)
+    except Exception as e:
+        raise Exception(f"JS focus failed on '{target}': {e}") from e
+
+
+def js_submit(page, target: str) -> None:
+    """
+    Submit a form directly via JavaScript .submit().
+
+    Usage in .flow:  js submit login_form
+    """
+    import json as _j
+    selector = _resolve_to_selector(target)
+    find_js  = _js_selector_script(selector)
+    script   = (
+        f'{find_js} '
+        f'if (!el) throw new Error("JS submit: element not found — {selector}"); '
+        f'if (typeof el.submit === "function") el.submit(); '
+        f'else el.dispatchEvent(new Event("submit", {{bubbles:true, cancelable:true}}));'
+    )
+    ep = _get_locator_root(page)
+    try:
+        ep.evaluate(script)
+        logger.info("✅ JS submit: %s", target)
+    except Exception as e:
+        raise Exception(f"JS submit failed on '{target}': {e}") from e
+
+
+def js_dispatch_event(page, event_name: str, target: str) -> None:
+    """
+    Dispatch a custom DOM event on an element.
+
+    Usage in .flow:  js dispatch click on submit_btn
+    """
+    import json as _j
+    selector   = _resolve_to_selector(target)
+    find_js    = _js_selector_script(selector)
+    event_safe = _j.dumps(event_name)
+    script = (
+        f'{find_js} '
+        f'if (!el) throw new Error("JS dispatch: element not found — {selector}"); '
+        f'el.dispatchEvent(new Event({event_safe}, {{bubbles:true, cancelable:true}}));'
+    )
+    ep = _get_locator_root(page)
+    try:
+        ep.evaluate(script)
+        logger.info("✅ JS dispatch %s on: %s", event_name, target)
+    except Exception as e:
+        raise Exception(f"JS dispatch '{event_name}' failed on '{target}': {e}") from e

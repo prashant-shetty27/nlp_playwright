@@ -1,0 +1,43 @@
+{
+  "_comment": "iOS Simulator Suite — JustDial on iPhone 17 Pro Simulator (iOS 26.2).",
+
+  "suite_name": "JustDial iOS Simulator Suite",
+  "description": "Runs JustDial iOS demo flow on the booted iPhone 17 Pro simulator.",
+  "platform": "ios",
+
+  "scripts": [
+    "flows/ios_demo.flow"
+  ],
+
+  "desired_capabilities": {
+    "platform":              "ios",
+    "platformName":          "iOS",
+    "appium:automationName": "XCUITest",
+
+    "_comment_device": "iPhone 17 Pro simulator — booted",
+    "appium:deviceName":     "iPhone 17 Pro",
+    "appium:udid":           "341A5327-590B-4377-B03B-A13F2CABED60",
+    "appium:platformVersion": "26.2",
+
+    "_comment_app": "App launched by bundleId — Appium checks if installed; set appium:app only when a fresh install is needed",
+    "appium:bundleId":       "com.justdial.justdialjd",
+
+    "appium:newCommandTimeout": 180,
+    "appium:noReset": false,
+    "appium:autoAcceptAlerts": false,
+
+    "_comment_wda": "Use pre-built WDA to avoid xcodebuild SIGTERM on Xcode 26",
+    "appium:useNewWDA": false,
+    "appium:usePrebuiltWDA": true,
+    "appium:derivedDataPath": "/tmp/wda_sim_build",
+    "appium:wdaLaunchTimeout": 300000,
+    "appium:wdaConnectionTimeout": 360000,
+    "appium:wdaLocalPort": 8200,
+    "appium:showXcodeLog": false
+  },
+
+  "parameters": [
+    { "name": "search_term",    "type": "string", "value": "Restaurants" },
+    { "name": "verify_keyword", "type": "string", "value": "Justdial" }
+  ]
+}

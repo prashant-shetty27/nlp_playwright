@@ -1,0 +1,10 @@
+# flows/web_movie_hk.flow
+# Recorded 2026-03-03 08:37 — platform: WEB
+# ─────────────────────────────────────────
+
+go to url https://www.justdial.com/
+click maybe_later_recorded_element
+scroll to element movies_thumbnail
+click movies_thumbnail
+wait 2 seconds
+verify text "movie_text_search_box" in movie_text_search_box

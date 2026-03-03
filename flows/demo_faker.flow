@@ -1,0 +1,30 @@
+# flows/demo_faker.flow
+# Demo: Test data generation with Faker
+# Run: python runner.py flows/demo_faker.flow
+# ────────────────────────────────────────────────────────────────
+
+# ── Generate fake user data ────────────────────────────────────
+generate fake name as user_name
+generate fake email as user_email
+generate fake phone as user_phone
+generate fake password as user_pass
+generate fake username as user_login
+generate fake company as company_name
+generate fake uuid as request_id
+
+# ── Generate random values ─────────────────────────────────────
+generate random number 1000 9999 as otp_code
+generate random string 16 as session_token
+
+# ── Use them in browser (register form example) ────────────────
+go to url https://demoqa.com/automation-practice-form
+wait 2 seconds
+take screenshot as before_fill
+
+# Type the generated values into form fields
+# (these element names come from your recorded locators)
+# type "${user_name}" into full_name_field
+# type "${user_email}" into email_field
+# type "${user_phone}" into phone_field
+
+take screenshot as after_fill

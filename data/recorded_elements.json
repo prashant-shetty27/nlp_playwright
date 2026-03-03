@@ -1,475 +1,4 @@
 {
-  "recorded_page": {
-    "span_login_171025": {
-      "tagName": "span",
-      "id": null,
-      "className": "jsx-ed7426680879169a headnav_item_text pl-5 font14 fw500 colorFFF",
-      "innerText": "Login",
-      "rect": {
-        "x": 1319,
-        "y": 30,
-        "width": 43,
-        "height": 21
-      },
-      "custom_xpath": "//span[contains(@class, 'jsx-ed7426680879169a') and contains(@class, 'headnav_item_text') and contains(@class, 'pl-5') and contains(@class, 'fw500') and contains(@class, 'colorFFF')]",
-      "attributes": {
-        "class": "jsx-ed7426680879169a headnav_item_text pl-5 font14 fw500 colorFFF"
-      }
-    },
-    "B2B_search_input_171043": {
-      "tagName": "input",
-      "id": "cpinput",
-      "className": "jdmart_search_input",
-      "innerText": null,
-      "rect": {
-        "x": 424,
-        "y": 21,
-        "width": 437,
-        "height": 39
-      },
-      "custom_xpath": "//input[@id='cpinput']",
-      "attributes": {
-        "id": "cpinput",
-        "type": "text",
-        "autocomplete": "off",
-        "aria-autocomplete": "list",
-        "aria-controls": "react-autowhatever-1",
-        "class": "jdmart_search_input",
-        "placeholder": "Search \"TMT Bar\"",
-        "aria-label": "search input",
-        "value": "cctv "
-      }
-    },
-    "div_cctv_171046": {
-      "tagName": "div",
-      "id": null,
-      "className": "jdmart_serach_text font14 fw400 color111 mr-5",
-      "innerText": "Cctv",
-      "rect": {
-        "x": 439,
-        "y": 113,
-        "width": 56,
-        "height": 21
-      },
-      "custom_xpath": "//div[contains(@class, 'jdmart_serach_text') and contains(@class, 'fw400') and contains(@class, 'color111') and contains(@class, 'mr-5')]",
-      "attributes": {
-        "class": "jdmart_serach_text font14 fw400 color111 mr-5"
-      }
-    },
-    "div_have_a_long_buck_171047": {
-      "tagName": "div",
-      "id": null,
-      "className": "jdmart_homecard_58_inner pl-30 pr-30 pt-20 pb-20",
-      "innerText": "Have a long bucket list?\ud83e\udd29\nLet us help you get verified sellers\nBowers & Wilkins Ceiling Speaker\nCan",
-      "rect": {
-        "x": 18,
-        "y": 122,
-        "width": 1440,
-        "height": 290
-      },
-      "custom_xpath": "//div[contains(@class, 'jdmart_homecard_58_inner') and contains(@class, 'pl-30') and contains(@class, 'pr-30') and contains(@class, 'pt-20') and contains(@class, 'pb-20')]",
-      "attributes": {
-        "class": "jdmart_homecard_58_inner pl-30 pr-30 pt-20 pb-20",
-        "style": "background: url(\"https://images.jdmagicbox.com/standard/shopfront/178b8c585955f277372972b1099b5750.png\") right center / contain;"
-      }
-    },
-    "input_search_input_171047": {
-      "tagName": "input",
-      "id": "cpinput",
-      "className": "jdmart_search_input",
-      "innerText": null,
-      "rect": {
-        "x": 424,
-        "y": 21,
-        "width": 437,
-        "height": 39
-      },
-      "custom_xpath": "//input[@id='cpinput']",
-      "attributes": {
-        "id": "cpinput",
-        "type": "text",
-        "autocomplete": "off",
-        "aria-autocomplete": "list",
-        "aria-controls": "react-autowhatever-1",
-        "class": "jdmart_search_input",
-        "placeholder": "Search \"Ceiling Speaker\"",
-        "aria-label": "search input",
-        "value": "cctv"
-      }
-    },
-    "div_have_a_long_buck_171052": {
-      "tagName": "div",
-      "id": null,
-      "className": "jdmart_homecard_58_inner pl-30 pr-30 pt-20 pb-20",
-      "innerText": "Have a long bucket list?\ud83e\udd29\nLet us help you get verified sellers\nBowers & Wilkins Ceiling Speaker\nCan",
-      "rect": {
-        "x": 18,
-        "y": 122,
-        "width": 1440,
-        "height": 290
-      },
-      "custom_xpath": "//div[contains(@class, 'jdmart_homecard_58_inner') and contains(@class, 'pl-30') and contains(@class, 'pr-30') and contains(@class, 'pt-20') and contains(@class, 'pb-20')]",
-      "attributes": {
-        "class": "jdmart_homecard_58_inner pl-30 pr-30 pt-20 pb-20",
-        "style": "background: url(\"https://images.jdmagicbox.com/standard/shopfront/178b8c585955f277372972b1099b5750.png\") right center / contain;"
-      }
-    },
-    "span_sign_up_171053": {
-      "tagName": "span",
-      "id": null,
-      "className": "jsx-ed7426680879169a headnav_item_text headnav_item_text_1 font14 fw500 colorFFF",
-      "innerText": "/\u00a0Sign Up",
-      "rect": {
-        "x": 1363,
-        "y": 30,
-        "width": 69,
-        "height": 21
-      },
-      "custom_xpath": "//span[contains(@class, 'jsx-ed7426680879169a') and contains(@class, 'headnav_item_text') and contains(@class, 'headnav_item_text_1') and contains(@class, 'fw500') and contains(@class, 'colorFFF')]",
-      "attributes": {
-        "class": "jsx-ed7426680879169a headnav_item_text headnav_item_text_1 font14 fw500 colorFFF"
-      }
-    },
-    "span_canopies_171112": {
-      "tagName": "span",
-      "id": null,
-      "className": "anim_text font14 fw500 color111 line_clamp_3",
-      "innerText": "Canopies",
-      "rect": {
-        "x": 416,
-        "y": 257,
-        "width": 74,
-        "height": 21
-      },
-      "custom_xpath": "//span[contains(@class, 'anim_text') and contains(@class, 'fw500') and contains(@class, 'color111') and contains(@class, 'line_clamp_3')]",
-      "attributes": {
-        "class": "anim_text font14 fw500 color111 line_clamp_3"
-      }
-    },
-    "div_have_a_business_171237": {
-      "tagName": "div",
-      "id": null,
-      "className": "color111 card_text card_text1",
-      "innerText": "Have a business ?",
-      "rect": {
-        "x": 784,
-        "y": 191,
-        "width": 272,
-        "height": 30
-      },
-      "custom_xpath": "//div[contains(@class, 'color111') and contains(@class, 'card_text') and contains(@class, 'card_text1')]",
-      "attributes": {
-        "class": "color111 card_text card_text1"
-      }
-    },
-    "div_start_selling_wi_171238": {
-      "tagName": "div",
-      "id": null,
-      "className": "color111 mt-8 card_text card_text2",
-      "innerText": "Start selling with us in",
-      "rect": {
-        "x": 784,
-        "y": 229,
-        "width": 272,
-        "height": 28
-      },
-      "custom_xpath": "//div[contains(@class, 'color111') and contains(@class, 'mt-8') and contains(@class, 'card_text') and contains(@class, 'card_text2')]",
-      "attributes": {
-        "class": "color111 mt-8 card_text card_text2"
-      }
-    },
-    "div_just_40_secs_for_171239": {
-      "tagName": "div",
-      "id": null,
-      "className": "color111 mt-2 card_text card_text3",
-      "innerText": "just 40 secs for free!",
-      "rect": {
-        "x": 784,
-        "y": 259,
-        "width": 272,
-        "height": 33
-      },
-      "custom_xpath": "//div[contains(@class, 'color111') and contains(@class, 'mt-2') and contains(@class, 'card_text') and contains(@class, 'card_text3')]",
-      "attributes": {
-        "class": "color111 mt-2 card_text card_text3"
-      }
-    },
-    "button_register_now_171241": {
-      "tagName": "button",
-      "id": null,
-      "className": "homecard_58_banner_button font16 fw500 colorFFF mt-12",
-      "innerText": "Register Now",
-      "rect": {
-        "x": 784,
-        "y": 303,
-        "width": 177,
-        "height": 40
-      },
-      "custom_xpath": "//button[contains(@class, 'homecard_58_banner_button') and contains(@class, 'fw500') and contains(@class, 'colorFFF') and contains(@class, 'mt-12')]",
-      "attributes": {
-        "class": "homecard_58_banner_button font16 fw500 colorFFF mt-12"
-      }
-    },
-    "button_get_verified_sell_171242": {
-      "tagName": "button",
-      "id": null,
-      "className": "homecard_58_banner_button font16 fw500 colorFFF mt-12",
-      "innerText": "Get Verified Sellers",
-      "rect": {
-        "x": 130,
-        "y": 333,
-        "width": 222,
-        "height": 40
-      },
-      "custom_xpath": "//button[contains(@class, 'homecard_58_banner_button') and contains(@class, 'fw500') and contains(@class, 'colorFFF') and contains(@class, 'mt-12')]",
-      "attributes": {
-        "class": "homecard_58_banner_button font16 fw500 colorFFF mt-12"
-      }
-    },
-    "div_let_us_help_you_ge_171244": {
-      "tagName": "div",
-      "id": null,
-      "className": "color111 card_text card_text4",
-      "innerText": "Let us help you get verified sellers",
-      "rect": {
-        "x": 130,
-        "y": 193,
-        "width": 562,
-        "height": 24
-      },
-      "custom_xpath": "//div[contains(@class, 'color111') and contains(@class, 'card_text') and contains(@class, 'card_text4')]",
-      "attributes": {
-        "class": "color111 card_text card_text4"
-      }
-    },
-    "span_all_categories_171246": {
-      "tagName": "span",
-      "id": null,
-      "className": "jsx-ed7426680879169a jdmart__hamburger__text pointer",
-      "innerText": "All Categories",
-      "rect": {
-        "x": 163,
-        "y": 84,
-        "width": 92,
-        "height": 18
-      },
-      "custom_xpath": "//span[contains(@class, 'jsx-ed7426680879169a') and contains(@class, 'jdmart__hamburger__text') and contains(@class, 'pointer')]",
-      "attributes": {
-        "class": "jsx-ed7426680879169a jdmart__hamburger__text pointer"
-      }
-    },
-    "a_food_beverage_171247": {
-      "tagName": "a",
-      "id": null,
-      "className": "jsx-ed7426680879169a subnav__anchor font13 fw400 color111",
-      "innerText": "Food & Beverage",
-      "rect": {
-        "x": 290,
-        "y": 84,
-        "width": 129,
-        "height": 37
-      },
-      "custom_xpath": "//a[contains(@class, 'jsx-ed7426680879169a') and contains(@class, 'subnav__anchor') and contains(@class, 'fw400') and contains(@class, 'color111')]",
-      "attributes": {
-        "href": "/jdmart/Mumbai/Food-Beverage/tid-13",
-        "role": "menuitem",
-        "title": "Food & Beverage",
-        "class": "jsx-ed7426680879169a subnav__anchor font13 fw400 color111"
-      }
-    },
-    "a_industrial_machine_171248": {
-      "tagName": "a",
-      "id": null,
-      "className": "jsx-ed7426680879169a subnav__anchor font13 fw400 color111",
-      "innerText": "Industrial Machinery",
-      "rect": {
-        "x": 454,
-        "y": 84,
-        "width": 151,
-        "height": 37
-      },
-      "custom_xpath": "//a[contains(@class, 'jsx-ed7426680879169a') and contains(@class, 'subnav__anchor') and contains(@class, 'fw400') and contains(@class, 'color111')]",
-      "attributes": {
-        "href": "/jdmart/Mumbai/Industrial-Machinery/tid-19",
-        "role": "menuitem",
-        "title": "Industrial Machinery",
-        "class": "jsx-ed7426680879169a subnav__anchor font13 fw400 color111"
-      }
-    },
-    "a_apparel_fashion_171249": {
-      "tagName": "a",
-      "id": null,
-      "className": "jsx-ed7426680879169a subnav__anchor font13 fw400 color111",
-      "innerText": "Apparel & Fashion",
-      "rect": {
-        "x": 641,
-        "y": 84,
-        "width": 137,
-        "height": 37
-      },
-      "custom_xpath": "//a[contains(@class, 'jsx-ed7426680879169a') and contains(@class, 'subnav__anchor') and contains(@class, 'fw400') and contains(@class, 'color111')]",
-      "attributes": {
-        "href": "/jdmart/Mumbai/Apparel-Fashion/tid-3",
-        "role": "menuitem",
-        "title": "Apparel & Fashion",
-        "class": "jsx-ed7426680879169a subnav__anchor font13 fw400 color111"
-      }
-    },
-    "a_electronics_171250": {
-      "tagName": "a",
-      "id": null,
-      "className": "jsx-ed7426680879169a subnav__anchor font13 fw400 color111",
-      "innerText": "Electronics",
-      "rect": {
-        "x": 813,
-        "y": 84,
-        "width": 88,
-        "height": 37
-      },
-      "custom_xpath": "//a[contains(@class, 'jsx-ed7426680879169a') and contains(@class, 'subnav__anchor') and contains(@class, 'fw400') and contains(@class, 'color111')]",
-      "attributes": {
-        "href": "/jdmart/Mumbai/Electronics/tid-11",
-        "role": "menuitem",
-        "title": "Electronics",
-        "class": "jsx-ed7426680879169a subnav__anchor font13 fw400 color111"
-      }
-    },
-    "a_b2b_events_171251": {
-      "tagName": "a",
-      "id": null,
-      "className": "jsx-ed7426680879169a subnav__anchor font13 fw400 color111",
-      "innerText": "B2B Events",
-      "rect": {
-        "x": 936,
-        "y": 84,
-        "width": 70,
-        "height": 37
-      },
-      "custom_xpath": "//a[contains(@class, 'jsx-ed7426680879169a') and contains(@class, 'subnav__anchor') and contains(@class, 'fw400') and contains(@class, 'color111')]",
-      "attributes": {
-        "href": "/jdmart/Mumbai/B2B-Events/tid-42",
-        "role": "menuitem",
-        "title": "B2B Events",
-        "class": "jsx-ed7426680879169a subnav__anchor font13 fw400 color111"
-      }
-    },
-    "a_beverage_171257": {
-      "tagName": "a",
-      "id": null,
-      "className": "jsx-ed7426680879169a font12 fw500 color777 text_uppercase",
-      "innerText": "BEVERAGE",
-      "rect": {
-        "x": 132,
-        "y": 146,
-        "width": 58,
-        "height": 18
-      },
-      "custom_xpath": "//a[contains(@class, 'jsx-ed7426680879169a') and contains(@class, 'fw500') and contains(@class, 'color777') and contains(@class, 'text_uppercase')]",
-      "attributes": {
-        "href": "/jdmart/Mumbai/Beverage_fil/510769669_2",
-        "title": "Beverage",
-        "class": "jsx-ed7426680879169a font12 fw500 color777 text_uppercase"
-      }
-    },
-    "div_ice_171258": {
-      "tagName": "div",
-      "id": null,
-      "className": "jsx-ed7426680879169a bottom__row__txtbox",
-      "innerText": "Ice",
-      "rect": {
-        "x": 174,
-        "y": 184,
-        "width": 233,
-        "height": 18
-      },
-      "custom_xpath": "//div[contains(@class, 'jsx-ed7426680879169a') and contains(@class, 'bottom__row__txtbox')]",
-      "attributes": {
-        "class": "jsx-ed7426680879169a bottom__row__txtbox"
-      }
-    },
-    "div_energy_health_dr_171300": {
-      "tagName": "div",
-      "id": null,
-      "className": "jsx-ed7426680879169a bottom__row__txtbox",
-      "innerText": "Energy & Health Drinks",
-      "rect": {
-        "x": 174,
-        "y": 222,
-        "width": 233,
-        "height": 18
-      },
-      "custom_xpath": "//div[contains(@class, 'jsx-ed7426680879169a') and contains(@class, 'bottom__row__txtbox')]",
-      "attributes": {
-        "class": "jsx-ed7426680879169a bottom__row__txtbox"
-      }
-    },
-    "div_element_171303": {
-      "tagName": "div",
-      "id": null,
-      "className": "jdmart_fcategory_image homecard_54_imgbox",
-      "innerText": null,
-      "rect": {
-        "x": 49,
-        "y": 496,
-        "width": 258,
-        "height": 194
-      },
-      "custom_xpath": "//div[contains(@class, 'jdmart_fcategory_image') and contains(@class, 'homecard_54_imgbox')]",
-      "attributes": {
-        "class": "jdmart_fcategory_image homecard_54_imgbox"
-      }
-    },
-    "a_view_all_171339": {
-      "tagName": "a",
-      "id": null,
-      "className": "font14 color127 fw500 pointer anchor",
-      "innerText": "View all",
-      "rect": {
-        "x": 1375,
-        "y": 450,
-        "width": 53,
-        "height": 21
-      },
-      "custom_xpath": "//a[contains(@class, 'color127') and contains(@class, 'fw500') and contains(@class, 'pointer') and contains(@class, 'anchor')]",
-      "attributes": {
-        "class": "font14 color127 fw500 pointer anchor",
-        "href": "/jdmart/Mumbai/Top-Ranked-Categories-For-You/int3-1-507-5",
-        "style": "color: rgb(0, 118, 215);"
-      }
-    },
-    "div_element_194726": {
-      "tagName": "div",
-      "id": null,
-      "className": "homecard_28_imgbox ",
-      "innerText": null,
-      "rect": {
-        "x": 212,
-        "y": 501,
-        "width": 201,
-        "height": 203
-      },
-      "attributes": {
-        "class": "homecard_28_imgbox "
-      },
-      "custom_xpath": "//div[contains(@class, 'homecard_28_imgbox')]"
-    },
-    "span_topranked_categories_194740": {
-      "tagName": "span",
-      "id": null,
-      "className": "font22 fw600 color111",
-      "innerText": "Top-Ranked Categories For You",
-      "rect": {
-        "x": 206,
-        "y": 442,
-        "width": 350,
-        "height": 33
-      },
-      "attributes": {
-        "class": "font22 fw600 color111"
-      },
-      "custom_xpath": "//span[contains(@class, 'fw600') and contains(@class, 'color111')]"
-    }
-  },
   "Web_B2B_HomePage": {
     "Login": {
       "tagName": "span",
@@ -485,26 +14,7 @@
       "attributes": {
         "class": "jsx-ed7426680879169a headnav_item_text pl-5 font14 fw500 colorFFF"
       },
-      "custom_xpath": "//span[contains(@class, 'jsx-ed7426680879169a') and contains(@class, 'headnav_item_text') and contains(@class, 'pl-5') and contains(@class, 'fw500') and contains(@class, 'colorFFF')]"
-    }
-  },
-  "unnamed_page": {
-    "unnamed_locator": {
-      "tagName": "div",
-      "id": null,
-      "className": "jsx-55162c602a57c0bf getapp_icon jdicon",
-      "innerText": null,
-      "rect": {
-        "x": 1544,
-        "y": 107,
-        "width": 27,
-        "height": 56
-      },
-      "absoluteXPath": "id(\"comHead\")/div[2]/section[1]/a[1]/div[4]",
-      "attributes": {
-        "class": "jsx-55162c602a57c0bf getapp_icon jdicon"
-      },
-      "custom_xpath": "//div[contains(@class, 'jsx-55162c602a57c0bf') and contains(@class, 'getapp_icon') and contains(@class, 'jdicon')]"
+      "custom_xpath": "//span[contains(@class, 'jsx-ed7426680879169a') and contains(@class, 'headnav_item_text') and contains(@class, 'pl-5') and contains(@class, 'fw500') and contains(@class, 'colorFFF') and normalize-space(.)='Login']"
     }
   },
   "web_homepage": {
@@ -521,7 +31,7 @@
       "attributes": {
         "class": "jsx-c77816fa1038cbdb headnav_item_text font14 fw500 colorFFF"
       },
-      "custom_xpath": "//div[contains(@class, 'jsx-c77816fa1038cbdb') and contains(@class, 'headnav_item_text') and contains(@class, 'fw500') and contains(@class, 'colorFFF')]"
+      "custom_xpath": "//div[contains(@class, 'jsx-c77816fa1038cbdb') and contains(@class, 'headnav_item_text') and contains(@class, 'fw500') and contains(@class, 'colorFFF') and normalize-space(.)='Login / Sign Up']"
     },
     "leads": {
       "tagName": "div",
@@ -536,7 +46,8 @@
       "attributes": {
         "class": "jsx-c77816fa1038cbdb headnav_item_text pl-5 font14 fw400 color111"
       },
-      "custom_xpath_P": "//div[contains(@class, 'jsx-c77816fa1038cbdb') and contains(@class, 'headnav_item_text') and contains(@class, 'pl-5') and contains(@class, 'fw400') and contains(@class, 'color111')]"
+      "custom_xpath_P": "//div[contains(@class, 'jsx-c77816fa1038cbdb') and contains(@class, 'headnav_item_text') and contains(@class, 'pl-5') and contains(@class, 'fw400') and contains(@class, 'color111')]",
+      "custom_xpath": "//div[contains(@class, 'jsx-c77816fa1038cbdb') and contains(@class, 'headnav_item_text') and contains(@class, 'pl-5') and contains(@class, 'fw400') and contains(@class, 'color111') and normalize-space(.)='Leads']"
     },
     "investor_relati_link": {
       "tagName": "div",
@@ -551,15 +62,15 @@
       "attributes": {
         "class": "jsx-c77816fa1038cbdb headnav_item_text pl-5 font14 fw400 color111"
       },
-      "custom_xpath": "//div[contains(@class, 'jsx-c77816fa1038cbdb') and contains(@class, 'headnav_item_text') and contains(@class, 'pl-5') and contains(@class, 'fw400') and contains(@class, 'color111')]"
+      "custom_xpath": "//div[contains(@class, 'jsx-c77816fa1038cbdb') and contains(@class, 'headnav_item_text') and contains(@class, 'pl-5') and contains(@class, 'fw400') and contains(@class, 'color111') and normalize-space(.)='Investor Relations']"
     },
     "freelisting_banner_cross_button": {
       "tagName": "span",
       "className": "jsx-953ea8b54d39d45 floatbanner_close jdicon",
       "innerText": null,
       "rect": {
-        "x": 1697,
-        "y": 634,
+        "x": 1237,
+        "y": 631,
         "width": 20,
         "height": 20
       },
@@ -664,7 +175,7 @@
       "attributes": {
         "class": "jsx-c77816fa1038cbdb headnav_item_text pl-5 font14 fw400 color451"
       },
-      "custom_xpath": "//span[contains(@class,'jsx-c77816fa1038cbdb') and contains(@class,'headnav_item_text') and contains(@class,'pl-5') and contains(@class,'fw400') and contains(@class,'color451')]"
+      "custom_xpath": "//span[contains(@class,'jsx-c77816fa1038cbdb') and contains(@class,'headnav_item_text') and contains(@class,'pl-5') and contains(@class,'fw400') and contains(@class,'color451') and normalize-space(.)='E N']"
     },
     "b2b_hotkey": {
       "tagName": "img",
@@ -701,7 +212,52 @@
       "attributes": {
         "class": "cardhotkey__title fw500 font18 color111"
       },
-      "custom_xpath": "//h2[contains(@class,'cardhotkey__title') and contains(@class,'fw500') and contains(@class,'color111')]"
+      "custom_xpath": "//h2[contains(@class,'cardhotkey__title') and contains(@class,'fw500') and contains(@class,'color111') and normalize-space(.)='Wedding Requisites']"
+    },
+    "search_across_text": {
+      "tagName": "span",
+      "className": "jsx-55162c602a57c0bf",
+      "innerText": "Search across",
+      "rect": {
+        "x": 221,
+        "y": 100,
+        "width": 185,
+        "height": 30
+      },
+      "attributes": {
+        "class": "jsx-55162c602a57c0bf"
+      },
+      "custom_xpath": "//span[contains(@class,'jsx-55162c602a57c0bf') and normalize-space(.)='Search across']"
+    },
+    "53_crore_business_text": {
+      "tagName": "span",
+      "className": "jsx-55162c602a57c0bf",
+      "innerText": "\u20185.3 Crore+\u2018 Businesses",
+      "rect": {
+        "x": 238,
+        "y": 100,
+        "width": 418,
+        "height": 39
+      },
+      "attributes": {
+        "class": "jsx-55162c602a57c0bf"
+      },
+      "custom_xpath": "//span[contains(@class,'jsx-55162c602a57c0bf') and normalize-space(.)='\u20185.3 Crore+\u2018 Businesses']"
+    },
+    "movies_thumbnail": {
+      "tagName": "figcaption",
+      "className": "color111 font14 pt-10",
+      "innerText": "Movies",
+      "rect": {
+        "x": 712,
+        "y": 518,
+        "width": 163,
+        "height": 31
+      },
+      "attributes": {
+        "class": "color111 font14 pt-10"
+      },
+      "custom_xpath": "//figcaption[contains(@class,'color111') and contains(@class,'pt-10') and normalize-space(.)='Movies']"
     }
   },
   "home_page": {
@@ -903,7 +459,7 @@
       "attributes": {
         "class": "jsx-55162c602a57c0bf getapp_button fw500 font13 color111"
       },
-      "custom_xpath": "//div[contains(@class, 'jsx-55162c602a57c0bf') and contains(@class, 'getapp_button') and contains(@class, 'fw500') and contains(@class, 'color111')]"
+      "custom_xpath": "//div[contains(@class, 'jsx-55162c602a57c0bf') and contains(@class, 'getapp_button') and contains(@class, 'fw500') and contains(@class, 'color111') and normalize-space(.)='Download App']"
     },
     "education_hotkey": {
       "tagName": "img",
@@ -1124,7 +680,7 @@
       "attributes": {
         "class": "jsx-da112b0f0664a117 resultbox_title_anchor font22 fw500 color111 line_clamp_1 "
       },
-      "custom_xpath": "//span[contains(@class, 'jsx-da112b0f0664a117') and contains(@class, 'resultbox_title_anchor') and contains(@class, 'fw500') and contains(@class, 'color111') and contains(@class, 'line_clamp_1')]"
+      "custom_xpath": "//span[contains(@class, 'jsx-da112b0f0664a117') and contains(@class, 'resultbox_title_anchor') and contains(@class, 'fw500') and contains(@class, 'color111') and contains(@class, 'line_clamp_1') and normalize-space(.)='Hotel Praveen']"
     },
     "sort_by_filter_tab": {
       "tagName": "span",
@@ -1424,7 +980,7 @@
       "attributes": {
         "class": "jsx-da112b0f0664a117 callcontent"
       },
-      "custom_xpath": "//span[contains(@class, 'jsx-da112b0f0664a117') and contains(@class, 'callcontent')]"
+      "custom_xpath": "//span[contains(@class, 'jsx-da112b0f0664a117') and contains(@class, 'callcontent') and normalize-space(.)='Show Number']"
     },
     "heading_search_title": {
       "tagName": "h1",
@@ -1514,7 +1070,7 @@
       "attributes": {
         "class": "font22 fw600 color111"
       },
-      "custom_xpath": "//span[contains(@class, 'fw600') and contains(@class, 'color111')]"
+      "custom_xpath": "//span[contains(@class, 'fw600') and contains(@class, 'color111') and normalize-space(.)='Top-Ranked Categories For You']"
     },
     "div": {
       "tagName": "div",
@@ -1562,7 +1118,7 @@
       "attributes": {
         "class": "font14 color111 fw400"
       },
-      "custom_xpath": "//div[contains(@class, 'color111') and contains(@class, 'fw400')]"
+      "custom_xpath": "//div[contains(@class, 'color111') and contains(@class, 'fw400') and normalize-space(.)='Packers & Movers']"
     },
     "popular_transpo": {
       "tagName": "h1",
@@ -1578,7 +1134,7 @@
         "class": "jsx-a487a86b47d169d9 font22 fw500 color111 line_clamp_1",
         "style": "min-height: 33px;"
       },
-      "custom_xpath": "//h1[contains(@class, 'jsx-a487a86b47d169d9') and contains(@class, 'fw500') and contains(@class, 'color111') and contains(@class, 'line_clamp_1')]"
+      "custom_xpath": "//h1[contains(@class, 'jsx-a487a86b47d169d9') and contains(@class, 'fw500') and contains(@class, 'color111') and contains(@class, 'line_clamp_1') and normalize-space(.)='Popular Transporters For Intercity in Mumbai']"
     },
     "national_trans": {
       "tagName": "span",
@@ -1593,7 +1149,7 @@
       "attributes": {
         "class": "jsx-da112b0f0664a117 resultbox_title_anchor font22 fw500 color111 line_clamp_1 "
       },
-      "custom_xpath": "//span[contains(@class, 'jsx-da112b0f0664a117') and contains(@class, 'resultbox_title_anchor') and contains(@class, 'fw500') and contains(@class, 'color111') and contains(@class, 'line_clamp_1')]"
+      "custom_xpath": "//span[contains(@class, 'jsx-da112b0f0664a117') and contains(@class, 'resultbox_title_anchor') and contains(@class, 'fw500') and contains(@class, 'color111') and contains(@class, 'line_clamp_1') and normalize-space(.)='National Trans INDIA']"
     },
     "download_app": {
       "tagName": "div",
@@ -1608,7 +1164,7 @@
       "attributes": {
         "class": "jsx-55162c602a57c0bf getapp_button fw500 font13 color111"
       },
-      "custom_xpath": "//div[contains(@class, 'jsx-55162c602a57c0bf') and contains(@class, 'getapp_button') and contains(@class, 'fw500') and contains(@class, 'color111')]"
+      "custom_xpath": "//div[contains(@class, 'jsx-55162c602a57c0bf') and contains(@class, 'getapp_button') and contains(@class, 'fw500') and contains(@class, 'color111') and normalize-space(.)='Download App']"
     },
     "freelisting_banner_close": {
       "tagName": "span",
@@ -1681,7 +1237,7 @@
       "attributes": {
         "class": "jsx-29825056 hl_area_text_inner"
       },
-      "custom_xpath": "//div[contains(@class,'jsx-29825056') and contains(@class,'hl_area_text_inner')]"
+      "custom_xpath": "//div[contains(@class,'jsx-29825056') and contains(@class,'hl_area_text_inner') and normalize-space(.)='Mumbai-400064']"
     }
   },
   "web_b2b_homepage": {
@@ -1735,7 +1291,7 @@
       "attributes": {
         "class": "font22 fw500 color111 new__results__pageheading fadeIn"
       },
-      "custom_xpath": "//h1[contains(@class,'fw500') and contains(@class,'color111') and contains(@class,'new__results__pageheading') and contains(@class,'fadeIn')]"
+      "custom_xpath": "//h1[contains(@class,'fw500') and contains(@class,'color111') and contains(@class,'new__results__pageheading') and contains(@class,'fadeIn') and normalize-space(.)='Top Cctv Products in Mumbai']"
     },
     "product_1st": {
       "tagName": "h2",
@@ -1750,7 +1306,7 @@
       "attributes": {
         "class": "resultbox__title font22 fw500 color111"
       },
-      "custom_xpath": "//h2[contains(@class,'resultbox__title') and contains(@class,'fw500') and contains(@class,'color111')]"
+      "custom_xpath": "//h2[contains(@class,'resultbox__title') and contains(@class,'fw500') and contains(@class,'color111') and normalize-space(.)='CP Plus-CP-GPC-D24L2-S CCTV Dome Camera']"
     },
     "gbp_popup_cross_button": {
       "tagName": "div",
@@ -1801,7 +1357,7 @@
       "attributes": {
         "class": "dcomppro_title font22 color414 fw600"
       },
-      "custom_xpath": "//h1[contains(@class,'dcomppro_title') and contains(@class,'color414') and contains(@class,'fw600')]"
+      "custom_xpath": "//h1[contains(@class,'dcomppro_title') and contains(@class,'color414') and contains(@class,'fw600') and normalize-space(.)='CP Plus-CP-GPC-D24L2-S CCTV Dome Camera']"
     },
     "seller_name_rhs_card": {
       "tagName": "div",
@@ -1816,7 +1372,7 @@
       "attributes": {
         "class": "dcomp_name font16 fw600 color111"
       },
-      "custom_xpath": "//div[contains(@class,'dcomp_name') and contains(@class,'fw600') and contains(@class,'color111')]"
+      "custom_xpath": "//div[contains(@class,'dcomp_name') and contains(@class,'fw600') and contains(@class,'color111') and normalize-space(.)='Smart Eye Vision']"
     }
   },
   "web_b2b_catalogue": {
@@ -1833,7 +1389,7 @@
       "attributes": {
         "class": "jsx-a614deb88c926a86 compney font23 fw500 color111"
       },
-      "custom_xpath": "//h1[contains(@class,'jsx-a614deb88c926a86') and contains(@class,'compney') and contains(@class,'fw500') and contains(@class,'color111')]"
+      "custom_xpath": "//h1[contains(@class,'jsx-a614deb88c926a86') and contains(@class,'compney') and contains(@class,'fw500') and contains(@class,'color111') and normalize-space(.)='Smart Eye Vision']"
     },
     "login_sign_up_button": {
       "tagName": "div",
@@ -1848,7 +1404,7 @@
       "attributes": {
         "class": "jsx-c77816fa1038cbdb headnav_item_text font14 fw500 colorFFF"
       },
-      "custom_xpath": "//div[contains(@class,'jsx-c77816fa1038cbdb') and contains(@class,'headnav_item_text') and contains(@class,'fw500') and contains(@class,'colorFFF')]"
+      "custom_xpath": "//div[contains(@class,'jsx-c77816fa1038cbdb') and contains(@class,'headnav_item_text') and contains(@class,'fw500') and contains(@class,'colorFFF') and normalize-space(.)='Login / Sign Up']"
     },
     "fmobile": {
       "tagName": "input",
@@ -2051,7 +1607,58 @@
       "attributes": {
         "class": "jsx-a614deb88c926a86 font15 fw500"
       },
-      "custom_xpath": "//span[contains(@class,'jsx-a614deb88c926a86') and contains(@class,'fw500')]"
+      "custom_xpath": "//span[contains(@class,'jsx-a614deb88c926a86') and contains(@class,'fw500') and normalize-space(.)='Your friend Prashant rated 4/5']"
+    }
+  },
+  "web_result_page": {
+    "paid_banner": {
+      "tagName": "img",
+      "className": "jsx-d1c1bd1e0ad8ca6f result_banner_front_image",
+      "innerText": null,
+      "rect": {
+        "x": 0,
+        "y": 81,
+        "width": 1332,
+        "height": 113
+      },
+      "attributes": {
+        "width": "auto",
+        "height": "113",
+        "id": "slides0",
+        "src": "https://images.jdmagicbox.com/mumbai/t2/022pxx22.xx22.220812163612.d4t2/cbnr/b34e619aa4f6d0c83d8a7ea6a2a86cff.jpg",
+        "alt": "Identiti Hair Studio",
+        "title": "Identiti Hair Studio",
+        "aria-label": "Identiti Hair Studio",
+        "class": "jsx-d1c1bd1e0ad8ca6f result_banner_front_image"
+      },
+      "custom_xpath": "//img[@id='slides0']"
+    }
+  },
+  "web_movie_filterpage": {
+    "movie_text_search_box": {
+      "tagName": "input",
+      "className": "input_search font14 fw400 color111",
+      "innerText": null,
+      "rect": {
+        "x": 345,
+        "y": 20,
+        "width": 322,
+        "height": 39
+      },
+      "attributes": {
+        "type": "text",
+        "autocomplete": "off",
+        "aria-autocomplete": "list",
+        "aria-controls": "main-auto-suggest",
+        "class": "input_search font14 fw400 color111",
+        "role": "combobox",
+        "aria-expanded": "true",
+        "aria-label": "Search",
+        "placeholder": "Search",
+        "id": "main-auto",
+        "value": "Movies"
+      },
+      "custom_xpath": "//input[@id='main-auto']"
     }
   }
 }

@@ -152,6 +152,129 @@ def sync_locators_to_snippets() -> None:
         "Action: Screenshot": {"prefix": "take screenshot", "body": [f"take screenshot of ${{1|{choice_list},viewport|}} as \"${{2:filename.png}}\""], "description": "Capture element or full page."},
     })
 
+    # --- 7. JAVASCRIPT ACTIONS ---
+    snippets.update({
+        "JS: Click (bypass overlay)": {
+            "prefix": "js click",
+            "body": [f"js click ${{1|{choice_list}|}}"],
+            "description": "JS el.click() — bypasses pointer-events:none / overlays",
+        },
+        "JS: Scroll To Element": {
+            "prefix": "js scroll to",
+            "body": [f"js scroll to ${{1|{choice_list}|}}"],
+            "description": "scrollIntoView(smooth) via JavaScript",
+        },
+        "JS: Scroll Down": {
+            "prefix": "js scroll down",
+            "body": ["js scroll down ${1:300}"],
+            "description": "window.scrollBy(0, N) — scroll down by N pixels",
+        },
+        "JS: Scroll Up": {
+            "prefix": "js scroll up",
+            "body": ["js scroll up ${1:300}"],
+            "description": "window.scrollBy(0, -N) — scroll up by N pixels",
+        },
+        "JS: Scroll Top": {
+            "prefix": "js scroll top",
+            "body": ["js scroll top"],
+            "description": "window.scrollTo(0,0) — jump to very top",
+        },
+        "JS: Scroll Bottom": {
+            "prefix": "js scroll bottom",
+            "body": ["js scroll bottom"],
+            "description": "window.scrollTo(0, document.body.scrollHeight)",
+        },
+        "JS: Type (React-aware)": {
+            "prefix": "js type",
+            "body": [f"js type \"${{1:text}}\" into ${{2|{choice_list}|}}"],
+            "description": "Native value setter + input/change events — works with React",
+        },
+        "JS: Focus": {
+            "prefix": "js focus",
+            "body": [f"js focus ${{1|{choice_list}|}}"],
+            "description": "el.focus() + focus/focusin events",
+        },
+        "JS: Submit Form": {
+            "prefix": "js submit",
+            "body": [f"js submit ${{1|{choice_list}|}}"],
+            "description": "el.submit() or dispatches submit event",
+        },
+        "JS: Dispatch Event": {
+            "prefix": "js dispatch",
+            "body": [f"js dispatch ${{1|change,click,input,submit,blur,focus|}} on ${{2|{choice_list}|}}"],
+            "description": "dispatchEvent(new Event(name)) on any element",
+        },
+    })
+
+    # --- 8. FAKER / TEST DATA ---
+    for kind in ["name", "email", "phone", "uuid", "number", "address", "company", "username", "password"]:
+        snippets[f"Data: Fake {kind.title()}"] = {
+            "prefix": f"fake {kind}",
+            "body": [f"generate fake {kind} as ${{1:{kind}_val}}"],
+            "description": f"Store a fake {kind} into a variable",
+        }
+    snippets["Data: Random Number"] = {
+        "prefix": "random number",
+        "body": ["generate random number ${1:1} ${2:9999} as ${3:rand_num}"],
+        "description": "Random integer between min and max stored as variable",
+    }
+    snippets["Data: Random String"] = {
+        "prefix": "random string",
+        "body": ["generate random string ${1:8} as ${2:rand_str}"],
+        "description": "Random alphanumeric string of given length",
+    }
+
+    # --- 9. DATE / TIME ---
+    snippets["Date: Get Today"] = {
+        "prefix": "get today",
+        "body": ["get today as ${1:today_date}"],
+        "description": "Store today's date as a variable",
+    }
+    snippets["Date: Get Timestamp"] = {
+        "prefix": "get timestamp",
+        "body": ["get timestamp as ${1:ts}"],
+        "description": "Store current datetime as a variable",
+    }
+    snippets["Date: Get Offset"] = {
+        "prefix": "get date offset",
+        "body": ["get date ${1:+7} days as ${2:future_date}"],
+        "description": "Store a date N days from today (+N or -N)",
+    }
+
+    # --- 10. HTTP / API ---
+    snippets["API: GET Request"] = {
+        "prefix": "api get",
+        "body": ["api get \"${1:https://api.example.com/endpoint}\" as ${2:api_response}"],
+        "description": "HTTP GET and store JSON response",
+    }
+    snippets["API: POST Request"] = {
+        "prefix": "api post",
+        "body": ["api post \"${1:https://api.example.com/endpoint}\" with body '{\"key\": \"value\"}' as ${2:api_response}"],
+        "description": "HTTP POST with body and store JSON response",
+    }
+    snippets["API: Store JSON Path"] = {
+        "prefix": "store json path",
+        "body": ["store json ${1:api_response} path ${2:data.0.id} as ${3:extracted_val}"],
+        "description": "Extract a value from a stored JSON response using dot-path",
+    }
+
+    # --- 11. EXCEL / CSV ---
+    snippets["Excel: Read Cell"] = {
+        "prefix": "read excel cell",
+        "body": ["read excel \"${1:data/test_data.xlsx}\" row ${2:1} col ${3:1} as ${4:cell_val}"],
+        "description": "Read a single cell from an Excel file",
+    }
+    snippets["Excel: Read Row"] = {
+        "prefix": "read excel row",
+        "body": ["read excel \"${1:data/test_data.xlsx}\" row ${2:1} as ${3:row_data}"],
+        "description": "Read an entire row from an Excel file as a list",
+    }
+    snippets["CSV: Read Cell"] = {
+        "prefix": "read csv cell",
+        "body": ["read csv \"${1:data/test_data.csv}\" row ${2:1} col ${3:1} as ${4:csv_val}"],
+        "description": "Read a single cell from a CSV file",
+    }
+
     # --- 6. WRITE ---
     try:
         os.makedirs(os.path.dirname(snippets_path), exist_ok=True)

@@ -1,0 +1,10 @@
+# flows/android_recorded.flow
+# Recorded 2026-03-03 02:36 — platform: ANDROID
+# ─────────────────────────────────────────
+
+tap if visible cancel
+tap skip
+tap if visible while_using_the_app
+tap if visible don_t_allow
+tap if visible close
+tap search_box

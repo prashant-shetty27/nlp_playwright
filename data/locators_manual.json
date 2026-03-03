@@ -120,12 +120,12 @@
         "xpath": "//XCUIElementTypeButton[@name='Not Now']"
       },
       "dont_allow_button": {
-        "_comment": "Contacts sharing dialog — 'Don't Allow' denies contact access without picker",
+        "_comment": "Contacts sharing dialog \u2014 'Don't Allow' denies contact access without picker",
         "accessibility_id": "Don't Allow",
         "xpath": "//XCUIElementTypeButton[@name=\"Don't Allow\"]"
       },
       "deny_button": {
-        "_comment": "Generic deny — alternate label on some iOS permission dialogs",
+        "_comment": "Generic deny \u2014 alternate label on some iOS permission dialogs",
         "accessibility_id": "Deny",
         "xpath": "//XCUIElementTypeButton[@name='Deny']"
       }
@@ -176,6 +176,93 @@
         "class_name": "android.widget.Button",
         "xpath": "//android.widget.Button[@resource-id='com.justdial.search:id/tvLoginWithOtp']",
         "bounds": "[83,1287][997,1430]"
+      },
+      "cancel": {
+        "accessibility_id": "Cancel",
+        "resource_id": "com.google.android.gms:id/cancel",
+        "class_name": "android.widget.ImageView",
+        "xpath": "//android.widget.ImageView[@resource-id='com.google.android.gms:id/cancel']"
+      },
+      "login_skip": {
+        "class_name": "android.widget.RelativeLayout",
+        "xpath": "//android.widget.RelativeLayout"
+      },
+      "while_using_the_app": {
+        "resource_id": "com.android.permissioncontroller:id/permission_allow_foreground_only_button",
+        "text": "While using the app",
+        "class_name": "android.widget.Button",
+        "xpath": "//android.widget.Button[@resource-id='com.android.permissioncontroller:id/permission_allow_foreground_only_button']"
+      },
+      "don_t_allow": {
+        "resource_id": "com.android.permissioncontroller:id/permission_deny_button",
+        "text": "Don\u2019t allow",
+        "class_name": "android.widget.Button",
+        "xpath": "//android.widget.Button[@resource-id='com.android.permissioncontroller:id/permission_deny_button']"
+      },
+      "close": {
+        "accessibility_id": "Close",
+        "resource_id": "com.justdial.search:id/buttonClose",
+        "class_name": "android.widget.ImageView",
+        "xpath": "//android.widget.ImageView[@resource-id='com.justdial.search:id/buttonClose']"
+      },
+      "skip": {
+        "accessibility_id": "Skip",
+        "resource_id": "com.justdial.search:id/tvSkip",
+        "text": "Skip",
+        "class_name": "android.widget.Button",
+        "xpath": "//android.widget.Button[@resource-id='com.justdial.search:id/tvSkip']"
+      },
+      "search_box": {
+        "resource_id": "com.justdial.search:id/search_edit_text",
+        "hint": "Pest Control Services",
+        "class_name": "android.widget.MultiAutoCompleteTextView",
+        "xpath": "//android.widget.MultiAutoCompleteTextView[@resource-id='com.justdial.search:id/search_edit_text']"
+      },
+      "spas_near_me": {
+        "resource_id": "com.justdial.search:id/displayTxt",
+        "text": "Spas Near Me",
+        "class_name": "android.widget.TextView",
+        "xpath": "//android.widget.TextView[@resource-id='com.justdial.search:id/displayTxt']"
+      },
+      "spas_near_me_result_searchbox_text": {
+        "resource_id": "com.justdial.search:id/headername",
+        "text": "Spas Near Me",
+        "class_name": "android.widget.TextView",
+        "xpath": "//android.widget.TextView[@resource-id='com.justdial.search:id/headername']"
+      },
+      "bannnerrecycler": {
+        "resource_id": "com.justdial.search:id/bannnerrecycler",
+        "class_name": "androidx.recyclerview.widget.RecyclerView",
+        "xpath": "//androidx.recyclerview.widget.RecyclerView[@resource-id='com.justdial.search:id/bannnerrecycler']"
+      },
+      "result_card": {
+        "resource_id": "com.justdial.search:id/ilinear",
+        "class_name": "android.widget.LinearLayout",
+        "xpath": "//android.widget.LinearLayout[@resource-id='com.justdial.search:id/ilinear']"
+      },
+      "company_name": {
+        "resource_id": "com.justdial.search:id/icomp_name",
+        "text": "11 A Luxury Spa",
+        "class_name": "android.widget.TextView",
+        "xpath": "//android.widget.TextView[@resource-id='com.justdial.search:id/icomp_name']"
+      },
+      "11_a_luxury_spa": {
+        "resource_id": "com.justdial.search:id/icomp_name",
+        "text": "11 A Luxury Spa",
+        "class_name": "android.widget.TextView",
+        "xpath": "//android.widget.TextView[@resource-id='com.justdial.search:id/icomp_name']"
+      },
+      "detailspage_companyname": {
+        "resource_id": "com.justdial.search:id/tvCompanyName",
+        "text": "11 A Luxury Spa",
+        "class_name": "android.widget.TextView",
+        "xpath": "//android.widget.TextView[@resource-id='com.justdial.search:id/tvCompanyName']"
+      },
+      "spas_near_me_autosuggest": {
+        "resource_id": "com.justdial.search:id/displayTxt",
+        "text": "Spas Near Me",
+        "class_name": "android.widget.TextView",
+        "xpath": "//android.widget.TextView[@resource-id='com.justdial.search:id/displayTxt']"
       }
     },
     "otp_screen": {},
@@ -193,6 +280,35 @@
         "class_name": "android.widget.Button",
         "xpath": "//android.widget.Button[@resource-id='com.android.permissioncontroller:id/permission_allow_button']",
         "bounds": "[137,1191][943,1345]"
+      }
+    }
+  },
+  "web": {
+    "web_homepage": {
+      "maybe_later": {
+        "custom_xpath": "//span[contains(@class,'jsx-55162c602a57c0bf')]",
+        "tagName": "span",
+        "innerText": "\u20185.3 Crore+\u2018 Businesses"
+      },
+      "maybe_later_recorded_element": {
+        "custom_xpath": "//span[contains(@class,'jsx-55162c602a57c0bf')]",
+        "tagName": "span",
+        "innerText": "\u20185.3 Crore+\u2018 Businesses"
+      },
+      "search_box": {
+        "custom_xpath": "//figcaption[contains(@class,'color111') and contains(@class,'pt-10')]",
+        "tagName": "figcaption",
+        "innerText": "Movies"
+      },
+      "freelisting_banner_cross_button": {
+        "custom_xpath": "//span[@aria-label='Close Banner']",
+        "tagName": "span",
+        "innerText": ""
+      },
+      "movies_thumbnail": {
+        "custom_xpath": "//span[@aria-label='Close Banner']",
+        "tagName": "span",
+        "innerText": ""
       }
     }
   }

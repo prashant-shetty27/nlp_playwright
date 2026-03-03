@@ -1,0 +1,7 @@
+# flows/web_recorded_new_ui_flow_edited.flow
+# Recorded 2026-03-03 05:33 — platform: WEB
+# ─────────────────────────────────────────
+
+go to url https://www.justdial.com
+wait 6 seconds
+click maybe_later_recorded_element

@@ -768,6 +768,10 @@ def _record_session(driver, platform: str, screen_name: str, flow_steps: list) -
         print("  delete <n>               — remove step #n")
         print("  move <m> <n>             — move step #m before step #n")
         print("  undo                     — remove last step")
+        print("── Saved elements ──────────────────────────────────────────────────")
+        print("  saved                    — list elements saved for this screen")
+        print("  remove <name>            — delete element from saved file")
+        print("  rename <old> <new>       — rename element in saved file")
         print("  done / exit              — finish recording this screen")
         print()
 
@@ -949,6 +953,52 @@ def _record_session(driver, platform: str, screen_name: str, flow_steps: list) -
                 print("  ⚠️  No steps to undo.")
             continue
 
+        # ── Saved: list elements saved for this screen ─────────────────────────
+        elif cmd == "saved":
+            _show_saved_elements(platform, screen_name)
+            continue
+
+        # ── Remove: delete a saved element by name ─────────────────────────────
+        elif cmd.startswith("remove ") or cmd.startswith("del "):
+            parts        = cmd_raw.split(maxsplit=1)
+            name_to_del  = parts[1].strip() if len(parts) > 1 else ""
+            if not name_to_del:
+                print("  ⚠️  Usage: remove <element_name>")
+                continue
+            data          = _load_locators()
+            screen_store  = data.get(platform, {}).get(screen_name, {})
+            in_file       = screen_store.pop(name_to_del, None)
+            in_memory     = recorded.pop(name_to_del, None)
+            if in_file is not None:
+                _save_locators(data)
+            if in_file is not None or in_memory is not None:
+                print(f"  🗑️  Removed '{name_to_del}' from '{screen_name}'")
+            else:
+                print(f"  ⚠️  Element '{name_to_del}' not found.")
+                _show_saved_elements(platform, screen_name)
+            continue
+
+        # ── Rename: rename a saved element ─────────────────────────────────────
+        elif cmd.startswith("rename "):
+            parts = cmd_raw.split()
+            if len(parts) != 3:
+                print("  ⚠️  Usage: rename <old_name> <new_name>")
+                continue
+            old_name = parts[1].strip()
+            new_name = parts[2].strip().lower().replace(" ", "_").replace("-", "_")
+            data         = _load_locators()
+            screen_store = data.get(platform, {}).get(screen_name, {})
+            if old_name not in screen_store:
+                print(f"  ⚠️  Element '{old_name}' not found in saved elements.")
+                _show_saved_elements(platform, screen_name)
+                continue
+            screen_store[new_name] = screen_store.pop(old_name)
+            _save_locators(data)
+            if old_name in recorded:
+                recorded[new_name] = recorded.pop(old_name)
+            print(f"  ✏️  Renamed '{old_name}' → '{new_name}'")
+            continue
+
         # ── Record element ─────────────────────────────────────────────────────
         elif cmd.isdigit():
             idx   = int(cmd)
@@ -980,6 +1030,136 @@ def _record_session(driver, platform: str, screen_name: str, flow_steps: list) -
             print(f"  ❓ Unknown command '{cmd}'. Enter a number, or see commands above.")
 
     return recorded
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# LOAD / EDIT HELPERS
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _list_flow_files() -> list:
+    """Return sorted list of .flow filenames found in flows/."""
+    flows_dir = os.path.join(BASE_DIR, "flows")
+    if not os.path.exists(flows_dir):
+        return []
+    return sorted(f for f in os.listdir(flows_dir) if f.endswith(".flow"))
+
+
+def _load_flow_steps(flow_path: str) -> list:
+    """Parse a .flow file → list of NLP step strings (strips # comments and blanks)."""
+    steps = []
+    with open(flow_path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith("#"):
+                steps.append(line)
+    return steps
+
+
+def _show_saved_elements(platform: str, screen_name: str) -> None:
+    """Print all elements saved for a screen in locators_manual.json."""
+    data  = _load_locators()
+    screen = data.get(platform, {}).get(screen_name, {})
+    if not screen:
+        print(f"  (no elements saved for '{screen_name}' yet)")
+        return
+    print(f"\n  💾 Saved elements for '{screen_name}' ({len(screen)} total):")
+    print("  " + "─" * 62)
+    for name, loc in screen.items():
+        primary = (
+            loc.get("accessibility_id")
+            or loc.get("resource_id")
+            or loc.get("text")
+            or loc.get("xpath", "—")
+        )
+        print(f"  {name:<32} {str(primary)[:38]}")
+    print("  " + "─" * 62 + "\n")
+
+
+def _startup_mode_menu(platform: str, args_screen: str) -> tuple:
+    """
+    Interactive startup menu.
+    Returns (screen_name, preloaded_flow_steps, loaded_flow_path_or_None).
+    loaded_flow_path is set when user loaded an existing .flow file.
+    """
+    saved_screens = list((_load_locators()).get(platform, {}).keys())
+
+    print("\n" + "─" * 62)
+    print("  What would you like to do?")
+    print("  [1] New session   — record fresh elements + build a new flow")
+    print("  [2] Load & edit   — open a saved screen + continue an existing flow")
+    print("─" * 62)
+    try:
+        mode = input("  Mode [1/2, default 1]: ").strip()
+    except (KeyboardInterrupt, EOFError):
+        mode = "1"
+
+    preloaded_steps = []
+    loaded_flow_path = None
+
+    # ── New session ───────────────────────────────────────────────────────────
+    if mode != "2":
+        screen_name = args_screen
+        if not screen_name:
+            try:
+                screen_name = input("\n📱 Screen name (e.g. 'home_screen'): ").strip()
+            except (KeyboardInterrupt, EOFError):
+                screen_name = ""
+        screen_name = (screen_name or f"{platform}_screen").lower().replace(" ", "_").replace("-", "_")
+        return screen_name, preloaded_steps, loaded_flow_path
+
+    # ── Load & edit ───────────────────────────────────────────────────────────
+    # 1. Pick screen
+    if saved_screens:
+        print(f"\n  💾 Saved screens ({platform}):")
+        for i, sc in enumerate(saved_screens, 1):
+            n_el = len((_load_locators()).get(platform, {}).get(sc, {}))
+            print(f"    [{i}] {sc}  ({n_el} element(s))")
+        print("    or type a new screen name")
+        try:
+            pick = input(f"\n  Pick screen [1–{len(saved_screens)} / name]: ").strip()
+        except (KeyboardInterrupt, EOFError):
+            pick = "1"
+        if pick.isdigit() and 1 <= int(pick) <= len(saved_screens):
+            screen_name = saved_screens[int(pick) - 1]
+        else:
+            screen_name = pick or saved_screens[0]
+    else:
+        print("  (no saved screens yet — enter a new screen name)")
+        try:
+            screen_name = input("  Screen name: ").strip()
+        except (KeyboardInterrupt, EOFError):
+            screen_name = ""
+
+    screen_name = (screen_name or f"{platform}_screen").lower().replace(" ", "_").replace("-", "_")
+    _show_saved_elements(platform, screen_name)
+
+    # 2. Pick flow file
+    flow_files = _list_flow_files()
+    if flow_files:
+        try:
+            load_flow = input("  📂 Load an existing .flow file to continue editing? (y/n): ").strip().lower()
+        except (KeyboardInterrupt, EOFError):
+            load_flow = "n"
+        if load_flow == "y":
+            print("\n  Available .flow files:")
+            for i, fn in enumerate(flow_files, 1):
+                flows_dir = os.path.join(BASE_DIR, "flows")
+                size = os.path.getsize(os.path.join(flows_dir, fn))
+                print(f"    [{i}] {fn}  ({size} bytes)")
+            try:
+                fpick = input(f"\n  File [1–{len(flow_files)}]: ").strip()
+            except (KeyboardInterrupt, EOFError):
+                fpick = ""
+            if fpick.isdigit() and 1 <= int(fpick) <= len(flow_files):
+                chosen = flow_files[int(fpick) - 1]
+                loaded_flow_path = os.path.join(BASE_DIR, "flows", chosen)
+                preloaded_steps  = _load_flow_steps(loaded_flow_path)
+                print(f"\n  ✅ Loaded {len(preloaded_steps)} step(s) from '{chosen}'")
+                _print_flow(preloaded_steps)
+            else:
+                print("  ⚠️  Invalid selection — starting with empty flow.")
+
+    return screen_name, preloaded_steps, loaded_flow_path
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1037,22 +1217,10 @@ def main():
     driver, effective_caps = _start_appium_session(args.platform, caps_override)
     _maybe_activate_target_app(driver, args.platform, effective_caps)
 
-    # Shared flow step list — accumulates across all recorded screens
-    all_flow_steps: list[str] = []
+    # Startup mode — new session or load & edit an existing one
+    screen_name, all_flow_steps, loaded_flow_path = _startup_mode_menu(args.platform, args.screen)
 
     try:
-        screen_name = args.screen
-        if not screen_name:
-            try:
-                screen_name = input("\n📱 Enter screen name to group elements under (e.g. 'home_screen'): ").strip()
-            except (KeyboardInterrupt, EOFError):
-                print("\n👋 Exiting.")
-                driver.quit()
-                sys.exit(0)
-            if not screen_name:
-                screen_name = f"{args.platform}_screen"
-        screen_name = screen_name.lower().replace(" ", "_").replace("-", "_")
-
         all_recorded: dict = {}
 
         # Multi-screen recording loop
@@ -1094,26 +1262,43 @@ def main():
     # ── Save flow file ────────────────────────────────────────────────────────
     if all_flow_steps:
         print("\n" + "═" * 70)
-        print(f"  📋 {len(all_flow_steps)} flow step(s) recorded:")
+        print(f"  📋 {len(all_flow_steps)} flow step(s):")
         _print_flow(all_flow_steps)
 
         try:
-            save = input("💾 Save as .flow file? (y/n): ").strip().lower()
+            save = input("💾 Save flow? (y/n): ").strip().lower()
         except (KeyboardInterrupt, EOFError):
             save = "n"
 
         if save == "y":
-            default_name = f"{args.platform}_recorded"
-            try:
-                flow_name_raw = input(f"  Flow file name [default: {default_name}]: ").strip()
-            except (KeyboardInterrupt, EOFError):
-                flow_name_raw = ""
-            flow_name = (flow_name_raw or default_name).replace(" ", "_").replace("-", "_")
-
             flows_dir = os.path.join(BASE_DIR, "flows")
             os.makedirs(flows_dir, exist_ok=True)
-            flow_path = os.path.join(flows_dir, f"{flow_name}.flow")
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+
+            # Smart save: if a file was loaded, offer to overwrite it
+            flow_path = None
+            flow_name = None
+            if loaded_flow_path:
+                orig_name = os.path.basename(loaded_flow_path)
+                print(f"\n  Loaded file: {orig_name}")
+                print("  [1] Overwrite original file")
+                print("  [2] Save as a new file")
+                try:
+                    overwrite_choice = input("  [1/2, default 1]: ").strip()
+                except (KeyboardInterrupt, EOFError):
+                    overwrite_choice = "1"
+                if overwrite_choice != "2":
+                    flow_path = loaded_flow_path
+                    flow_name = os.path.splitext(orig_name)[0]
+
+            if flow_path is None:
+                default_name = f"{args.platform}_recorded"
+                try:
+                    flow_name_raw = input(f"  Flow file name [default: {default_name}]: ").strip()
+                except (KeyboardInterrupt, EOFError):
+                    flow_name_raw = ""
+                flow_name = (flow_name_raw or default_name).replace(" ", "_").replace("-", "_")
+                flow_path = os.path.join(flows_dir, f"{flow_name}.flow")
 
             with open(flow_path, "w", encoding="utf-8") as f:
                 f.write(f"# flows/{flow_name}.flow\n")

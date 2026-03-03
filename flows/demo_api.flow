@@ -1,0 +1,31 @@
+# flows/demo_api.flow
+# Demo: API calls + JSON extraction + use in browser
+# Run: python runner.py flows/demo_api.flow
+# ────────────────────────────────────────────────────────────────
+
+# ── Step 1: Call a public API (JSONPlaceholder) ────────────────
+api get "https://jsonplaceholder.typicode.com/users/1" as user_data
+
+# ── Step 2: Extract specific fields from the JSON response ─────
+store json user_data path name as api_user_name
+store json user_data path email as api_user_email
+store json user_data path address.city as api_user_city
+store json user_data path company.name as api_company
+
+# ── Step 3: Verify the extracted values ───────────────────────
+verify ${api_user_name} contains "Leanne"
+
+# ── Step 4: Use the API data in a form ────────────────────────
+go to url https://demoqa.com/text-box
+wait 1 seconds
+
+# type "${api_user_name}" into full_name_input
+# type "${api_user_email}" into email_input
+# type "${api_user_city}" into current_address_input
+
+take screenshot as api_data_filled
+
+# ── POST example (login API) ──────────────────────────────────
+# api post "https://reqres.in/api/login" with body '{"email": "eve.holt@reqres.in", "password": "cityslicka"}' as login_resp
+# store json login_resp path token as auth_token
+# verify ${auth_token} contains "QpwL5tpe"

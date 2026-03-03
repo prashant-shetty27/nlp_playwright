@@ -1,0 +1,5 @@
+{
+  "_comment": "Android element locators — managed via ui/pages/platform/android/elements.py",
+  "_platform": "android",
+  "screens": {}
+}

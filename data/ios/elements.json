@@ -1,0 +1,5 @@
+{
+  "_comment": "iOS element locators — managed via ui/pages/platform/ios/elements.py",
+  "_platform": "ios",
+  "screens": {}
+}

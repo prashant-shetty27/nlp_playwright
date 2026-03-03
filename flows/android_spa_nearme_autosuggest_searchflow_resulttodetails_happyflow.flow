@@ -1,0 +1,20 @@
+# flows/android_spa_nearme_autosuggest_searchflow_resulttodetails_happyflow.flow
+# Recorded 2026-03-03 02:49 — platform: ANDROID
+# ─────────────────────────────────────────
+
+tap if visible cancel
+tap skip
+tap if visible while_using_the_app
+tap if visible don_t_allow
+tap if visible close
+type "${spa}" into search_box
+type "${input_text}" into spas_near_me
+tap spas_near_me_autosuggest
+wait 5 seconds
+verify text "Spas Near Me"
+verify element exists bannnerrecycler
+verify element exists result_card
+store text from 11_a_luxury_spa as Result company name 11 A Luxury Spa
+wait 5 seconds
+tap company_name
+verify text "Result company name 11 A Luxury Spa"

@@ -11,7 +11,23 @@ def parse_step(step: str) -> Command:
     s = step.strip()
 
     # =============================
-    # OPEN
+    # NAVIGATE / GO TO URL
+    # Accepted aliases (all produce type="open"):
+    #   go to url <url>        — recorder default
+    #   navigate to <url>      — NLP variant
+    #   browse to <url>        — mobile/hybrid variant
+    #   visit <url>            — short form
+    #   open url <url>         — explicit "open url" form
+    # =============================
+    m = re.match(
+        r'^(?:go\s+to\s+url|navigate\s+to|browse\s+to|visit|open\s+url)\s+(\S+)$',
+        s, re.I
+    )
+    if m:
+        return Command(type="open", target=m.group(1).strip())
+
+    # =============================
+    # OPEN  (site alias or bare URL, e.g. "open justdial" or "open https://…")
     # =============================
     if s.lower().startswith("open "):
         return Command(type="open", target=s[5:].strip())
@@ -85,6 +101,15 @@ def parse_step(step: str) -> Command:
         if not text:
             raise ValueError("Verify requires quoted text")
 
+        # verify text "X" in element_name  →  element-level contains check
+        in_el = re.search(r'\bin\s+(\w+)\s*$', s, re.I)
+        if in_el:
+            return Command(
+                type="verify_element_contains",
+                target=in_el.group(1).strip(),
+                text=text.group(1),
+            )
+
         scroll = re.search(r",\s*(\d+)\s*$", s)
 
         return Command(
@@ -98,6 +123,50 @@ def parse_step(step: str) -> Command:
     # =============================
     if s.lower() in ["refresh", "refresh page", "reload", "reload page"]:
         return Command(type="refresh")
+
+    # ================================================================
+    # IF VISIBLE — conditional actions (skip silently if not present)
+    # Syntax: <action> if visible <target> [wait <N> seconds]
+    # ================================================================
+    _IF_VIS = r'\s+if\s+(?:visible|present)\s+'
+    _WAIT_SFX = r'(?:\s+wait\s+(\d+(?:\.\d+)?)\s+seconds?)?$'
+
+    # tap/click if visible <target> [wait N seconds]
+    m = re.match(r'^(?:click|tap)' + _IF_VIS + r'(?:on\s+)?(\S+)' + _WAIT_SFX, s, re.I)
+    if m:
+        return Command(type="tap_if_visible", target=m.group(1).strip(),
+                       wait=float(m.group(2)) if m.group(2) else None)
+
+    # type/fill if visible "text" into <target> [wait N seconds]
+    m = re.match(r'^(?:type|fill)' + _IF_VIS + r'"(.*?)"\s+(?:into|in)\s+(\S+)' + _WAIT_SFX, s, re.I)
+    if m:
+        return Command(type="fill_if_visible", text=m.group(1), target=m.group(2).strip(),
+                       wait=float(m.group(3)) if m.group(3) else None)
+
+    # verify if visible <target> [wait N seconds]
+    m = re.match(r'^verify' + _IF_VIS + r'(?:element\s+)?(?:exists\s+)?(\S+)' + _WAIT_SFX, s, re.I)
+    if m:
+        return Command(type="verify_if_visible", target=m.group(1).strip(),
+                       wait=float(m.group(2)) if m.group(2) else None)
+
+    # double tap if visible <target> [wait N seconds]
+    m = re.match(r'^double\s+(?:tap|click)' + _IF_VIS + r'(\S+)' + _WAIT_SFX, s, re.I)
+    if m:
+        return Command(type="double_tap_if_visible", target=m.group(1).strip(),
+                       wait=float(m.group(2)) if m.group(2) else None)
+
+    # long press if visible <target> [wait N seconds]
+    m = re.match(r'^long\s+press' + _IF_VIS + r'(\S+)' + _WAIT_SFX, s, re.I)
+    if m:
+        return Command(type="long_press_if_visible", target=m.group(1).strip(),
+                       wait=float(m.group(2)) if m.group(2) else None)
+
+    # store text if visible from <target> as <var> [wait N seconds]
+    m = re.match(r'^store\s+text' + _IF_VIS + r'(?:from\s+)?(\S+)\s+as\s+(\S+)' + _WAIT_SFX, s, re.I)
+    if m:
+        return Command(type="store_text_if_visible", target=m.group(1).strip(),
+                       variable_name=m.group(2).strip(),
+                       wait=float(m.group(3)) if m.group(3) else None)
 
     # =============================
     # OPTIONAL CLICK/TAP COMMAND
@@ -232,12 +301,14 @@ def parse_step(step: str) -> Command:
         return Command(type="verify_multiple_texts", text=texts)
 
     # =============================
-    # STORE TEXT OF <locator> AS <var>   (extract element inner text)
+    # STORE TEXT OF/FROM <locator> AS <var>   (extract element inner text)
+    # "store text of X as Y"   — original syntax
+    # "store text from X as Y" — recorder-generated syntax (both accepted)
     # =============================
-    m = re.match(r'^store\s+text\s+of\s+(\S+)\s+as\s+(\S+)$', s, re.I)
+    m = re.match(r'^store\s+text\s+(?:of|from)\s+(\S+)\s+as\s+(\S+)$', s, re.I)
     if m:
         locator, var_name = m.groups()
-        return Command(type="extract_text", target=locator, variable_name=var_name)
+        return Command(type="store_text", target=locator, variable_name=var_name)
 
     # =============================
     # STORE PAGE URL / TITLE
@@ -314,6 +385,13 @@ def parse_step(step: str) -> Command:
     if re.match(r'^(?:dismiss|accept|handle|clear)\s+alerts?$', s, re.I):
         return Command(type="dismiss_alerts")
 
+    # =============================
+    # GOOGLE PLAY RATING POPUP
+    # dismiss rating | dismiss play rating | skip rating | dismiss rating popup
+    # =============================
+    if re.match(r'^(?:dismiss|skip|close|handle)\s+(?:play\s+)?rating(?:\s+popup)?$', s, re.I):
+        return Command(type="dismiss_play_rating")
+
     # WAIT FOR ELEMENT — explicit visibility wait (no scrolling)
     # wait for element <name>  |  wait until element <name>  |  wait until <name> visible
     m = re.match(r'^wait\s+(?:for|until)\s+(?:element\s+)?(\S+)(?:\s+(?:visible|appears?))?$', s, re.I)
@@ -321,10 +399,20 @@ def parse_step(step: str) -> Command:
         return Command(type="wait_for_element", target=m.group(1).strip())
 
     # =============================
+    # SCROLL TO ELEMENT
+    # scroll to <name>  |  scroll to element <name>
+    # =============================
+    m = re.match(r'^scroll\s+to\s+(?:element\s+)?(\S+)$', s, re.I)
+    if m:
+        return Command(type="scroll_to", target=m.group(1).strip())
+
+    # =============================
     # DEVICE CONTROLS
     # =============================
     if re.match(r'^press\s+back$', s, re.I) or s.lower() == "go back":
         return Command(type="press_back")
+    if re.match(r'^go\s+forward$', s, re.I) or re.match(r'^browser\s+forward$', s, re.I):
+        return Command(type="go_forward")
     if re.match(r'^press\s+home$', s, re.I):
         return Command(type="press_home")
     if re.match(r'^press\s+(?:enter|return|search)$', s, re.I):
@@ -377,6 +465,171 @@ def parse_step(step: str) -> Command:
 
     if re.match(r'^(?:exit\s+(?:iframe|frame)|switch\s+to\s+(?:main\s+frame|default\s+content))$', s, re.I):
         return Command(type="exit_iframe")
+
+    # =============================
+    # FAKE DATA GENERATION
+    # generate fake name as var_name
+    # generate fake email as var_name  … (name/email/phone/uuid/number/address/
+    #   city/country/company/password/username/url/date/text/paragraph/postcode/
+    #   first name/last name/credit card)
+    # =============================
+    m = re.match(
+        r'^generate\s+fake\s+'
+        r'(name|first\s+name|last\s+name|email|phone|uuid|number|address|city|country'
+        r'|company|password|username|url|date|text|paragraph|postcode|credit\s+card)'
+        r'\s+as\s+(\S+)$',
+        s, re.I
+    )
+    if m:
+        return Command(type="generate_fake",
+                       text=m.group(1).lower().strip(),
+                       variable_name=m.group(2))
+
+    # generate random number <min> <max> as <var>
+    m = re.match(r'^generate\s+random\s+number\s+(\S+)\s+(\S+)\s+as\s+(\S+)$', s, re.I)
+    if m:
+        return Command(type="random_number",
+                       target=m.group(1), text=m.group(2),
+                       variable_name=m.group(3))
+
+    # generate random string <length> as <var>
+    m = re.match(r'^generate\s+random\s+string\s+(\d+)\s+as\s+(\S+)$', s, re.I)
+    if m:
+        return Command(type="random_string",
+                       count=int(m.group(1)),
+                       variable_name=m.group(2))
+
+    # =============================
+    # DATE / TIME
+    # get today as <var>  |  get current date as <var>
+    # get timestamp as <var>  |  get now as <var>
+    # get date +7 days as <var>  |  get date -1 day as <var>
+    # format date "${var}" as "DD/MM/YYYY" into <var>
+    # =============================
+    m = re.match(r'^get\s+(?:current\s+)?(?:today|date)\s+as\s+(\S+)$', s, re.I)
+    if m:
+        return Command(type="get_date", text="today", variable_name=m.group(1))
+
+    m = re.match(r'^get\s+(?:current\s+)?(?:timestamp|time|now)\s+as\s+(\S+)$', s, re.I)
+    if m:
+        return Command(type="get_date", text="timestamp", variable_name=m.group(1))
+
+    m = re.match(r'^get\s+date\s+([+-]\d+)\s+days?\s+as\s+(\S+)$', s, re.I)
+    if m:
+        return Command(type="get_date",
+                       text=f"offset:{m.group(1)}",
+                       variable_name=m.group(2))
+
+    m = re.match(r'^format\s+date\s+"(.*?)"\s+as\s+"(.*?)"\s+into\s+(\S+)$', s, re.I)
+    if m:
+        return Command(type="format_date",
+                       text=m.group(1), values=[m.group(2)],
+                       variable_name=m.group(3))
+
+    # =============================
+    # HTTP / API CALLS
+    # api get "url" as <var>
+    # api post "url" with body '{"k":"v"}' as <var>
+    # store json <var> path data.0.name as <var2>
+    # =============================
+    m = re.match(r'^api\s+get\s+"(.*?)"\s+as\s+(\S+)$', s, re.I)
+    if m:
+        return Command(type="api_get", text=m.group(1), variable_name=m.group(2))
+
+    m = re.match(r'^api\s+post\s+"(.*?)"\s+with\s+body\s+\'(.*?)\'\s+as\s+(\S+)$', s, re.I)
+    if not m:
+        m = re.match(r'^api\s+post\s+"(.*?)"\s+with\s+body\s+"(.*?)"\s+as\s+(\S+)$', s, re.I)
+    if m:
+        return Command(type="api_post",
+                       text=m.group(1), target=m.group(2),
+                       variable_name=m.group(3))
+
+    m = re.match(r'^store\s+json\s+(\S+)\s+path\s+(\S+)\s+as\s+(\S+)$', s, re.I)
+    if m:
+        return Command(type="extract_json",
+                       target=m.group(1), text=m.group(2),
+                       variable_name=m.group(3))
+
+    # =============================
+    # EXCEL / CSV
+    # read excel "file.xlsx" row 1 col 2 as <var>
+    # read excel "file.xlsx" row 1 col A as <var>
+    # read excel row "file.xlsx" row 3 as <var>      (full row → list)
+    # read csv "file.csv" row 1 col email as <var>
+    # read csv "file.csv" row 2 col 3 as <var>
+    # =============================
+    m = re.match(
+        r'^read\s+excel\s+"(.*?)"\s+row\s+(\d+)\s+col\s+(\S+)\s+as\s+(\S+)$', s, re.I
+    )
+    if m:
+        col_raw = m.group(3)
+        col = int(col_raw) if col_raw.isdigit() else col_raw
+        return Command(type="read_excel_cell",
+                       text=m.group(1), target=str(m.group(2)),
+                       values=[str(col)], variable_name=m.group(4))
+
+    m = re.match(
+        r'^read\s+excel\s+"(.*?)"\s+row\s+(\d+)\s+as\s+(\S+)$', s, re.I
+    )
+    if m:
+        return Command(type="read_excel_row",
+                       text=m.group(1), target=m.group(2),
+                       variable_name=m.group(3))
+
+    m = re.match(
+        r'^read\s+csv\s+"(.*?)"\s+row\s+(\d+)\s+col\s+(\S+)\s+as\s+(\S+)$', s, re.I
+    )
+    if m:
+        col_raw = m.group(3)
+        col = int(col_raw) if col_raw.isdigit() else col_raw
+        return Command(type="read_csv_cell",
+                       text=m.group(1), target=str(m.group(2)),
+                       values=[str(col)], variable_name=m.group(4))
+
+    # =============================
+    # JAVASCRIPT ACTIONS
+    # js click <element>
+    # js scroll to <element>
+    # js scroll down [N]  |  js scroll up [N]  |  js scroll top  |  js scroll bottom
+    # js type "text" into <element>
+    # js set value "text" on <element>
+    # js focus <element>
+    # js submit <element>
+    # js dispatch <event> on <element>
+    # =============================
+    m = re.match(r'^js\s+click\s+(\S+)$', s, re.I)
+    if m:
+        return Command(type="js_click", target=m.group(1).strip())
+
+    m = re.match(r'^js\s+scroll\s+to\s+(\S+)$', s, re.I)
+    if m:
+        return Command(type="js_scroll_to", target=m.group(1).strip())
+
+    m = re.match(r'^js\s+scroll\s+(down|up|top|bottom)(?:\s+(\d+))?$', s, re.I)
+    if m:
+        return Command(type="js_scroll",
+                       text=m.group(1).lower(),
+                       count=int(m.group(2)) if m.group(2) else 300)
+
+    m = re.match(r'^js\s+type\s+"(.*?)"\s+into\s+(\S+)$', s, re.I)
+    if m:
+        return Command(type="js_type", text=m.group(1), target=m.group(2).strip())
+
+    m = re.match(r'^js\s+set\s+value\s+"(.*?)"\s+on\s+(\S+)$', s, re.I)
+    if m:
+        return Command(type="js_set_value", text=m.group(1), target=m.group(2).strip())
+
+    m = re.match(r'^js\s+focus\s+(\S+)$', s, re.I)
+    if m:
+        return Command(type="js_focus", target=m.group(1).strip())
+
+    m = re.match(r'^js\s+submit\s+(\S+)$', s, re.I)
+    if m:
+        return Command(type="js_submit", target=m.group(1).strip())
+
+    m = re.match(r'^js\s+dispatch\s+(\S+)\s+on\s+(\S+)$', s, re.I)
+    if m:
+        return Command(type="js_dispatch", text=m.group(1), target=m.group(2).strip())
 
     # =============================
     # TERMINAL FALLBACK

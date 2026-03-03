@@ -1,0 +1,25 @@
+# flows/demo_dates.flow
+# Demo: Date/Time operations in a flow
+# Run: python runner.py flows/demo_dates.flow
+# ────────────────────────────────────────────────────────────────
+
+# ── Get useful date values ─────────────────────────────────────
+get today as today_date
+get timestamp as run_timestamp
+get date +7 days as expiry_date
+get date -1 days as yesterday
+get date +30 days as next_month
+
+# ── Reformat for different systems ────────────────────────────
+format date "${today_date}" as "YYYY-MM-DD" into iso_date
+format date "${today_date}" as "DD-MM-YYYY" into dmy_date
+format date "${today_date}" as "MM/DD/YYYY" into us_date
+
+# ── Use in a date picker (booking demo) ───────────────────────
+go to url https://demoqa.com/date-picker
+wait 1 seconds
+
+# type "${iso_date}" into date_input_field
+# type "${expiry_date}" into checkout_date_field
+
+take screenshot as date_demo

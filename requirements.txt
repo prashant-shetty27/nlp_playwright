@@ -43,3 +43,9 @@ flask-cors
 
 # Mobile adapters
 Appium-Python-Client
+
+# Test data generation
+faker
+
+# Excel / CSV data-driven testing
+openpyxl

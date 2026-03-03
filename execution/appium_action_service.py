@@ -7,12 +7,15 @@ instead of a Playwright Page. All locators come from the 'android' or 'ios'
 section of data/locators_manual.json (recorded via spy/appium_spy.py).
 
 Locator resolution priority:
-  Android: accessibility_id > resource_id > text > xpath > class_name
-  iOS    : accessibility_id > label > xpath > class_name
+  Android: accessibility_id > resource_id > xpath > class_name
+           (text is ONLY used as fallback for non-input elements)
+  iOS    : accessibility_id > xpath > class_name
+           (label is ONLY used as fallback for non-input elements)
 """
 
 import logging
 import os
+import re
 import time
 from datetime import datetime
 
@@ -26,84 +29,156 @@ logger = logging.getLogger(__name__)
 # ─────────────────────────────────────────────────────────────────────────────
 
 _locator_cache: dict | None = None
+_locator_cache_mtime: float = 0.0
+
+
+def invalidate_locator_cache():
+    """Force the next call to _load_app_locators() to re-read the file."""
+    global _locator_cache, _locator_cache_mtime
+    _locator_cache = None
+    _locator_cache_mtime = 0.0
 
 
 def _load_app_locators() -> dict:
-    global _locator_cache
-    if _locator_cache is None:
-        import json
-        path = settings.MANUAL_LOCATORS_FILE
+    global _locator_cache, _locator_cache_mtime
+    import json
+    path = settings.MANUAL_LOCATORS_FILE
+    try:
+        mtime = os.path.getmtime(path) if os.path.exists(path) else 0.0
+    except OSError:
+        mtime = 0.0
+    if _locator_cache is None or mtime > _locator_cache_mtime:
         if os.path.exists(path):
-            with open(path, "r", encoding="utf-8") as f:
-                _locator_cache = json.load(f)
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    _locator_cache = json.load(f)
+            except (json.JSONDecodeError, OSError) as e:
+                logger.warning("⚠️  Could not reload locators (%s) — using cached copy", e)
+                if _locator_cache is None:
+                    _locator_cache = {}
         else:
             _locator_cache = {}
+        _locator_cache_mtime = mtime
     return _locator_cache
 
 
 def _get_appium_locator(name: str, platform: str) -> dict:
     """
     Look up a locator by name under the platform section.
+    Supports index suffix in name: "login_btn[last]" → looks up "login_btn".
     Searches all screen groups under platform key.
 
     Returns a dict with keys like accessibility_id, resource_id, xpath, etc.
     Raises ValueError if not found.
     """
+    # Strip optional [index] suffix before lookup
+    base_name = re.sub(r'\[.*?\]$', '', name.strip())
+
     data = _load_app_locators()
     platform_data = data.get(platform, {})
 
-    # Search flat (top-level name)
-    if name in platform_data:
-        return platform_data[name]
+    # Search flat (top-level name) using base_name
+    if base_name in platform_data:
+        return platform_data[base_name]
 
     # Search inside screen groups
     for screen_group in platform_data.values():
-        if isinstance(screen_group, dict) and name in screen_group:
-            return screen_group[name]
+        if isinstance(screen_group, dict) and base_name in screen_group:
+            return screen_group[base_name]
 
     raise ValueError(
-        f"Locator '{name}' not found in platform '{platform}' section of locators_manual.json.\n"
+        f"Locator '{base_name}' not found in platform '{platform}' section of locators_manual.json.\n"
         f"  Run:  python spy/appium_spy.py --platform {platform}  to record it."
     )
+
+
+def _parse_index_suffix(name: str) -> tuple[str, str]:
+    """Extract base name and index suffix from 'element_name[last]' style strings."""
+    m = re.match(r'^(.+?)\[([^\]]+)\]$', name.strip())
+    if m:
+        return m.group(1).strip(), m.group(2).strip()
+    return name.strip(), "any"
+
+
+_INDEX_MAP = {
+    "1st": 0, "2nd": 1, "3rd": 2, "4th": 3, "5th": 4,
+    "last": -1, "last-2": -2, "last-3": -3, "last-4": -4,
+}
 
 
 def _find_element(driver, name: str, platform: str):
     """
     Find an Appium element by locator name. Tries strategies in priority order.
+    Supports [index] suffix for multi-match disambiguation (e.g. 'btn[last]').
+    text/label are skipped for input-type elements (dynamic placeholder values).
     """
     from appium.webdriver.common.appiumby import AppiumBy
 
-    locator = _get_appium_locator(name, platform)
-    errors  = []
+    base_name, el_index = _parse_index_suffix(name)
 
-    # Priority order per platform
+    _INPUT_CLASS_NAMES = {
+        "android.widget.EditText",
+        "android.widget.MultiAutoCompleteTextView",
+        "android.widget.AutoCompleteTextView",
+        "android.widget.SearchView",
+        "XCUIElementTypeTextField",
+        "XCUIElementTypeSecureTextField",
+        "XCUIElementTypeSearchField",
+    }
+
+    locator    = _get_appium_locator(base_name, platform)
+    errors     = []
+    cls_name   = locator.get("class_name", "")
+    is_input   = cls_name in _INPUT_CLASS_NAMES
+
+    # Priority order per platform — text/label only for non-input elements
     if platform == "android":
         strategies = [
-            (AppiumBy.ACCESSIBILITY_ID,     locator.get("accessibility_id")),
-            (AppiumBy.ID,                   locator.get("resource_id")),
+            (AppiumBy.ACCESSIBILITY_ID, locator.get("accessibility_id")),
+            (AppiumBy.ID,               locator.get("resource_id")),
+            (AppiumBy.XPATH,            locator.get("xpath")),
+            (AppiumBy.CLASS_NAME,       locator.get("class_name")),
+            # text is a last-resort fallback only for non-input elements
             (AppiumBy.ANDROID_UIAUTOMATOR,
-             f'new UiSelector().text("{locator["text"]}")' if locator.get("text") else None),
-            (AppiumBy.XPATH,                locator.get("xpath")),
-            (AppiumBy.CLASS_NAME,           locator.get("class_name")),
+             f'new UiSelector().text("{locator["text"]}")'
+             if (not is_input and locator.get("text")) else None),
         ]
     else:  # ios
         strategies = [
-            (AppiumBy.ACCESSIBILITY_ID,  locator.get("accessibility_id")),
+            (AppiumBy.ACCESSIBILITY_ID, locator.get("accessibility_id")),
+            (AppiumBy.XPATH,            locator.get("xpath")),
+            (AppiumBy.CLASS_NAME,       locator.get("class_name")),
+            # label only for non-input elements
             (AppiumBy.IOS_PREDICATE,
-             f'label == "{locator["label"]}"' if locator.get("label") else None),
-            (AppiumBy.XPATH,             locator.get("xpath")),
-            (AppiumBy.CLASS_NAME,        locator.get("class_name")),
+             f'label == "{locator["label"]}"'
+             if (not is_input and locator.get("label")) else None),
         ]
 
-    for by, value in strategies:
-        if not value:
-            continue
-        try:
-            el = driver.find_element(by, value)
-            logger.debug("  ✅ Found '%s' via %s='%s'", name, by, value)
-            return el
-        except Exception as e:
-            errors.append(f"{by}: {e}")
+    # When el_index is "any" use find_element (first match); otherwise find_elements + index
+    if el_index == "any":
+        for by, value in strategies:
+            if not value:
+                continue
+            try:
+                el = driver.find_element(by, value)
+                logger.debug("  ✅ Found '%s' via %s='%s'", base_name, by, value)
+                return el
+            except Exception as e:
+                errors.append(f"{by}: {e}")
+    else:
+        # Try each strategy with find_elements, pick by index
+        num_idx = _INDEX_MAP.get(el_index, 0)
+        for by, value in strategies:
+            if not value:
+                continue
+            try:
+                els = driver.find_elements(by, value)
+                if els:
+                    el = els[num_idx]
+                    logger.debug("  ✅ Found '%s'[%s] via %s", base_name, el_index, by)
+                    return el
+            except Exception as e:
+                errors.append(f"{by}[{el_index}]: {e}")
 
     raise RuntimeError(
         f"Could not find element '{name}' on {platform} using any strategy.\n"
@@ -121,6 +196,62 @@ def _ensure_dir(path: str) -> None:
 
 def _timestamp() -> str:
     return datetime.now().strftime("%Y%m%d_%H%M%S")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# VIDEO RECORDING
+# ─────────────────────────────────────────────────────────────────────────────
+
+def start_recording(driver, platform: str = "android") -> None:
+    """
+    Start Appium screen recording.
+    Android: records mp4 via UiAutomator2 (max 3 min by default).
+    iOS    : records mp4 via XCUITest.
+    """
+    try:
+        if platform == "android":
+            driver.start_recording_screen(
+                options={
+                    "videoQuality": "high",
+                    "timeLimit": "1800",     # 30 min hard cap
+                    "bitRate": "4000000",
+                }
+            )
+        else:
+            driver.start_recording_screen(
+                options={
+                    "videoQuality": "medium",
+                    "timeLimit": "1800",
+                    "videoFps": "30",
+                }
+            )
+        logger.info("🎥 Screen recording started [%s]", platform.upper())
+    except Exception as e:
+        logger.warning("⚠️  Could not start screen recording: %s", e)
+
+
+def stop_recording(driver, label: str = "run", platform: str = "android") -> str | None:
+    """
+    Stop Appium screen recording and save the video to data/videos/.
+    Returns the saved file path, or None on failure.
+    """
+    import base64
+    try:
+        raw = driver.stop_recording_screen()
+        if not raw:
+            logger.warning("⚠️  stop_recording_screen returned empty data")
+            return None
+        _ensure_dir(settings.VIDEOS_DIR)
+        filename = os.path.join(
+            settings.VIDEOS_DIR, f"{label}_{_timestamp()}.mp4"
+        )
+        with open(filename, "wb") as fh:
+            fh.write(base64.b64decode(raw))
+        logger.info("🎬 Video saved: %s", filename)
+        return filename
+    except Exception as e:
+        logger.warning("⚠️  Could not stop/save screen recording: %s", e)
+        return None
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -157,30 +288,33 @@ def launch_app(driver, fallback_caps: dict | None = None):
         logger.warning("⚠️  launch_app: %s", e)
 
 
-def tap_element(driver, name: str, platform: str):
-    """Tap/click an element by locator name."""
+def tap_element(driver, name: str, platform: str, el_index: str = "any"):
+    """Tap/click an element by locator name. el_index: 'any','1st','2nd','last','last-2' etc."""
     name = resolve_variables(name)
-    el   = _find_element(driver, name, platform)
+    lookup = f"{name}[{el_index}]" if el_index and el_index != "any" else name
+    el   = _find_element(driver, lookup, platform)
     el.click()
-    logger.info("👆 Tapped: '%s'", name)
+    logger.info("👆 Tapped: '%s'%s", name, f"[{el_index}]" if el_index != "any" else "")
 
 
-def fill_element(driver, name: str, text: str, platform: str):
-    """Clear and type text into an element."""
+def fill_element(driver, name: str, text: str, platform: str, el_index: str = "any"):
+    """Clear and type text into an element. el_index: 'any','1st','last' etc."""
     name = resolve_variables(name)
     text = resolve_variables(text)
-    el   = _find_element(driver, name, platform)
+    lookup = f"{name}[{el_index}]" if el_index and el_index != "any" else name
+    el   = _find_element(driver, lookup, platform)
     el.clear()
     el.send_keys(text)
-    logger.info("⌨️  Filled '%s' with '%s'", name, text)
+    logger.info("⌨️  Filled '%s'%s with '%s'", name, f"[{el_index}]" if el_index != "any" else "", text)
 
 
-def clear_element(driver, name: str, platform: str):
-    """Clear text from an input element."""
+def clear_element(driver, name: str, platform: str, el_index: str = "any"):
+    """Clear text from an input element. el_index: 'any','1st','last' etc."""
     name = resolve_variables(name)
-    el   = _find_element(driver, name, platform)
+    lookup = f"{name}[{el_index}]" if el_index and el_index != "any" else name
+    el   = _find_element(driver, lookup, platform)
     el.clear()
-    logger.info("🗑️  Cleared: '%s'", name)
+    logger.info("🗑️  Cleared: '%s'%s", name, f"[{el_index}]" if el_index != "any" else "")
 
 
 def tap_coordinates(driver, x: int, y: int):
@@ -314,63 +448,68 @@ def verify_texts(driver, texts: list[str]):
         verify_text(driver, t)
 
 
-def verify_element_exists(driver, name: str, platform: str):
-    """Assert that a named element exists and is displayed."""
+def verify_element_exists(driver, name: str, platform: str, el_index: str = "any"):
+    """Assert that a named element exists and is displayed. el_index: 'any','1st','last' etc."""
     name = resolve_variables(name)
-    el   = _find_element(driver, name, platform)
+    lookup = f"{name}[{el_index}]" if el_index and el_index != "any" else name
+    el   = _find_element(driver, lookup, platform)
     if not el.is_displayed():
         raise AssertionError(f"❌ Element '{name}' found but not visible")
-    logger.info("✅ Element verified: '%s'", name)
+    logger.info("✅ Element verified: '%s'%s", name, f"[{el_index}]" if el_index != "any" else "")
 
 
-def verify_element_not_exists(driver, name: str, platform: str):
-    """Assert that a named element does NOT exist."""
+def verify_element_not_exists(driver, name: str, platform: str, el_index: str = "any"):
+    """Assert that a named element does NOT exist. el_index: 'any','1st','last' etc."""
     name = resolve_variables(name)
+    lookup = f"{name}[{el_index}]" if el_index and el_index != "any" else name
     try:
-        el = _find_element(driver, name, platform)
+        el = _find_element(driver, lookup, platform)
         if el.is_displayed():
             raise AssertionError(f"❌ Element '{name}' is visible but should not be")
     except (RuntimeError, ValueError):
         pass  # Not found = expected
-    logger.info("✅ Element '{name}' correctly absent")
+    logger.info("✅ Element '%s' correctly absent", name)
 
 
-def double_tap(driver, name: str, platform: str):
-    """Double-tap an element."""
+def double_tap(driver, name: str, platform: str, el_index: str = "any"):
+    """Double-tap an element. el_index: 'any','1st','last' etc."""
     name = resolve_variables(name)
-    el   = _find_element(driver, name, platform)
+    lookup = f"{name}[{el_index}]" if el_index and el_index != "any" else name
+    el   = _find_element(driver, lookup, platform)
     try:
         driver.execute_script("mobile: doubleTap", {"element": el.id})
     except Exception:
         el.click()
         import time as _t; _t.sleep(0.1)
         el.click()
-    logger.info("👆👆 Double-tapped: '%s'", name)
+    logger.info("👆👆 Double-tapped: '%s'%s", name, f"[{el_index}]" if el_index != "any" else "")
 
 
-def long_press(driver, name: str, platform: str, duration_s: float = 1.5):
-    """Long-press (hold) an element."""
+def long_press(driver, name: str, platform: str, duration_s: float = 1.5, el_index: str = "any"):
+    """Long-press (hold) an element. el_index: 'any','1st','last' etc."""
     name = resolve_variables(name)
-    el   = _find_element(driver, name, platform)
+    lookup = f"{name}[{el_index}]" if el_index and el_index != "any" else name
+    el   = _find_element(driver, lookup, platform)
     try:
         driver.execute_script("mobile: touchAndHold", {"element": el.id, "duration": duration_s})
     except Exception:
         from selenium.webdriver.common.action_chains import ActionChains
         ActionChains(driver).click_and_hold(el).pause(duration_s).release().perform()
-    logger.info("🤙 Long-pressed: '%s' (%.1fs)", name, duration_s)
+    logger.info("🤙 Long-pressed: '%s'%s (%.1fs)", name, f"[{el_index}]" if el_index != "any" else "", duration_s)
 
 
-def wait_for_element(driver, name: str, platform: str, timeout_s: float = 15):
-    """Wait up to timeout_s for a named element to become visible."""
+def wait_for_element(driver, name: str, platform: str, timeout_s: float = 15, el_index: str = "any"):
+    """Wait up to timeout_s for a named element to become visible. el_index: 'any','1st','last' etc."""
     import time as _t
     name     = resolve_variables(name)
+    lookup   = f"{name}[{el_index}]" if el_index and el_index != "any" else name
     deadline = _t.time() + timeout_s
     last_err = None
     while _t.time() < deadline:
         try:
-            el = _find_element(driver, name, platform)
+            el = _find_element(driver, lookup, platform)
             if el.is_displayed():
-                logger.info("✅ Element appeared: '%s'", name)
+                logger.info("✅ Element appeared: '%s'%s", name, f"[{el_index}]" if el_index != "any" else "")
                 return
         except Exception as e:
             last_err = e
@@ -380,14 +519,15 @@ def wait_for_element(driver, name: str, platform: str, timeout_s: float = 15):
     )
 
 
-def store_element_text(driver, name: str, platform: str, variable: str):
-    """Read text from element and store in RUNTIME_VARIABLES."""
+def store_element_text(driver, name: str, platform: str, variable: str, el_index: str = "any"):
+    """Read text from element and store in RUNTIME_VARIABLES. el_index: 'any','1st','last' etc."""
     name     = resolve_variables(name)
     variable = resolve_variables(variable)
-    el       = _find_element(driver, name, platform)
+    lookup   = f"{name}[{el_index}]" if el_index and el_index != "any" else name
+    el       = _find_element(driver, lookup, platform)
     text     = el.text or el.get_attribute("label") or el.get_attribute("value") or ""
     RUNTIME_VARIABLES[variable] = text
-    logger.info("💾 Stored text of '%s' → $%s = '%s'", name, variable, text)
+    logger.info("💾 Stored text of '%s'%s → $%s = '%s'", name, f"[{el_index}]" if el_index != "any" else "", variable, text)
 
 
 def store_variable(value: str, variable: str):
@@ -416,12 +556,90 @@ def wait_seconds(driver, seconds: float):
     time.sleep(float(seconds))
 
 
+def dismiss_play_rating(driver) -> bool:
+    """
+    Dismiss a Google Play In-App Review (rating) popup.
+
+    The Play rating dialog is rendered by the Play Store process, NOT the app,
+    so driver.switch_to.alert and mobile:alert both miss it.
+    UiAutomator2 can reach across process boundaries and find the dismiss button.
+
+    Dismiss button text varies by locale/Play version — we try all known variants.
+    Falls back to pressing BACK if no button is found.
+
+    Returns True if something was dismissed, False if no popup was detected.
+    """
+    from appium.webdriver.common.appiumby import AppiumBy
+
+    # Known dismiss button labels across Play Store versions and locales
+    _DISMISS_TEXTS = [
+        "Maybe later",
+        "Not now",
+        "No thanks",
+        "Remind me later",
+        "Later",
+        "Cancel",
+        "Dismiss",
+    ]
+
+    # 1. Try clicking a dismiss button by text (UiAutomator2 finds cross-process overlays)
+    for label in _DISMISS_TEXTS:
+        try:
+            el = driver.find_element(
+                AppiumBy.ANDROID_UIAUTOMATOR,
+                f'new UiSelector().textContains("{label}")',
+            )
+            el.click()
+            logger.info("⭐ Google Play rating popup dismissed via '%s' button", label)
+            time.sleep(0.5)
+            return True
+        except Exception:
+            pass
+
+    # 2. Check if the Play Store activity is in the foreground (reliable on most devices)
+    try:
+        current_activity = driver.current_activity or ""
+        current_package  = driver.current_package  or ""
+        play_packages = ("com.android.vending", "com.google.android.play")
+        play_activities = ("ReviewActivity", "InAppReview", "RatingDialog")
+        is_play_overlay = any(p in current_package for p in play_packages) or \
+                          any(a in current_activity for a in play_activities)
+        if is_play_overlay:
+            driver.back()
+            logger.info("⭐ Google Play rating overlay detected — pressed BACK to dismiss")
+            time.sleep(0.5)
+            return True
+    except Exception:
+        pass
+
+    # 3. XPath fallback: look for a dialog containing a "Rate" button alongside a dismiss option
+    try:
+        rate_btn = driver.find_element(
+            AppiumBy.XPATH,
+            '//*[contains(@text,"Rate") or contains(@text,"rate")]'
+        )
+        if rate_btn.is_displayed():
+            # A "Rate" button visible → we're in the rating popup; press back to close
+            driver.back()
+            logger.info("⭐ Rating popup detected via 'Rate' button — pressed BACK to dismiss")
+            time.sleep(0.5)
+            return True
+    except Exception:
+        pass
+
+    logger.debug("ℹ️  No Play rating popup detected.")
+    return False
+
+
 def dismiss_alerts(driver, attempts: int = 3):
     """
-    Dismiss any visible system alerts (permission dialogs, etc.).
-    Tries both 'dismiss' (Don't Allow / Cancel) and 'accept' (Allow).
+    Dismiss any visible system alerts, permission dialogs, or Google Play rating popups.
+    Tries (in order): Play rating popup → system alert dismiss → system alert accept.
     Safe to call even when no alert is showing.
     """
+    # Always try Play rating first — it's invisible to mobile:alert
+    dismiss_play_rating(driver)
+
     for _ in range(attempts):
         dismissed = False
         for action in ("dismiss", "accept"):
@@ -554,3 +772,147 @@ def open_url(driver, url: str):
     url = resolve_variables(url)
     driver.get(url)
     logger.info("🌐 Opened URL: %s", url)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# WINDOW / TAB MANAGEMENT  (Appium window handles — hybrid/browser contexts)
+# driver.window_handles returns a list of handle strings for each open tab/window.
+# In a purely native app there is usually one handle. Hybrid apps or in-app
+# browsers may have several.
+# ─────────────────────────────────────────────────────────────────────────────
+
+def switch_window(driver, index: int):
+    """Switch to a window/tab by 0-based index."""
+    handles = driver.window_handles
+    if index < 0 or index >= len(handles):
+        raise AssertionError(
+            f"❌ Window index {index} out of range. "
+            f"Open windows: {len(handles)}  (valid: 0–{len(handles) - 1})"
+        )
+    driver.switch_to.window(handles[index])
+    logger.info("🪟 Switched to window %d — handle: %s", index, handles[index])
+
+
+def close_window(driver, index=None):
+    """Close a window by index (or the current window when index is None), then focus window 0."""
+    handles = driver.window_handles
+    if index is not None:
+        if index < 0 or index >= len(handles):
+            raise AssertionError(f"❌ Window index {index} out of range (0–{len(handles) - 1})")
+        driver.switch_to.window(handles[index])
+    driver.close()
+    remaining = driver.window_handles
+    if remaining:
+        driver.switch_to.window(remaining[0])
+        logger.info("🗑️  Window closed. Back to window 0.")
+    else:
+        logger.warning("⚠️  No windows remaining after close.")
+
+
+def close_all_windows(driver):
+    """Close every window except window 0, then focus window 0."""
+    handles = driver.window_handles
+    for h in handles[1:]:
+        driver.switch_to.window(h)
+        driver.close()
+    remaining = driver.window_handles
+    if remaining:
+        driver.switch_to.window(remaining[0])
+    logger.info("🗑️  Closed all windows. Back to window 0.")
+
+
+def list_windows(driver):
+    """Log all open window handles with their index."""
+    handles = driver.window_handles
+    logger.info("📋 Open windows (%d):", len(handles))
+    for i, h in enumerate(handles):
+        logger.info("  [%d] %s", i, h)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# IFRAME / FRAME MANAGEMENT  (WebView / mobile-browser context only)
+# Works when the driver has already switched into a WEBVIEW context.
+# In NATIVE_APP context, switch_to.frame() has no effect.
+# ─────────────────────────────────────────────────────────────────────────────
+
+def switch_iframe(driver, selector: str):
+    """Switch driver context into an iframe.
+    selector can be: a digit (0-based index), an XPath, or a name/id string.
+    """
+    if selector.strip().isdigit():
+        driver.switch_to.frame(int(selector))
+        logger.info("🖼️  Switched to iframe index %s", selector)
+    else:
+        from appium.webdriver.common.appiumby import AppiumBy
+        try:
+            el = driver.find_element(AppiumBy.XPATH, selector)
+            driver.switch_to.frame(el)
+            logger.info("🖼️  Switched to iframe by xpath: %s", selector)
+        except Exception:
+            driver.switch_to.frame(selector)   # fall back: name or id
+            logger.info("🖼️  Switched to iframe by name/id: %s", selector)
+
+
+def exit_iframe(driver):
+    """Return to the main document (default content), exiting any active iframe."""
+    driver.switch_to.default_content()
+    logger.info("🖼️  Exited iframe — back to default content.")
+
+
+def scroll_to_element(driver, name: str, platform: str, max_swipes: int = 10):
+    """
+    Scroll the named element into the visible centre of the screen.
+
+    Android: uses UiScrollable.scrollIntoView (fastest, native).
+    iOS    : uses mobile:scroll with toVisible=true after element lookup.
+    Falls back to repeated swipe-up if the native strategies fail.
+    """
+    from appium.webdriver.common.appiumby import AppiumBy
+    name = resolve_variables(name)
+    locator = _get_appium_locator(name, platform)
+
+    if platform == "android":
+        # ── Try UiScrollable (works for any scrollable container) ─────────────
+        for attr, uia_key in [
+            ("resource_id",     "resourceId"),
+            ("accessibility_id", "description"),
+            ("text",             "text"),
+        ]:
+            val = locator.get(attr, "")
+            if not val:
+                continue
+            uia_expr = (
+                f'new UiScrollable(new UiSelector().scrollable(true))'
+                f'.scrollIntoView(new UiSelector().{uia_key}("{val}"))'
+            )
+            try:
+                driver.find_element(AppiumBy.ANDROID_UIAUTOMATOR, uia_expr)
+                logger.info("📜 Scrolled to '%s' via UiScrollable (%s)", name, uia_key)
+                return
+            except Exception:
+                pass
+
+    elif platform == "ios":
+        # ── Try mobile:scroll with element reference ──────────────────────────
+        try:
+            el = _find_element(driver, name, platform)
+            driver.execute_script("mobile: scroll", {"element": el.id, "toVisible": True})
+            logger.info("📜 Scrolled to '%s' via mobile:scroll", name)
+            return
+        except Exception:
+            pass
+
+    # ── Fallback: swipe-up until element found ────────────────────────────────
+    for attempt in range(max_swipes):
+        try:
+            el = _find_element(driver, name, platform)
+            if el.is_displayed():
+                logger.info("📜 Element '%s' visible after %d swipes", name, attempt)
+                return
+        except Exception:
+            pass
+        swipe_up(driver)
+        time.sleep(0.4)
+    raise AssertionError(
+        f"❌ Could not scroll element '{name}' into view after {max_swipes} swipes"
+    )

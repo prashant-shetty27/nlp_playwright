@@ -1,0 +1,45 @@
+# flows/demo_combined.flow
+# Demo: Real-world scenario combining Faker + Date + API + Excel
+# Scenario: Register a new user, verify via API, check OTP, book a slot
+# Run: python runner.py flows/demo_combined.flow
+# ────────────────────────────────────────────────────────────────
+
+# ── 1. Generate test user data ─────────────────────────────────
+generate fake name as reg_name
+generate fake email as reg_email
+generate fake phone as reg_phone
+generate fake password as reg_pass
+generate random number 100000 999999 as otp
+get today as reg_date
+get date +30 days as subscription_expiry
+
+# ── 2. Load additional test data from Excel ────────────────────
+read excel "data/test_users.xlsx" row 2 col 1 as existing_user
+read excel "data/test_users.xlsx" row 2 col 2 as existing_email
+
+# ── 3. Register a new user via API first ──────────────────────
+api post "https://reqres.in/api/users" with body '{"name": "${reg_name}", "job": "QA"}' as create_resp
+store json create_resp path id as new_user_id
+
+# ── 4. Open the app and fill the registration form ────────────
+go to url https://demoqa.com/automation-practice-form
+wait 2 seconds
+
+# Fill form with generated data
+# type "${reg_name}" into first_name_field
+# type "${reg_email}" into email_field
+# type "${reg_phone}" into mobile_field
+
+take screenshot as registration_filled
+
+# ── 5. Verify OTP page ────────────────────────────────────────
+# type "${otp}" into otp_input
+# click submit_button
+# verify text "${reg_name}"
+
+# ── 6. Verify via API the user was created ────────────────────
+api get "https://reqres.in/api/users/2" as verify_resp
+store json verify_resp path data.email as verified_email
+verify ${verified_email} contains "janet"
+
+take screenshot as registration_complete

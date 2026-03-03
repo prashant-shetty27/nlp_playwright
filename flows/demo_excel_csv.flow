@@ -1,0 +1,40 @@
+# flows/demo_excel_csv.flow
+# Demo: Data-driven testing from Excel and CSV files
+# Run: python runner.py flows/demo_excel_csv.flow
+# ────────────────────────────────────────────────────────────────
+# Assumes files exist at:
+#   data/test_users.xlsx  — columns: name | email | phone | password
+#   data/test_users.csv   — same columns as header row
+# ────────────────────────────────────────────────────────────────
+
+# ── Read from Excel ───────────────────────────────────────────
+read excel "data/test_users.xlsx" row 2 col 1 as xl_name
+read excel "data/test_users.xlsx" row 2 col 2 as xl_email
+read excel "data/test_users.xlsx" row 2 col 3 as xl_phone
+read excel "data/test_users.xlsx" row 2 col 4 as xl_password
+
+# Read by column letter
+read excel "data/test_users.xlsx" row 3 col A as xl_name2
+read excel "data/test_users.xlsx" row 3 col B as xl_email2
+
+# Read full row as a list (${row_data} = ['Alice','alice@test.com','9876543210','Pass@123'])
+read excel "data/test_users.xlsx" row 2 as row_data
+
+# ── Read from CSV ─────────────────────────────────────────────
+# By column header name:
+read csv "data/test_users.csv" row 2 col name as csv_name
+read csv "data/test_users.csv" row 2 col email as csv_email
+
+# By column number:
+read csv "data/test_users.csv" row 3 col 1 as csv_name2
+read csv "data/test_users.csv" row 3 col 2 as csv_email2
+
+# ── Use the data in the browser ───────────────────────────────
+go to url https://demoqa.com/automation-practice-form
+wait 1 seconds
+
+# type "${xl_name}" into first_name_field
+# type "${xl_email}" into email_field
+# type "${xl_phone}" into mobile_field
+
+take screenshot as excel_data_filled

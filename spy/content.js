@@ -57,13 +57,45 @@ document.addEventListener('click', function(event) {
     event.stopPropagation();
 
     let target = event.target;
-    let rawGuess = target.innerText ? target.innerText.substring(0, 15) : (target.id || target.name || target.tagName);
+
+    // ── Bubble up to the best clickable ancestor ──────────────────────────────
+    // If the clicked element is a generic child (span/img/figcaption/div with no
+    // unique attrs), walk up to find the nearest <a> or <button> that has a
+    // stable unique attribute (id > href > title > aria-label). This produces
+    // much more reliable XPaths like //a[@title='Movies in Mumbai'] instead of
+    // //figcaption[contains(@class,'color111')].
+    function hasUniqueAttr(el) {
+        return el.id || el.getAttribute('href') || el.getAttribute('title') ||
+               el.getAttribute('aria-label') || el.getAttribute('name');
+    }
+    const CLICKABLE_TAGS = new Set(['A', 'BUTTON', 'LABEL']);
+    if (!hasUniqueAttr(target)) {
+        let ancestor = target.parentElement;
+        let levels = 0;
+        while (ancestor && levels < 4) {
+            if (CLICKABLE_TAGS.has(ancestor.tagName) && hasUniqueAttr(ancestor)) {
+                target = ancestor;
+                break;
+            }
+            // Also accept any ancestor with id/aria-label even if not a/button
+            if (ancestor.id || ancestor.getAttribute('aria-label')) {
+                target = ancestor;
+                break;
+            }
+            ancestor = ancestor.parentElement;
+            levels++;
+        }
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
+    let rawGuess = target.innerText ? target.innerText.substring(0, 15) :
+                   (target.getAttribute('title') || target.id || target.getAttribute('aria-label') || target.tagName);
     let smartLocatorName = rawGuess.trim().toLowerCase().replace(/[^a-z0-9]/g, '_') || `element_${Math.floor(Math.random() * 1000)}`;
 
     const elementDNA = {
         tagName: target.tagName.toLowerCase(),
         className: target.className || null,
-        innerText: target.innerText ? target.innerText.trim() : null,
+        innerText: target.innerText ? target.innerText.trim().substring(0, 80) : null,
         rect: getSpatialCoordinates(target),
         attributes: extractAllAttributes(target)
     };

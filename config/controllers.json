@@ -32,12 +32,12 @@
     "appium_server_url": "http://localhost:4723"
   },
   "android_lifecycle_defaults": {
-    "app_install": false,
+    "app_install": true,
     "app_update": false,
     "new_apk_shared": false,
     "existing_app_present": true,
-    "clear_cache": false,
-    "clear_storage": false,
+    "clear_cache": true,
+    "clear_storage": true,
     "reset_device_permission": false
   }
 }

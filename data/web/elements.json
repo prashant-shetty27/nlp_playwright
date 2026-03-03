@@ -1,0 +1,5 @@
+{
+  "_comment": "Web element locators — managed via ui/pages/platform/web/elements.py",
+  "_platform": "web",
+  "pages": {}
+}

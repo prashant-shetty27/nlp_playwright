@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>ML Spy Recorder</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; background: #0f172a; overflow: hidden; }
+
+    #top-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      background: #1e293b;
+      border-bottom: 1px solid #334155;
+      font-family: 'Inter', system-ui, sans-serif;
+      flex-shrink: 0;
+    }
+
+    #nav-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      background: #0f172a;
+      border-bottom: 2px solid #3b82f6;
+      flex-shrink: 0;
+    }
+    #nav-icon { font-size: 14px; flex-shrink: 0; }
+    #nav-input {
+      flex: 1;
+      background: #1e293b;
+      border: 1px solid #475569;
+      border-radius: 5px;
+      color: #e2e8f0;
+      font-family: monospace;
+      font-size: 12px;
+      padding: 4px 8px;
+      outline: none;
+      transition: border-color .2s;
+    }
+    #nav-input:focus { border-color: #3b82f6; }
+    #nav-go {
+      padding: 4px 12px;
+      background: #3b82f6;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    #nav-go:hover { background: #2563eb; }
+    #top-bar .logo { font-size: 16px; }
+    #top-bar .title {
+      font-size: 12px; font-weight: 700;
+      color: #60a5fa; flex: 1;
+    }
+    #status-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #ef4444;
+      transition: background 0.4s;
+      flex-shrink: 0;
+    }
+    #status-dot.connected { background: #22c55e; }
+    #status-label {
+      font-size: 10px; color: #64748b;
+      font-family: monospace;
+    }
+
+    #recorder-frame {
+      width: 100%;
+      /* full height minus top-bar (~36px) + nav-bar (~36px) */
+      height: calc(100vh - 72px);
+      border: none;
+      display: block;
+    }
+
+    #offline-msg {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: calc(100vh - 72px);
+      color: #64748b;
+      font-family: system-ui, sans-serif;
+      text-align: center;
+      padding: 24px;
+      gap: 12px;
+    }
+    #offline-msg .icon { font-size: 40px; }
+    #offline-msg p { font-size: 13px; line-height: 1.6; }
+    #offline-msg code {
+      background: #1e293b; color: #60a5fa;
+      padding: 2px 6px; border-radius: 4px; font-size: 12px;
+    }
+    #retry-btn {
+      margin-top: 8px;
+      padding: 8px 20px;
+      background: #3b82f6; color: #fff;
+      border: none; border-radius: 6px;
+      cursor: pointer; font-size: 13px; font-weight: 600;
+    }
+    #retry-btn:hover { background: #2563eb; }
+  </style>
+</head>
+<body>
+
+  <div id="top-bar">
+    <span class="logo">🔬</span>
+    <span class="title">ML Spy Recorder</span>
+    <span id="status-dot"></span>
+    <span id="status-label">checking…</span>
+  </div>
+
+  <!-- URL navigation bar -->
+  <div id="nav-bar">
+    <span id="nav-icon">🌐</span>
+    <input id="nav-input" type="text" placeholder="Enter URL and press Enter — opens in Chrome tab" spellcheck="false" autocomplete="off" />
+    <button id="nav-go">Go</button>
+  </div>
+
+  <iframe id="recorder-frame" src="http://localhost:8080"
+          allow="clipboard-read; clipboard-write"></iframe>
+
+  <div id="offline-msg">
+    <div class="icon">⚠️</div>
+    <p>
+      <strong style="color:#e2e8f0;">Recorder server is not running.</strong><br><br>
+      Start it with:<br>
+      <code>python ui_builder.py</code><br><br>
+      Then click Retry below.
+    </p>
+    <button id="retry-btn">↻ Retry</button>
+  </div>
+
+  <script src="sidepanel.js"></script>
+
+</body>
+</html>
