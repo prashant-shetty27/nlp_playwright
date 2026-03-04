@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-03-04T11:19:35Z",
+  "platform": {
+    "label": "Android app",
+    "key": "android_app"
+  },
+  "project_name": "recorder_smoke",
+  "script_name": "connect_disconnect",
+  "recorder_kind": "app",
+  "paths": {
+    "data_dir": "/Users/prashantshetty/nlp_playwright/data/contexts/android_app/recorder_smoke/connect_disconnect",
+    "flow_dir": "/Users/prashantshetty/nlp_playwright/flows/contexts/android_app/recorder_smoke/connect_disconnect",
+    "manifest_file": "/Users/prashantshetty/nlp_playwright/data/contexts/android_app/recorder_smoke/connect_disconnect/context_manifest.json",
+    "recorded_elements_file": "/Users/prashantshetty/nlp_playwright/data/contexts/android_app/recorder_smoke/connect_disconnect/recorded_elements.json",
+    "manual_locators_file": "/Users/prashantshetty/nlp_playwright/data/contexts/android_app/recorder_smoke/connect_disconnect/locators_manual.json",
+    "env_snapshot_file": "/Users/prashantshetty/nlp_playwright/data/contexts/android_app/recorder_smoke/connect_disconnect/environment_snapshot.json",
+    "runtime_variables_file": "/Users/prashantshetty/nlp_playwright/data/contexts/android_app/recorder_smoke/connect_disconnect/runtime_variables.json",
+    "setup_options_file": "/Users/prashantshetty/nlp_playwright/data/contexts/android_app/recorder_smoke/connect_disconnect/setup_options.json"
+  },
+  "created_at": "2026-03-04T11:17:58Z",
+  "last_used_at": "2026-03-04T11:19:35Z"
+}

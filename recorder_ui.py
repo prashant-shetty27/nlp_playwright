@@ -32,10 +32,15 @@ import xml.etree.ElementTree as ET
 from datetime import datetime
 
 from nicegui import ui, run
+from core import recording_context as rc
+from core import recorder_security as rs
+from execution.ios_readiness import enforce_ios_readiness, enrich_ios_session_exception
 
 BASE_DIR      = os.path.dirname(os.path.abspath(__file__))
 LOCATORS_FILE = os.path.join(BASE_DIR, "data", "locators_manual.json")
 FLOWS_DIR     = os.path.join(BASE_DIR, "flows")
+UNSCOPED_DATA_DIR = os.path.join(BASE_DIR, "data", "contexts", "_unscoped")
+UNSCOPED_FLOWS_DIR = os.path.join(BASE_DIR, "flows", "contexts", "_unscoped")
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -57,12 +62,32 @@ _state = {
     "auto_refresh":   True,
     "el_filter":      "",         # live search text
     # ── New feature state ─────────────────────────────────────────────────
-    "edit_step_idx":  None,       # int index when editing existing step from flow list
-    "known_names":    [],         # list of recorded element names for autocomplete
-    "latest_vars":    [],         # last 3 RUNTIME_VARIABLES keys (for live panel)
-    "latest_names":  [],          # last 3 recorded element names (for live panel)
+    "edit_step_idx":           None,   # int index when editing existing step from flow list
+    "known_names":             [],     # list of recorded element names for autocomplete
+    "latest_vars":             [],     # last 3 RUNTIME_VARIABLES keys (for live panel)
+    "latest_names":            [],     # last 3 recorded element names (for live panel)
+    "selected_step_indices":   set(),  # set of step indices checked for reusable save
+    "recording_context":       None,
+    "auth_session":            None,
 }
 _lock = threading.Lock()
+
+
+def _active_locators_file() -> str:
+    default_path = os.path.join(UNSCOPED_DATA_DIR, "locators_manual.json")
+    return rc.get_path(_state.get("recording_context"), "manual_locators_file", default_path)
+
+
+def _active_flow_dir() -> str:
+    return rc.get_path(_state.get("recording_context"), "flow_dir", UNSCOPED_FLOWS_DIR)
+
+
+def _has_context() -> bool:
+    return bool(_state.get("auth_session")) and bool(_state.get("recording_context"))
+
+
+def _has_auth_session() -> bool:
+    return bool(_state.get("auth_session"))
 
 # Input/editable widget classes whose `text` attribute is a dynamic placeholder —
 # never use text as a locator key for these, since the value rotates at runtime.
@@ -230,17 +255,19 @@ def _find_live_element(driver, locator: dict, platform: str):
     raise RuntimeError("Element not found on device")
 
 def _load_locators() -> dict:
-    if os.path.exists(LOCATORS_FILE):
+    locators_file = _active_locators_file()
+    if os.path.exists(locators_file):
         try:
-            with open(LOCATORS_FILE, "r", encoding="utf-8") as f:
+            with open(locators_file, "r", encoding="utf-8") as f:
                 return json.load(f)
         except (json.JSONDecodeError, OSError) as e:
             logger.warning("locators_manual.json corrupt/unreadable (%s) — treating as empty", e)
     return {}
 
 def _save_locators(data: dict):
-    os.makedirs(os.path.dirname(LOCATORS_FILE), exist_ok=True)
-    with open(LOCATORS_FILE,"w",encoding="utf-8") as f:
+    locators_file = _active_locators_file()
+    os.makedirs(os.path.dirname(locators_file), exist_ok=True)
+    with open(locators_file, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
 # ─── Screenshot + refresh thread ─────────────────────────────────────────────
@@ -471,6 +498,10 @@ def _auto_refresh_loop():
 
 def _start_session(caps: dict, platform: str):
     from appium import webdriver as aw
+    session_caps = dict(caps or {})
+    if platform == "ios":
+        session_caps = enforce_ios_readiness(session_caps)
+
     if platform == "android":
         from appium.options.android.uiautomator2.base import UiAutomator2Options
         options = UiAutomator2Options()
@@ -478,7 +509,7 @@ def _start_session(caps: dict, platform: str):
         from appium.options.ios.xcuitest.base import XCUITestOptions
         options = XCUITestOptions()
 
-    for key, val in caps.items():
+    for key, val in session_caps.items():
         if val is None or val == "" or str(key).startswith("_comment"):
             continue
         clean = key.replace("appium:","")
@@ -493,19 +524,33 @@ def _start_session(caps: dict, platform: str):
 
     sys.path.insert(0, BASE_DIR)
     from config import settings
-    driver = aw.Remote(settings.APPIUM_SERVER_URL, options=options)
-    return driver
+    try:
+        return aw.Remote(settings.APPIUM_SERVER_URL, options=options)
+    except Exception as exc:
+        if platform == "ios":
+            raise enrich_ios_session_exception(exc, session_caps) from exc
+        raise
 
 # ─── Save helpers ─────────────────────────────────────────────────────────────
 
 def _save_flow(name: str, steps: list, platform: str) -> str:
-    os.makedirs(FLOWS_DIR, exist_ok=True)
+    flow_dir = _active_flow_dir()
+    os.makedirs(flow_dir, exist_ok=True)
     safe = re.sub(r"[^a-z0-9_]","_", name.lower().strip("_"))
     safe = re.sub(r"_+", "_", safe).strip("_") or "recorded_flow"
-    path = os.path.join(FLOWS_DIR, f"{safe}.flow")
+    path = os.path.join(flow_dir, f"{safe}.flow")
     ts   = datetime.now().strftime("%Y-%m-%d %H:%M")
+    ctx = _state.get("recording_context") or {}
+    ctx_txt = ""
+    if ctx:
+        p = ctx.get("platform", {}).get("label", "")
+        prj = ctx.get("project_name", "")
+        scr = ctx.get("script_name", "")
+        ctx_txt = f"# Context {p} / {prj} / {scr}\n"
     with open(path,"w",encoding="utf-8") as f:
-        f.write(f"# flows/{safe}.flow\n")
+        f.write(f"# {os.path.relpath(path, BASE_DIR)}\n")
+        if ctx_txt:
+            f.write(ctx_txt)
         f.write(f"# Recorded {ts} — platform: {platform.upper()}\n")
         f.write("# ─────────────────────────────────────────\n\n")
         for s in steps:
@@ -514,14 +559,16 @@ def _save_flow(name: str, steps: list, platform: str) -> str:
 
 def _persist_locators(screen: str, recorded: dict, platform: str):
     import fcntl
-    os.makedirs(os.path.dirname(LOCATORS_FILE), exist_ok=True)
-    lock_path = LOCATORS_FILE + ".lock"
+    locators_file = _active_locators_file()
+    os.makedirs(os.path.dirname(locators_file), exist_ok=True)
+    lock_path = locators_file + ".lock"
     with open(lock_path, "w") as lf:
         try:
             fcntl.flock(lf, fcntl.LOCK_EX)
             data = _load_locators()
             data.setdefault(platform, {}).setdefault(screen, {}).update(recorded)
-            _save_locators(data)
+            with open(locators_file, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
         finally:
             fcntl.flock(lf, fcntl.LOCK_UN)
     # Tell appium_action_service to reload on next use
@@ -542,22 +589,46 @@ def _persist_locators(screen: str, recorded: dict, platform: str):
         lst.insert(0, n)
         _state["latest_names"] = lst[:3]
 
+
+def _sync_known_names_from_locators(platform: str) -> bool:
+    """Merge known element names from locators file for the active platform.
+
+    Returns True when at least one new name is discovered.
+    """
+    changed = False
+    try:
+        existing = _load_locators()
+        plat_data = existing.get(platform, {})
+        for group in plat_data.values():
+            if isinstance(group, dict):
+                for n in group:
+                    if n not in _state["known_names"]:
+                        _state["known_names"].append(n)
+                        changed = True
+    except Exception:
+        pass
+    return changed
+
 # ─────────────────────────────────────────────────────────────────────────────
 # NiceGUI PAGE
 # ─────────────────────────────────────────────────────────────────────────────
 
 def build_ui():
     # ── Seed known_names from existing locators file on startup ───────────────
-    try:
-        existing = _load_locators()
-        plat_data = existing.get(_state["platform"], {})
-        for group in plat_data.values():
-            if isinstance(group, dict):
-                for n in group:
-                    if n not in _state["known_names"]:
-                        _state["known_names"].append(n)
-    except Exception:
-        pass
+    _sync_known_names_from_locators(_state["platform"])
+    _locators_watch = {
+        "file": _active_locators_file(),
+        "mtime": rc.file_mtime(_active_locators_file()),
+    }
+
+    def _locators_file_changed() -> bool:
+        current_file = _active_locators_file()
+        current_mtime = rc.file_mtime(current_file)
+        if current_file != _locators_watch["file"] or current_mtime != _locators_watch["mtime"]:
+            _locators_watch["file"] = current_file
+            _locators_watch["mtime"] = current_mtime
+            return True
+        return False
 
     ui.page_title("📱 Appium Recorder")
     # ── Theme ──────────────────────────────────────────────────────────────────
@@ -670,7 +741,8 @@ def build_ui():
             # Auto-refresh toggle
             auto_toggle = ui.switch("Auto-refresh (3s)", value=True).classes("text-xs text-slate-300")
             def toggle_auto(e):
-                _state["auto_refresh"] = e.value
+                v = e.value if hasattr(e, "value") else (e.args if isinstance(e.args, bool) else getattr(e.sender, "value", _state["auto_refresh"]))
+                _state["auto_refresh"] = bool(v)
             auto_toggle.on("update:model-value", toggle_auto)
 
             # ── Popup / Permission quick-dismiss panel ────────────────────────
@@ -795,7 +867,8 @@ def build_ui():
                 auto_dismiss_toggle = ui.switch("Auto-dismiss popups after each action", value=False
                 ).classes("text-xs text-amber-300 mt-1")
                 def on_auto_dismiss(e):
-                    _state["auto_dismiss"] = e.value
+                    v = e.value if hasattr(e, "value") else (e.args if isinstance(e.args, bool) else getattr(e.sender, "value", _state["auto_dismiss"]))
+                    _state["auto_dismiss"] = bool(v)
                 auto_dismiss_toggle.on("update:model-value", on_auto_dismiss)
 
         # ── MIDDLE: Elements + Actions ────────────────────────────────────────
@@ -804,6 +877,170 @@ def build_ui():
             # ── Connection bar ─────────────────────────────────────────────────
             with ui.card().classes("w-full p-3"):
                 ui.label("🔌 Connection").classes("text-blue-400 font-bold text-sm mb-1")
+                active_auth = _state.get("auth_session") or {}
+                with ui.row().classes("gap-2 items-end flex-wrap w-full mb-2"):
+                    auth_name_input = ui.input(
+                        label="Employee name", value=active_auth.get("employee_name", "")
+                    ).classes("w-44").props("dense clearable")
+                    auth_id_input = ui.input(
+                        label="Employee ID", value=active_auth.get("employee_id", "")
+                    ).classes("w-32").props("dense clearable")
+                    auth_login_btn = ui.button("🔐 Login", color="green").props("flat dense")
+                    auth_logout_btn = ui.button("🚪 Logout", color="red").props("flat dense")
+                auth_status_lbl = ui.label(
+                    "Login required before context activation and recording."
+                ).classes("text-xs text-slate-300 mb-1")
+
+                active_ctx = _state.get("recording_context") or {}
+                ctx_platform_val = (
+                    active_ctx.get("platform", {}).get("label")
+                    if isinstance(active_ctx.get("platform"), dict) else None
+                ) or "Android app"
+                ctx_project_val = active_ctx.get("project_name", "")
+                ctx_script_val = active_ctx.get("script_name", "")
+
+                with ui.row().classes("gap-2 items-end flex-wrap w-full mb-2"):
+                    ctx_platform_select = ui.select(
+                        rc.list_platform_labels(),
+                        value=ctx_platform_val,
+                        label="Data Platform",
+                    ).classes("w-40").props("dense")
+                    ctx_project_input = ui.input(
+                        label="Project name", value=ctx_project_val
+                    ).classes("w-36").props("dense clearable")
+                    ctx_script_input = ui.input(
+                        label="Test script", value=ctx_script_val
+                    ).classes("w-36").props("dense clearable")
+                    ctx_activate_btn = ui.button("✅ Activate Context", color="orange").props("flat dense")
+                ctx_status_lbl = ui.label(
+                    "Select platform + project + test script before connect/record."
+                ).classes("text-xs text-slate-300 mb-1")
+
+                def _snapshot_context_state(setup_options: dict | None = None):
+                    ctx = _state.get("recording_context")
+                    if not ctx:
+                        return
+                    try:
+                        from config import environment_manager as _em
+                        from nlp.variable_manager import RUNTIME_VARIABLES
+                        rc.snapshot_context_state(
+                            ctx,
+                            env_name=_em.get_active_env_name(),
+                            env_payload=_em.get_active_env(),
+                            runtime_variables=dict(RUNTIME_VARIABLES),
+                            setup_options=setup_options or {},
+                        )
+                    except Exception as ex:
+                        logger.warning("Context snapshot failed: %s", ex)
+
+                def _login_employee():
+                    name = (auth_name_input.value or "").strip()
+                    emp_id = (auth_id_input.value or "").strip()
+                    try:
+                        session = rs.start_session(
+                            employee_name=name,
+                            employee_id=emp_id,
+                            recorder_kind="app",
+                            client_id="",
+                        )
+                    except ValueError as ex:
+                        ui.notify(str(ex), color="negative")
+                        auth_status_lbl.set_text("❌ Login failed")
+                        return
+                    _state["auth_session"] = session
+                    auth_name_input.set_value(session["employee_name"])
+                    auth_id_input.set_value(session["employee_id"])
+                    auth_status_lbl.set_text(
+                        f"✅ Logged in: {session['employee_name']} ({session['employee_id']})"
+                    )
+                    ui.notify("Login successful", color="positive")
+
+                def _logout_employee():
+                    sess = _state.get("auth_session")
+                    rs.end_session(sess, reason="user_logout")
+                    _state["auth_session"] = None
+                    _state["recording_context"] = None
+                    _state["flow_steps"] = []
+                    _state["recorded"] = {}
+                    _state["selected_step_indices"] = set()
+                    _state["known_names"] = []
+                    _state["latest_names"] = []
+                    _state["pending_context_refresh"] = True
+                    auth_status_lbl.set_text("Logged out")
+                    ctx_status_lbl.set_text("Context cleared — login required")
+                    ui.notify("Logged out", color="warning")
+
+                auth_login_btn.on("click", _login_employee)
+                auth_logout_btn.on("click", _logout_employee)
+                if _has_auth_session():
+                    s0 = _state["auth_session"]
+                    auth_status_lbl.set_text(
+                        f"✅ Logged in: {s0['employee_name']} ({s0['employee_id']})"
+                    )
+
+                def _activate_recording_context():
+                    if not _has_auth_session():
+                        ui.notify("Employee login required before context activation", color="negative")
+                        return
+                    plat_label = ctx_platform_select.value
+                    allowed_for_app = {"Android app", "iOS app", "Hybrid"}
+                    if plat_label not in allowed_for_app:
+                        ui.notify(
+                            "App recorder supports context platforms: Android app, iOS app, Hybrid",
+                            color="negative",
+                        )
+                        return
+                    try:
+                        ctx = rc.activate_context(
+                            BASE_DIR,
+                            plat_label,
+                            ctx_project_input.value or "",
+                            ctx_script_input.value or "",
+                            recorder_kind="app",
+                        )
+                    except ValueError as ex:
+                        ui.notify(f"Context validation failed: {ex}", color="negative")
+                        return
+
+                    _state["recording_context"] = ctx
+                    _state["flow_steps"] = []
+                    _state["recorded"] = {}
+                    _state["selected_step_indices"] = set()
+                    _state["known_names"] = []
+                    _state["latest_names"] = []
+                    _sync_known_names_from_locators(_state["platform"])
+                    _state["pending_context_refresh"] = True
+
+                    ctx_platform_select.set_value(ctx["platform"]["label"])
+                    ctx_project_input.set_value(ctx["project_name"])
+                    ctx_script_input.set_value(ctx["script_name"])
+                    ctx_status_lbl.set_text(
+                        f"✅ Active: {ctx['platform']['label']} / {ctx['project_name']} / {ctx['script_name']}"
+                    )
+                    _snapshot_context_state(
+                        setup_options={
+                            "device_platform": _state.get("platform"),
+                            "screen_name": _state.get("screen_name"),
+                        }
+                    )
+                    rs.log_action(
+                        _state.get("auth_session"),
+                        "activate_context",
+                        {
+                            "platform": ctx["platform"]["label"],
+                            "project": ctx["project_name"],
+                            "script": ctx["script_name"],
+                        },
+                    )
+                    ui.notify("Recording context activated", color="positive")
+
+                ctx_activate_btn.on("click", _activate_recording_context)
+                if _has_context():
+                    c0 = _state["recording_context"]
+                    ctx_status_lbl.set_text(
+                        f"✅ Active: {c0['platform']['label']} / {c0['project_name']} / {c0['script_name']}"
+                    )
+
                 with ui.row().classes("gap-3 items-center flex-wrap"):
                     plat_select = ui.select(
                         ["android","ios"], value=_state["platform"], label="Platform"
@@ -815,6 +1052,17 @@ def build_ui():
                     conn_status = ui.label("").classes("text-xs text-slate-400")
 
                 async def do_connect():
+                    if not _has_context():
+                        ui.notify("Activate recording context first", color="negative")
+                        return
+                    ctx_label = _state["recording_context"]["platform"]["label"]
+                    target_platform = plat_select.value
+                    if target_platform == "android" and ctx_label not in {"Android app", "Hybrid"}:
+                        ui.notify("Choose Android app/Hybrid context before Android connect", color="negative")
+                        return
+                    if target_platform == "ios" and ctx_label not in {"iOS app", "Hybrid"}:
+                        ui.notify("Choose iOS app/Hybrid context before iOS connect", color="negative")
+                        return
                     conn_status.set_text("⏳ Connecting…")
                     conn_btn.props("disabled")
                     _state["platform"]    = plat_select.value
@@ -833,6 +1081,17 @@ def build_ui():
                         # Start auto-refresh thread
                         t = threading.Thread(target=_auto_refresh_loop, daemon=True)
                         t.start()
+                        _snapshot_context_state(
+                            setup_options={
+                                "device_platform": _state["platform"],
+                                "screen_name": _state["screen_name"],
+                            }
+                        )
+                        rs.log_action(
+                            _state.get("auth_session"),
+                            "connect_device",
+                            {"platform": _state["platform"], "screen_name": _state["screen_name"]},
+                        )
                     except Exception as e:
                         conn_status.set_text(f"❌ {e}")
                         _state["status"] = f"❌ {e}"
@@ -847,6 +1106,7 @@ def build_ui():
                         _state["driver"] = None
                     conn_status.set_text("Disconnected")
                     _state["status"] = "Disconnected"
+                    rs.log_action(_state.get("auth_session"), "disconnect_device", {})
 
                 conn_btn.on("click", do_connect)
                 disconn_btn.on("click", do_disconnect)
@@ -1022,7 +1282,8 @@ def build_ui():
                         wait_secs_input.set_visibility(False)
 
                     def on_if_visible_toggle(e):
-                        wait_secs_input.set_visibility(e.value)
+                        v = e.value if hasattr(e, "value") else (e.args if isinstance(e.args, bool) else getattr(e.sender, "value", False))
+                        wait_secs_input.set_visibility(bool(v))
                     if_visible_toggle.on("update:model-value", on_if_visible_toggle)
 
                     def _refresh_name_options():
@@ -1042,6 +1303,9 @@ def build_ui():
                                       (raw or "").strip().lower().replace("-","_"))[:40].strip("_")
 
                     async def do_record():
+                        if not _has_context():
+                            ui.notify("Activate recording context first", color="negative")
+                            return
                         el         = _state.get("selected_el")
                         raw_name   = (name_input.value or "").strip()
                         name       = _sanitise_name(raw_name)
@@ -1054,6 +1318,19 @@ def build_ui():
 
                         if not name:
                             ui.notify("Enter an element name first", color="negative")
+                            return
+
+                        _extra_required = {
+                            "type":        "Enter the text to type",
+                            "verify text": "Enter the expected text to verify",
+                            "go to url":   "Enter the URL to navigate to",
+                            "api get":     "Enter the API URL",
+                            "api post":    "Enter the API URL",
+                            "js type":     "Enter the text to type",
+                            "js dispatch": "Enter the event name (e.g. change, click)",
+                        }
+                        if action in _extra_required and not extra:
+                            ui.notify(_extra_required[action], color="negative")
                             return
 
                         # Inject index into name suffix if not "any"
@@ -1072,9 +1349,11 @@ def build_ui():
 
                             # _build_step may return "scroll to X\ntap X" — split into two steps
                             step_lines = [ln for ln in step.split("\n") if ln.strip()]
+                            op_mode = "add"
 
                             edit_idx = _state.get("edit_step_idx")
                             if edit_idx is not None:
+                                op_mode = "update"
                                 # Update existing step (replace with potentially 2 steps)
                                 if 0 <= edit_idx < len(_state["flow_steps"]):
                                     _state["flow_steps"][edit_idx:edit_idx+1] = step_lines
@@ -1116,6 +1395,22 @@ def build_ui():
                             _update_live_panel()
                             status_lbl.set_text(_state["status"])
                             record_btn.props(remove="disabled")
+                            _snapshot_context_state(
+                                setup_options={
+                                    "last_action": action,
+                                    "screen_name": _state["screen_name"],
+                                }
+                            )
+                            rs.log_action(
+                                _state.get("auth_session"),
+                                "record_step",
+                                {
+                                    "mode": op_mode,
+                                    "action": action,
+                                    "screen_name": _state["screen_name"],
+                                    "element": name,
+                                },
+                            )
 
                     record_btn.on("click", do_record)
 
@@ -1158,9 +1453,13 @@ def build_ui():
                 ui.label("➕ Quick Add").classes("text-xs text-slate-400 mb-1")
                 with ui.row().classes("gap-1 flex-wrap"):
                     def qadd(step):
+                        if not _has_context():
+                            ui.notify("Activate recording context first", color="negative")
+                            return
                         _state["flow_steps"].append(step)
                         _update_flow_list()
                         ui.notify(f"Added: {step}", color="positive")
+                        rs.log_action(_state.get("auth_session"), "record_step", {"mode": "quick_add", "step": step})
 
                     ui.button("↩ Back",    on_click=lambda: qadd("press back")).props("flat dense").classes("text-xs bg-slate-700")
                     ui.button("↵ Enter",   on_click=lambda: qadd("press enter")).props("flat dense").classes("text-xs bg-slate-700")
@@ -1181,6 +1480,11 @@ def build_ui():
                         removed = _state["flow_steps"].pop()
                         _update_flow_list()
                         ui.notify(f"Undone: {removed}", color="warning")
+                        rs.log_action(
+                            _state.get("auth_session"),
+                            "delete_step",
+                            {"mode": "undo", "step": removed},
+                        )
                     else:
                         ui.notify("Nothing to undo", color="negative")
 
@@ -1188,6 +1492,11 @@ def build_ui():
                     _state["flow_steps"].clear()
                     _update_flow_list()
                     ui.notify("Flow cleared", color="warning")
+                    rs.log_action(
+                        _state.get("auth_session"),
+                        "delete_step",
+                        {"mode": "clear_all"},
+                    )
 
                 ui.button("↩ Undo", on_click=do_undo).props("flat dense").classes("text-xs bg-slate-700")
                 ui.button("🗑 Clear All", on_click=do_clear).props("flat dense").classes("text-xs bg-red-900")
@@ -1197,9 +1506,10 @@ def build_ui():
                 ui.label("📂 Open Flow File").classes("text-xs text-slate-400 mb-1")
 
                 def _list_flows():
-                    os.makedirs(FLOWS_DIR, exist_ok=True)
+                    flow_dir = _active_flow_dir()
+                    os.makedirs(flow_dir, exist_ok=True)
                     return sorted([
-                        f for f in os.listdir(FLOWS_DIR) if f.endswith(".flow")
+                        f for f in os.listdir(flow_dir) if f.endswith(".flow")
                     ])
 
                 def _parse_flow_file(path: str) -> list:
@@ -1228,11 +1538,14 @@ def build_ui():
 
                 with ui.row().classes("gap-1 mt-1"):
                     def do_open_flow():
+                        if not _has_context():
+                            ui.notify("Activate recording context first", color="negative")
+                            return
                         fname = open_select.value
                         if not fname or fname == "(no flows saved yet)":
                             ui.notify("No flow selected", color="negative")
                             return
-                        path = os.path.join(FLOWS_DIR, fname)
+                        path = os.path.join(_active_flow_dir(), fname)
                         if not os.path.exists(path):
                             ui.notify(f"File not found: {fname}", color="negative")
                             return
@@ -1242,6 +1555,11 @@ def build_ui():
                             _update_flow_list()
                             ui.notify(f"✅ Loaded {len(steps)} steps from {fname}", color="positive")
                             logger.info("Loaded %d steps from %s", len(steps), fname)
+                            rs.log_action(
+                                _state.get("auth_session"),
+                                "load_flow",
+                                {"flow_file": fname, "step_count": len(steps)},
+                            )
                         except Exception as ex:
                             ui.notify(f"❌ Load failed: {ex}", color="negative")
                             logger.exception("do_open_flow error")
@@ -1259,6 +1577,9 @@ def build_ui():
                 ).classes("w-full")
 
                 def do_save():
+                    if not _has_context():
+                        ui.notify("Activate recording context first", color="negative")
+                        return
                     name  = flow_name_input.value.strip()
                     steps = _state["flow_steps"]
                     if not steps:
@@ -1269,6 +1590,17 @@ def build_ui():
                         return
                     path = _save_flow(name, steps, _state["platform"])
                     ui.notify(f"✅ Saved: {path}", color="positive")
+                    _snapshot_context_state(
+                        setup_options={
+                            "last_saved_flow": os.path.basename(path),
+                            "step_count": len(steps),
+                        }
+                    )
+                    rs.log_action(
+                        _state.get("auth_session"),
+                        "save_flow",
+                        {"flow_file": os.path.basename(path), "step_count": len(steps)},
+                    )
 
                 ui.button("💾 Save .flow file", on_click=do_save, color="green").classes("w-full text-sm mt-1")
                 # After saving, refresh the open-flow dropdown
@@ -1342,6 +1674,11 @@ def build_ui():
                     summary = f"✅ {passed} passed  ❌ {failed} failed  out of {len(steps)} steps"
                     run_log_area.push(f"\n{'─'*40}\n{summary}")
                     run_status_lbl.set_text(summary)
+                    rs.log_action(
+                        _state.get("auth_session"),
+                        "run_flow",
+                        {"passed": passed, "failed": failed, "total_steps": len(steps)},
+                    )
                     run_btn.set_visibility(True)
                     run_file_btn.set_visibility(True)
                     stop_btn.set_visibility(False)
@@ -1355,6 +1692,9 @@ def build_ui():
 
                 async def do_run_flow():
                     """Run whatever is currently in the editor step list."""
+                    if not _has_context():
+                        ui.notify("Activate recording context first", color="negative")
+                        return
                     steps = _state["flow_steps"]
                     if not steps:
                         ui.notify(
@@ -1366,11 +1706,14 @@ def build_ui():
 
                 async def do_run_file():
                     """Load the selected .flow file from the dropdown and run it immediately."""
+                    if not _has_context():
+                        ui.notify("Activate recording context first", color="negative")
+                        return
                     fname = open_select.value
                     if not fname or fname == "(no flows saved yet)":
                         ui.notify("Select a .flow file from the dropdown above first", color="negative")
                         return
-                    path = os.path.join(FLOWS_DIR, fname)
+                    path = os.path.join(_active_flow_dir(), fname)
                     if not os.path.exists(path):
                         ui.notify(f"File not found: {fname}", color="negative")
                         return
@@ -1468,16 +1811,159 @@ def build_ui():
                             "username":        mob_user_input.value or "",
                             "password":        mob_pass_input.value or "",
                         })
+                        _snapshot_context_state(
+                            setup_options={
+                                "saved_env_name": n_,
+                                "domain_source": mob_src_input.value or "",
+                                "domain_override": mob_dst_input.value or "",
+                                "auth_type": mob_auth_select.value or "none",
+                            }
+                        )
+                        rs.log_action(_state.get("auth_session"), "save_env", {"env_name": n_})
                         ui.notify(f"\U0001f4be Saved env: {n_}", color="positive")
                     def _mob_apply_env():
                         _mob_save_env()
                         n_ = mob_env_select.value or "local"
                         _em.set_active_env(n_)
+                        _snapshot_context_state(setup_options={"active_env_name": n_})
+                        rs.log_action(_state.get("auth_session"), "apply_env", {"env_name": n_})
                         mob_env_status.set_text(f"\u2705 active \u2014 {n_}")
                         ui.notify(f"\u2705 Active env \u2192 {n_}", color="positive")
                     ui.button("\U0001f4be Save", on_click=_mob_save_env, color="teal").props("flat dense").classes("text-xs")
                     ui.button("\u2705 Apply (set active)", on_click=_mob_apply_env, color="green").props("flat dense").classes("text-xs font-bold")
                     ui.label("scope: all URL steps").classes("text-xs text-slate-500 self-center ml-2")
+
+            # ── Reusable Steps ────────────────────────────────────────────────
+            with ui.expansion("🔁 Reusable Steps", icon="bookmark").classes(
+                "w-full border border-indigo-700 rounded mt-2"
+            ).props("dense"):
+                with ui.column().classes("w-full gap-1 p-1"):
+
+                    # ─ Save section ──────────────────────────────────────────
+                    ui.label("💾 Save Selected Steps").classes("text-xs text-indigo-300 font-bold")
+                    reusable_sel_lbl = ui.label("0 steps selected").classes("text-xs text-slate-400")
+                    rs_name_input = ui.input(
+                        label="Group name", placeholder="e.g. setup_justdial"
+                    ).classes("w-full").props("dense clearable")
+                    rs_name_input.tooltip(
+                        "Lowercase letters/digits/underscores, starts with a letter, 2–50 chars"
+                    )
+
+                    rs_overwrite_pending: dict = {"name": None}
+                    rs_confirm_row = ui.row().classes("gap-1 items-center")
+                    rs_confirm_row.set_visibility(False)
+                    with rs_confirm_row:
+                        rs_confirm_lbl = ui.label("").classes("text-xs text-yellow-400")
+                        rs_overwrite_btn = ui.button("Overwrite", color="orange").props("flat dense size=sm")
+                        rs_cancel_btn   = ui.button("Cancel",    color="grey"  ).props("flat dense size=sm")
+
+                    def _do_rs_save(overwrite=False):
+                        from core.reusable_steps import save as _rs_save
+                        gname = (rs_name_input.value or "").strip()
+                        if not gname:
+                            ui.notify("Enter a group name", color="negative")
+                            return
+                        indices  = sorted(_state["selected_step_indices"])
+                        selected = [_state["flow_steps"][i] for i in indices
+                                    if i < len(_state["flow_steps"])]
+                        if not selected:
+                            ui.notify("Select at least one step (use checkboxes)", color="negative")
+                            return
+                        try:
+                            _rs_save(gname, selected, overwrite=overwrite)
+                            ui.notify(f"✅ Saved '{gname}' ({len(selected)} steps)", color="positive")
+                            _state["selected_step_indices"].clear()
+                            rs_name_input.set_value("")
+                            rs_confirm_row.set_visibility(False)
+                            rs_overwrite_pending["name"] = None
+                            _update_flow_list()
+                            _refresh_rs_results()
+                        except ValueError as e:
+                            msg = str(e)
+                            if msg.startswith("DUPLICATE:"):
+                                dup = msg.split(":", 1)[1]
+                                rs_overwrite_pending["name"] = dup
+                                rs_confirm_lbl.set_text(f"'{dup}' already exists.")
+                                rs_confirm_row.set_visibility(True)
+                                ui.notify(f"'{dup}' already exists — confirm overwrite", color="warning")
+                            else:
+                                ui.notify(msg, color="negative")
+                                rs_confirm_row.set_visibility(False)
+
+                    def _do_rs_overwrite():
+                        gname    = rs_overwrite_pending.get("name") or (rs_name_input.value or "").strip()
+                        indices  = sorted(_state["selected_step_indices"])
+                        selected = [_state["flow_steps"][i] for i in indices
+                                    if i < len(_state["flow_steps"])]
+                        from core.reusable_steps import save as _rs_save
+                        try:
+                            _rs_save(gname, selected, overwrite=True)
+                            ui.notify(f"✅ Overwritten '{gname}' ({len(selected)} steps)", color="positive")
+                            _state["selected_step_indices"].clear()
+                            rs_name_input.set_value("")
+                            rs_confirm_row.set_visibility(False)
+                            rs_overwrite_pending["name"] = None
+                            _update_flow_list()
+                            _refresh_rs_results()
+                        except ValueError as e:
+                            ui.notify(str(e), color="negative")
+
+                    rs_overwrite_btn.on("click", _do_rs_overwrite)
+                    rs_cancel_btn.on("click", lambda: rs_confirm_row.set_visibility(False))
+
+                    ui.button(
+                        "💾 Save as Reusable", on_click=lambda: _do_rs_save(False), color="indigo"
+                    ).props("flat dense").classes("text-xs font-bold w-full mt-1")
+
+                    ui.separator()
+
+                    # ─ Insert section ─────────────────────────────────────────
+                    ui.label("📥 Insert Reusable Step").classes("text-xs text-indigo-300 font-bold mt-1")
+                    rs_search_input = ui.input(
+                        label="Search saved groups…", placeholder="type to filter"
+                    ).classes("w-full").props("dense clearable")
+                    rs_results_scroll = ui.scroll_area().classes("w-full").style("height:160px;")
+
+                    def _refresh_rs_results(query=""):
+                        from core.reusable_steps import load_all as _rs_load
+                        all_groups = _rs_load()
+                        q = (query or "").strip().lower()
+                        matches = {n: v for n, v in all_groups.items() if not q or q in n}
+                        rs_results_scroll.clear()
+                        with rs_results_scroll:
+                            if not matches:
+                                lbl = "No saved groups yet" if not q else f"No match for '{q}'"
+                                ui.label(lbl).classes("text-xs text-slate-500 p-2")
+                                return
+                            for gname, gdata in sorted(matches.items()):
+                                with ui.card().classes("w-full p-1 mb-1 bg-indigo-900 border border-indigo-700"):
+                                    with ui.row().classes("items-center justify-between gap-1"):
+                                        ui.label(gname).classes(
+                                            "text-xs text-white font-bold truncate flex-1"
+                                        )
+                                        ui.badge(f"{gdata['step_count']} steps").props("color=indigo")
+                                        def make_insert(n=gname):
+                                            def _ins():
+                                                _state["flow_steps"].append(f"call {n}")
+                                                _update_flow_list()
+                                                ui.notify(f"✅ Inserted: call {n}", color="positive")
+                                            return _ins
+                                        ui.button(
+                                            "Insert", on_click=make_insert()
+                                        ).props("flat dense size=sm color=teal").classes("text-xs")
+                                    with ui.expansion("preview").props("dense").classes(
+                                        "text-xs text-slate-400"
+                                    ):
+                                        for st in gdata.get("steps", []):
+                                            ui.label(f"  {st}").classes("text-xs text-slate-300 font-mono")
+
+                    rs_search_input.on(
+                        "update:model-value",
+                        lambda e: _refresh_rs_results(
+                            e.value if hasattr(e, "value") else rs_search_input.value
+                        ),
+                    )
+                    _refresh_rs_results()
 
     # ── Dynamic element list renderer ─────────────────────────────────────────
     # ── Dynamic element list renderer ─────────────────────────────────────────
@@ -1578,15 +2064,34 @@ def build_ui():
     def _update_flow_list():
         steps = _state["flow_steps"]
         step_count_lbl.set_text(f"{len(steps)} steps")
+        # Prune stale indices
+        _state["selected_step_indices"] = {
+            idx for idx in _state["selected_step_indices"] if idx < len(steps)
+        }
         flow_scroll.clear()
         with flow_scroll:
             if not steps:
                 ui.label("No steps yet — record elements or use Quick Add").classes("text-slate-400 text-xs p-4")
+                reusable_sel_lbl.set_text("0 steps selected")
                 return
             for i, step in enumerate(steps, 1):
                 is_editing = (_state.get("edit_step_idx") == i - 1)
                 row_bg = "bg-yellow-900 border border-yellow-600" if is_editing else ""
                 with ui.row().classes(f"step-row w-full flex gap-2 items-center {row_bg}"):
+                    def make_toggle(idx=i-1):
+                        def _toggle(e):
+                            val = e.value if hasattr(e, "value") else e.args
+                            if val:
+                                _state["selected_step_indices"].add(idx)
+                            else:
+                                _state["selected_step_indices"].discard(idx)
+                            n = len(_state["selected_step_indices"])
+                            reusable_sel_lbl.set_text(
+                                f"{n} step{'s' if n != 1 else ''} selected"
+                            )
+                        return _toggle
+                    cb = ui.checkbox(value=(i-1 in _state["selected_step_indices"])).props("dense")
+                    cb.on("update:model-value", make_toggle())
                     ui.label(f"{i:2d}.").classes("w-6 text-slate-400 text-xs")
                     step_lbl = ui.label(step).classes(
                         "flex-1 text-white text-xs truncate cursor-pointer"
@@ -1603,6 +2108,11 @@ def build_ui():
                             _populate_form_from_step(s)
                             _update_flow_list()
                             ui.notify(f"✏️ Editing step {idx+1} — modify fields and click Update Step", color="info", timeout=4000)
+                            rs.log_action(
+                                _state.get("auth_session"),
+                                "edit_step_start",
+                                {"index": idx, "step": s},
+                            )
                         return _edit
 
                     def make_del(idx=i-1):
@@ -1614,6 +2124,11 @@ def build_ui():
                                     record_btn.set_text("⚡ Execute + Add Step")
                                 _update_flow_list()
                                 ui.notify(f"Deleted: {removed}", color="warning")
+                                rs.log_action(
+                                    _state.get("auth_session"),
+                                    "delete_step",
+                                    {"mode": "row_delete", "index": idx, "step": removed},
+                                )
                         return _del
 
                     def make_up(idx=i-1):
@@ -1636,6 +2151,8 @@ def build_ui():
                     ui.button("▲", on_click=make_up()).props("flat dense").classes("text-xs text-slate-400 p-0")
                     ui.button("▼", on_click=make_down()).props("flat dense").classes("text-xs text-slate-400 p-0")
                     ui.button("✕", on_click=make_del()).props("flat dense").classes("text-xs text-red-400 p-0")
+        n = len(_state["selected_step_indices"])
+        reusable_sel_lbl.set_text(f"{n} step{'s' if n != 1 else ''} selected")
 
     # ── Helper: parse a step string back into the record form fields ─────────
     def _populate_form_from_step(step: str):
@@ -1758,6 +2275,15 @@ def build_ui():
 
     # ── Screenshot auto-update timer ──────────────────────────────────────────
     async def _tick():
+        if _has_auth_session():
+            rs.touch_session(_state.get("auth_session"))
+        # Keep autocomplete in sync when locators are saved by another process/UI.
+        if _locators_file_changed() and _sync_known_names_from_locators(_state["platform"]):
+            _refresh_name_options()
+        if _state.pop("pending_context_refresh", False):
+            _refresh_name_options()
+            refresh_flow_list_select()
+
         if not _state["driver"] or not _state["auto_refresh"]:
             return
         _state["tick_count"] = _state.get("tick_count", 0) + 1
@@ -1818,17 +2344,16 @@ def _build_step(el, name: str, action: str, extra: str,
     if action == "tap":
         return f"{scroll_pfx}tap{vis} {_n(name)}{wait_sfx}"
     elif action == "type":
-        var = extra or "input_text"
+        var = extra
         if if_visible:
-            return f'{scroll_pfx}type if visible "{{{var}}}" into {_n(name)}{wait_sfx}'
+            return f'{scroll_pfx}type if visible "${{{var}}}" into {_n(name)}{wait_sfx}'
         return f'{scroll_pfx}type "${{{var}}}" into {_n(name)}'
     elif action == "verify exists":
         if if_visible:
             return f"{scroll_pfx}verify if visible {_n(name)}{wait_sfx}"
         return f"{scroll_pfx}verify element exists {_n(name)}"
     elif action == "verify text":
-        text = extra or name
-        return f'verify text "{text}"'
+        return f'verify text "{extra}"'
     elif action == "double tap":
         return f"{scroll_pfx}double tap{vis} {_n(name)}{wait_sfx}"
     elif action == "long press":
@@ -1863,7 +2388,7 @@ def _build_step(el, name: str, action: str, extra: str,
     elif action == "dismiss alerts":
         return "dismiss alerts"
     elif action == "go to url":
-        return f"go to url {extra or 'https://example.com'}"
+        return f"go to url {extra}"
     # ── Fake data ──────────────────────────────────────────────────────────
     elif action in ("fake name", "fake email", "fake phone", "fake uuid",
                     "fake number", "fake address", "fake company",
@@ -1892,14 +2417,12 @@ def _build_step(el, name: str, action: str, extra: str,
         return f"get date {offset} days as {var}"
     # ── HTTP / API ───────────────────────────────────────────────────────────
     elif action == "api get":
-        url = extra or "https://api.example.com/endpoint"
         var = name or "api_response"
-        return f'api get "{url}" as {var}'
+        return f'api get "{extra}" as {var}'
     elif action == "api post":
-        url  = extra or "https://api.example.com/endpoint"
         body = '{"key": "value"}'
         var  = name or "api_response"
-        return f"api post \"{url}\" with body '{body}' as {var}"
+        return f"api post \"{extra}\" with body '{body}' as {var}"
     elif action == "store json path":
         src  = extra or "api_response"
         path = name or "data.0.id"
@@ -1932,13 +2455,13 @@ def _build_step(el, name: str, action: str, extra: str,
     elif action == "js scroll bottom":
         return "js scroll bottom"
     elif action == "js type":
-        return f'js type "{extra or "text"}" into {name}'
+        return f'js type "{extra}" into {name}'
     elif action == "js focus":
         return f"js focus {name}"
     elif action == "js submit":
         return f"js submit {name}"
     elif action == "js dispatch":
-        return f"js dispatch {extra or 'change'} on {name}"
+        return f"js dispatch {extra} on {name}"
     return None
 
 

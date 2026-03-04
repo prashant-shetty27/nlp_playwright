@@ -1,18 +1,15 @@
 """
 api/routes/locators.py
 GET    /locators               — all locators (both DBs merged)
+GET    /locators/dropdown/names — flat name map for dropdowns
 GET    /locators/{page}        — all locators for one page
 POST   /locators               — add / overwrite a locator
 DELETE /locators/{page}/{name} — remove a locator
 """
-import json
-import os
-
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from locators.manager import get_all_locators, load_locators
-from config.settings import MANUAL_LOCATORS_FILE, RECORDED_ELEMENTS_FILE
+from locators.manager import get_all_locators, load_locators, save_locators
 
 router = APIRouter(prefix="/locators", tags=["locators"])
 
@@ -29,26 +26,30 @@ class LocatorBody(BaseModel):
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
 def _write_manual(data: dict) -> None:
-    os.makedirs(os.path.dirname(MANUAL_LOCATORS_FILE), exist_ok=True)
-    with open(MANUAL_LOCATORS_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
+    save_locators(data)
 
 
 # ── Routes ─────────────────────────────────────────────────────────────────────
 
 @router.get("")
 def list_all_locators():
-    """Return every locator from both manual and recorded DBs."""
+    """Return every locator from both manual and recorded DBs, keyed by page."""
+    return load_locators()
+
+
+@router.get("/dropdown/names")
+def list_locator_names():
+    """Return flat element-name → display-string map for UI dropdowns."""
     return get_all_locators()
 
 
 @router.get("/{page}")
 def list_page_locators(page: str):
     """Return all locators for a specific page."""
-    all_locs = get_all_locators()
-    if page not in all_locs:
+    data = load_locators()
+    if page not in data:
         raise HTTPException(status_code=404, detail=f"Page '{page}' not found.")
-    return all_locs[page]
+    return data[page]
 
 
 @router.post("", status_code=201)

@@ -3,11 +3,12 @@ locators/watcher.py
 LocatorWatcher — file system observer for live locator hot-reloading.
 Extracted from locator_manager.py.
 """
-import json
 import logging
+import os
 
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
+from locators.io_utils import file_lock, read_json
 
 logger = logging.getLogger(__name__)
 
@@ -25,14 +26,14 @@ class LocatorWatcher(FileSystemEventHandler):
 
     def load_into_memory(self) -> None:
         try:
-            with open(self.file_path, "r") as f:
-                self.live_locators = json.load(f)
+            with file_lock(self.file_path, exclusive=False):
+                self.live_locators = read_json(self.file_path, retries=3)
             logger.info("🔄 Locators reloaded from %s", self.file_path)
         except Exception as e:
             logger.error("❌ Error loading locators: %s", e)
 
     def on_modified(self, event) -> None:
-        if event.src_path.endswith(self.file_path):
+        if os.path.abspath(event.src_path) == os.path.abspath(self.file_path):
             self.load_into_memory()
 
 

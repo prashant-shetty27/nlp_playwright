@@ -308,7 +308,7 @@ def parse_step(step: str) -> Command:
     m = re.match(r'^store\s+text\s+(?:of|from)\s+(\S+)\s+as\s+(\S+)$', s, re.I)
     if m:
         locator, var_name = m.groups()
-        return Command(type="store_text", target=locator, variable_name=var_name)
+        return Command(type="extract_text", target=locator, variable_name=var_name)
 
     # =============================
     # STORE PAGE URL / TITLE
@@ -630,6 +630,14 @@ def parse_step(step: str) -> Command:
     m = re.match(r'^js\s+dispatch\s+(\S+)\s+on\s+(\S+)$', s, re.I)
     if m:
         return Command(type="js_dispatch", text=m.group(1), target=m.group(2).strip())
+
+    # =============================
+    # CALL REUSABLE STEPS
+    # call <name>  — inline-expands a saved reusable step group at runtime
+    # =============================
+    m = re.match(r'^call\s+(\S+)$', s, re.I)
+    if m:
+        return Command(type="call_reusable", target=m.group(1).strip())
 
     # =============================
     # TERMINAL FALLBACK

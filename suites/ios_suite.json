@@ -11,7 +11,6 @@
   ],
 
   "desired_capabilities": {
-    "platform":              "ios",
     "platformName":          "iOS",
     "appium:automationName": "XCUITest",
 
@@ -29,20 +28,23 @@
     "appium:noReset": false,
     "_comment_autoAcceptAlerts": "false = we handle alerts manually via 'dismiss alerts' in flows (deny contacts = no sharing sheet). true = auto-accepts all, grants contacts, triggers JD sharing UI.",
     "appium:autoAcceptAlerts": false,
+    "_comment_autoDismissAlerts": "true = let XCUITest auto-dismiss iOS system permission alerts (Don't Allow path).",
+    "appium:autoDismissAlerts": true,
     "_comment_appPushTimeout": "58MB IPA needs more than default 480s; 900s = 15 min covers large IPAs over slow USB",
     "appium:appPushTimeout": 900000,
 
     "_comment_signing": "Real device requires WDA code signing. xcodeOrgId + xcodeSigningId are the primary signing config; xcodeConfigFile provides xcconfig overrides.",
-    "appium:xcodeOrgId": "53NR34M72B",
+    "appium:xcodeOrgId": "B6X5B62QJ6",
     "appium:xcodeSigningId": "Apple Development",
     "appium:xcodeConfigFile": "/Users/prashantshetty/nlp_playwright/config/wda_signing.xcconfig",
     "appium:updatedWDABundleId": "com.prashantshetty.integrationapp",
-    "_comment_useNewWDA": "true = force fresh WDA build and re-sign; set false after first successful run for speed. Bundle ID matches provisioning profiles for team 53NR34M72B.",
+    "_comment_useNewWDA": "true = force fresh WDA build and re-sign; set false after first successful run for speed. Bundle ID matches provisioning profiles for team B6X5B62QJ6.",
     "appium:useNewWDA": false,
+    "appium:allowProvisioningUpdates": true,
     "appium:allowProvisioningDeviceRegistration": true,
     "appium:wdaLaunchTimeout": 600000,
     "appium:wdaConnectionTimeout": 660000,
-    "appium:wdaLocalPort": 8100,
+    "appium:wdaLocalPort": 8110,
     "appium:showXcodeLog": true
   },
 

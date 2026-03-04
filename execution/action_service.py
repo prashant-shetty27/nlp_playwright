@@ -15,6 +15,7 @@ from execution.retry import with_retry
 from execution.browser_manager import (
     _ensure_dir, _timestamp, get_standard_timeout_ms, get_default_scroll_count,
 )
+from execution.session import TestSession
 from nlp.variable_manager import RUNTIME_VARIABLES, resolve_variables
 from locators.manager import get_locator_and_dna
 from core.healer import ml_heal_element
@@ -25,23 +26,26 @@ from config import settings
 logger = logging.getLogger(__name__)
 
 # ─────────────────────────────────────────────────────────────────────────────
-# TAB / WINDOW & IFRAME STATE
-# These module-level refs let NLP steps switch the active tab or iframe context
-# without changing the runner's own page reference.
+# TAB / WINDOW & IFRAME STATE (session-scoped)
 # ─────────────────────────────────────────────────────────────────────────────
-_ACTIVE_PAGE = None   # overrides default page when user switches tabs (None = use runner's page)
-_ACTIVE_FRAME = None  # FrameLocator override when inside an iframe (None = use page)
+_TEST_SESSION: TestSession = TestSession()
+
+
+def set_test_session(session: TestSession | None) -> None:
+    """Bind action-service state to the active run session."""
+    global _TEST_SESSION
+    _TEST_SESSION = session or TestSession()
 
 
 def get_active_page(default_page):
     """Return the active tab page; falls back to the runner's page if no tab switch happened."""
-    return _ACTIVE_PAGE if _ACTIVE_PAGE is not None else default_page
+    return _TEST_SESSION.active_page if _TEST_SESSION.active_page is not None else default_page
 
 
 def _get_locator_root(page):
     """Return the iframe FrameLocator when inside one, else the active page."""
-    if _ACTIVE_FRAME is not None:
-        return _ACTIVE_FRAME
+    if _TEST_SESSION.active_frame is not None:
+        return _TEST_SESSION.active_frame
     return get_active_page(page)
 
 
@@ -146,6 +150,7 @@ def open_site(page, url: str):
 # ─────────────────────────────────────────────────────────────────────────────
 # CLICK
 # ─────────────────────────────────────────────────────────────────────────────
+@with_retry(max_attempts=2, delay=1.0)
 def click_element(page, locator_name):
     primary_xpath, dna = get_locator_and_dna(locator_name)
     if not primary_xpath:
@@ -180,7 +185,7 @@ def click_element(page, locator_name):
         try:
             healed_xpath = ml_heal_element(page, dna)
         except Exception as ml_err:
-            raise Exception(f"Self-healing math failed: {ml_err}")
+            raise Exception(f"Self-healing match failed: {ml_err}")
 
         if healed_xpath:
             page.locator(healed_xpath).first.click(timeout=5000)
@@ -193,6 +198,7 @@ def click_element(page, locator_name):
 # ─────────────────────────────────────────────────────────────────────────────
 # FILL
 # ─────────────────────────────────────────────────────────────────────────────
+@with_retry(max_attempts=2, delay=1.0)
 def fill_element(page, text, locator_name):
     primary_xpath, dna = get_locator_and_dna(locator_name)
     if not primary_xpath:
@@ -208,7 +214,7 @@ def fill_element(page, text, locator_name):
         except PlaywrightTimeoutError:
             if loc.count() > 0:
                 logger.warning("🛡️ Input field blocked. Forcing value via JavaScript...")
-                loc.evaluate(f"el => el.value = '{text}'")
+                loc.evaluate("(el, v) => { el.value = v; }", text)
                 loc.dispatch_event("input")
                 return True
             raise
@@ -225,7 +231,7 @@ def fill_element(page, text, locator_name):
         try:
             healed_xpath = ml_heal_element(page, dna)
         except Exception as ml_err:
-            raise Exception(f"Self-healing math failed: {ml_err}")
+            raise Exception(f"Self-healing match failed: {ml_err}")
 
         if healed_xpath:
             execute_robust_fill(healed_xpath)
@@ -285,6 +291,8 @@ def extract_input_value(page, locator_name, variable_name):
 
 def extract_element_count(page, locator_name, variable_name):
     primary_xpath, _ = get_locator_and_dna(locator_name)
+    if not primary_xpath:
+        raise Exception(f"Locator '{locator_name}' not found in any page.")
     primary_xpath = resolve_variables(primary_xpath)
     count = page.locator(primary_xpath).count()
     RUNTIME_VARIABLES[variable_name] = str(count)
@@ -720,21 +728,20 @@ def take_screenshot(page_obj, label="capture"):
 
 def switch_tab(page, index: int):
     """Focus a browser tab by 0-based index."""
-    global _ACTIVE_PAGE
     pages = page.context.pages
     if index < 0 or index >= len(pages):
         raise AssertionError(
             f"❌ Tab index {index} out of range. "
             f"Open tabs: {len(pages)}  (valid: 0–{len(pages) - 1})"
         )
-    _ACTIVE_PAGE = pages[index]
-    _ACTIVE_PAGE.bring_to_front()
-    logger.info("🪟 Switched to tab %d — %s", index, _ACTIVE_PAGE.url)
+    _TEST_SESSION.active_page = pages[index]
+    _TEST_SESSION.active_frame = None
+    _TEST_SESSION.active_page.bring_to_front()
+    logger.info("🪟 Switched to tab %d — %s", index, _TEST_SESSION.active_page.url)
 
 
 def close_tab(page, index=None):
     """Close a tab by index (or the current active tab when index is None)."""
-    global _ACTIVE_PAGE
     ctx = page.context
     pages = ctx.pages
     if index is not None:
@@ -742,31 +749,38 @@ def close_tab(page, index=None):
             raise AssertionError(f"❌ Tab index {index} out of range (0–{len(pages) - 1})")
         target = pages[index]
     else:
-        target = _ACTIVE_PAGE or page
+        target = _TEST_SESSION.active_page or page
     target.close()
     remaining = ctx.pages
-    _ACTIVE_PAGE = remaining[0] if remaining else None
-    if _ACTIVE_PAGE:
-        _ACTIVE_PAGE.bring_to_front()
-    logger.info("🗑️  Tab closed. Active tab: %s", _ACTIVE_PAGE.url if _ACTIVE_PAGE else "—")
+    _TEST_SESSION.active_page = remaining[0] if remaining else None
+    _TEST_SESSION.active_frame = None
+    if _TEST_SESSION.active_page:
+        _TEST_SESSION.active_page.bring_to_front()
+    logger.info(
+        "🗑️  Tab closed. Active tab: %s",
+        _TEST_SESSION.active_page.url if _TEST_SESSION.active_page else "—",
+    )
 
 
 def close_all_tabs(page):
     """Close every tab except tab 0 and reset focus to tab 0."""
-    global _ACTIVE_PAGE
     pages = page.context.pages
     for p in pages[1:]:
         p.close()
-    _ACTIVE_PAGE = pages[0] if pages else None
-    if _ACTIVE_PAGE:
-        _ACTIVE_PAGE.bring_to_front()
-    logger.info("🗑️  Closed all tabs. Active: %s", _ACTIVE_PAGE.url if _ACTIVE_PAGE else "—")
+    _TEST_SESSION.active_page = pages[0] if pages else None
+    _TEST_SESSION.active_frame = None
+    if _TEST_SESSION.active_page:
+        _TEST_SESSION.active_page.bring_to_front()
+    logger.info(
+        "🗑️  Closed all tabs. Active: %s",
+        _TEST_SESSION.active_page.url if _TEST_SESSION.active_page else "—",
+    )
 
 
 def open_new_tab(page):
     """Open a blank new tab and switch focus to it."""
-    global _ACTIVE_PAGE
-    _ACTIVE_PAGE = page.context.new_page()
+    _TEST_SESSION.active_page = page.context.new_page()
+    _TEST_SESSION.active_frame = None
     logger.info("🪟 Opened new tab (now active).")
 
 
@@ -788,16 +802,14 @@ def list_tabs(page):
 
 def switch_iframe(page, selector: str):
     """Switch element-interaction context into an iframe matching the given CSS/XPath selector."""
-    global _ACTIVE_FRAME
     effective = get_active_page(page)
-    _ACTIVE_FRAME = effective.frame_locator(selector)
+    _TEST_SESSION.active_frame = effective.frame_locator(selector)
     logger.info("🖼️  Entered iframe: %s", selector)
 
 
 def exit_iframe(_page=None):
     """Return to the main frame (clear iframe context)."""
-    global _ACTIVE_FRAME
-    _ACTIVE_FRAME = None
+    _TEST_SESSION.active_frame = None
     logger.info("🖼️  Exited iframe — back to main frame.")
 
 
@@ -1014,6 +1026,8 @@ def read_csv_cell(file_path: str, row: int, col, variable_name: str):
 
 @codeless_snippet("Open Site")
 def ui_open_site(page, target_url_or_key: str):
+    from config.environment_manager import get_active_env, transform_url
+
     target = target_url_or_key.lower().strip()
     if target.startswith("http://") or target.startswith("https://"):
         url_to_open = target
@@ -1021,9 +1035,10 @@ def ui_open_site(page, target_url_or_key: str):
         url_to_open = SITES[target]
     else:
         raise ValueError(f"❌ Unknown site or invalid URL: {target}")
-    page.goto(url_to_open, wait_until="load")
-    logger.info(f"🌐 Page Loaded: {url_to_open}")
-    _stabilize_page(page)
+
+    # JSON/codeless flows bypass runner.py step-rewrite, so apply env transform here.
+    resolved_url = transform_url(url_to_open, get_active_env())
+    open_site(page, resolved_url)
 
 
 @codeless_snippet("Click Element")

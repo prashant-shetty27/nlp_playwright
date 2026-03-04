@@ -8,14 +8,69 @@ Unified variable/memory management for both NLP-flow and JSON-flow execution pat
 """
 import re
 import logging
-from typing import Any, Dict
+import threading
+from typing import Any, Dict, Iterator, MutableMapping
 
 logger = logging.getLogger(__name__)
 
 # ─────────────────────────────────────────────────────────────────────────────
-# SHARED RUNTIME MEMORY (replaces global RUNTIME_VARIABLES in actions.py)
+# SHARED RUNTIME MEMORY — thread-local, per-execution isolation
+#
+# Each thread (each concurrent test run / API request) gets its own store via
+# threading.local().  Calling bind_runtime_variables() in thread A has zero
+# effect on thread B.  All existing `from ... import RUNTIME_VARIABLES`
+# callsites continue to work without modification.
 # ─────────────────────────────────────────────────────────────────────────────
-RUNTIME_VARIABLES: Dict[str, Any] = {}
+class RuntimeVariablesProxy(MutableMapping[str, Any]):
+    """
+    Thread-local variable store.  Each thread maintains an independent backing
+    dict that is bound via bind_runtime_variables() at the start of each run.
+    """
+
+    def __init__(self):
+        self._local = threading.local()
+
+    def _store(self) -> Dict[str, Any]:
+        if not hasattr(self._local, "_store"):
+            self._local._store = {}
+        return self._local._store
+
+    def bind(self, store: Dict[str, Any] | None) -> Dict[str, Any]:
+        """Bind this thread's store to the given dict (e.g. session.runtime_variables)."""
+        self._local._store = store if store is not None else {}
+        return self._local._store
+
+    def backend(self) -> Dict[str, Any]:
+        return self._store()
+
+    def __getitem__(self, key: str) -> Any:
+        return self._store()[key]
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        self._store()[key] = value
+
+    def __delitem__(self, key: str) -> None:
+        del self._store()[key]
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self._store())
+
+    def __len__(self) -> int:
+        return len(self._store())
+
+    def __repr__(self) -> str:
+        return repr(self._store())
+
+
+RUNTIME_VARIABLES = RuntimeVariablesProxy()
+
+
+def bind_runtime_variables(store: Dict[str, Any] | None = None) -> Dict[str, Any]:
+    """
+    Bind this thread's runtime memory to the given dict.
+    Call once at the start of each run/request — does not affect other threads.
+    """
+    return RUNTIME_VARIABLES.bind(store if store is not None else {})
 
 
 def resolve_variables(text: Any) -> Any:

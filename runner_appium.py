@@ -11,6 +11,7 @@ Used by plan_runner.py automatically when suite platform = android|ios.
 """
 
 import os
+import re
 import sys
 import json
 import logging
@@ -20,13 +21,42 @@ import threading
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
 
 from nlp.parser import parse_step
-from nlp.variable_manager import RUNTIME_VARIABLES, resolve_variables
+from nlp.variable_manager import RUNTIME_VARIABLES, bind_runtime_variables, resolve_variables
+from execution.session import TestSession
+from execution.ios_readiness import enforce_ios_readiness, enrich_ios_session_exception
 from config import settings
 from config.settings import _as_bool
 
 logger = logging.getLogger(__name__)
 
-_STOP_ON_FAILURE: bool = False
+# ── Per-thread execution state ────────────────────────────────────────────────
+_thread_local = threading.local()
+
+
+def _get_stop_on_failure() -> bool:
+    return getattr(_thread_local, "stop_on_failure", False)
+
+
+def _set_stop_on_failure(val: bool) -> None:
+    _thread_local.stop_on_failure = val
+
+
+def _get_call_stack() -> set:
+    if not hasattr(_thread_local, "call_stack"):
+        _thread_local.call_stack = set()
+    return _thread_local.call_stack
+def _bind_app_runtime_session() -> None:
+    """
+    Bind this thread's runtime variable proxy to a fresh TestSession store,
+    preserving any variables pre-injected by callers (e.g. suite parameters).
+    Each thread gets its own isolated TestSession via threading.local().
+    """
+    preloaded = dict(RUNTIME_VARIABLES.items())
+    session = TestSession()
+    _thread_local.session = session
+    if preloaded:
+        session.runtime_variables.update(preloaded)
+    bind_runtime_variables(session.runtime_variables)
 
 # ── Timeout configuration (seconds) ──────────────────────────────────────────
 SESSION_START_TIMEOUT   = 1200  # 20 min — max time for WDA build + IPA install + session start (iOS WDA build 8-15 min, large IPA push up to 15 min)
@@ -297,12 +327,28 @@ def _is_app_installed_on_simulator(udid: str, bundle_id: str) -> bool:
         return False
 
 
+def _is_simulator_udid(udid: str) -> bool:
+    """Best-effort simulator detection by checking whether simctl knows the UDID."""
+    if not udid:
+        return False
+    try:
+        result = subprocess.run(
+            ["xcrun", "simctl", "list", "devices"],
+            capture_output=True, text=True, timeout=15
+        )
+        return udid in (result.stdout or "")
+    except Exception:
+        return False
+
+
 def _prepare_ios_app(caps: dict) -> dict:
     """
     iOS pre-session policy:
     - If the app is already installed on the simulator, remove appium:app
       so Appium launches it directly without reinstalling.
     - On a real device, keep appium:app as-is (always install IPA).
+    - If autoAcceptAlerts is explicitly false and autoDismissAlerts is unset,
+      enable autoDismissAlerts to reliably close permission popups.
     """
     prepared = dict(caps)
 
@@ -310,25 +356,37 @@ def _prepare_ios_app(caps: dict) -> dict:
     bundle_id  = prepared.get("appium:bundleId") or prepared.get("bundleId", "")
     app_path   = prepared.get("appium:app") or prepared.get("app", "")
 
-    # Only applies when targeting a simulator (no real-device udid format)
-    # Simulator UDIDs are UUID format; real device UDIDs are 40-char hex or
-    # alphanumeric. Simplest check: if xcrun simctl knows the udid it's a sim.
     if udid and bundle_id and app_path:
-        if _is_app_installed_on_simulator(udid, bundle_id):
-            logger.info(
-                "✅ iOS simulator: '%s' already installed on %s — skipping reinstall",
-                bundle_id, udid,
-            )
-            prepared.pop("appium:app", None)
-            prepared.pop("app", None)
-            prepared["appium:noReset"] = True
+        if _is_simulator_udid(udid):
+            if _is_app_installed_on_simulator(udid, bundle_id):
+                logger.info(
+                    "✅ iOS simulator: '%s' already installed on %s — skipping reinstall",
+                    bundle_id, udid,
+                )
+                prepared.pop("appium:app", None)
+                prepared.pop("app", None)
+                prepared["appium:noReset"] = True
+            else:
+                logger.info(
+                    "📦 iOS simulator: '%s' NOT found on %s — will install from: %s",
+                    bundle_id, udid, app_path,
+                )
         else:
             logger.info(
-                "📦 iOS simulator: '%s' NOT found on %s — will install from: %s",
-                bundle_id, udid, app_path,
+                "📦 iOS real device: will install '%s' from: %s",
+                bundle_id, app_path,
             )
     elif not app_path and bundle_id:
         logger.info("✅ iOS: no appium:app set — launching existing install of '%s'", bundle_id)
+
+    auto_accept = prepared.get("appium:autoAcceptAlerts", prepared.get("autoAcceptAlerts"))
+    has_auto_dismiss = (
+        "appium:autoDismissAlerts" in prepared
+        or "autoDismissAlerts" in prepared
+    )
+    if auto_accept is False and not has_auto_dismiss:
+        prepared["appium:autoDismissAlerts"] = True
+        logger.info("🛡️  iOS: autoAcceptAlerts=false → enabling autoDismissAlerts=true")
 
     return prepared
 
@@ -389,6 +447,7 @@ def _start_session(capabilities: dict, platform: str):
     # ── iOS simulator: check if app is already installed; skip appium:app if so ─
     if platform == "ios":
         caps = _prepare_ios_app(caps)
+        caps = enforce_ios_readiness(caps)
 
     server_url = settings.APPIUM_SERVER_URL
     logger.info("🔗 Connecting to Appium at %s [platform=%s]", server_url, platform.upper())
@@ -428,36 +487,41 @@ def _start_session(capabilities: dict, platform: str):
 
     _lock_deadline = time.time() + DEVICE_LOCK_RETRY_TIMEOUT
     driver = None
-    while True:
-        with ThreadPoolExecutor(max_workers=1) as pool:
-            future = pool.submit(_create_driver)
-            try:
-                driver = future.result(timeout=SESSION_START_TIMEOUT)
-                break  # session created successfully
-            except FuturesTimeout:
-                future.cancel()
-                raise TimeoutError(
-                    f"⏰ SESSION TIMEOUT: Appium session did not start within "
-                    f"{SESSION_START_TIMEOUT}s — WDA build or device connection may be stuck"
-                )
-            except Exception as exc:
-                err_str = str(exc)
-                is_locked = (
-                    "could not be, unlocked" in err_str
-                    or "device was not" in err_str
-                    or "Locked" in err_str
-                )
-                if is_locked and time.time() < _lock_deadline:
-                    remaining = max(0, int(_lock_deadline - time.time()))
-                    logger.warning(
-                        "🔒 Device locked — please unlock your device. "
-                        "Retrying in 10s (up to %ds remaining)…",
-                        remaining,
+    try:
+        while True:
+            with ThreadPoolExecutor(max_workers=1) as pool:
+                future = pool.submit(_create_driver)
+                try:
+                    driver = future.result(timeout=SESSION_START_TIMEOUT)
+                    break  # session created successfully
+                except FuturesTimeout:
+                    future.cancel()
+                    raise TimeoutError(
+                        f"⏰ SESSION TIMEOUT: Appium session did not start within "
+                        f"{SESSION_START_TIMEOUT}s — WDA build or device connection may be stuck"
                     )
-                    time.sleep(10)
-                    # loop continues — rebuild the executor and retry
-                else:
-                    raise
+                except Exception as exc:
+                    err_str = str(exc)
+                    is_locked = (
+                        "could not be, unlocked" in err_str
+                        or "device was not" in err_str
+                        or "Locked" in err_str
+                    )
+                    if is_locked and time.time() < _lock_deadline:
+                        remaining = max(0, int(_lock_deadline - time.time()))
+                        logger.warning(
+                            "🔒 Device locked — please unlock your device. "
+                            "Retrying in 10s (up to %ds remaining)…",
+                            remaining,
+                        )
+                        time.sleep(10)
+                        # loop continues — rebuild the executor and retry
+                    else:
+                        raise
+    except Exception as exc:
+        if platform == "ios":
+            raise enrich_ios_session_exception(exc, caps) from exc
+        raise
 
     logger.info("🚀 Appium session started — id: %s", driver.session_id)
     _touch_activity()
@@ -496,8 +560,10 @@ def _execute_step(cmd, driver, platform: str):
 
     # Extract index suffix from target (e.g. "login_btn[last]" → el_index="last")
     # _find_element handles this internally, but we also expose it for if-visible helpers.
-    _idx_m = __import__("re").match(r'^(.+?)\[([^\]]+)\]$', target)
+    _idx_m = re.match(r'^(.+?)\[([^\]]+)\]$', target)
     el_index = _idx_m.group(2) if _idx_m else "any"
+    first_value = (cmd.values or [None])[0] if hasattr(cmd, "values") else None
+    first_value = resolve_variables(first_value) if isinstance(first_value, str) else first_value
 
     dispatch = {
         # ── App lifecycle ─────────────────────────────────────────────────
@@ -507,9 +573,9 @@ def _execute_step(cmd, driver, platform: str):
         # target may carry [index] suffix — _find_element handles it internally
         "click":                     lambda: svc.tap_element(driver, target, platform),
         "tap":                       lambda: svc.tap_element(driver, target, platform),
-        "tap_text":                  lambda: svc.tap_by_text(driver, text),
-        "dismiss_alerts":            lambda: svc.dismiss_alerts(driver),
-        "dismiss_play_rating":       lambda: svc.dismiss_play_rating(driver),
+        "tap_text":                  lambda: svc.tap_by_text(driver, text, platform),
+        "dismiss_alerts":            lambda: svc.dismiss_alerts(driver, platform),
+        "dismiss_play_rating":       lambda: svc.dismiss_play_rating(driver, platform),
         "click_if_exists":           lambda: _tap_if_exists(svc, driver, target, platform),
         "tap_if_exists":             lambda: _tap_if_exists(svc, driver, target, platform),
         # ── If Visible (conditional + optional wait timeout) ──────────────
@@ -517,24 +583,24 @@ def _execute_step(cmd, driver, platform: str):
         "click_if_visible":          lambda: _tap_if_visible(svc, driver, target, platform, float(cmd.wait or 0)),
         "fill_if_visible":           lambda: _fill_if_visible(svc, driver, target, text, platform, float(cmd.wait or 0)),
         "type_if_visible":           lambda: _fill_if_visible(svc, driver, target, text, platform, float(cmd.wait or 0)),
-        "verify_if_visible":         lambda: _verify_if_visible(svc, driver, target, platform, float(cmd.wait or 0)),
+        "verify_if_visible":         lambda: _verify_if_visible(svc, driver, target, platform, float(cmd.wait or 0), el_index),
         "double_tap_if_visible":     lambda: _double_tap_if_visible(svc, driver, target, platform, float(cmd.wait or 0)),
         "long_press_if_visible":     lambda: _long_press_if_visible(svc, driver, target, platform, float(cmd.wait or 0)),
-        "store_text_if_visible":     lambda: _store_text_if_visible(svc, driver, target, platform, cmd.variable_name, float(cmd.wait or 0)),
+        "store_text_if_visible":     lambda: _store_text_if_visible(svc, driver, target, platform, cmd.variable_name, float(cmd.wait or 0), el_index),
         # ─────────────────────────────────────────────────────────────────
         "fill":                      lambda: svc.fill_element(driver, target, text, platform),
         "type":                      lambda: svc.fill_element(driver, target, text, platform),
-        "type_text":                 lambda: svc.type_into_active(driver, text),
+        "type_text":                 lambda: svc.type_into_active(driver, text, platform),
         "fill_if_exists":            lambda: _fill_if_exists(svc, driver, target, text, platform),
         "type_if_exists":            lambda: _fill_if_exists(svc, driver, target, text, platform),
         "clear":                     lambda: svc.clear_element(driver, target, platform),
         "double_tap":                lambda: svc.double_tap(driver, target, platform),
         "long_press":                lambda: svc.long_press(driver, target, platform),
-        "wait_for_element":          lambda: svc.wait_for_element(driver, target, platform),
+        "wait_for_element":          lambda: svc.wait_for_element(driver, target, platform, timeout_s=float(cmd.wait or 15)),
         "press_back":                lambda: svc.press_back(driver),
-        "press_home":                lambda: svc.press_home(driver),
-        "press_enter":               lambda: svc.press_enter(driver),
-        "hide_keyboard":             lambda: svc.hide_keyboard(driver),
+        "press_home":                lambda: svc.press_home(driver, platform),
+        "press_enter":               lambda: svc.press_enter(driver, platform),
+        "hide_keyboard":             lambda: svc.hide_keyboard(driver, platform),
         # ── Scroll / Swipe ────────────────────────────────────────────────
         "scroll":                    lambda: svc.swipe_up(driver),
         "scroll_down":               lambda: svc.swipe_up(driver),
@@ -542,7 +608,7 @@ def _execute_step(cmd, driver, platform: str):
         "swipe_left":                lambda: svc.swipe_left(driver),
         "swipe_right":               lambda: svc.swipe_right(driver),
         "scroll_until_text_visible": lambda: svc.scroll_until_text_visible(
-                                         driver, text, int(cmd.count or 8), float(cmd.wait or 0.5)
+                                         driver, text, int(cmd.count or 8), float(cmd.wait or 0.5), platform
                                      ),
         "scroll_until_element":      lambda: svc.scroll_until_element_visible(
                                          driver, target, platform, int(cmd.count or 8)
@@ -567,29 +633,31 @@ def _execute_step(cmd, driver, platform: str):
         "create_variable":           lambda: svc.store_variable(text, target),
         "math":                      lambda: _execute_math(cmd),
         # ── Fake data generation (faker) ─────────────────────────────────────
-        "generate_fake":             lambda: __import__("execution.action_service", fromlist=["generate_fake_data"]).generate_fake_data(cmd.text, cmd.variable_name),
-        "random_number":             lambda: __import__("execution.action_service", fromlist=["generate_random_number"]).generate_random_number(cmd.target, cmd.text, cmd.variable_name),
+        "generate_fake":             lambda: __import__("execution.action_service", fromlist=["generate_fake_data"]).generate_fake_data(text, cmd.variable_name),
+        "random_number":             lambda: __import__("execution.action_service", fromlist=["generate_random_number"]).generate_random_number(target, text, cmd.variable_name),
         "random_string":             lambda: __import__("execution.action_service", fromlist=["generate_random_string"]).generate_random_string(cmd.count or 8, cmd.variable_name),
         # ── Date / Time ───────────────────────────────────────────────────────
-        "get_date":                  lambda: __import__("execution.action_service", fromlist=["get_date_value"]).get_date_value(cmd.text, cmd.variable_name),
-        "format_date":               lambda: __import__("execution.action_service", fromlist=["format_date_value"]).format_date_value(cmd.text, cmd.values[0], cmd.variable_name),
+        "get_date":                  lambda: __import__("execution.action_service", fromlist=["get_date_value"]).get_date_value(text, cmd.variable_name),
+        "format_date":               lambda: __import__("execution.action_service", fromlist=["format_date_value"]).format_date_value(text, first_value, cmd.variable_name),
         # ── HTTP / API ───────────────────────────────────────────────────────
-        "api_get":                   lambda: __import__("execution.action_service", fromlist=["api_get"]).api_get(cmd.text, cmd.variable_name),
-        "api_post":                  lambda: __import__("execution.action_service", fromlist=["api_post"]).api_post(cmd.text, cmd.target, cmd.variable_name),
-        "extract_json":              lambda: __import__("execution.action_service", fromlist=["extract_json_path"]).extract_json_path(cmd.target, cmd.text, cmd.variable_name),
+        "api_get":                   lambda: __import__("execution.action_service", fromlist=["api_get"]).api_get(text, cmd.variable_name),
+        "api_post":                  lambda: __import__("execution.action_service", fromlist=["api_post"]).api_post(text, target, cmd.variable_name),
+        "extract_json":              lambda: __import__("execution.action_service", fromlist=["extract_json_path"]).extract_json_path(target, text, cmd.variable_name),
         # ── Excel / CSV ───────────────────────────────────────────────────────
-        "read_excel_cell":           lambda: __import__("execution.action_service", fromlist=["read_excel_cell"]).read_excel_cell(cmd.text, int(cmd.target), cmd.values[0], cmd.variable_name),
-        "read_excel_row":            lambda: __import__("execution.action_service", fromlist=["read_excel_row"]).read_excel_row(cmd.text, int(cmd.target), cmd.variable_name),
-        "read_csv_cell":             lambda: __import__("execution.action_service", fromlist=["read_csv_cell"]).read_csv_cell(cmd.text, int(cmd.target), cmd.values[0], cmd.variable_name),
-        # -- JavaScript Actions (WebView / mobile-browser context) -----
-        "js_click":     lambda: __import__("execution.action_service", fromlist=["js_click"]).js_click(driver, cmd.target),
-        "js_scroll_to": lambda: __import__("execution.action_service", fromlist=["js_scroll_to"]).js_scroll_to(driver, cmd.target),
-        "js_scroll":    lambda: __import__("execution.action_service", fromlist=["js_scroll"]).js_scroll(driver, cmd.text, cmd.count or 300),
-        "js_type":      lambda: __import__("execution.action_service", fromlist=["js_type"]).js_type(driver, cmd.text, cmd.target),
-        "js_set_value": lambda: __import__("execution.action_service", fromlist=["js_set_value"]).js_set_value(driver, cmd.text, cmd.target),
-        "js_focus":     lambda: __import__("execution.action_service", fromlist=["js_focus"]).js_focus(driver, cmd.target),
-        "js_submit":    lambda: __import__("execution.action_service", fromlist=["js_submit"]).js_submit(driver, cmd.target),
-        "js_dispatch":  lambda: __import__("execution.action_service", fromlist=["js_dispatch_event"]).js_dispatch_event(driver, cmd.text, cmd.target),
+        "read_excel_cell":           lambda: __import__("execution.action_service", fromlist=["read_excel_cell"]).read_excel_cell(text, int(target), first_value, cmd.variable_name),
+        "read_excel_row":            lambda: __import__("execution.action_service", fromlist=["read_excel_row"]).read_excel_row(text, int(target), cmd.variable_name),
+        "read_csv_cell":             lambda: __import__("execution.action_service", fromlist=["read_csv_cell"]).read_csv_cell(text, int(target), first_value, cmd.variable_name),
+        # -- JavaScript Actions (WebView / hybrid context only) ---------------
+        # These require driver.execute_script — they do NOT use Playwright page.evaluate().
+        # Only valid after switching to a WebView context (driver.switch_to.context("WEBVIEW_*")).
+        "js_click":     lambda: driver.execute_script(f"document.querySelector('{target}').click()"),
+        "js_scroll_to": lambda: driver.execute_script(f"document.querySelector('{target}').scrollIntoView(true)"),
+        "js_scroll":    lambda: driver.execute_script(f"window.scrollBy(0, {cmd.count or 300})"),
+        "js_type":      lambda: driver.execute_script(f"document.querySelector('{target}').value = arguments[0]", text),
+        "js_set_value": lambda: driver.execute_script(f"document.querySelector('{target}').value = arguments[0]", text),
+        "js_focus":     lambda: driver.execute_script(f"document.querySelector('{target}').focus()"),
+        "js_submit":    lambda: driver.execute_script(f"document.querySelector('{target}').submit()"),
+        "js_dispatch":  lambda: driver.execute_script(f"document.querySelector('{target}').dispatchEvent(new Event('{text}', {{bubbles: true}}))"),
         # ── Windows / Tabs ────────────────────────────────────────────────
         "switch_tab":                lambda: svc.switch_window(driver, int(cmd.count or 0)),
         "close_tab":                 lambda: svc.close_window(driver, int(cmd.count) if cmd.count is not None else None),
@@ -605,7 +673,35 @@ def _execute_step(cmd, driver, platform: str):
     if not handler:
         logger.warning("⚠️  Unsupported command for Appium: '%s' — skipping", cmd.type)
         return
-    handler()
+
+    # iOS recovery: if a system permission sheet blocks the step, dismiss alert(s)
+    # and retry the same step once. This keeps flows stable when popups appear
+    # asynchronously between actions.
+    if platform != "ios" or cmd.type in {"dismiss_alerts", "dismiss_play_rating"}:
+        handler()
+        return
+
+    # Pre-step iOS alert sweep: clears async permission sheets that appeared
+    # between commands, before they block the next action.
+    try:
+        svc.dismiss_alerts(driver, platform, attempts=1)
+    except Exception:
+        pass
+
+    try:
+        handler()
+    except Exception:
+        recovered = False
+        try:
+            recovered = bool(svc.dismiss_alerts(driver, platform, attempts=3))
+        except Exception:
+            recovered = False
+
+        if recovered:
+            logger.info("🔁 Retrying step after iOS alert recovery: %s", cmd.type)
+            handler()
+            return
+        raise
 
 
 def _execute_single_step(step_text: str, driver, platform: str):
@@ -618,6 +714,9 @@ def _execute_single_step(step_text: str, driver, platform: str):
     cmd = parse_step(step_text)
     if cmd is None:
         raise ValueError(f"Unrecognised step syntax: {step_text!r}")
+    if cmd.type == "call_reusable":
+        _expand_reusable_appium(cmd.target, driver, platform)
+        return
     _execute_step(cmd, driver, platform)
 
 
@@ -678,11 +777,11 @@ def _fill_if_visible(svc, driver, target: str, text: str, platform: str, timeout
         logger.info("ℹ️  fill_if_visible: element not visible, skipping: '%s'", target)
 
 
-def _verify_if_visible(svc, driver, target: str, platform: str, timeout: float = 0):
+def _verify_if_visible(svc, driver, target: str, platform: str, timeout: float = 0, el_index: str = "any"):
     """Verify element exists only if visible; skip (pass) silently otherwise."""
     if _wait_for_visible(svc, driver, target, platform, timeout):
         try:
-            svc.verify_element_exists(driver, target, platform)
+            svc.verify_element_exists(driver, target, platform, el_index)
         except Exception as e:
             logger.info("ℹ️  verify_if_visible: verify failed (%s): '%s'", e, target)
     else:
@@ -711,11 +810,11 @@ def _long_press_if_visible(svc, driver, target: str, platform: str, timeout: flo
         logger.info("ℹ️  long_press_if_visible: element not visible, skipping: '%s'", target)
 
 
-def _store_text_if_visible(svc, driver, target: str, platform: str, variable_name: str, timeout: float = 0):
+def _store_text_if_visible(svc, driver, target: str, platform: str, variable_name: str, timeout: float = 0, el_index: str = "any"):
     """Store element text only if visible; skip silently otherwise."""
     if _wait_for_visible(svc, driver, target, platform, timeout):
         try:
-            svc.store_element_text(driver, target, platform, variable_name)
+            svc.store_element_text(driver, target, platform, variable_name, el_index)
         except Exception as e:
             logger.info("ℹ️  store_text_if_visible: failed (%s): '%s'", e, target)
     else:
@@ -739,9 +838,13 @@ def _verify_var_contains(var_name: str, expected: str):
 def _execute_math(cmd):
     """Simple math: store result of op(a, b)."""
     try:
-        a   = float(RUNTIME_VARIABLES.get(cmd.target, cmd.target))
-        b   = float(RUNTIME_VARIABLES.get(cmd.values[0], cmd.values[0]) if hasattr(cmd, "values") and cmd.values else 0)
-        op  = (cmd.text or "+").strip()
+        target = resolve_variables(cmd.target) if isinstance(getattr(cmd, "target", None), str) else cmd.target
+        rhs = (cmd.values[0] if hasattr(cmd, "values") and cmd.values else 0)
+        rhs = resolve_variables(rhs) if isinstance(rhs, str) else rhs
+        op = resolve_variables(cmd.text) if isinstance(getattr(cmd, "text", None), str) else (cmd.text or "+")
+        a = float(RUNTIME_VARIABLES.get(target, target))
+        b = float(RUNTIME_VARIABLES.get(rhs, rhs))
+        op = (op or "+").strip()
         result = {"+": a + b, "-": a - b, "*": a * b, "/": a / b if b != 0 else 0}.get(op, a + b)
         RUNTIME_VARIABLES[cmd.variable_name] = str(int(result) if result == int(result) else result)
         logger.info("🔢 Math: %s %s %s = %s → $%s", a, op, b, RUNTIME_VARIABLES[cmd.variable_name], cmd.variable_name)
@@ -753,6 +856,29 @@ def _execute_math(cmd):
 # ─────────────────────────────────────────────────────────────────────────────
 # STEP INTERPRETATION
 # ─────────────────────────────────────────────────────────────────────────────
+
+def _expand_reusable_appium(name: str, driver, platform: str) -> None:
+    """Inline-expand a named reusable step group on the Appium driver."""
+    from core.reusable_steps import get as _rs_get
+    name_lower = name.lower()
+    call_stack = _get_call_stack()
+    if name_lower in call_stack:
+        raise RuntimeError(
+            f"Circular call detected: '{name}' is already in the active call stack "
+            f"({' → '.join(sorted(call_stack))} → {name})"
+        )
+    try:
+        steps = _rs_get(name)
+    except KeyError as e:
+        raise ValueError(str(e)) from e
+    call_stack.add(name_lower)
+    try:
+        logger.info("▶ Expanding reusable '%s' (%d steps)", name, len(steps))
+        for sub_step in steps:
+            _interpret_step(sub_step, driver, platform)
+    finally:
+        call_stack.discard(name_lower)
+
 
 def _interpret_step(step: str, driver, platform: str) -> None:
     """Resolve variables in a step then parse and execute it (with timeout)."""
@@ -771,6 +897,10 @@ def _interpret_step(step: str, driver, platform: str) -> None:
     cmd = parse_step(resolved)
     if cmd is None:
         logger.warning("⚠️  Could not parse step: '%s'", step)
+        return
+
+    if cmd.type == "call_reusable":
+        _expand_reusable_appium(cmd.target, driver, platform)
         return
 
     # ── Per-step timeout ──────────────────────────────────────────────────
@@ -811,7 +941,6 @@ def _run_flow_core(file_path: str, driver, platform: str) -> dict:
     Execute all steps in a .flow file against an Appium driver.
     Returns: {"passed": int, "failed": int, "log": list[str]}
     """
-    global _STOP_ON_FAILURE
     steps  = _load_flow_file(file_path)
     stats  = {"passed": 0, "failed": 0, "log": []}
 
@@ -824,7 +953,7 @@ def _run_flow_core(file_path: str, driver, platform: str) -> dict:
             logger.error("❌ Assertion failed: %s", msg)
             stats["failed"] += 1
             stats["log"].append(f"❌ {msg}")
-            if _STOP_ON_FAILURE:
+            if _get_stop_on_failure():
                 logger.warning("🛑 stop_on_failure=true — halting flow")
                 break
         except Exception as e:
@@ -832,7 +961,7 @@ def _run_flow_core(file_path: str, driver, platform: str) -> dict:
             logger.error("❌ Step error: %s", msg)
             stats["failed"] += 1
             stats["log"].append(f"❌ {msg}")
-            if _STOP_ON_FAILURE:
+            if _get_stop_on_failure():
                 logger.warning("🛑 stop_on_failure=true — halting flow")
                 break
 
@@ -859,8 +988,8 @@ def run_appium_suite_collect(
         [{"file": str, "passed": int, "failed": int, "log": list[str]}, ...]
     """
     _setup_logging()
-    global _STOP_ON_FAILURE
-    _STOP_ON_FAILURE = stop_on_first_failure
+    _bind_app_runtime_session()
+    _set_stop_on_failure(stop_on_first_failure)
 
     try:
         import json as _json
@@ -868,7 +997,7 @@ def run_appium_suite_collect(
         if os.path.exists(cfg_path):
             with open(cfg_path) as f:
                 run_cfg = _json.load(f).get("run", {})
-                _STOP_ON_FAILURE = bool(run_cfg.get("stop_on_failure", False))
+                _set_stop_on_failure(bool(run_cfg.get("stop_on_failure", False)))
     except Exception:
         pass
 
@@ -952,7 +1081,7 @@ def run_appium_flow_collect(
         platform:     "android" or "ios"
     """
     _setup_logging()
-    global _STOP_ON_FAILURE
+    _bind_app_runtime_session()
 
     # Load stop_on_failure from playwright config (shared config)
     try:
@@ -961,7 +1090,7 @@ def run_appium_flow_collect(
         if os.path.exists(cfg_path):
             with open(cfg_path) as f:
                 run_cfg = _json.load(f).get("run", {})
-                _STOP_ON_FAILURE = bool(run_cfg.get("stop_on_failure", False))
+                _set_stop_on_failure(bool(run_cfg.get("stop_on_failure", False)))
     except Exception:
         pass
 

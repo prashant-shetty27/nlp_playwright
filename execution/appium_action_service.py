@@ -16,6 +16,7 @@ Locator resolution priority:
 import logging
 import os
 import re
+import threading
 import time
 from datetime import datetime
 
@@ -30,13 +31,15 @@ logger = logging.getLogger(__name__)
 
 _locator_cache: dict | None = None
 _locator_cache_mtime: float = 0.0
+_locator_cache_lock = threading.Lock()
 
 
 def invalidate_locator_cache():
     """Force the next call to _load_app_locators() to re-read the file."""
     global _locator_cache, _locator_cache_mtime
-    _locator_cache = None
-    _locator_cache_mtime = 0.0
+    with _locator_cache_lock:
+        _locator_cache = None
+        _locator_cache_mtime = 0.0
 
 
 def _load_app_locators() -> dict:
@@ -47,18 +50,19 @@ def _load_app_locators() -> dict:
         mtime = os.path.getmtime(path) if os.path.exists(path) else 0.0
     except OSError:
         mtime = 0.0
-    if _locator_cache is None or mtime > _locator_cache_mtime:
-        if os.path.exists(path):
-            try:
-                with open(path, "r", encoding="utf-8") as f:
-                    _locator_cache = json.load(f)
-            except (json.JSONDecodeError, OSError) as e:
-                logger.warning("⚠️  Could not reload locators (%s) — using cached copy", e)
-                if _locator_cache is None:
-                    _locator_cache = {}
-        else:
-            _locator_cache = {}
-        _locator_cache_mtime = mtime
+    with _locator_cache_lock:
+        if _locator_cache is None or mtime > _locator_cache_mtime:
+            if os.path.exists(path):
+                try:
+                    with open(path, "r", encoding="utf-8") as f:
+                        _locator_cache = json.load(f)
+                except (json.JSONDecodeError, OSError) as e:
+                    logger.warning("⚠️  Could not reload locators (%s) — using cached copy", e)
+                    if _locator_cache is None:
+                        _locator_cache = {}
+            else:
+                _locator_cache = {}
+            _locator_cache_mtime = mtime
     return _locator_cache
 
 
@@ -106,6 +110,97 @@ _INDEX_MAP = {
 }
 
 
+def _xpath_literal(value: str) -> str:
+    """Safe XPath literal builder for values containing quotes."""
+    if "'" not in value:
+        return f"'{value}'"
+    if '"' not in value:
+        return f'"{value}"'
+    parts = value.split("'")
+    out = []
+    for i, part in enumerate(parts):
+        if part:
+            out.append(f"'{part}'")
+        if i < len(parts) - 1:
+            out.append('"\'"')
+    return f"concat({', '.join(out)})"
+
+
+def _pick_indexed_element(elements: list, el_index: str):
+    """Pick the requested index token from an element list; returns None if out of range."""
+    if not elements:
+        return None
+    if el_index == "any":
+        return elements[0]
+    num_idx = _INDEX_MAP.get(el_index, 0)
+    try:
+        return elements[num_idx]
+    except Exception:
+        return None
+
+
+def _parse_bounds(bounds_str: str) -> tuple[int, int] | None:
+    """
+    Parse Appium bounds string '[x1,y1][x2,y2]' into center coordinates.
+    Returns (cx, cy) or None if parsing fails.
+    Used as last-resort tap fallback when all element strategies fail (Android only).
+    """
+    m = re.findall(r'\[(\d+),(\d+)\]', bounds_str)
+    if len(m) == 2:
+        cx = (int(m[0][0]) + int(m[1][0])) // 2
+        cy = (int(m[0][1]) + int(m[1][1])) // 2
+        return cx, cy
+    return None
+
+
+def _w3c_swipe(driver, start_x: int, start_y: int, end_x: int, end_y: int,
+               duration_ms: int = 600) -> None:
+    """
+    W3C Actions API swipe — industry-standard replacement for deprecated driver.swipe().
+    Works on both iOS (XCUITest) and Android (UiAutomator2) with Appium 2.x.
+    """
+    from selenium.webdriver.common.action_chains import ActionChains
+    from selenium.webdriver.common.actions.action_builder import ActionBuilder
+    from selenium.webdriver.common.actions.pointer_input import PointerInput
+    from selenium.webdriver.common.actions import interaction
+
+    actions = ActionChains(driver)
+    actions.w3c_actions = ActionBuilder(
+        driver, mouse=PointerInput(interaction.POINTER_TOUCH, "touch")
+    )
+    (actions.w3c_actions.pointer_action
+        .move_to_location(start_x, start_y)
+        .pointer_down()
+        .pause(duration_ms / 1000)
+        .move_to_location(end_x, end_y)
+        .pointer_up()
+    )
+    actions.perform()
+
+
+def _w3c_tap(driver, x: int, y: int) -> None:
+    """
+    W3C Actions API tap at coordinates — industry-standard replacement for deprecated driver.tap().
+    Works on both iOS (XCUITest) and Android (UiAutomator2) with Appium 2.x.
+    """
+    from selenium.webdriver.common.action_chains import ActionChains
+    from selenium.webdriver.common.actions.action_builder import ActionBuilder
+    from selenium.webdriver.common.actions.pointer_input import PointerInput
+    from selenium.webdriver.common.actions import interaction
+
+    actions = ActionChains(driver)
+    actions.w3c_actions = ActionBuilder(
+        driver, mouse=PointerInput(interaction.POINTER_TOUCH, "touch")
+    )
+    (actions.w3c_actions.pointer_action
+        .move_to_location(x, y)
+        .pointer_down()
+        .pause(0.05)
+        .pointer_up()
+    )
+    actions.perform()
+
+
 def _find_element(driver, name: str, platform: str):
     """
     Find an Appium element by locator name. Tries strategies in priority order.
@@ -148,7 +243,11 @@ def _find_element(driver, name: str, platform: str):
             (AppiumBy.ACCESSIBILITY_ID, locator.get("accessibility_id")),
             (AppiumBy.XPATH,            locator.get("xpath")),
             (AppiumBy.CLASS_NAME,       locator.get("class_name")),
-            # label only for non-input elements
+            # name predicate — matches elements whose `name` attr differs from accessibility_id
+            (AppiumBy.IOS_PREDICATE,
+             f'name == "{locator["name"]}"'
+             if locator.get("name") else None),
+            # label predicate only for non-input elements (avoids placeholder text matches)
             (AppiumBy.IOS_PREDICATE,
              f'label == "{locator["label"]}"'
              if (not is_input and locator.get("label")) else None),
@@ -167,7 +266,10 @@ def _find_element(driver, name: str, platform: str):
                 errors.append(f"{by}: {e}")
     else:
         # Try each strategy with find_elements, pick by index
-        num_idx = _INDEX_MAP.get(el_index, 0)
+        num_idx = _INDEX_MAP.get(el_index)
+        if num_idx is None:
+            logger.warning("⚠️  Unknown el_index '%s' — defaulting to first match (0)", el_index)
+            num_idx = 0
         for by, value in strategies:
             if not value:
                 continue
@@ -179,6 +281,42 @@ def _find_element(driver, name: str, platform: str):
                     return el
             except Exception as e:
                 errors.append(f"{by}[{el_index}]: {e}")
+
+    # ── Basic healing fallback chain ─────────────────────────────────────────
+    # 1) broad text/label/name/value XPath search
+    text_candidates = [
+        locator.get("text"),
+        locator.get("label"),
+        locator.get("name"),
+        locator.get("accessibility_id"),
+    ]
+    for token in [t for t in text_candidates if t]:
+        try:
+            lit = _xpath_literal(str(token))
+            xp = (
+                f"//*[contains(@text, {lit}) or contains(@content-desc, {lit}) "
+                f"or contains(@label, {lit}) or contains(@name, {lit}) "
+                f"or contains(@value, {lit})]"
+            )
+            els = driver.find_elements(AppiumBy.XPATH, xp)
+            picked = _pick_indexed_element(els, el_index)
+            if picked is not None:
+                logger.info("🏥 Appium fallback healed '%s' via text token", base_name)
+                return picked
+        except Exception as e:
+            errors.append(f"fallback[text]: {e}")
+
+    # 2) class-only fallback as last non-ML attempt
+    class_name = locator.get("class_name")
+    if class_name:
+        try:
+            els = driver.find_elements(AppiumBy.CLASS_NAME, class_name)
+            picked = _pick_indexed_element(els, el_index)
+            if picked is not None:
+                logger.info("🏥 Appium fallback healed '%s' via class_name", base_name)
+                return picked
+        except Exception as e:
+            errors.append(f"fallback[class_name]: {e}")
 
     raise RuntimeError(
         f"Could not find element '{name}' on {platform} using any strategy.\n"
@@ -210,20 +348,17 @@ def start_recording(driver, platform: str = "android") -> None:
     """
     try:
         if platform == "android":
+            # Appium-Python-Client 3.x+: pass recording options as kwargs (not options={})
             driver.start_recording_screen(
-                options={
-                    "videoQuality": "high",
-                    "timeLimit": "1800",     # 30 min hard cap
-                    "bitRate": "4000000",
-                }
+                videoQuality="high",
+                timeLimit="1800",   # 30 min hard cap
+                bitRate=4000000,
             )
         else:
             driver.start_recording_screen(
-                options={
-                    "videoQuality": "medium",
-                    "timeLimit": "1800",
-                    "videoFps": "30",
-                }
+                videoQuality="medium",
+                timeLimit="1800",
+                videoFps="30",
             )
         logger.info("🎥 Screen recording started [%s]", platform.upper())
     except Exception as e:
@@ -292,9 +427,23 @@ def tap_element(driver, name: str, platform: str, el_index: str = "any"):
     """Tap/click an element by locator name. el_index: 'any','1st','2nd','last','last-2' etc."""
     name = resolve_variables(name)
     lookup = f"{name}[{el_index}]" if el_index and el_index != "any" else name
-    el   = _find_element(driver, lookup, platform)
-    el.click()
-    logger.info("👆 Tapped: '%s'%s", name, f"[{el_index}]" if el_index != "any" else "")
+    try:
+        el = _find_element(driver, lookup, platform)
+        el.click()
+        logger.info("👆 Tapped: '%s'%s", name, f"[{el_index}]" if el_index != "any" else "")
+    except RuntimeError:
+        # Last-resort: coordinate tap via stored bounds (Android only — screen-size-dependent)
+        if platform == "android":
+            try:
+                locator = _get_appium_locator(name, platform)
+                coords  = _parse_bounds(locator.get("bounds", ""))
+                if coords:
+                    _w3c_tap(driver, *coords)
+                    logger.info("👆 Tapped '%s' via bounds coordinates %s", name, coords)
+                    return
+            except Exception:
+                pass
+        raise
 
 
 def fill_element(driver, name: str, text: str, platform: str, el_index: str = "any"):
@@ -317,68 +466,93 @@ def clear_element(driver, name: str, platform: str, el_index: str = "any"):
     logger.info("🗑️  Cleared: '%s'%s", name, f"[{el_index}]" if el_index != "any" else "")
 
 
-def tap_coordinates(driver, x: int, y: int):
-    """Tap at raw screen coordinates (works on iOS and Android)."""
+def tap_coordinates(driver, x: int, y: int, platform: str = "android"):
+    """Tap at raw screen coordinates. Uses the native gesture API per platform."""
+    x, y = int(x), int(y)
     try:
-        # iOS: mobile:tap with x,y coordinates
-        driver.execute_script("mobile: tap", {"x": int(x), "y": int(y)})
+        if platform == "ios":
+            # XCUITest: mobile:tap with absolute coordinates
+            driver.execute_script("mobile: tap", {"x": x, "y": y})
+        else:
+            # UiAutomator2: mobile:clickGesture with absolute coordinates
+            driver.execute_script("mobile: clickGesture", {"x": x, "y": y})
     except Exception:
-        # Fallback: W3C Appium tap
-        driver.tap([(int(x), int(y))])
+        # Universal W3C Actions API fallback (Appium 2.x, both platforms)
+        _w3c_tap(driver, x, y)
     logger.info("👆 Tapped at (%d, %d)", x, y)
 
 
 def swipe_up(driver, duration_ms: int = 600):
-    """Swipe up (scroll down content)."""
+    """Swipe up (scroll down content). Uses W3C Actions API (Appium 2.x standard)."""
     size = driver.get_window_size()
     w, h = size["width"], size["height"]
-    driver.swipe(w // 2, int(h * 0.75), w // 2, int(h * 0.25), duration_ms)
+    _w3c_swipe(driver, w // 2, int(h * 0.75), w // 2, int(h * 0.25), duration_ms)
     logger.info("🔼 Swiped up (scroll down)")
 
 
 def swipe_down(driver, duration_ms: int = 600):
-    """Swipe down (scroll up content)."""
+    """Swipe down (scroll up content). Uses W3C Actions API (Appium 2.x standard)."""
     size = driver.get_window_size()
     w, h = size["width"], size["height"]
-    driver.swipe(w // 2, int(h * 0.25), w // 2, int(h * 0.75), duration_ms)
+    _w3c_swipe(driver, w // 2, int(h * 0.25), w // 2, int(h * 0.75), duration_ms)
     logger.info("🔽 Swiped down (scroll up)")
 
 
 def swipe_left(driver, duration_ms: int = 400):
-    """Swipe left."""
+    """Swipe left. Uses W3C Actions API (Appium 2.x standard)."""
     size = driver.get_window_size()
     w, h = size["width"], size["height"]
-    driver.swipe(int(w * 0.8), h // 2, int(w * 0.2), h // 2, duration_ms)
+    _w3c_swipe(driver, int(w * 0.8), h // 2, int(w * 0.2), h // 2, duration_ms)
     logger.info("◀️  Swiped left")
 
 
 def swipe_right(driver, duration_ms: int = 400):
-    """Swipe right."""
+    """Swipe right. Uses W3C Actions API (Appium 2.x standard)."""
     size = driver.get_window_size()
     w, h = size["width"], size["height"]
-    driver.swipe(int(w * 0.2), h // 2, int(w * 0.8), h // 2, duration_ms)
+    _w3c_swipe(driver, int(w * 0.2), h // 2, int(w * 0.8), h // 2, duration_ms)
     logger.info("▶️  Swiped right")
 
 
-def scroll_until_text_visible(driver, text: str, max_swipes: int = 8, wait_s: float = 0.5):
-    """Swipe up repeatedly until text appears on screen."""
+def scroll_until_text_visible(driver, text: str, max_swipes: int = 8, wait_s: float = 0.5,
+                              platform: str = "android"):
+    """Swipe up repeatedly until text appears on screen. Platform-aware."""
     text = resolve_variables(text)
     from appium.webdriver.common.appiumby import AppiumBy
 
     for _ in range(max_swipes):
-        try:
-            el = driver.find_element(AppiumBy.ANDROID_UIAUTOMATOR,
-                                     f'new UiScrollable(new UiSelector().scrollable(true))'
-                                     f'.scrollIntoView(new UiSelector().textContains("{text}"))')
-            if el:
+        if platform == "android":
+            # Android: UiScrollable scrollIntoView (native, fast)
+            try:
+                el = driver.find_element(
+                    AppiumBy.ANDROID_UIAUTOMATOR,
+                    f'new UiScrollable(new UiSelector().scrollable(true))'
+                    f'.scrollIntoView(new UiSelector().textContains("{text}"))'
+                )
+                if el:
+                    logger.info("📜 Scrolled to text: '%s'", text)
+                    return
+            except Exception:
+                pass
+        else:
+            # iOS: mobile:scroll with NSPredicate text matching
+            try:
+                driver.execute_script("mobile: scroll", {
+                    "direction": "down",
+                    "predicateString": f'label CONTAINS "{text}" OR name CONTAINS "{text}" OR value CONTAINS "{text}"',
+                })
                 logger.info("📜 Scrolled to text: '%s'", text)
                 return
-        except Exception:
-            pass
+            except Exception:
+                pass
 
-        # Fallback: try XPATH
+        # Fallback: XPath scan (works on both platforms)
         try:
-            els = driver.find_elements(AppiumBy.XPATH, f"//*[contains(@text,'{text}') or contains(@content-desc,'{text}')]")
+            els = driver.find_elements(
+                AppiumBy.XPATH,
+                f"//*[contains(@text,'{text}') or contains(@content-desc,'{text}') "
+                f"or contains(@label,'{text}') or contains(@value,'{text}')]"
+            )
             if els:
                 logger.info("📜 Found text via XPath: '%s'", text)
                 return
@@ -392,13 +566,47 @@ def scroll_until_text_visible(driver, text: str, max_swipes: int = 8, wait_s: fl
 
 
 def scroll_until_element_visible(driver, name: str, platform: str, max_swipes: int = 8):
-    """Swipe until a named element appears."""
+    """Scroll until a named element appears. Uses native platform strategies first."""
     name = resolve_variables(name)
-    for _ in range(max_swipes):
+    from appium.webdriver.common.appiumby import AppiumBy
+
+    if platform == "android":
+        # Android: UiScrollable.scrollIntoView is native and crosses all containers
+        try:
+            locator = _get_appium_locator(name, platform)
+            for attr, uia_key in [("resource_id", "resourceId"), ("accessibility_id", "description")]:
+                val = locator.get(attr, "")
+                if not val:
+                    continue
+                try:
+                    driver.find_element(
+                        AppiumBy.ANDROID_UIAUTOMATOR,
+                        f'new UiScrollable(new UiSelector().scrollable(true))'
+                        f'.scrollIntoView(new UiSelector().{uia_key}("{val}"))'
+                    )
+                    logger.info("📜 Scrolled to element '%s' via UiScrollable (%s)", name, uia_key)
+                    return
+                except Exception:
+                    pass
+        except ValueError:
+            pass  # locator not in DB — fall through to generic swipe
+
+    elif platform == "ios":
+        # iOS: mobile:scroll with toVisible=True — WDA scrolls the element into viewport
+        try:
+            el = _find_element(driver, name, platform)
+            driver.execute_script("mobile: scroll", {"element": el, "toVisible": True})
+            logger.info("📜 Scrolled to element '%s' via mobile:scroll", name)
+            return
+        except Exception:
+            pass
+
+    # Fallback: swipe-up until element becomes visible (both platforms)
+    for i in range(max_swipes):
         try:
             el = _find_element(driver, name, platform)
             if el.is_displayed():
-                logger.info("📜 Scrolled to element: '%s'", name)
+                logger.info("📜 Element '%s' visible after %d swipes", name, i)
                 return
         except Exception:
             pass
@@ -477,7 +685,12 @@ def double_tap(driver, name: str, platform: str, el_index: str = "any"):
     lookup = f"{name}[{el_index}]" if el_index and el_index != "any" else name
     el   = _find_element(driver, lookup, platform)
     try:
-        driver.execute_script("mobile: doubleTap", {"element": el.id})
+        if platform == "ios":
+            # XCUITest: mobile:doubleTap (iOS-only)
+            driver.execute_script("mobile: doubleTap", {"element": el.id})
+        else:
+            # UiAutomator2: mobile:doubleClickGesture (Android-only)
+            driver.execute_script("mobile: doubleClickGesture", {"elementId": el.id})
     except Exception:
         el.click()
         import time as _t; _t.sleep(0.1)
@@ -491,7 +704,14 @@ def long_press(driver, name: str, platform: str, duration_s: float = 1.5, el_ind
     lookup = f"{name}[{el_index}]" if el_index and el_index != "any" else name
     el   = _find_element(driver, lookup, platform)
     try:
-        driver.execute_script("mobile: touchAndHold", {"element": el.id, "duration": duration_s})
+        if platform == "ios":
+            # XCUITest: mobile:touchAndHold with duration in seconds (iOS-only)
+            driver.execute_script("mobile: touchAndHold", {"element": el.id, "duration": duration_s})
+        else:
+            # UiAutomator2: mobile:longClickGesture with duration in milliseconds (Android-only)
+            driver.execute_script("mobile: longClickGesture", {
+                "elementId": el.id, "duration": int(duration_s * 1000)
+            })
     except Exception:
         from selenium.webdriver.common.action_chains import ActionChains
         ActionChains(driver).click_and_hold(el).pause(duration_s).release().perform()
@@ -525,7 +745,18 @@ def store_element_text(driver, name: str, platform: str, variable: str, el_index
     variable = resolve_variables(variable)
     lookup   = f"{name}[{el_index}]" if el_index and el_index != "any" else name
     el       = _find_element(driver, lookup, platform)
-    text     = el.text or el.get_attribute("label") or el.get_attribute("value") or ""
+    if platform == "ios":
+        # XCUITest attribute priority:
+        #   label  = visible text shown on screen (most useful)
+        #   .text  = maps to 'value' (typed content in input fields)
+        #   value  = input field current value
+        #   name   = accessibility identifier (rarely the display text)
+        text = (el.get_attribute("label") or el.text or el.get_attribute("value") or "")
+    else:
+        # UiAutomator2 attribute priority:
+        #   .text        = the element's visible text (primary)
+        #   content-desc = accessibility description (TalkBack label)
+        text = (el.text or el.get_attribute("content-desc") or "")
     RUNTIME_VARIABLES[variable] = text
     logger.info("💾 Stored text of '%s'%s → $%s = '%s'", name, f"[{el_index}]" if el_index != "any" else "", variable, text)
 
@@ -556,9 +787,9 @@ def wait_seconds(driver, seconds: float):
     time.sleep(float(seconds))
 
 
-def dismiss_play_rating(driver) -> bool:
+def dismiss_play_rating(driver, platform: str = "android") -> bool:
     """
-    Dismiss a Google Play In-App Review (rating) popup.
+    Dismiss a Google Play In-App Review (rating) popup. Android-only.
 
     The Play rating dialog is rendered by the Play Store process, NOT the app,
     so driver.switch_to.alert and mobile:alert both miss it.
@@ -567,8 +798,11 @@ def dismiss_play_rating(driver) -> bool:
     Dismiss button text varies by locale/Play version — we try all known variants.
     Falls back to pressing BACK if no button is found.
 
-    Returns True if something was dismissed, False if no popup was detected.
+    Returns True if something was dismissed, False if no popup detected or not Android.
     """
+    if platform != "android":
+        return False  # Play Store ratings are Android-only; skip on iOS entirely
+
     from appium.webdriver.common.appiumby import AppiumBy
 
     # Known dismiss button labels across Play Store versions and locales
@@ -631,42 +865,254 @@ def dismiss_play_rating(driver) -> bool:
     return False
 
 
-def dismiss_alerts(driver, attempts: int = 3):
+def _normalize_alert_label(value: str) -> str:
+    """Normalize alert button labels for robust matching."""
+    cleaned = (value or "").strip().lower().replace("’", "'")
+    return re.sub(r"\s+", " ", cleaned)
+
+
+def _pick_ios_alert_button(buttons: list[str], prefer: str = "dismiss") -> str | None:
+    """
+    Pick the most appropriate iOS alert button label.
+    prefer:
+      - dismiss: deny/cancel style
+      - accept : allow/ok style
+    """
+    if not buttons:
+        return None
+
+    normalized = [(raw, _normalize_alert_label(raw)) for raw in buttons if isinstance(raw, str)]
+    if not normalized:
+        return None
+
+    negative_tokens = (
+        "don't allow", "dont allow", "not now", "no thanks", "deny",
+        "cancel", "later", "skip", "close", "don't share", "dont share",
+    )
+    positive_tokens = (
+        "allow", "ok", "continue", "always allow", "allow once",
+        "allow while using app", "yes", "share",
+    )
+
+    def _find(tokens: tuple[str, ...]) -> str | None:
+        for raw, norm in normalized:
+            if any(token in norm for token in tokens):
+                return raw
+        return None
+
+    if prefer == "dismiss":
+        return _find(negative_tokens) or _find(positive_tokens) or normalized[0][0]
+    return _find(positive_tokens) or _find(negative_tokens) or normalized[-1][0]
+
+
+def _dismiss_ios_alert_once(driver, prefer: str = "dismiss") -> bool:
+    """
+    Attempt to dismiss one visible iOS alert/sheet.
+    Returns True if an alert button was tapped, else False.
+    """
+    from appium.webdriver.common.appiumby import AppiumBy
+
+    prefer_action = "dismiss" if prefer == "dismiss" else "accept"
+    fallback_action = "accept" if prefer_action == "dismiss" else "dismiss"
+
+    # 1) WDA-native button enumeration + explicit button tap
+    try:
+        buttons = driver.execute_script("mobile: alert", {"action": "getButtons"}) or []
+        if isinstance(buttons, list) and buttons:
+            chosen = _pick_ios_alert_button(buttons, prefer=prefer)
+            if chosen:
+                try:
+                    driver.execute_script(
+                        "mobile: alert",
+                        {"action": "accept", "buttonLabel": chosen},
+                    )
+                    logger.info("🔔 iOS alert handled via button '%s'", chosen)
+                    return True
+                except Exception:
+                    pass
+    except Exception:
+        pass
+
+    # 2) WDA generic action fallback
+    for action in (prefer_action, fallback_action):
+        try:
+            driver.execute_script("mobile: alert", {"action": action})
+            logger.info("🔔 iOS alert %sed via mobile: alert", action)
+            return True
+        except Exception:
+            pass
+
+    # 3) Selenium alert fallback
+    for action in (prefer_action, fallback_action):
+        try:
+            alert = driver.switch_to.alert
+            if action == "dismiss":
+                alert.dismiss()
+            else:
+                alert.accept()
+            logger.info("🔔 iOS alert %sed via switch_to.alert", action)
+            return True
+        except Exception:
+            pass
+
+    # 4) SpringBoard/dialog button fallback when alert APIs miss overlays
+    button_candidates = [
+        "Don't Allow",
+        "Dont Allow",
+        "Do Not Allow",
+        "Not Now",
+        "No Thanks",
+        "Cancel",
+        "Later",
+        "Not Allow",
+        "Allow",
+        "Allow Once",
+        "Allow While Using App",
+        "Allow While Using",
+        "Allow Full Access",
+        "OK",
+        "Continue",
+        "Paste",
+        "Join",
+    ]
+    if prefer != "dismiss":
+        button_candidates = button_candidates[6:] + button_candidates[:6]
+
+    for label in button_candidates:
+        lit = _xpath_literal(label)
+        xpaths = [
+            f"//XCUIElementTypeButton[@label={lit} or @name={lit}]",
+            f"//XCUIElementTypeButton[contains(@label,{lit}) or contains(@name,{lit})]",
+        ]
+        for xp in xpaths:
+            try:
+                elements = driver.find_elements(AppiumBy.XPATH, xp)
+                for el in elements:
+                    if el.is_displayed():
+                        el.click()
+                        logger.info("🔔 iOS alert handled via button text '%s'", label)
+                        return True
+            except Exception:
+                pass
+
+    # 5) Generic visible alert/sheet button fallback (no hardcoded labels)
+    try:
+        all_buttons = driver.find_elements(
+            AppiumBy.XPATH,
+            "//XCUIElementTypeAlert//XCUIElementTypeButton | "
+            "//XCUIElementTypeSheet//XCUIElementTypeButton | "
+            "//XCUIElementTypeDialog//XCUIElementTypeButton"
+        )
+        visible_buttons = []
+        for btn in all_buttons:
+            try:
+                if btn.is_displayed():
+                    label = (
+                        btn.get_attribute("label")
+                        or btn.get_attribute("name")
+                        or btn.text
+                        or ""
+                    ).strip()
+                    visible_buttons.append((label, btn))
+            except Exception:
+                pass
+
+        if visible_buttons:
+            labels = [lbl for lbl, _ in visible_buttons]
+            chosen_label = _pick_ios_alert_button(labels, prefer=prefer) or labels[0]
+            for lbl, btn in visible_buttons:
+                if lbl == chosen_label:
+                    btn.click()
+                    logger.info("🔔 iOS alert handled via generic dialog button '%s'", chosen_label)
+                    return True
+    except Exception:
+        pass
+
+    # 6) Diagnostics: log visible iOS buttons to help tune matching quickly
+    try:
+        raw_buttons = driver.find_elements(AppiumBy.XPATH, "//XCUIElementTypeButton")
+        visible = []
+        for btn in raw_buttons[:40]:
+            try:
+                if btn.is_displayed():
+                    label = (
+                        btn.get_attribute("label")
+                        or btn.get_attribute("name")
+                        or btn.text
+                        or ""
+                    ).strip()
+                    if label:
+                        visible.append(label)
+            except Exception:
+                pass
+        if visible:
+            logger.info("ℹ️  iOS visible button labels: %s", sorted(set(visible))[:20])
+    except Exception:
+        pass
+
+    return False
+
+
+def dismiss_alerts(driver, platform: str = "android", attempts: int = 3) -> bool:
     """
     Dismiss any visible system alerts, permission dialogs, or Google Play rating popups.
-    Tries (in order): Play rating popup → system alert dismiss → system alert accept.
+    Android: Play rating popup → UiAutomator2 alert dismiss → mobile:alert.
+    iOS    : multi-stage chain (mobile:alert buttons/actions, switch_to.alert, visible button fallback).
     Safe to call even when no alert is showing.
     """
-    # Always try Play rating first — it's invisible to mobile:alert
-    dismiss_play_rating(driver)
+    any_dismissed = False
+
+    if platform == "android":
+        # Play rating dialog is Android-only and invisible to mobile:alert
+        any_dismissed = dismiss_play_rating(driver, platform) or any_dismissed
 
     for _ in range(attempts):
         dismissed = False
-        for action in ("dismiss", "accept"):
-            try:
-                driver.execute_script("mobile: alert", {"action": action})
-                logger.info("🔔 System alert %sed", action)
-                dismissed = True
-                time.sleep(1)
-                break
-            except Exception:
-                pass
+        if platform == "ios":
+            dismissed = _dismiss_ios_alert_once(driver, prefer="dismiss")
+            if not dismissed:
+                dismissed = _dismiss_ios_alert_once(driver, prefer="accept")
+        else:
+            for action in ("dismiss", "accept"):
+                try:
+                    driver.execute_script("mobile: alert", {"action": action})
+                    logger.info("🔔 System alert %sed", action)
+                    dismissed = True
+                    break
+                except Exception:
+                    pass
+
         if not dismissed:
             break
+        any_dismissed = True
+        time.sleep(0.6)
+
+    return any_dismissed
 
 
-def tap_by_text(driver, text: str):
+def tap_by_text(driver, text: str, platform: str = "android"):
     """Tap the first visible element whose label / text / value contains the given text."""
     text = resolve_variables(text)
     from appium.webdriver.common.appiumby import AppiumBy
 
-    strategies = [
-        (AppiumBy.ACCESSIBILITY_ID,
-         text),
-        (AppiumBy.XPATH,
-         f"//*[contains(@label,'{text}') or contains(@text,'{text}') "
-         f"or contains(@value,'{text}') or contains(@name,'{text}')]"),
-    ]
+    if platform == "ios":
+        # iOS: NSPredicate is server-side evaluated (fastest); XPath is fallback
+        strategies = [
+            (AppiumBy.IOS_PREDICATE,
+             f'label CONTAINS "{text}" OR name CONTAINS "{text}" OR value CONTAINS "{text}"'),
+            (AppiumBy.ACCESSIBILITY_ID, text),
+            (AppiumBy.XPATH,
+             f"//*[contains(@label,'{text}') or contains(@value,'{text}') "
+             f"or contains(@name,'{text}')]"),
+        ]
+    else:
+        # Android: UiSelector.textContains is server-side and crosses containers (fastest)
+        strategies = [
+            (AppiumBy.ANDROID_UIAUTOMATOR, f'new UiSelector().textContains("{text}")'),
+            (AppiumBy.ACCESSIBILITY_ID, text),
+            (AppiumBy.XPATH,
+             f"//*[contains(@text,'{text}') or contains(@content-desc,'{text}')]"),
+        ]
 
     errors = []
     for by, value in strategies:
@@ -684,17 +1130,32 @@ def tap_by_text(driver, text: str):
     )
 
 
-def type_into_active(driver, text: str):
+def type_into_active(driver, text: str, platform: str = "android"):
     """Type text into whatever element is currently focused (no element lookup needed)."""
     text = resolve_variables(text)
-    try:
-        # iOS preferred: native typeText avoids keyboard lag
-        driver.execute_script("mobile: typeText", {"text": text})
-        logger.info("⌨️  Typed into active element: '%s'", text)
-    except Exception:
-        # Fallback: send_keys on the active element (works on Android too)
-        driver.switch_to.active_element.send_keys(text)
-        logger.info("⌨️  Typed (send_keys) into active element: '%s'", text)
+    if platform == "ios":
+        # iOS: mobile:typeText is WDA-native — avoids keyboard lag and handles special chars
+        try:
+            driver.execute_script("mobile: typeText", {"text": text})
+            logger.info("⌨️  Typed into active element: '%s'", text)
+            return
+        except Exception:
+            pass
+        # iOS fallback: send_keys on active element (may 404 if nothing focused)
+        try:
+            driver.switch_to.active_element.send_keys(text)
+            logger.info("⌨️  Typed (send_keys) into active element: '%s'", text)
+        except Exception as err:
+            logger.warning("⚠️  type_into_active iOS fallback failed (no focused element?): %s", err)
+            raise
+    else:
+        # Android: mobile:typeText is iOS-only — go directly to send_keys on active element
+        try:
+            driver.switch_to.active_element.send_keys(text)
+            logger.info("⌨️  Typed into active element: '%s'", text)
+        except Exception as err:
+            logger.warning("⚠️  type_into_active Android send_keys failed: %s", err)
+            raise
 
 
 def press_back(driver):
@@ -706,20 +1167,35 @@ def press_back(driver):
         logger.warning("⚠️  back(): %s", e)
 
 
-def press_home(driver):
+def press_home(driver, platform: str = "android"):
     """Press the home button / go to home screen."""
     try:
-        driver.execute_script("mobile: pressKey", {"keycode": 3})  # KEYCODE_HOME on Android
+        if platform == "ios":
+            # iOS XCUITest: mobile:pressButton is the correct API
+            driver.execute_script("mobile: pressButton", {"name": "home"})
+        else:
+            # Android UiAutomator2: KEYCODE_HOME = 3
+            driver.execute_script("mobile: pressKey", {"keycode": 3})
         logger.info("🏠 Pressed home")
     except Exception as e:
         logger.warning("⚠️  home(): %s", e)
 
 
-def press_enter(driver):
-    """Press enter/return/search key on the keyboard (iOS and Android)."""
+def press_enter(driver, platform: str = "android"):
+    """Press enter/return/search key on the keyboard."""
     from appium.webdriver.common.appiumby import AppiumBy
 
-    # iOS: HID keyboard Return key event (works on real device with XCUITest)
+    if platform == "android":
+        # Android: KEYCODE_ENTER (66) via UiAutomator2 — go directly, skip iOS attempts
+        try:
+            driver.execute_script("mobile: pressKey", {"keycode": 66})
+            logger.info("↩️  Pressed enter (Android KEYCODE_ENTER)")
+        except Exception as e:
+            logger.warning("⚠️  enter() Android: %s", e)
+        return
+
+    # ── iOS cascade ───────────────────────────────────────────────────────────
+    # 1. HID keyboard Return key (real device, XCUITest — most reliable)
     try:
         driver.execute_script("mobile: performIoHidEvent", {
             "page": 0x07, "usage": 0x28, "durationSeconds": 0.005
@@ -729,7 +1205,7 @@ def press_enter(driver):
     except Exception:
         pass
 
-    # iOS: tap the visible keyboard Return/Search/Go/Done button
+    # 2. Tap visible keyboard action button (simulator or no HID support)
     for key_name in ("Search", "Go", "Done", "return", "Return"):
         try:
             el = driver.find_element(
@@ -742,29 +1218,36 @@ def press_enter(driver):
         except Exception:
             pass
 
-    # iOS fallback: typeText newline
+    # 3. iOS typeText newline (last resort — triggers keyboard action)
     try:
         driver.execute_script("mobile: typeText", {"text": "\n"})
         logger.info("↩️  Pressed enter (typeText \\n)")
-        return
-    except Exception:
-        pass
-
-    # Android: KEYCODE_ENTER
-    try:
-        driver.execute_script("mobile: pressKey", {"keycode": 66})
-        logger.info("↩️  Pressed enter (Android keycode)")
     except Exception as e:
-        logger.warning("⚠️  enter(): %s", e)
+        logger.warning("⚠️  enter() iOS all strategies failed: %s", e)
 
 
-def hide_keyboard(driver):
+def hide_keyboard(driver, platform: str = "android"):
     """Dismiss the on-screen keyboard."""
+    if platform == "ios":
+        # iOS: tap the Done / Hide-keyboard button on the keyboard toolbar first
+        from appium.webdriver.common.appiumby import AppiumBy
+        for btn_name in ("Done", "Hide keyboard", "Return"):
+            try:
+                el = driver.find_element(
+                    AppiumBy.XPATH,
+                    f"//XCUIElementTypeKeyboard//XCUIElementTypeButton[@name='{btn_name}']",
+                )
+                el.click()
+                logger.info("⌨️  Keyboard hidden via '%s' button", btn_name)
+                return
+            except Exception:
+                pass
+    # Both platforms: standard Appium hide_keyboard (taps a Done/Hide button if visible)
     try:
         driver.hide_keyboard()
         logger.info("⌨️  Keyboard hidden")
     except Exception:
-        pass
+        pass  # keyboard may already be dismissed — not an error
 
 
 def open_url(driver, url: str):

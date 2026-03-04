@@ -21,6 +21,11 @@ class TestSession:
         self.browser = None
         self.context = None
         self.page = None
+        # Session-scoped runtime memory (binds to nlp.variable_manager proxy)
+        self.runtime_variables: dict = {}
+        # Session-scoped tab/frame state (replaces action_service module globals)
+        self.active_page = None
+        self.active_frame = None
 
 
 # ─────────────────────────────────────────────────────────────────────────────

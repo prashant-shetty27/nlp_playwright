@@ -15,17 +15,22 @@ from fastapi.middleware.cors import CORSMiddleware
 from nicegui import app, ui, Client, run
 
 from config.settings import RECORDED_ELEMENTS_FILE, MANUAL_LOCATORS_FILE
+from core import recording_context as rc
+from core import recorder_security as rs
 
 # ─── Configuration ────────────────────────────────────────────────────────────
 BASE_DIR    = os.path.dirname(os.path.abspath(__file__))
 FLOWS_DIR   = os.path.join(BASE_DIR, "flows")
 DB_FILE     = RECORDED_ELEMENTS_FILE
 MANUAL_FILE = MANUAL_LOCATORS_FILE
+UNSCOPED_DATA_DIR = os.path.join(BASE_DIR, "data", "contexts", "_unscoped")
+UNSCOPED_FLOWS_DIR = os.path.join(BASE_DIR, "flows", "contexts", "_unscoped")
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
 logger = logging.getLogger(__name__)
 
 db_lock = threading.Lock()
+runner_settings_lock = threading.Lock()
 
 # ─── Shared server-side state ─────────────────────────────────────────────────
 _ui_state: dict = {
@@ -36,7 +41,31 @@ _ui_state: dict = {
     "last_element":  None,
     "edit_step_idx": None,
     "start_url":     "",
+    "recording_context": None,
+    "auth_session": None,
 }
+
+
+def _active_db_file() -> str:
+    default_path = os.path.join(UNSCOPED_DATA_DIR, "recorded_elements.json")
+    return rc.get_path(_ui_state.get("recording_context"), "recorded_elements_file", default_path)
+
+
+def _active_manual_file() -> str:
+    default_path = os.path.join(UNSCOPED_DATA_DIR, "locators_manual.json")
+    return rc.get_path(_ui_state.get("recording_context"), "manual_locators_file", default_path)
+
+
+def _active_flow_dir() -> str:
+    return rc.get_path(_ui_state.get("recording_context"), "flow_dir", UNSCOPED_FLOWS_DIR)
+
+
+def _has_context() -> bool:
+    return bool(_ui_state.get("auth_session")) and bool(_ui_state.get("recording_context"))
+
+
+def _has_auth_session() -> bool:
+    return bool(_ui_state.get("auth_session"))
 
 
 # =====================================================
@@ -102,16 +131,17 @@ def generate_safe_xpath(element_dna):
 # =====================================================
 
 def read_database_unlocked():
-    if not os.path.exists(DB_FILE):
+    db_file = _active_db_file()
+    if not os.path.exists(db_file):
         return {}
     try:
-        with open(DB_FILE, "r", encoding="utf-8") as f:
+        with open(db_file, "r", encoding="utf-8") as f:
             return json.load(f)
     except json.JSONDecodeError:
         logging.error("Database corrupted → quarantining")
-        backup_path = DB_FILE + ".corrupt.bak"
+        backup_path = db_file + ".corrupt.bak"
         try:
-            shutil.copy2(DB_FILE, backup_path)
+            shutil.copy2(db_file, backup_path)
             logging.info(f"Backup created → {backup_path}")
         except Exception:
             logging.exception("Backup failed")
@@ -123,7 +153,9 @@ def read_database_unlocked():
 
 
 def write_database_unlocked(data):
-    with open(DB_FILE, "w", encoding="utf-8") as f:
+    db_file = _active_db_file()
+    os.makedirs(os.path.dirname(db_file), exist_ok=True)
+    with open(db_file, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
         f.flush()
         os.fsync(f.fileno())
@@ -178,10 +210,11 @@ def persist_element_to_disk(element_dna):
 
 # ─── Manual locators helpers ──────────────────────────────────────────────────────
 def _load_manual_locators() -> dict:
-    if not os.path.exists(MANUAL_FILE):
+    manual_file = _active_manual_file()
+    if not os.path.exists(manual_file):
         return {}
     try:
-        with open(MANUAL_FILE, "r", encoding="utf-8") as f:
+        with open(manual_file, "r", encoding="utf-8") as f:
             return json.load(f)
     except Exception:
         return {}
@@ -190,14 +223,15 @@ def _load_manual_locators() -> dict:
 def _persist_manual_locator(page_name: str, element_name: str, locator_data: dict):
     """Store a manually-built element into data/locators_manual.json under web > page_name."""
     key = page_name.strip() or "global_context"
-    os.makedirs(os.path.dirname(MANUAL_FILE), exist_ok=True)
-    lock_path = MANUAL_FILE + ".lock"
+    manual_file = _active_manual_file()
+    os.makedirs(os.path.dirname(manual_file), exist_ok=True)
+    lock_path = manual_file + ".lock"
     with open(lock_path, "w") as lf:
         try:
             fcntl.flock(lf, fcntl.LOCK_EX)
             data = _load_manual_locators()
             data.setdefault("web", {}).setdefault(key, {})[element_name] = locator_data
-            with open(MANUAL_FILE, "w", encoding="utf-8") as f:
+            with open(manual_file, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2)
         finally:
             fcntl.flock(lf, fcntl.LOCK_UN)
@@ -214,17 +248,23 @@ def _persist_manual_locator(page_name: str, element_name: str, locator_data: dic
     _ui_state.setdefault("pending_new_names", []).append(element_name)
 
 
-def _seed_known_from_db():
-    """Populate known_pages + known_names from both database files on startup."""
+def _seed_known_from_db() -> bool:
+    """Merge known_pages + known_names from both database files.
+
+    Returns True when any new page/name is discovered.
+    """
+    changed = False
     try:
         data = read_database_unlocked()
         for page, elements in data.items():
             if page not in _ui_state["known_pages"]:
                 _ui_state["known_pages"].append(page)
+                changed = True
             if isinstance(elements, dict):
                 for n in elements:
                     if n not in _ui_state["known_names"]:
                         _ui_state["known_names"].append(n)
+                        changed = True
     except Exception:
         pass
     try:
@@ -234,22 +274,35 @@ def _seed_known_from_db():
             if isinstance(elements, dict):
                 if page not in _ui_state["known_pages"]:
                     _ui_state["known_pages"].append(page)
+                    changed = True
                 for n in elements:
                     if n not in _ui_state["known_names"]:
                         _ui_state["known_names"].append(n)
+                        changed = True
     except Exception:
         pass
+    return changed
 
 
 # ─── Flow helpers ──────────────────────────────────────────────────────────────
 def _save_flow(name: str, steps: list) -> str:
-    os.makedirs(FLOWS_DIR, exist_ok=True)
+    flow_dir = _active_flow_dir()
+    os.makedirs(flow_dir, exist_ok=True)
     safe = re.sub(r"[^a-z0-9_]", "_", name.lower().strip("_"))
     safe = re.sub(r"_+", "_", safe).strip("_") or "recorded_flow"
-    path = os.path.join(FLOWS_DIR, f"{safe}.flow")
+    path = os.path.join(flow_dir, f"{safe}.flow")
     ts   = datetime.now().strftime("%Y-%m-%d %H:%M")
+    ctx = _ui_state.get("recording_context") or {}
+    ctx_txt = ""
+    if ctx:
+        p = ctx.get("platform", {}).get("label", "")
+        prj = ctx.get("project_name", "")
+        scr = ctx.get("script_name", "")
+        ctx_txt = f"# Context {p} / {prj} / {scr}\n"
     with open(path, "w", encoding="utf-8") as f:
-        f.write(f"# flows/{safe}.flow\n")
+        f.write(f"# {os.path.relpath(path, BASE_DIR)}\n")
+        if ctx_txt:
+            f.write(ctx_txt)
         f.write(f"# Recorded {ts} \u2014 platform: WEB\n")
         f.write("# \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\n")
         for s in steps:
@@ -417,6 +470,11 @@ def get_database_schema():
 
 @app.post("/api/record-element")
 async def receive_recorded_element(request: Request):
+    if not _has_context():
+        return {
+            "status": "error",
+            "message": "Login + recording context are required before recording elements.",
+        }
     try:
         raw_dna = await request.json()
     except Exception:
@@ -437,6 +495,11 @@ async def receive_recorded_element(request: Request):
             "tag":   processed_dna.get("tagName", ""),
             "text":  (processed_dna.get("innerText") or "")[:60],
         }
+        rs.log_action(
+            _ui_state.get("auth_session"),
+            "record_element_extension",
+            {"page": page_hint, "locator_name": locator_name},
+        )
 
         logger.info("Recorded element → %s.%s", page_hint, locator_name)
         return {"status": "success", "locator_name": locator_name}
@@ -463,6 +526,34 @@ async def set_start_url(request: Request):
 def build_web_ui():
     """Web recorder panel — full-screen DevTools-style, side panel docked in Chrome."""
     _seed_known_from_db()
+    _locator_store_mtime = {
+        "recorded_file": _active_db_file(),
+        "manual_file": _active_manual_file(),
+        "recorded": rc.file_mtime(_active_db_file()),
+        "manual": rc.file_mtime(_active_manual_file()),
+    }
+
+    def _locator_store_changed() -> bool:
+        recorded_file = _active_db_file()
+        manual_file = _active_manual_file()
+        recorded_mtime = rc.file_mtime(recorded_file)
+        manual_mtime = rc.file_mtime(manual_file)
+        path_changed = (
+            recorded_file != _locator_store_mtime["recorded_file"]
+            or manual_file != _locator_store_mtime["manual_file"]
+        )
+        changed = (
+            path_changed
+            or
+            recorded_mtime != _locator_store_mtime["recorded"]
+            or manual_mtime != _locator_store_mtime["manual"]
+        )
+        if changed:
+            _locator_store_mtime["recorded_file"] = recorded_file
+            _locator_store_mtime["manual_file"] = manual_file
+            _locator_store_mtime["recorded"] = recorded_mtime
+            _locator_store_mtime["manual"] = manual_mtime
+        return changed
 
     # Enable Quasar dark mode so all components render with light text on dark backgrounds
     ui.dark_mode().enable()
@@ -541,6 +632,51 @@ def build_web_ui():
                 ui.html('<span style="color:#60a5fa;font-weight:700;font-size:12px;">✏️ Record Element</span>')
 
             with ui.element("div").classes("panel-body"):
+                active_auth = _ui_state.get("auth_session") or {}
+                with ui.card().classes("w-full p-3 border border-emerald-700 bg-slate-900"):
+                    ui.label("🛂 Employee Login (Mandatory)").classes("text-emerald-300 font-bold text-sm")
+                    with ui.row().classes("w-full gap-2 items-end flex-wrap mt-1"):
+                        auth_name_input = ui.input(
+                            label="Employee name",
+                            value=active_auth.get("employee_name", ""),
+                        ).classes("w-52").props("dense clearable")
+                        auth_id_input = ui.input(
+                            label="Employee ID",
+                            value=active_auth.get("employee_id", ""),
+                        ).classes("w-32").props("dense clearable")
+                        auth_login_btn = ui.button("🔐 Login", color="green").classes("text-xs")
+                        auth_logout_btn = ui.button("🚪 Logout", color="red").classes("text-xs")
+                    auth_status_lbl = ui.label(
+                        "Login required before context activation and recording."
+                    ).classes("text-xs text-slate-300")
+
+                active_ctx = _ui_state.get("recording_context") or {}
+                active_platform = (
+                    active_ctx.get("platform", {}).get("label")
+                    if isinstance(active_ctx.get("platform"), dict) else None
+                ) or "Website"
+                active_project = active_ctx.get("project_name", "")
+                active_script = active_ctx.get("script_name", "")
+
+                # Strict preflight context: required before any recording persistence.
+                with ui.card().classes("w-full p-3 border border-amber-700 bg-slate-900"):
+                    ui.label("🧭 Recording Context (Mandatory)").classes("text-amber-300 font-bold text-sm")
+                    with ui.row().classes("w-full gap-2 items-end flex-wrap mt-1"):
+                        context_platform_select = ui.select(
+                            rc.list_platform_labels(),
+                            value=active_platform,
+                            label="Platform",
+                        ).classes("w-40").props("dense")
+                        context_project_input = ui.input(
+                            label="Project name", value=active_project or ""
+                        ).classes("w-40").props("dense clearable")
+                        context_script_input = ui.input(
+                            label="Test script", value=active_script or ""
+                        ).classes("w-40").props("dense clearable")
+                        activate_context_btn = ui.button("✅ Activate Context", color="orange").classes("text-xs")
+                    context_status_lbl = ui.label(
+                        "Select platform + project + test script to unlock recording."
+                    ).classes("text-xs text-slate-300")
 
                 # ── STEP 1 — Navigate to URL (always the first step) ──────────────
                 with ui.element("div").style(
@@ -738,6 +874,8 @@ def build_web_ui():
 
                         with ui.row().classes("gap-1 flex-wrap mt-1"):
                             def qadd(s):
+                                if not _has_context():
+                                    ui.notify("Activate recording context first", color="negative"); return
                                 _ui_state["flow_steps"].append(s)
                                 _update_flow_list()
                                 ui.notify(f"Added: {s}", color="positive")
@@ -760,11 +898,21 @@ def build_web_ui():
                                     removed = _ui_state["flow_steps"].pop()
                                     _update_flow_list()
                                     ui.notify(f"Undone: {removed}", color="warning")
+                                    rs.log_action(
+                                        _ui_state.get("auth_session"),
+                                        "delete_step",
+                                        {"mode": "undo", "step": removed},
+                                    )
 
                             def do_clear():
                                 _ui_state["flow_steps"].clear()
                                 _ui_state["edit_step_idx"] = None
                                 _update_flow_list()
+                                rs.log_action(
+                                    _ui_state.get("auth_session"),
+                                    "delete_step",
+                                    {"mode": "clear_all"},
+                                )
 
                             ui.button("↩ Undo",  on_click=do_undo ).props("flat dense").classes("text-xs bg-slate-700")
                             ui.button("🗑 Clear", on_click=do_clear).props("flat dense").classes("text-xs bg-red-900")
@@ -780,6 +928,8 @@ def build_web_ui():
                     ).classes("w-44").props("dense")
 
                     def do_save():
+                        if not _has_context():
+                            ui.notify("Activate recording context first", color="negative"); return
                         name_ = flow_name_input.value.strip()
                         if not _ui_state["flow_steps"]:
                             ui.notify("No steps to save", color="negative"); return
@@ -797,12 +947,24 @@ def build_web_ui():
                         path_ = _save_flow(name_, steps_to_save)
                         ui.notify(f"✅ Saved: {path_}", color="positive")
                         _refresh_flow_select()
+                        _snapshot_context_state(
+                            setup_options={
+                                "last_saved_flow": os.path.basename(path_),
+                                "step_count": len(steps_to_save),
+                            }
+                        )
+                        rs.log_action(
+                            _ui_state.get("auth_session"),
+                            "save_flow",
+                            {"flow_file": os.path.basename(path_), "step_count": len(steps_to_save)},
+                        )
 
                     ui.button("💾 Save .flow", on_click=do_save, color="green"
                     ).props("flat dense").classes("text-sm")
 
-                    os.makedirs(FLOWS_DIR, exist_ok=True)
-                    _flist = sorted([f for f in os.listdir(FLOWS_DIR) if f.endswith(".flow")])
+                    flow_dir = _active_flow_dir()
+                    os.makedirs(flow_dir, exist_ok=True)
+                    _flist = sorted([f for f in os.listdir(flow_dir) if f.endswith(".flow")])
                     open_select = ui.select(
                         _flist or ["(none)"],
                         value=_flist[0] if _flist else "(none)",
@@ -810,16 +972,22 @@ def build_web_ui():
                     ).classes("w-44").props("dense")
 
                     def _refresh_flow_select():
-                        fl = sorted([f for f in os.listdir(FLOWS_DIR) if f.endswith(".flow")])
+                        active_dir = _active_flow_dir()
+                        os.makedirs(active_dir, exist_ok=True)
+                        fl = sorted([f for f in os.listdir(active_dir) if f.endswith(".flow")])
                         open_select.options = fl or ["(none)"]
                         if fl:
                             open_select.set_value(fl[0])
+                        else:
+                            open_select.set_value("(none)")
                         open_select.update()
 
                     def do_load():
+                        if not _has_context():
+                            ui.notify("Activate recording context first", color="negative"); return
                         fname = open_select.value
                         if not fname or fname == "(none)": return
-                        path_ = os.path.join(FLOWS_DIR, fname)
+                        path_ = os.path.join(_active_flow_dir(), fname)
                         if not os.path.exists(path_): return
                         steps_ = []
                         with open(path_, "r", encoding="utf-8") as fh:
@@ -830,6 +998,11 @@ def build_web_ui():
                         _ui_state["flow_steps"] = steps_
                         _update_flow_list()
                         ui.notify(f"Loaded {len(steps_)} steps from {fname}", color="positive")
+                        rs.log_action(
+                            _ui_state.get("auth_session"),
+                            "load_flow",
+                            {"flow_file": fname, "step_count": len(steps_)},
+                        )
 
                     ui.button("📂 Load", on_click=do_load, color="teal"
                     ).props("flat dense").classes("text-sm")
@@ -849,10 +1022,14 @@ def build_web_ui():
                     _web_run_state = {"cancelled": False}
 
                     async def do_run_web_flow():
+                        if not _has_context():
+                            ui.notify("Activate recording context first", color="negative"); return
                         steps = list(_ui_state["flow_steps"])
                         if not steps:
                             ui.notify("No steps to run — add steps first", color="negative"); return
-                        tmp_path = os.path.join(FLOWS_DIR, "__tmp_run__.flow")
+                        run_dir = _active_flow_dir()
+                        os.makedirs(run_dir, exist_ok=True)
+                        tmp_path = os.path.join(run_dir, "__tmp_run__.flow")
                         url_ = (start_url_input.value or "").strip()
                         all_steps = list(steps)
                         if url_:
@@ -868,7 +1045,21 @@ def build_web_ui():
                         _web_run_state["cancelled"] = False
                         web_run_status.set_text(f"▶ Running {len(all_steps)} steps\u2026")
                         import runner as _runner
-                        def _do_run(): return _runner.run_nlp_flow_collect(tmp_path)
+                        from config import settings as _settings
+                        active_manual = _active_manual_file()
+                        active_recorded = _active_db_file()
+
+                        def _do_run():
+                            with runner_settings_lock:
+                                prev_manual = _settings.MANUAL_LOCATORS_FILE
+                                prev_recorded = _settings.RECORDED_ELEMENTS_FILE
+                                _settings.MANUAL_LOCATORS_FILE = active_manual
+                                _settings.RECORDED_ELEMENTS_FILE = active_recorded
+                                try:
+                                    return _runner.run_nlp_flow_collect(tmp_path)
+                                finally:
+                                    _settings.MANUAL_LOCATORS_FILE = prev_manual
+                                    _settings.RECORDED_ELEMENTS_FILE = prev_recorded
                         try:
                             stats = await run.io_bound(_do_run)
                             for entry in stats["log"]:
@@ -876,9 +1067,24 @@ def build_web_ui():
                             web_run_status.set_text(
                                 f"\u2705 {stats['passed']} passed  \u274c {stats['failed']} failed"
                             )
+                            rs.log_action(
+                                _ui_state.get("auth_session"),
+                                "run_flow",
+                                {
+                                    "result": "completed",
+                                    "passed": stats["passed"],
+                                    "failed": stats["failed"],
+                                    "total_steps": len(all_steps),
+                                },
+                            )
                         except Exception as _ex:
                             web_run_log.push(f"\u274c {_ex}")
                             web_run_status.set_text("\u274c Error")
+                            rs.log_action(
+                                _ui_state.get("auth_session"),
+                                "run_flow",
+                                {"result": "error", "error": str(_ex), "total_steps": len(all_steps)},
+                            )
                         finally:
                             web_run_btn.set_visibility(True)
                             web_stop_btn.set_visibility(False)
@@ -963,11 +1169,22 @@ def build_web_ui():
                                 "username":        env_user_input.value or "",
                                 "password":        env_pass_input.value or "",
                             })
+                            _snapshot_context_state(
+                                setup_options={
+                                    "saved_env_name": n_,
+                                    "domain_source": env_src_input.value or "",
+                                    "domain_override": env_dst_input.value or "",
+                                    "auth_type": auth_type_select.value or "none",
+                                }
+                            )
+                            rs.log_action(_ui_state.get("auth_session"), "save_env", {"env_name": n_})
                             ui.notify(f"\U0001f4be Saved env: {n_}", color="positive")
                         def do_apply_env():
                             do_save_env()
                             n_ = env_select.value or "local"
                             em.set_active_env(n_)
+                            _snapshot_context_state(setup_options={"active_env_name": n_})
+                            rs.log_action(_ui_state.get("auth_session"), "apply_env", {"env_name": n_})
                             env_status_lbl.set_text(f"\u2705 active \u2014 {n_}")
                             ui.notify(f"\u2705 Active env \u2192 {n_}", color="positive")
                         ui.button("\U0001f4be Save", on_click=do_save_env, color="teal").props("flat dense").classes("text-xs")
@@ -995,6 +1212,146 @@ def build_web_ui():
             extra_input.update()
         except Exception:
             pass
+
+    def _login_employee():
+        name = (auth_name_input.value or "").strip()
+        emp_id = (auth_id_input.value or "").strip()
+        try:
+            session = rs.start_session(
+                employee_name=name,
+                employee_id=emp_id,
+                recorder_kind="web",
+                client_id="",
+            )
+        except ValueError as ex:
+            ui.notify(str(ex), color="negative")
+            auth_status_lbl.set_text("❌ Login failed")
+            return
+        _ui_state["auth_session"] = session
+        auth_name_input.set_value(session["employee_name"])
+        auth_id_input.set_value(session["employee_id"])
+        auth_status_lbl.set_text(
+            f"✅ Logged in: {session['employee_name']} ({session['employee_id']})"
+        )
+        ui.notify("Login successful", color="positive")
+
+    def _logout_employee():
+        sess = _ui_state.get("auth_session")
+        rs.end_session(sess, reason="user_logout")
+        _ui_state["auth_session"] = None
+        _ui_state["recording_context"] = None
+        _ui_state["flow_steps"] = []
+        _ui_state["edit_step_idx"] = None
+        _ui_state["known_pages"] = []
+        _ui_state["known_names"] = []
+        _ui_state["latest_names"] = []
+        _ui_state["last_element"] = None
+        _refresh_name_options()
+        _refresh_page_options()
+        _refresh_flow_select()
+        _update_flow_list()
+        _update_live_panel()
+        auth_status_lbl.set_text("Logged out")
+        context_status_lbl.set_text("Context cleared — login required")
+        panel_status_lbl.set_text("Ready")
+        ui.notify("Logged out", color="warning")
+
+    auth_login_btn.on("click", _login_employee)
+    auth_logout_btn.on("click", _logout_employee)
+    if _has_auth_session():
+        s0 = _ui_state["auth_session"]
+        auth_status_lbl.set_text(
+            f"✅ Logged in: {s0['employee_name']} ({s0['employee_id']})"
+        )
+
+    def _snapshot_context_state(setup_options: dict | None = None):
+        ctx = _ui_state.get("recording_context")
+        if not ctx:
+            return
+        try:
+            from config import environment_manager as _em
+            from nlp.variable_manager import RUNTIME_VARIABLES
+            rc.snapshot_context_state(
+                ctx,
+                env_name=_em.get_active_env_name(),
+                env_payload=_em.get_active_env(),
+                runtime_variables=dict(RUNTIME_VARIABLES),
+                setup_options=setup_options or {},
+            )
+        except Exception:
+            logger.exception("Failed to snapshot context state")
+
+    def _activate_recording_context():
+        if not _has_auth_session():
+            ui.notify("Employee login required before context activation", color="negative")
+            return
+        plat = context_platform_select.value
+        project = context_project_input.value or ""
+        script = context_script_input.value or ""
+        allowed_for_web = {"Website", "Touch-mobile", "API", "Hybrid"}
+        if plat not in allowed_for_web:
+            ui.notify(
+                "Web recorder supports context platforms: Website, Touch-mobile, API, Hybrid",
+                color="negative",
+            )
+            return
+        try:
+            ctx = rc.activate_context(
+                BASE_DIR,
+                plat,
+                project,
+                script,
+                recorder_kind="web",
+            )
+        except ValueError as ex:
+            ui.notify(f"Context validation failed: {ex}", color="negative")
+            return
+
+        _ui_state["recording_context"] = ctx
+        _ui_state["flow_steps"] = []
+        _ui_state["edit_step_idx"] = None
+        _ui_state["known_pages"] = []
+        _ui_state["known_names"] = []
+        _ui_state["latest_names"] = []
+        _ui_state["last_element"] = None
+
+        context_platform_select.set_value(ctx["platform"]["label"])
+        context_project_input.set_value(ctx["project_name"])
+        context_script_input.set_value(ctx["script_name"])
+        context_status_lbl.set_text(
+            f"✅ Active: {ctx['platform']['label']} / {ctx['project_name']} / {ctx['script_name']}"
+        )
+        panel_status_lbl.set_text("✅ Context activated")
+
+        _seed_known_from_db()
+        _refresh_name_options()
+        _refresh_page_options()
+        _refresh_flow_select()
+        _update_flow_list()
+        _update_live_panel()
+        _snapshot_context_state(
+            setup_options={
+                "start_url": (start_url_input.value or "").strip(),
+                "flow_name_default": (flow_name_input.value or "").strip(),
+            }
+        )
+        rs.log_action(
+            _ui_state.get("auth_session"),
+            "activate_context",
+            {
+                "platform": ctx["platform"]["label"],
+                "project": ctx["project_name"],
+                "script": ctx["script_name"],
+            },
+        )
+        ui.notify("Recording context activated", color="positive")
+
+    activate_context_btn.on("click", _activate_recording_context)
+    if _has_context():
+        c0 = _ui_state["recording_context"]
+        context_status_lbl.set_text(
+            f"✅ Active: {c0['platform']['label']} / {c0['project_name']} / {c0['script_name']}"
+        )
 
     def _update_live_panel():
         live_panel.clear()
@@ -1042,16 +1399,27 @@ def build_web_ui():
                             _populate_form_from_step(s)
                             _update_flow_list()
                             ui.notify(f"Editing step {idx+1}", color="info", timeout=3000)
+                            rs.log_action(
+                                _ui_state.get("auth_session"),
+                                "edit_step_start",
+                                {"index": idx, "step": s},
+                            )
                         return _edit
 
                     def make_del(idx=i-1):
                         def _del():
                             if 0 <= idx < len(_ui_state["flow_steps"]):
+                                removed_step = _ui_state["flow_steps"][idx]
                                 _ui_state["flow_steps"].pop(idx)
                                 if _ui_state.get("edit_step_idx") == idx:
                                     _ui_state["edit_step_idx"] = None
                                     record_btn.set_text("⚡ Add Step")
                                 _update_flow_list()
+                                rs.log_action(
+                                    _ui_state.get("auth_session"),
+                                    "delete_step",
+                                    {"mode": "row_delete", "index": idx, "step": removed_step},
+                                )
                         return _del
 
                     def make_up(idx=i-1):
@@ -1153,6 +1521,9 @@ def build_web_ui():
             extra_input.update()
 
     def do_record():
+        if not _has_context():
+            ui.notify("Activate recording context first", color="negative")
+            return
         raw_name   = (name_input.value or "").strip()
         name       = _sanitise(raw_name)
         action     = action_select.value
@@ -1175,9 +1546,11 @@ def build_web_ui():
             return
 
         step_lines = [ln for ln in step.split("\n") if ln.strip()]
+        op_mode = "add"
 
         edit_idx = _ui_state.get("edit_step_idx")
         if edit_idx is not None:
+            op_mode = "update"
             if 0 <= edit_idx < len(_ui_state["flow_steps"]):
                 _ui_state["flow_steps"][edit_idx:edit_idx + 1] = step_lines
             _ui_state["edit_step_idx"] = None
@@ -1204,6 +1577,17 @@ def build_web_ui():
         index_select.set_value("any")
         scroll_toggle.set_value(False)
         _update_live_panel()
+        _snapshot_context_state(
+            setup_options={
+                "last_action": action,
+                "last_page": page_name,
+            }
+        )
+        rs.log_action(
+            _ui_state.get("auth_session"),
+            "record_step",
+            {"mode": op_mode, "action": action, "page": page_name, "element": name},
+        )
 
     record_btn.on("click", do_record)
 
@@ -1216,6 +1600,14 @@ def build_web_ui():
 
     async def _tick():
         _tick_n["n"] += 1
+        if _has_auth_session():
+            rs.touch_session(_ui_state.get("auth_session"))
+
+        # Keep dropdowns hot with elements saved from other UI screens/processes.
+        if _locator_store_changed() and _seed_known_from_db():
+            _refresh_name_options()
+            _refresh_page_options()
+
         if _tick_n["n"] % 2 == 0:
             _update_live_panel()
             _refresh_var_options()
@@ -1268,7 +1660,7 @@ def build_web_ui():
 
             _ui_state["last_element"] = None
 
-    ui.timer(3.0, _tick)
+    ui.timer(1.0, _tick)
 
 
 @ui.page("/")

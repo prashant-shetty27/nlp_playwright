@@ -101,7 +101,10 @@
       },
       "agree_and_continue": {
         "accessibility_id": "Agree and Continue",
-        "xpath": "//XCUIElementTypeButton[@name='Agree and Continue']"
+        "label": "Agree and Continue",
+        "value": "Agree and Continue",
+        "class_name": "XCUIElementTypeStaticText",
+        "xpath": "//XCUIElementTypeStaticText[@name='Agree and Continue']"
       },
       "skip_button": {
         "accessibility_id": "Skip",
@@ -120,14 +123,28 @@
         "xpath": "//XCUIElementTypeButton[@name='Not Now']"
       },
       "dont_allow_button": {
-        "_comment": "Contacts sharing dialog \u2014 'Don't Allow' denies contact access without picker",
+        "_comment": "Contacts sharing dialog — 'Don't Allow' denies contact access without picker",
         "accessibility_id": "Don't Allow",
         "xpath": "//XCUIElementTypeButton[@name=\"Don't Allow\"]"
       },
       "deny_button": {
-        "_comment": "Generic deny \u2014 alternate label on some iOS permission dialogs",
+        "_comment": "Generic deny — alternate label on some iOS permission dialogs",
         "accessibility_id": "Deny",
         "xpath": "//XCUIElementTypeButton[@name='Deny']"
+      },
+      "login_skip": {
+        "accessibility_id": "Skip",
+        "label": "Skip",
+        "value": "Skip",
+        "class_name": "XCUIElementTypeStaticText",
+        "xpath": "//XCUIElementTypeStaticText[@name='Skip']"
+      },
+      "b2b": {
+        "accessibility_id": "B2B",
+        "label": "B2B",
+        "value": "B2B",
+        "class_name": "XCUIElementTypeStaticText",
+        "xpath": "//XCUIElementTypeStaticText[@name='B2B']"
       }
     },
     "results_screen": {
@@ -195,7 +212,7 @@
       },
       "don_t_allow": {
         "resource_id": "com.android.permissioncontroller:id/permission_deny_button",
-        "text": "Don\u2019t allow",
+        "text": "Don’t allow",
         "class_name": "android.widget.Button",
         "xpath": "//android.widget.Button[@resource-id='com.android.permissioncontroller:id/permission_deny_button']"
       },
@@ -288,12 +305,12 @@
       "maybe_later": {
         "custom_xpath": "//span[contains(@class,'jsx-55162c602a57c0bf')]",
         "tagName": "span",
-        "innerText": "\u20185.3 Crore+\u2018 Businesses"
+        "innerText": "‘5.3 Crore+‘ Businesses"
       },
       "maybe_later_recorded_element": {
         "custom_xpath": "//span[contains(@class,'jsx-55162c602a57c0bf')]",
         "tagName": "span",
-        "innerText": "\u20185.3 Crore+\u2018 Businesses"
+        "innerText": "‘5.3 Crore+‘ Businesses"
       },
       "search_box": {
         "custom_xpath": "//figcaption[contains(@class,'color111') and contains(@class,'pt-10')]",

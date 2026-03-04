@@ -42,7 +42,9 @@ flask
 flask-cors
 
 # Mobile adapters
-Appium-Python-Client
+# >=3.1.0: UiAutomator2Options/XCUITestOptions, W3C caps, start_recording_screen(**kwargs) API
+# <5.0.0:  guard against future major breaking changes
+Appium-Python-Client>=3.1.0,<5.0.0
 
 # Test data generation
 faker

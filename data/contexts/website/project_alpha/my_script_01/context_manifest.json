@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-03-04T11:23:48Z",
+  "platform": {
+    "label": "Website",
+    "key": "website"
+  },
+  "project_name": "project_alpha",
+  "script_name": "my_script_01",
+  "recorder_kind": "web",
+  "paths": {
+    "data_dir": "/Users/prashantshetty/nlp_playwright/data/contexts/website/project_alpha/my_script_01",
+    "flow_dir": "/Users/prashantshetty/nlp_playwright/flows/contexts/website/project_alpha/my_script_01",
+    "manifest_file": "/Users/prashantshetty/nlp_playwright/data/contexts/website/project_alpha/my_script_01/context_manifest.json",
+    "recorded_elements_file": "/Users/prashantshetty/nlp_playwright/data/contexts/website/project_alpha/my_script_01/recorded_elements.json",
+    "manual_locators_file": "/Users/prashantshetty/nlp_playwright/data/contexts/website/project_alpha/my_script_01/locators_manual.json",
+    "env_snapshot_file": "/Users/prashantshetty/nlp_playwright/data/contexts/website/project_alpha/my_script_01/environment_snapshot.json",
+    "runtime_variables_file": "/Users/prashantshetty/nlp_playwright/data/contexts/website/project_alpha/my_script_01/runtime_variables.json",
+    "setup_options_file": "/Users/prashantshetty/nlp_playwright/data/contexts/website/project_alpha/my_script_01/setup_options.json"
+  },
+  "created_at": "2026-03-04T11:23:48Z",
+  "last_used_at": "2026-03-04T11:23:48Z"
+}

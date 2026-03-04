@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-03-04T09:13:15Z",
+  "platform": {
+    "label": "Website",
+    "key": "website"
+  },
+  "project_name": "proj_alpha",
+  "script_name": "smoke_suite",
+  "recorder_kind": "web",
+  "paths": {
+    "data_dir": "/Users/prashantshetty/nlp_playwright/data/contexts/website/proj_alpha/smoke_suite",
+    "flow_dir": "/Users/prashantshetty/nlp_playwright/flows/contexts/website/proj_alpha/smoke_suite",
+    "manifest_file": "/Users/prashantshetty/nlp_playwright/data/contexts/website/proj_alpha/smoke_suite/context_manifest.json",
+    "recorded_elements_file": "/Users/prashantshetty/nlp_playwright/data/contexts/website/proj_alpha/smoke_suite/recorded_elements.json",
+    "manual_locators_file": "/Users/prashantshetty/nlp_playwright/data/contexts/website/proj_alpha/smoke_suite/locators_manual.json",
+    "env_snapshot_file": "/Users/prashantshetty/nlp_playwright/data/contexts/website/proj_alpha/smoke_suite/environment_snapshot.json",
+    "runtime_variables_file": "/Users/prashantshetty/nlp_playwright/data/contexts/website/proj_alpha/smoke_suite/runtime_variables.json",
+    "setup_options_file": "/Users/prashantshetty/nlp_playwright/data/contexts/website/proj_alpha/smoke_suite/setup_options.json"
+  },
+  "created_at": "2026-03-04T09:13:15Z",
+  "last_used_at": "2026-03-04T09:13:15Z"
+}

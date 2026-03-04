@@ -1,0 +1,9 @@
+{
+  "android": {
+    "home_screen": {
+      "login_button": {
+        "xpath": "//x"
+      }
+    }
+  }
+}

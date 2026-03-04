@@ -48,8 +48,11 @@ LOCATORS_FILE = os.path.join(BASE_DIR, "data", "locators_manual.json")
 
 def _load_locators() -> dict:
     if os.path.exists(LOCATORS_FILE):
-        with open(LOCATORS_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+        try:
+            with open(LOCATORS_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except (json.JSONDecodeError, OSError) as e:
+            print(f"⚠️  locators_manual.json unreadable ({e}) — starting with empty database.")
     return {}
 
 

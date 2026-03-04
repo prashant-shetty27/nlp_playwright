@@ -258,6 +258,60 @@
         "class": "color111 font14 pt-10"
       },
       "custom_xpath": "//figcaption[contains(@class,'color111') and contains(@class,'pt-10') and normalize-space(.)='Movies']"
+    },
+    "main_search_box": {
+      "tagName": "input",
+      "className": "input_search font14 fw400 color111",
+      "innerText": null,
+      "rect": {
+        "x": 308,
+        "y": 140,
+        "width": 492,
+        "height": 49
+      },
+      "attributes": {
+        "type": "text",
+        "autocomplete": "off",
+        "aria-autocomplete": "list",
+        "aria-controls": "main-auto-suggest",
+        "class": "input_search font14 fw400 color111",
+        "role": "combobox",
+        "aria-expanded": "true",
+        "aria-label": "Search",
+        "placeholder": "Search for Spa & Salons",
+        "id": "main-auto"
+      },
+      "custom_xpath": "//input[@id='main-auto']"
+    },
+    "autosuggest_restaurants_nearme": {
+      "tagName": "div",
+      "className": "search_text font14 fw400 color111",
+      "innerText": "Restaurants Near Me\nCategory",
+      "rect": {
+        "x": 358,
+        "y": 210,
+        "width": 436,
+        "height": 36
+      },
+      "attributes": {
+        "class": "search_text font14 fw400 color111"
+      },
+      "custom_xpath": "//div[contains(@class,'search_text') and contains(@class,'fw400') and contains(@class,'color111') and normalize-space(.)='Restaurants Near Me\nCategory']"
+    },
+    "caterers_thumbail": {
+      "tagName": "figcaption",
+      "className": "color111 font14 pt-10",
+      "innerText": "Caterers",
+      "rect": {
+        "x": 457,
+        "y": 446,
+        "width": 163,
+        "height": 31
+      },
+      "attributes": {
+        "class": "color111 font14 pt-10"
+      },
+      "custom_xpath": "//figcaption[contains(@class,'color111') and contains(@class,'pt-10') and normalize-space(.)='Caterers']"
     }
   },
   "home_page": {

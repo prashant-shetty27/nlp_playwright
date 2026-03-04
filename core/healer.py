@@ -4,11 +4,29 @@ ML-powered self-healing orchestrator — unified for all platforms.
 Works with Playwright (web/mobile) and Appium (android/ios/hybrid).
 """
 import logging
-from core.ml_engine import LocatorHealer
+from healing.ml_engine import LocatorHealer
 
 logger = logging.getLogger(__name__)
 
 _ml_healer = LocatorHealer()
+
+
+def _xpath_literal(value: str) -> str:
+    """
+    Build a safe XPath string literal for values that may contain quotes.
+    """
+    if "'" not in value:
+        return f"'{value}'"
+    if '"' not in value:
+        return f'"{value}"'
+    parts = value.split("'")
+    segments: list[str] = []
+    for i, part in enumerate(parts):
+        if part:
+            segments.append(f"'{part}'")
+        if i < len(parts) - 1:
+            segments.append('"\'"')
+    return f"concat({', '.join(segments)})"
 
 
 def scrape_dom_web(page) -> list:
@@ -58,27 +76,28 @@ def build_locator_from_dna(element_dna: dict) -> str:
     attrs = element_dna.get("attributes", {}) or {}
 
     if attrs.get("id"):
-        return f"//{tag}[@id='{attrs['id']}']"
+        return f"//{tag}[@id={_xpath_literal(attrs['id'])}]"
     if attrs.get("name"):
-        return f"//{tag}[@name='{attrs['name']}']"
+        return f"//{tag}[@name={_xpath_literal(attrs['name'])}]"
     if attrs.get("aria-label"):
-        return f"//{tag}[@aria-label='{attrs['aria-label']}']"
+        return f"//{tag}[@aria-label={_xpath_literal(attrs['aria-label'])}]"
     if attrs.get("title"):
-        return f"//{tag}[@title='{attrs['title']}']"
+        return f"//{tag}[@title={_xpath_literal(attrs['title'])}]"
     if attrs.get("alt"):
-        return f"//{tag}[@alt='{attrs['alt']}']"
+        return f"//{tag}[@alt={_xpath_literal(attrs['alt'])}]"
 
     classes = attrs.get("class", "")
     if classes:
         valid_classes = [c for c in classes.split() if "font" not in c.lower()]
         if valid_classes:
-            contains_logic = " and ".join([f"contains(@class, '{c}')" for c in valid_classes])
+            contains_logic = " and ".join(
+                [f"contains(@class, {_xpath_literal(c)})" for c in valid_classes]
+            )
             return f"//{tag}[{contains_logic}]"
 
     text = element_dna.get("innerText")
     if text and len(text) < 40:
-        clean_text = text.replace("'", "\\'")
-        return f"//{tag}[normalize-space(text())='{clean_text}']"
+        return f"//{tag}[normalize-space(text())={_xpath_literal(text)}]"
 
     return f"//{tag}"
 

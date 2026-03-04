@@ -10,6 +10,7 @@ Routes:
   POST /nlp/parse
   POST /nlp/suggest
   GET  /locators
+  GET  /locators/dropdown/names
   GET  /locators/{page}
   POST /locators
   DEL  /locators/{page}/{name}

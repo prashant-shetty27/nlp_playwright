@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-03-04T11:25:46Z",
+  "platform": {
+    "label": "Website",
+    "key": "website"
+  },
+  "project_name": "webrecorder_smoke",
+  "script_name": "employee_dataflow",
+  "recorder_kind": "web",
+  "paths": {
+    "data_dir": "/Users/prashantshetty/nlp_playwright/data/contexts/website/webrecorder_smoke/employee_dataflow",
+    "flow_dir": "/Users/prashantshetty/nlp_playwright/flows/contexts/website/webrecorder_smoke/employee_dataflow",
+    "manifest_file": "/Users/prashantshetty/nlp_playwright/data/contexts/website/webrecorder_smoke/employee_dataflow/context_manifest.json",
+    "recorded_elements_file": "/Users/prashantshetty/nlp_playwright/data/contexts/website/webrecorder_smoke/employee_dataflow/recorded_elements.json",
+    "manual_locators_file": "/Users/prashantshetty/nlp_playwright/data/contexts/website/webrecorder_smoke/employee_dataflow/locators_manual.json",
+    "env_snapshot_file": "/Users/prashantshetty/nlp_playwright/data/contexts/website/webrecorder_smoke/employee_dataflow/environment_snapshot.json",
+    "runtime_variables_file": "/Users/prashantshetty/nlp_playwright/data/contexts/website/webrecorder_smoke/employee_dataflow/runtime_variables.json",
+    "setup_options_file": "/Users/prashantshetty/nlp_playwright/data/contexts/website/webrecorder_smoke/employee_dataflow/setup_options.json"
+  },
+  "created_at": "2026-03-04T11:25:46Z",
+  "last_used_at": "2026-03-04T11:25:46Z"
+}

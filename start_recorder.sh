@@ -10,11 +10,14 @@ Simple recorder launcher
 
 Usage:
   ./start_recorder.sh web [--port 8080] [--force]
+  ./start_recorder.sh app recorder [--port 8090] [--force] [--with-appium]
   ./start_recorder.sh app android [--caps suites/android_suite.json] [--port 8090] [--force] [--with-appium]
-  ./start_recorder.sh app ios     [--caps suites/ios_suite.json]     [--port 8090] [--force] [--with-appium]
+  ./start_recorder.sh app ios     [--caps suites/ios_suite.json]     [--port 8090] [--force] [--with-appium] [--skip-ios-preflight]
+  ./start_recorder.sh app-recorder [--port 8090] [--force] [--with-appium]
 
 Examples:
   ./start_recorder.sh web
+  ./start_recorder.sh app recorder
   ./start_recorder.sh web --port 8081 --force
   ./start_recorder.sh app android
   ./start_recorder.sh app android --caps suites/android_suite.json --with-appium
@@ -37,21 +40,28 @@ PORT=""
 CAPS=""
 FORCE="false"
 WITH_APPIUM="false"
+SKIP_IOS_PREFLIGHT="false"
 PLATFORM=""
+DEFAULT_APP_PLATFORM="${DEFAULT_APP_PLATFORM:-ios}"
 
 if [[ "$MODE" == "web" ]]; then
   PORT="8080"
-elif [[ "$MODE" == "app" ]]; then
-  if [[ $# -lt 1 ]]; then
-    echo "❌ Missing app platform: android|ios"
-    usage
-    exit 1
+elif [[ "$MODE" == "app" || "$MODE" == "app-recorder" ]]; then
+  # Simple mode: "app recorder" -> uses DEFAULT_APP_PLATFORM (ios by default)
+  if [[ "$MODE" == "app" && "${1:-}" == "recorder" ]]; then
+    PLATFORM="$DEFAULT_APP_PLATFORM"
+    shift || true
+  elif [[ "$MODE" == "app-recorder" || $# -lt 1 || "${1:-}" == --* ]]; then
+    PLATFORM="$DEFAULT_APP_PLATFORM"
+  else
+    PLATFORM="$1"; shift || true
   fi
-  PLATFORM="$1"; shift || true
+
   if [[ "$PLATFORM" != "android" && "$PLATFORM" != "ios" ]]; then
-    echo "❌ Invalid platform: $PLATFORM"
+    echo "❌ Invalid platform: $PLATFORM (use android|ios or 'recorder')"
     exit 1
   fi
+
   PORT="8090"
   CAPS="suites/${PLATFORM}_suite.json"
 else
@@ -70,6 +80,8 @@ while [[ $# -gt 0 ]]; do
       FORCE="true"; shift ;;
     --with-appium)
       WITH_APPIUM="true"; shift ;;
+    --skip-ios-preflight)
+      SKIP_IOS_PREFLIGHT="true"; shift ;;
     -h|--help)
       usage; exit 0 ;;
     *)
@@ -124,6 +136,19 @@ if [[ ! -f "$ROOT_DIR/$CAPS" ]]; then
   echo "⚠️ Caps file not found: $ROOT_DIR/$CAPS"
   echo "Continuing without --caps (recorder_ui defaults will be used)."
   CAPS=""
+fi
+
+if [[ "$PLATFORM" == "ios" && "$SKIP_IOS_PREFLIGHT" != "true" ]]; then
+  if [[ -n "$CAPS" ]]; then
+    echo "🧪 Running iOS readiness preflight..."
+    if ! "$PY" "$ROOT_DIR/execution/ios_readiness.py" --caps "$ROOT_DIR/$CAPS"; then
+      echo "❌ iOS readiness failed. Fix the errors above, then retry."
+      echo "   Use --skip-ios-preflight only if you intentionally want to bypass this gate."
+      exit 1
+    fi
+  else
+    echo "⚠️  iOS preflight skipped because no caps file was provided."
+  fi
 fi
 
 kill_port_if_needed "$PORT"

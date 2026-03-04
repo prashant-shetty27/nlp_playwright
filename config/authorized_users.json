@@ -1,0 +1,9 @@
+{
+  "_comment": "Authorized recorder users for employee login preflight.",
+  "users": [
+    {
+      "employee_name": "Prashant Shetty",
+      "employee_id": "10015420"
+    }
+  ]
+}

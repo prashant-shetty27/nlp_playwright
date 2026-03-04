@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-03-04T09:13:15Z",
+  "platform": {
+    "label": "Android app",
+    "key": "android_app"
+  },
+  "project_name": "proj_alpha",
+  "script_name": "checkout",
+  "recorder_kind": "app",
+  "paths": {
+    "data_dir": "/Users/prashantshetty/nlp_playwright/data/contexts/android_app/proj_alpha/checkout",
+    "flow_dir": "/Users/prashantshetty/nlp_playwright/flows/contexts/android_app/proj_alpha/checkout",
+    "manifest_file": "/Users/prashantshetty/nlp_playwright/data/contexts/android_app/proj_alpha/checkout/context_manifest.json",
+    "recorded_elements_file": "/Users/prashantshetty/nlp_playwright/data/contexts/android_app/proj_alpha/checkout/recorded_elements.json",
+    "manual_locators_file": "/Users/prashantshetty/nlp_playwright/data/contexts/android_app/proj_alpha/checkout/locators_manual.json",
+    "env_snapshot_file": "/Users/prashantshetty/nlp_playwright/data/contexts/android_app/proj_alpha/checkout/environment_snapshot.json",
+    "runtime_variables_file": "/Users/prashantshetty/nlp_playwright/data/contexts/android_app/proj_alpha/checkout/runtime_variables.json",
+    "setup_options_file": "/Users/prashantshetty/nlp_playwright/data/contexts/android_app/proj_alpha/checkout/setup_options.json"
+  },
+  "created_at": "2026-03-04T09:13:15Z",
+  "last_used_at": "2026-03-04T09:13:15Z"
+}

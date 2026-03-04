@@ -130,6 +130,8 @@ def close_browser(page, test_name: str = "test_run", session: TestSession | None
                 session.browser.close()
             if session.playwright_instance:
                 session.playwright_instance.stop()
+            session.active_page = None
+            session.active_frame = None
         # Legacy path — close directly via the page's context/browser if no session
         elif page:
             try:

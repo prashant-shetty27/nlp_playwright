@@ -7,19 +7,41 @@ This project provides a modular, NLP-driven automation framework using Playwrigh
 - Visual regression (image comparison)
 - Robust error handling and logging
 - Extensible snippet and keyword system
-# .venv/bin/python runner.py flows/full_demo.flow 2>&1
-# python plan_runner.py plans/android_plan.json
- ## Setup
+
+## Common Commands
+```sh
+.venv/bin/python runner.py flows/full_demo.flow 2>&1
+.venv/bin/python plan_runner.py plans/android_plan.json
+```
+
+## Setup
 1. **Clone the repository**
-2. **Install dependencies:**
-   ```sh
-   pip install -r requirements.txt
-   playwright install
-   ```
-3. **Run setup script (optional):**
+2. **Install dependencies (recommended):**
    ```sh
    ./setup.sh
    ```
+   Manual alternative:
+   ```sh
+   python3 -m venv .venv
+   . .venv/bin/activate
+   pip install -r requirements.txt
+   python -m playwright install
+   ```
+3. **Start recorder (optional):**
+   ```sh
+   ./start_recorder.sh web
+   ./start_recorder.sh web --port 8081 --force
+   ./start_recorder.sh app recorder --force
+   ./start_recorder.sh app android --caps suites/android_suite.json --with-appium
+   ./start_recorder.sh app ios --caps suites/ios_suite.json --port 8091
+   ```
+   iOS recorder runs a signing preflight before connecting. To check manually:
+   ```sh
+   .venv/bin/python execution/ios_readiness.py --caps suites/ios_suite.json
+   ```
+<!-- ./run_ios.sh --skip-tunnel          # if tunnel is already running
+<!-- ./run_ios.sh --keep-running         # keep Appium/tunnel alive after run -->
+<!-- ./run_ios.sh --port 4725            # custom Appium port --> -->
 
 ## Usage
 - **Run a test flow:**
@@ -115,6 +137,11 @@ Runtime profile options include:
 ## Troubleshooting
 - If locators are not found, check `locators_manual.json` and use `locators/cleaner.py`.
 - For Playwright errors, ensure browsers are installed with `playwright install`.
+- For iOS `xcodebuild code 65`, run:
+  ```sh
+  .venv/bin/python execution/ios_readiness.py --caps suites/ios_suite.json
+  ```
+  and fix team/certificate/profile errors before rerunning Appium.
 
 ## License
 MIT

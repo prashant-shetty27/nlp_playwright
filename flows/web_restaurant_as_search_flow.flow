@@ -1,0 +1,11 @@
+# flows/web_restaurant_as_search_flow.flow
+# Recorded 2026-03-04 13:30 — platform: WEB
+# ─────────────────────────────────────────
+
+go to url https://www.justdial.com/
+wait 6 seconds
+click maybe_later_recorded_element
+click main_search_box
+type "restaurants" into main_search_box
+click autosuggest_restaurants_nearme
+wait 62 seconds

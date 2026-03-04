@@ -1,0 +1,7 @@
+# flows/contexts/website/webrecorder_smoke/employee_dataflow/web_recorder_employee_dataflow_smoke.flow
+# Context Website / webrecorder_smoke / employee_dataflow
+# Recorded 2026-03-04 16:55 — platform: WEB
+# ─────────────────────────────────────────
+
+go to url https://www.justdial.com/
+wait 1 seconds
