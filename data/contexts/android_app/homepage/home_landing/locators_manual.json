@@ -1,0 +1,12 @@
+{
+  "android": {
+    "home_screen": {
+      "close": {
+        "accessibility_id": "Close",
+        "resource_id": "com.justdial.search:id/buttonClose",
+        "class_name": "android.widget.ImageView",
+        "xpath": "//android.widget.ImageView[@resource-id='com.justdial.search:id/buttonClose']"
+      }
+    }
+  }
+}

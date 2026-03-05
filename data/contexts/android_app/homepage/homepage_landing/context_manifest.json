@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-03-05T12:39:12Z",
+  "platform": {
+    "label": "Android app",
+    "key": "android_app"
+  },
+  "project_name": "homepage",
+  "script_name": "homepage_landing",
+  "recorder_kind": "app",
+  "paths": {
+    "data_dir": "/Users/prashantshetty/nlp_playwright/data/contexts/android_app/homepage/homepage_landing",
+    "flow_dir": "/Users/prashantshetty/nlp_playwright/flows/contexts/android_app/homepage/homepage_landing",
+    "manifest_file": "/Users/prashantshetty/nlp_playwright/data/contexts/android_app/homepage/homepage_landing/context_manifest.json",
+    "recorded_elements_file": "/Users/prashantshetty/nlp_playwright/data/contexts/android_app/homepage/homepage_landing/recorded_elements.json",
+    "manual_locators_file": "/Users/prashantshetty/nlp_playwright/data/contexts/android_app/homepage/homepage_landing/locators_manual.json",
+    "env_snapshot_file": "/Users/prashantshetty/nlp_playwright/data/contexts/android_app/homepage/homepage_landing/environment_snapshot.json",
+    "runtime_variables_file": "/Users/prashantshetty/nlp_playwright/data/contexts/android_app/homepage/homepage_landing/runtime_variables.json",
+    "setup_options_file": "/Users/prashantshetty/nlp_playwright/data/contexts/android_app/homepage/homepage_landing/setup_options.json"
+  },
+  "created_at": "2026-03-05T12:36:31Z",
+  "last_used_at": "2026-03-05T12:39:12Z"
+}

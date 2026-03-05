@@ -68,7 +68,7 @@ _state = {
     "latest_names":            [],     # last 3 recorded element names (for live panel)
     "selected_step_indices":   set(),  # set of step indices checked for reusable save
     "recording_context":       None,
-    "auth_session":            None,
+    "auth_session":            None,  # auto-set at startup — no login required
 }
 _lock = threading.Lock()
 
@@ -83,11 +83,11 @@ def _active_flow_dir() -> str:
 
 
 def _has_context() -> bool:
-    return bool(_state.get("auth_session")) and bool(_state.get("recording_context"))
+    return bool(_state.get("recording_context"))
 
 
 def _has_auth_session() -> bool:
-    return bool(_state.get("auth_session"))
+    return True  # auth disabled — no employee login required
 
 # Input/editable widget classes whose `text` attribute is a dynamic placeholder —
 # never use text as a locator key for these, since the value rotates at runtime.
@@ -630,29 +630,264 @@ def build_ui():
             return True
         return False
 
-    ui.page_title("📱 Appium Recorder")
+    ui.page_title("📱 Appium Recorder · Prashant Shetty")
     # ── Theme ──────────────────────────────────────────────────────────────────
     ui.add_head_html("""
     <style>
-      body { background:#0f172a; color:#e2e8f0; font-family:'Inter',sans-serif; }
-      .q-card { background:#1e293b!important; border:1px solid #334155; }
+      html, body { height:100%; margin:0; overflow:hidden;
+                   background:#0f172a; color:#e2e8f0;
+                   font-family:'Inter','Segoe UI',sans-serif; }
+      #q-app, #q-app > div { height:100%; display:flex; flex-direction:column; overflow:hidden; }
+      .q-card { background:#1e293b!important; border:1px solid #2d3f55; border-radius:6px!important; }
       .el-row:hover { background:#1e3a5f!important; cursor:pointer; }
       .el-row.selected { background:#1d4ed8!important; }
-      .step-row { border-bottom:1px solid #334155; padding:4px 8px; }
+      .step-row { border-bottom:1px solid #2d3f55; padding:3px 6px; }
       .step-row:hover { background:#1e293b; }
-      ::-webkit-scrollbar { width:6px; } ::-webkit-scrollbar-thumb { background:#475569; border-radius:3px; }
+      ::-webkit-scrollbar { width:5px; }
+      ::-webkit-scrollbar-thumb { background:#475569; border-radius:3px; }
+      ::-webkit-scrollbar-track { background:transparent; }
+      .hdr-div { width:1px; background:#2d3f55; height:26px; flex-shrink:0; align-self:center; }
+      .section-lbl { font-size:0.58rem; font-weight:700; letter-spacing:.09em;
+                     text-transform:uppercase; color:#64748b; margin-bottom:1px; }
     </style>
     """)
 
-    # ── Layout ────────────────────────────────────────────────────────────────
-    with ui.row().classes("w-full h-screen gap-0"):
+    # ══ HEADER BAR ════════════════════════════════════════════════════════════
+    with ui.row().classes(
+        "w-full bg-slate-950 border-b border-slate-800 px-4 items-center gap-3 flex-shrink-0"
+    ).style("height:58px; min-height:58px;"):
+
+        # Brand ────────────────────────────────────────────────────────────────
+        with ui.column().classes("gap-0 flex-shrink-0"):
+            ui.label("📱 Appium Recorder").classes(
+                "text-slate-100 font-bold leading-tight"
+            ).style("font-size:0.86rem;")
+            ui.label("by Prashant Shetty").classes(
+                "text-slate-600 leading-tight tracking-widest uppercase"
+            ).style("font-size:0.55rem;")
+
+        ui.element("div").classes("hdr-div")
+
+        # User name ────────────────────────────────────────────────────────────
+        saved_name = rs.load_saved_user_name()
+        if not _state.get("auth_session"):
+            _state["auth_session"] = rs.start_session(
+                user_name=saved_name or "guest", recorder_kind="app"
+            )
+        with ui.column().classes("gap-0 flex-shrink-0"):
+            ui.label("Tester").classes("section-lbl")
+            with ui.row().classes("gap-1 items-center"):
+                user_name_input = ui.input(
+                    value=_state["auth_session"].get("user_name", ""),
+                    placeholder="Your name",
+                ).classes("w-28").props("dense borderless")
+                def _set_user_name():
+                    name = (user_name_input.value or "").strip() or "guest"
+                    rs.save_user_name(name)
+                    _state["auth_session"]["user_name"] = name
+                    ui.notify(f"Name saved: {name}", color="positive")
+                ui.button("Set", color="teal").props("flat dense size=xs").on("click", _set_user_name)
+        auth_status_lbl = ui.label("").classes("hidden")
+
+        ui.element("div").classes("hdr-div")
+
+        # Context activation ───────────────────────────────────────────────────
+        active_ctx      = _state.get("recording_context") or {}
+        ctx_platform_val = (
+            active_ctx.get("platform", {}).get("label")
+            if isinstance(active_ctx.get("platform"), dict) else None
+        ) or "Android app"
+        ctx_project_val = active_ctx.get("project_name", "")
+        ctx_script_val  = active_ctx.get("script_name", "")
+
+        with ui.column().classes("gap-0 flex-shrink-0"):
+            ui.label("Context").classes("section-lbl")
+            with ui.row().classes("gap-1 items-center"):
+                ctx_platform_select = ui.select(
+                    rc.list_platform_labels(), value=ctx_platform_val,
+                ).classes("w-32").props("dense borderless")
+                ctx_project_input = ui.input(
+                    value=ctx_project_val, placeholder="Project"
+                ).classes("w-24").props("dense borderless clearable")
+                ctx_script_input = ui.input(
+                    value=ctx_script_val, placeholder="Script"
+                ).classes("w-24").props("dense borderless clearable")
+                ctx_activate_btn = ui.button("✅ Activate", color="orange").props("flat dense size=xs")
+
+        ctx_status_lbl = ui.label(
+            "← Select platform · project · script"
+        ).classes("text-xs text-slate-500 flex-shrink-0").style(
+            "max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; align-self:center;"
+        )
+
+        def _snapshot_context_state(setup_options: dict | None = None):
+            ctx = _state.get("recording_context")
+            if not ctx:
+                return
+            try:
+                from config import environment_manager as _em
+                from nlp.variable_manager import RUNTIME_VARIABLES
+                rc.snapshot_context_state(
+                    ctx,
+                    env_name=_em.get_active_env_name(),
+                    env_payload=_em.get_active_env(),
+                    runtime_variables=dict(RUNTIME_VARIABLES),
+                    setup_options=setup_options or {},
+                )
+            except Exception as ex:
+                logger.warning("Context snapshot failed: %s", ex)
+
+        def _activate_recording_context():
+            plat_label = ctx_platform_select.value
+            allowed_for_app = {"Android app", "iOS app", "Hybrid"}
+            if plat_label not in allowed_for_app:
+                ui.notify(
+                    "App recorder supports context platforms: Android app, iOS app, Hybrid",
+                    color="negative",
+                )
+                return
+            try:
+                ctx = rc.activate_context(
+                    BASE_DIR,
+                    plat_label,
+                    ctx_project_input.value or "",
+                    ctx_script_input.value or "",
+                    recorder_kind="app",
+                )
+            except ValueError as ex:
+                ui.notify(f"Context validation failed: {ex}", color="negative")
+                return
+            _state["recording_context"] = ctx
+            _state["flow_steps"] = []
+            _state["recorded"] = {}
+            _state["selected_step_indices"] = set()
+            _state["known_names"] = []
+            _state["latest_names"] = []
+            _state["pending_context_refresh"] = True
+            ctx_platform_select.set_value(ctx["platform"]["label"])
+            ctx_project_input.set_value(ctx["project_name"])
+            ctx_script_input.set_value(ctx["script_name"])
+            ctx_status_lbl.set_text(
+                f"✅ {ctx['platform']['label']} / {ctx['project_name']} / {ctx['script_name']}"
+            )
+            _snapshot_context_state(
+                setup_options={
+                    "device_platform": _state.get("platform"),
+                    "screen_name": _state.get("screen_name"),
+                }
+            )
+            rs.log_action(
+                _state.get("auth_session"),
+                "activate_context",
+                {
+                    "app_type": ctx["platform"]["label"],
+                    "file_name": ctx["script_name"],
+                    "project": ctx["project_name"],
+                },
+            )
+            ui.notify("Recording context activated", color="positive")
+
+        ctx_activate_btn.on("click", _activate_recording_context)
+        if _has_context():
+            c0 = _state["recording_context"]
+            ctx_status_lbl.set_text(
+                f"✅ {c0['platform']['label']} / {c0['project_name']} / {c0['script_name']}"
+            )
+
+        ui.element("div").classes("hdr-div")
+
+        # Device connect ───────────────────────────────────────────────────────
+        with ui.column().classes("gap-0 flex-shrink-0"):
+            ui.label("Device").classes("section-lbl")
+            with ui.row().classes("gap-1 items-center"):
+                plat_select = ui.select(
+                    ["android", "ios"], value=_state["platform"],
+                ).classes("w-24").props("dense borderless")
+                screen_input = ui.input(
+                    value=_state["screen_name"], placeholder="Screen name"
+                ).classes("w-28").props("dense borderless clearable")
+                conn_btn    = ui.button("▶ Connect",    color="green").props("flat dense size=sm").classes("font-bold")
+                disconn_btn = ui.button("⏹ Disconnect", color="red"  ).props("flat dense size=sm")
+
+        conn_status = ui.label("").classes("text-xs text-slate-400 flex-shrink-0 self-center")
+
+        async def do_connect():
+            if not _has_context():
+                ui.notify("Activate recording context first", color="negative")
+                return
+            ctx_label = _state["recording_context"]["platform"]["label"]
+            target_platform = plat_select.value
+            if target_platform == "android" and ctx_label not in {"Android app", "Hybrid"}:
+                ui.notify("Choose Android app/Hybrid context before Android connect", color="negative")
+                return
+            if target_platform == "ios" and ctx_label not in {"iOS app", "Hybrid"}:
+                ui.notify("Choose iOS app/Hybrid context before iOS connect", color="negative")
+                return
+            conn_status.set_text("⏳ Connecting…")
+            conn_btn.props("disabled")
+            _state["platform"]    = plat_select.value
+            _state["screen_name"] = screen_input.value or "home_screen"
+            try:
+                driver = await run.io_bound(_start_session, _state["caps"], _state["platform"])
+                _state["driver"] = driver
+                _state["status"] = "✅ Connected"
+                conn_status.set_text("✅ Connected")
+                await run.io_bound(_refresh_elements)
+                _update_element_list()
+                if _state["screenshot_b64"]:
+                    screenshot_img.set_source(
+                        f"data:image/png;base64,{_state['screenshot_b64']}"
+                    )
+                # Start auto-refresh thread
+                t = threading.Thread(target=_auto_refresh_loop, daemon=True)
+                t.start()
+                _snapshot_context_state(
+                    setup_options={
+                        "device_platform": _state["platform"],
+                        "screen_name": _state["screen_name"],
+                    }
+                )
+                rs.log_action(
+                    _state.get("auth_session"),
+                    "connect_device",
+                    {
+                        "app_type": _state["platform"],
+                        "screen_name": _state["screen_name"],
+                        "status": "pass",
+                    },
+                )
+            except Exception as e:
+                conn_status.set_text(f"❌ {e}")
+                _state["status"] = f"❌ {e}"
+            finally:
+                conn_btn.props(remove="disabled")
+
+        def do_disconnect():
+            _state["auto_refresh"] = False
+            if _state["driver"]:
+                try: _state["driver"].quit()
+                except: pass
+                _state["driver"] = None
+            conn_status.set_text("Disconnected")
+            _state["status"] = "Disconnected"
+            rs.log_action(_state.get("auth_session"), "disconnect_device", {})
+
+        conn_btn.on("click", do_connect)
+        disconn_btn.on("click", do_disconnect)
+
+        # right spacer
+        ui.element("div").classes("flex-1")
+
+    # ══ MAIN 3-COLUMN LAYOUT ══════════════════════════════════════════════════
+    with ui.row().classes("w-full gap-0").style("flex:1; overflow:hidden; min-height:0;"):
 
         # ── LEFT: Device screenshot ───────────────────────────────────────────
-        with ui.column().classes("w-72 bg-slate-900 border-r border-slate-700 p-3 gap-2"):
-            ui.label("📱 Device Screen").classes("text-blue-400 font-bold text-sm")
-            status_lbl = ui.label(_state["status"]).classes("text-xs text-slate-400")
-            screenshot_img = ui.image("").classes("w-full rounded-lg border border-slate-700").style(
-                "min-height:400px; object-fit:contain; background:#0f172a; cursor:crosshair;"
+        with ui.column().classes("bg-slate-900 border-r border-slate-800 p-2 gap-2 overflow-y-auto flex-shrink-0").style("width:256px; min-width:256px;"):
+            with ui.row().classes("items-center justify-between w-full"):
+                ui.label("DEVICE").classes("section-lbl")
+                status_lbl = ui.label(_state["status"]).classes("text-xs text-slate-400")
+            screenshot_img = ui.image("").classes("w-full rounded border border-slate-800").style(
+                "min-height:380px; object-fit:contain; background:#0f172a; cursor:crosshair;"
             )
 
             def on_screenshot_click(e):
@@ -726,7 +961,7 @@ def build_ui():
                     status_lbl.set_text(_state["status"])
 
                 ui.button("🔄 Refresh", on_click=on_refresh).classes(
-                    "flex-1 bg-blue-700 hover:bg-blue-600 text-white text-xs rounded"
+                    "flex-1 bg-blue-900 text-blue-200 text-xs rounded"
                 ).props("flat dense")
 
                 async def on_back():
@@ -735,7 +970,7 @@ def build_ui():
                         except: pass
                         await on_refresh()
                 ui.button("◀ Back", on_click=on_back).classes(
-                    "flex-1 bg-slate-700 hover:bg-slate-600 text-white text-xs rounded"
+                    "flex-1 bg-slate-800 text-slate-300 text-xs rounded"
                 ).props("flat dense")
 
             # Auto-refresh toggle
@@ -871,250 +1106,13 @@ def build_ui():
                     _state["auto_dismiss"] = bool(v)
                 auto_dismiss_toggle.on("update:model-value", on_auto_dismiss)
 
-        # ── MIDDLE: Elements + Actions ────────────────────────────────────────
-        with ui.column().classes("flex-1 p-3 gap-3 overflow-hidden"):
-
-            # ── Connection bar ─────────────────────────────────────────────────
-            with ui.card().classes("w-full p-3"):
-                ui.label("🔌 Connection").classes("text-blue-400 font-bold text-sm mb-1")
-                active_auth = _state.get("auth_session") or {}
-                with ui.row().classes("gap-2 items-end flex-wrap w-full mb-2"):
-                    auth_name_input = ui.input(
-                        label="Employee name", value=active_auth.get("employee_name", "")
-                    ).classes("w-44").props("dense clearable")
-                    auth_id_input = ui.input(
-                        label="Employee ID", value=active_auth.get("employee_id", "")
-                    ).classes("w-32").props("dense clearable")
-                    auth_login_btn = ui.button("🔐 Login", color="green").props("flat dense")
-                    auth_logout_btn = ui.button("🚪 Logout", color="red").props("flat dense")
-                auth_status_lbl = ui.label(
-                    "Login required before context activation and recording."
-                ).classes("text-xs text-slate-300 mb-1")
-
-                active_ctx = _state.get("recording_context") or {}
-                ctx_platform_val = (
-                    active_ctx.get("platform", {}).get("label")
-                    if isinstance(active_ctx.get("platform"), dict) else None
-                ) or "Android app"
-                ctx_project_val = active_ctx.get("project_name", "")
-                ctx_script_val = active_ctx.get("script_name", "")
-
-                with ui.row().classes("gap-2 items-end flex-wrap w-full mb-2"):
-                    ctx_platform_select = ui.select(
-                        rc.list_platform_labels(),
-                        value=ctx_platform_val,
-                        label="Data Platform",
-                    ).classes("w-40").props("dense")
-                    ctx_project_input = ui.input(
-                        label="Project name", value=ctx_project_val
-                    ).classes("w-36").props("dense clearable")
-                    ctx_script_input = ui.input(
-                        label="Test script", value=ctx_script_val
-                    ).classes("w-36").props("dense clearable")
-                    ctx_activate_btn = ui.button("✅ Activate Context", color="orange").props("flat dense")
-                ctx_status_lbl = ui.label(
-                    "Select platform + project + test script before connect/record."
-                ).classes("text-xs text-slate-300 mb-1")
-
-                def _snapshot_context_state(setup_options: dict | None = None):
-                    ctx = _state.get("recording_context")
-                    if not ctx:
-                        return
-                    try:
-                        from config import environment_manager as _em
-                        from nlp.variable_manager import RUNTIME_VARIABLES
-                        rc.snapshot_context_state(
-                            ctx,
-                            env_name=_em.get_active_env_name(),
-                            env_payload=_em.get_active_env(),
-                            runtime_variables=dict(RUNTIME_VARIABLES),
-                            setup_options=setup_options or {},
-                        )
-                    except Exception as ex:
-                        logger.warning("Context snapshot failed: %s", ex)
-
-                def _login_employee():
-                    name = (auth_name_input.value or "").strip()
-                    emp_id = (auth_id_input.value or "").strip()
-                    try:
-                        session = rs.start_session(
-                            employee_name=name,
-                            employee_id=emp_id,
-                            recorder_kind="app",
-                            client_id="",
-                        )
-                    except ValueError as ex:
-                        ui.notify(str(ex), color="negative")
-                        auth_status_lbl.set_text("❌ Login failed")
-                        return
-                    _state["auth_session"] = session
-                    auth_name_input.set_value(session["employee_name"])
-                    auth_id_input.set_value(session["employee_id"])
-                    auth_status_lbl.set_text(
-                        f"✅ Logged in: {session['employee_name']} ({session['employee_id']})"
-                    )
-                    ui.notify("Login successful", color="positive")
-
-                def _logout_employee():
-                    sess = _state.get("auth_session")
-                    rs.end_session(sess, reason="user_logout")
-                    _state["auth_session"] = None
-                    _state["recording_context"] = None
-                    _state["flow_steps"] = []
-                    _state["recorded"] = {}
-                    _state["selected_step_indices"] = set()
-                    _state["known_names"] = []
-                    _state["latest_names"] = []
-                    _state["pending_context_refresh"] = True
-                    auth_status_lbl.set_text("Logged out")
-                    ctx_status_lbl.set_text("Context cleared — login required")
-                    ui.notify("Logged out", color="warning")
-
-                auth_login_btn.on("click", _login_employee)
-                auth_logout_btn.on("click", _logout_employee)
-                if _has_auth_session():
-                    s0 = _state["auth_session"]
-                    auth_status_lbl.set_text(
-                        f"✅ Logged in: {s0['employee_name']} ({s0['employee_id']})"
-                    )
-
-                def _activate_recording_context():
-                    if not _has_auth_session():
-                        ui.notify("Employee login required before context activation", color="negative")
-                        return
-                    plat_label = ctx_platform_select.value
-                    allowed_for_app = {"Android app", "iOS app", "Hybrid"}
-                    if plat_label not in allowed_for_app:
-                        ui.notify(
-                            "App recorder supports context platforms: Android app, iOS app, Hybrid",
-                            color="negative",
-                        )
-                        return
-                    try:
-                        ctx = rc.activate_context(
-                            BASE_DIR,
-                            plat_label,
-                            ctx_project_input.value or "",
-                            ctx_script_input.value or "",
-                            recorder_kind="app",
-                        )
-                    except ValueError as ex:
-                        ui.notify(f"Context validation failed: {ex}", color="negative")
-                        return
-
-                    _state["recording_context"] = ctx
-                    _state["flow_steps"] = []
-                    _state["recorded"] = {}
-                    _state["selected_step_indices"] = set()
-                    _state["known_names"] = []
-                    _state["latest_names"] = []
-                    _sync_known_names_from_locators(_state["platform"])
-                    _state["pending_context_refresh"] = True
-
-                    ctx_platform_select.set_value(ctx["platform"]["label"])
-                    ctx_project_input.set_value(ctx["project_name"])
-                    ctx_script_input.set_value(ctx["script_name"])
-                    ctx_status_lbl.set_text(
-                        f"✅ Active: {ctx['platform']['label']} / {ctx['project_name']} / {ctx['script_name']}"
-                    )
-                    _snapshot_context_state(
-                        setup_options={
-                            "device_platform": _state.get("platform"),
-                            "screen_name": _state.get("screen_name"),
-                        }
-                    )
-                    rs.log_action(
-                        _state.get("auth_session"),
-                        "activate_context",
-                        {
-                            "platform": ctx["platform"]["label"],
-                            "project": ctx["project_name"],
-                            "script": ctx["script_name"],
-                        },
-                    )
-                    ui.notify("Recording context activated", color="positive")
-
-                ctx_activate_btn.on("click", _activate_recording_context)
-                if _has_context():
-                    c0 = _state["recording_context"]
-                    ctx_status_lbl.set_text(
-                        f"✅ Active: {c0['platform']['label']} / {c0['project_name']} / {c0['script_name']}"
-                    )
-
-                with ui.row().classes("gap-3 items-center flex-wrap"):
-                    plat_select = ui.select(
-                        ["android","ios"], value=_state["platform"], label="Platform"
-                    ).classes("w-32")
-                    screen_input = ui.input(label="Screen name", value=_state["screen_name"]
-                    ).classes("w-40")
-                    conn_btn = ui.button("▶ Connect", color="green").classes("text-sm")
-                    disconn_btn = ui.button("⏹ Disconnect", color="red").classes("text-sm")
-                    conn_status = ui.label("").classes("text-xs text-slate-400")
-
-                async def do_connect():
-                    if not _has_context():
-                        ui.notify("Activate recording context first", color="negative")
-                        return
-                    ctx_label = _state["recording_context"]["platform"]["label"]
-                    target_platform = plat_select.value
-                    if target_platform == "android" and ctx_label not in {"Android app", "Hybrid"}:
-                        ui.notify("Choose Android app/Hybrid context before Android connect", color="negative")
-                        return
-                    if target_platform == "ios" and ctx_label not in {"iOS app", "Hybrid"}:
-                        ui.notify("Choose iOS app/Hybrid context before iOS connect", color="negative")
-                        return
-                    conn_status.set_text("⏳ Connecting…")
-                    conn_btn.props("disabled")
-                    _state["platform"]    = plat_select.value
-                    _state["screen_name"] = screen_input.value or "home_screen"
-                    try:
-                        driver = await run.io_bound(_start_session, _state["caps"], _state["platform"])
-                        _state["driver"] = driver
-                        _state["status"] = "✅ Connected"
-                        conn_status.set_text("✅ Connected")
-                        await run.io_bound(_refresh_elements)
-                        _update_element_list()
-                        if _state["screenshot_b64"]:
-                            screenshot_img.set_source(
-                                f"data:image/png;base64,{_state['screenshot_b64']}"
-                            )
-                        # Start auto-refresh thread
-                        t = threading.Thread(target=_auto_refresh_loop, daemon=True)
-                        t.start()
-                        _snapshot_context_state(
-                            setup_options={
-                                "device_platform": _state["platform"],
-                                "screen_name": _state["screen_name"],
-                            }
-                        )
-                        rs.log_action(
-                            _state.get("auth_session"),
-                            "connect_device",
-                            {"platform": _state["platform"], "screen_name": _state["screen_name"]},
-                        )
-                    except Exception as e:
-                        conn_status.set_text(f"❌ {e}")
-                        _state["status"] = f"❌ {e}"
-                    finally:
-                        conn_btn.props(remove="disabled")
-
-                def do_disconnect():
-                    _state["auto_refresh"] = False
-                    if _state["driver"]:
-                        try: _state["driver"].quit()
-                        except: pass
-                        _state["driver"] = None
-                    conn_status.set_text("Disconnected")
-                    _state["status"] = "Disconnected"
-                    rs.log_action(_state.get("auth_session"), "disconnect_device", {})
-
-                conn_btn.on("click", do_connect)
-                disconn_btn.on("click", do_disconnect)
+        # ── MIDDLE: Elements + Actions ────────────────────────────────────────────
+        with ui.column().classes("flex-1 bg-slate-900 border-r border-slate-800 p-2 gap-2 overflow-hidden"):
 
             # ── Element list ───────────────────────────────────────────────────
             with ui.card().classes("w-full p-3").style("flex:1; overflow:hidden;"):
                 with ui.row().classes("justify-between items-center mb-1"):
-                    ui.label("🔍 Elements on Screen").classes("text-blue-400 font-bold text-sm")
+                    ui.label("ELEMENTS").classes("section-lbl")
                     el_count_lbl = ui.label("0 elements").classes("text-xs text-slate-400")
 
                 # ── Search / filter bar ────────────────────────────────────────
@@ -1135,7 +1133,7 @@ def build_ui():
                 filter_input.on("update:model-value", on_filter_change)
                 type_filter.on("update:model-value", on_filter_change)
 
-                el_scroll = ui.scroll_area().classes("w-full").style("height:300px;")
+                el_scroll = ui.scroll_area().classes("w-full").style("height:260px;")
                 el_container = el_scroll
 
                 # Selected element detail
@@ -1407,6 +1405,8 @@ def build_ui():
                                 {
                                     "mode": op_mode,
                                     "action": action,
+                                    "app_type": _state.get("platform", ""),
+                                    "total_recorded_steps": len(_state["flow_steps"]),
                                     "screen_name": _state["screen_name"],
                                     "element": name,
                                 },
@@ -1442,9 +1442,10 @@ def build_ui():
 
 
         # ── RIGHT: Flow builder ───────────────────────────────────────────────
-        with ui.column().classes("w-96 bg-slate-900 border-l border-slate-700 p-3 gap-2"):
-            ui.label("📋 Flow Steps").classes("text-blue-400 font-bold text-sm")
-            step_count_lbl = ui.label("0 steps").classes("text-xs text-slate-400")
+        with ui.column().classes("bg-slate-900 border-l border-slate-800 p-2 gap-2 overflow-y-auto flex-shrink-0").style("width:340px; min-width:340px;"):
+            with ui.row().classes("items-center justify-between w-full"):
+                ui.label("FLOW STEPS").classes("section-lbl")
+                step_count_lbl = ui.label("0 steps").classes("text-xs text-slate-400")
 
             flow_scroll = ui.scroll_area().classes("w-full").style("height:480px;")
 
@@ -1459,7 +1460,11 @@ def build_ui():
                         _state["flow_steps"].append(step)
                         _update_flow_list()
                         ui.notify(f"Added: {step}", color="positive")
-                        rs.log_action(_state.get("auth_session"), "record_step", {"mode": "quick_add", "step": step})
+                        rs.log_action(_state.get("auth_session"), "record_step", {
+                            "mode": "quick_add", "step": step,
+                            "app_type": _state.get("platform", ""),
+                            "total_recorded_steps": len(_state["flow_steps"]),
+                        })
 
                     ui.button("↩ Back",    on_click=lambda: qadd("press back")).props("flat dense").classes("text-xs bg-slate-700")
                     ui.button("↵ Enter",   on_click=lambda: qadd("press enter")).props("flat dense").classes("text-xs bg-slate-700")
@@ -1599,7 +1604,12 @@ def build_ui():
                     rs.log_action(
                         _state.get("auth_session"),
                         "save_flow",
-                        {"flow_file": os.path.basename(path), "step_count": len(steps)},
+                        {
+                            "file_name": os.path.basename(path),
+                            "app_type": _state.get("platform", ""),
+                            "total_recorded_steps": len(steps),
+                            "status": "pass",
+                        },
                     )
 
                 ui.button("💾 Save .flow file", on_click=do_save, color="green").classes("w-full text-sm mt-1")
