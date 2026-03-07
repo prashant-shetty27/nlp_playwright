@@ -43,6 +43,9 @@ This project provides a modular, NLP-driven automation framework using Playwrigh
 <!-- ./run_ios.sh --keep-running         # keep Appium/tunnel alive after run -->
 <!-- ./run_ios.sh --port 4725            # custom Appium port --> -->
 
+# https://ps-ai-testcase-generator-production.up.railway.app/runs/latest
+# https://ps-ai-testcase-generator-production.up.railway.app/admin/runs
+
 ## Usage
 - **Run a test flow:**
   ```sh
