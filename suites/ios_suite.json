@@ -17,7 +17,7 @@
     "_comment_device": "Real device — Prashant iPhone (iPhone 16 Plus)",
     "appium:deviceName":     "Prashant iPhone",
     "appium:udid":           "00008140-0006295A0AEB001C",
-    "appium:platformVersion": "26.2",
+    "appium:platformVersion": "auto",
 
     "_comment_app": "JustDial IPA for real device install",
     "appium:app":            "/Users/prashantshetty/Desktop/Desktop/ios_Justdial_(15).ipa",
@@ -39,7 +39,7 @@
     "appium:xcodeConfigFile": "/Users/prashantshetty/nlp_playwright/config/wda_signing.xcconfig",
     "appium:updatedWDABundleId": "com.prashantshetty.integrationapp",
     "_comment_useNewWDA": "true = force fresh WDA build and re-sign; set false after first successful run for speed. Bundle ID matches provisioning profiles for team B6X5B62QJ6.",
-    "appium:useNewWDA": false,
+    "appium:useNewWDA": true,
     "appium:allowProvisioningUpdates": true,
     "appium:allowProvisioningDeviceRegistration": true,
     "appium:wdaLaunchTimeout": 600000,

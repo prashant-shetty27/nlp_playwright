@@ -341,6 +341,57 @@ def _is_simulator_udid(udid: str) -> bool:
         return False
 
 
+def _is_app_installed_on_real_device(udid: str, bundle_id: str) -> bool:
+    """Return True if app is installed on a real iOS device via ios-deploy."""
+    if not udid or not bundle_id:
+        return False
+    try:
+        result = subprocess.run(
+            ["ios-deploy", "--bundle_id", bundle_id, "--exists", "--id", udid],
+            capture_output=True, text=True, timeout=20,
+        )
+        return result.returncode == 0
+    except Exception as e:
+        logger.debug("ios-deploy --exists check failed: %s", e)
+        return False
+
+
+def _install_ipa_via_ios_deploy(udid: str, ipa_path: str) -> bool:
+    """Install an IPA on a real device using ios-deploy (more reliable than AFC)."""
+    try:
+        logger.info("📲 Installing IPA via ios-deploy: %s", ipa_path)
+        result = subprocess.run(
+            ["ios-deploy", "--bundle", ipa_path, "--id", udid],
+            capture_output=True, text=True, timeout=300,
+        )
+        if result.returncode == 0:
+            logger.info("✅ IPA installed successfully via ios-deploy")
+            return True
+        logger.warning("⚠️  ios-deploy install failed: %s", result.stderr or result.stdout)
+        return False
+    except Exception as e:
+        logger.warning("⚠️  ios-deploy install exception: %s", e)
+        return False
+
+
+def _detect_ios_version(udid: str) -> str | None:
+    """Return the iOS version of the connected device via xcrun xctrace."""
+    try:
+        result = subprocess.run(
+            ["xcrun", "xctrace", "list", "devices"],
+            capture_output=True, text=True, timeout=10,
+        )
+        for line in result.stdout.splitlines():
+            if udid in line:
+                import re
+                m = re.search(r'\((\d+\.\d+(?:\.\d+)?)\)', line)
+                if m:
+                    return m.group(1)
+    except Exception:
+        pass
+    return None
+
+
 def _prepare_ios_app(caps: dict) -> dict:
     """
     iOS pre-session policy:
@@ -349,12 +400,23 @@ def _prepare_ios_app(caps: dict) -> dict:
     - On a real device, keep appium:app as-is (always install IPA).
     - If autoAcceptAlerts is explicitly false and autoDismissAlerts is unset,
       enable autoDismissAlerts to reliably close permission popups.
+    - Auto-detects platformVersion from connected device so suite files
+      never need manual version updates after iOS upgrades.
     """
     prepared = dict(caps)
 
     udid       = prepared.get("appium:udid") or prepared.get("udid", "")
     bundle_id  = prepared.get("appium:bundleId") or prepared.get("bundleId", "")
     app_path   = prepared.get("appium:app") or prepared.get("app", "")
+
+    # Auto-detect iOS version from connected device — overrides suite file value
+    if udid and not _is_simulator_udid(udid):
+        detected = _detect_ios_version(udid)
+        if detected:
+            configured = prepared.get("appium:platformVersion") or prepared.get("platformVersion")
+            if configured != detected:
+                logger.info("📱 iOS version auto-detected: %s (suite had: %s) — updating", detected, configured)
+            prepared["appium:platformVersion"] = detected
 
     if udid and bundle_id and app_path:
         if _is_simulator_udid(udid):
@@ -372,10 +434,30 @@ def _prepare_ios_app(caps: dict) -> dict:
                     bundle_id, udid, app_path,
                 )
         else:
-            logger.info(
-                "📦 iOS real device: will install '%s' from: %s",
-                bundle_id, app_path,
-            )
+            # Real device — use ios-deploy (reliable) instead of Appium AFC transfer
+            no_reset = prepared.get("appium:noReset", prepared.get("noReset", False))
+            already_installed = _is_app_installed_on_real_device(udid, bundle_id)
+            if already_installed and no_reset:
+                logger.info("✅ iOS real device: '%s' already installed, noReset=true — skipping reinstall", bundle_id)
+                prepared.pop("appium:app", None)
+                prepared.pop("app", None)
+            else:
+                installed = _install_ipa_via_ios_deploy(udid, app_path)
+                if installed:
+                    # Tell Appium the app is already installed — skip its AFC transfer
+                    prepared.pop("appium:app", None)
+                    prepared.pop("app", None)
+                    prepared["appium:noReset"] = True
+                elif already_installed:
+                    # ios-deploy reinstall failed (e.g. app running/locked) but app is present
+                    # — skip AFC transfer, let Appium launch the existing install
+                    logger.warning("⚠️  ios-deploy reinstall failed but app is installed — skipping AFC, launching existing")
+                    prepared.pop("appium:app", None)
+                    prepared.pop("app", None)
+                    prepared["appium:noReset"] = True
+                else:
+                    logger.warning("⚠️  ios-deploy failed and app not installed — falling back to Appium AFC install")
+                    logger.info("📦 iOS real device: will install '%s' from: %s", bundle_id, app_path)
     elif not app_path and bundle_id:
         logger.info("✅ iOS: no appium:app set — launching existing install of '%s'", bundle_id)
 
