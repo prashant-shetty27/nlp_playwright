@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.nlpplaywright.controlpanel</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/prashantshetty/nlp_playwright/.venv/bin/python</string>
+        <string>/Users/prashantshetty/nlp_playwright/control_panel.py</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/prashantshetty/nlp_playwright</string>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/prashantshetty/nlp_playwright/data/logs/control_panel.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/prashantshetty/nlp_playwright/data/logs/control_panel.log</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    </dict>
+</dict>
+</plist>

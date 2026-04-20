@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-04-19T09:14:33Z",
+  "platform": {
+    "label": "Website",
+    "key": "website"
+  },
+  "project_name": "leads_bank",
+  "script_name": "positive",
+  "recorder_kind": "web",
+  "paths": {
+    "data_dir": "/Users/prashantshetty/nlp_playwright/data/contexts/website/leads_bank/positive",
+    "flow_dir": "/Users/prashantshetty/nlp_playwright/flows/contexts/website/leads_bank/positive",
+    "manifest_file": "/Users/prashantshetty/nlp_playwright/data/contexts/website/leads_bank/positive/context_manifest.json",
+    "recorded_elements_file": "/Users/prashantshetty/nlp_playwright/data/contexts/website/leads_bank/positive/recorded_elements.json",
+    "manual_locators_file": "/Users/prashantshetty/nlp_playwright/data/contexts/website/leads_bank/positive/locators_manual.json",
+    "env_snapshot_file": "/Users/prashantshetty/nlp_playwright/data/contexts/website/leads_bank/positive/environment_snapshot.json",
+    "runtime_variables_file": "/Users/prashantshetty/nlp_playwright/data/contexts/website/leads_bank/positive/runtime_variables.json",
+    "setup_options_file": "/Users/prashantshetty/nlp_playwright/data/contexts/website/leads_bank/positive/setup_options.json"
+  },
+  "created_at": "2026-04-19T08:14:53Z",
+  "last_used_at": "2026-04-19T09:14:33Z"
+}

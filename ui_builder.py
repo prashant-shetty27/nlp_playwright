@@ -16,7 +16,6 @@ from nicegui import app, ui, Client, run
 
 from config.settings import RECORDED_ELEMENTS_FILE, MANUAL_LOCATORS_FILE
 from core import recording_context as rc
-from core import recorder_security as rs
 
 # ─── Configuration ────────────────────────────────────────────────────────────
 BASE_DIR    = os.path.dirname(os.path.abspath(__file__))
@@ -42,30 +41,23 @@ _ui_state: dict = {
     "edit_step_idx": None,
     "start_url":     "",
     "recording_context": None,
-    "auth_session": None,
 }
 
 
 def _active_db_file() -> str:
-    default_path = os.path.join(UNSCOPED_DATA_DIR, "recorded_elements.json")
-    return rc.get_path(_ui_state.get("recording_context"), "recorded_elements_file", default_path)
+    return rc.get_path(_ui_state.get("recording_context"), "recorded_elements_file", DB_FILE)
 
 
 def _active_manual_file() -> str:
-    default_path = os.path.join(UNSCOPED_DATA_DIR, "locators_manual.json")
-    return rc.get_path(_ui_state.get("recording_context"), "manual_locators_file", default_path)
+    return rc.get_path(_ui_state.get("recording_context"), "manual_locators_file", MANUAL_FILE)
 
 
 def _active_flow_dir() -> str:
-    return rc.get_path(_ui_state.get("recording_context"), "flow_dir", UNSCOPED_FLOWS_DIR)
+    return rc.get_path(_ui_state.get("recording_context"), "flow_dir", FLOWS_DIR)
 
 
 def _has_context() -> bool:
-    return bool(_ui_state.get("auth_session")) and bool(_ui_state.get("recording_context"))
-
-
-def _has_auth_session() -> bool:
-    return bool(_ui_state.get("auth_session"))
+    return bool(_ui_state.get("recording_context"))
 
 
 # =====================================================
@@ -454,7 +446,7 @@ if not middleware_already_added:
         allow_origins=["*"],
         allow_credentials=True,
         allow_methods=["*"],
-        allow_headers=["*"]
+        allow_headers=["*"],
     )
 
 def trigger_graceful_shutdown():
@@ -466,15 +458,19 @@ app.on_shutdown(trigger_graceful_shutdown)
 @app.get("/api/get-database-schema")
 def get_database_schema():
     with db_lock:
-        return read_database_unlocked()
+        data = read_database_unlocked()
+        if not data:
+            # Context-specific DB is empty/missing — fall back to main DB
+            try:
+                with open(DB_FILE, "r", encoding="utf-8") as _f:
+                    import json as _json
+                    data = _json.load(_f)
+            except Exception:
+                data = {}
+        return data
 
 @app.post("/api/record-element")
 async def receive_recorded_element(request: Request):
-    if not _has_context():
-        return {
-            "status": "error",
-            "message": "Login + recording context are required before recording elements.",
-        }
     try:
         raw_dna = await request.json()
     except Exception:
@@ -495,12 +491,6 @@ async def receive_recorded_element(request: Request):
             "tag":   processed_dna.get("tagName", ""),
             "text":  (processed_dna.get("innerText") or "")[:60],
         }
-        rs.log_action(
-            _ui_state.get("auth_session"),
-            "record_element_extension",
-            {"page": page_hint, "locator_name": locator_name},
-        )
-
         logger.info("Recorded element → %s.%s", page_hint, locator_name)
         return {"status": "success", "locator_name": locator_name}
     except Exception:
@@ -632,24 +622,6 @@ def build_web_ui():
                 ui.html('<span style="color:#60a5fa;font-weight:700;font-size:12px;">✏️ Record Element</span>')
 
             with ui.element("div").classes("panel-body"):
-                active_auth = _ui_state.get("auth_session") or {}
-                with ui.card().classes("w-full p-3 border border-emerald-700 bg-slate-900"):
-                    ui.label("🛂 Employee Login (Mandatory)").classes("text-emerald-300 font-bold text-sm")
-                    with ui.row().classes("w-full gap-2 items-end flex-wrap mt-1"):
-                        auth_name_input = ui.input(
-                            label="Employee name",
-                            value=active_auth.get("employee_name", ""),
-                        ).classes("w-52").props("dense clearable")
-                        auth_id_input = ui.input(
-                            label="Employee ID",
-                            value=active_auth.get("employee_id", ""),
-                        ).classes("w-32").props("dense clearable")
-                        auth_login_btn = ui.button("🔐 Login", color="green").classes("text-xs")
-                        auth_logout_btn = ui.button("🚪 Logout", color="red").classes("text-xs")
-                    auth_status_lbl = ui.label(
-                        "Login required before context activation and recording."
-                    ).classes("text-xs text-slate-300")
-
                 active_ctx = _ui_state.get("recording_context") or {}
                 active_platform = (
                     active_ctx.get("platform", {}).get("label")
@@ -658,9 +630,8 @@ def build_web_ui():
                 active_project = active_ctx.get("project_name", "")
                 active_script = active_ctx.get("script_name", "")
 
-                # Strict preflight context: required before any recording persistence.
                 with ui.card().classes("w-full p-3 border border-amber-700 bg-slate-900"):
-                    ui.label("🧭 Recording Context (Mandatory)").classes("text-amber-300 font-bold text-sm")
+                    ui.label("🧭 Recording Context (optional)").classes("text-amber-300 font-bold text-sm")
                     with ui.row().classes("w-full gap-2 items-end flex-wrap mt-1"):
                         context_platform_select = ui.select(
                             rc.list_platform_labels(),
@@ -675,7 +646,7 @@ def build_web_ui():
                         ).classes("w-40").props("dense clearable")
                         activate_context_btn = ui.button("✅ Activate Context", color="orange").classes("text-xs")
                     context_status_lbl = ui.label(
-                        "Select platform + project + test script to unlock recording."
+                        "Optional: set context to scope recordings by platform / project / script."
                     ).classes("text-xs text-slate-300")
 
                 # ── STEP 1 — Navigate to URL (always the first step) ──────────────
@@ -874,8 +845,6 @@ def build_web_ui():
 
                         with ui.row().classes("gap-1 flex-wrap mt-1"):
                             def qadd(s):
-                                if not _has_context():
-                                    ui.notify("Activate recording context first", color="negative"); return
                                 _ui_state["flow_steps"].append(s)
                                 _update_flow_list()
                                 ui.notify(f"Added: {s}", color="positive")
@@ -898,21 +867,11 @@ def build_web_ui():
                                     removed = _ui_state["flow_steps"].pop()
                                     _update_flow_list()
                                     ui.notify(f"Undone: {removed}", color="warning")
-                                    rs.log_action(
-                                        _ui_state.get("auth_session"),
-                                        "delete_step",
-                                        {"mode": "undo", "step": removed},
-                                    )
 
                             def do_clear():
                                 _ui_state["flow_steps"].clear()
                                 _ui_state["edit_step_idx"] = None
                                 _update_flow_list()
-                                rs.log_action(
-                                    _ui_state.get("auth_session"),
-                                    "delete_step",
-                                    {"mode": "clear_all"},
-                                )
 
                             ui.button("↩ Undo",  on_click=do_undo ).props("flat dense").classes("text-xs bg-slate-700")
                             ui.button("🗑 Clear", on_click=do_clear).props("flat dense").classes("text-xs bg-red-900")
@@ -928,8 +887,6 @@ def build_web_ui():
                     ).classes("w-44").props("dense")
 
                     def do_save():
-                        if not _has_context():
-                            ui.notify("Activate recording context first", color="negative"); return
                         name_ = flow_name_input.value.strip()
                         if not _ui_state["flow_steps"]:
                             ui.notify("No steps to save", color="negative"); return
@@ -953,11 +910,6 @@ def build_web_ui():
                                 "step_count": len(steps_to_save),
                             }
                         )
-                        rs.log_action(
-                            _ui_state.get("auth_session"),
-                            "save_flow",
-                            {"flow_file": os.path.basename(path_), "step_count": len(steps_to_save)},
-                        )
 
                     ui.button("💾 Save .flow", on_click=do_save, color="green"
                     ).props("flat dense").classes("text-sm")
@@ -975,16 +927,11 @@ def build_web_ui():
                         active_dir = _active_flow_dir()
                         os.makedirs(active_dir, exist_ok=True)
                         fl = sorted([f for f in os.listdir(active_dir) if f.endswith(".flow")])
-                        open_select.options = fl or ["(none)"]
-                        if fl:
-                            open_select.set_value(fl[0])
-                        else:
-                            open_select.set_value("(none)")
+                        new_opts = fl or ["(none)"]
+                        open_select.set_options(new_opts, value=fl[0] if fl else "(none)")
                         open_select.update()
 
                     def do_load():
-                        if not _has_context():
-                            ui.notify("Activate recording context first", color="negative"); return
                         fname = open_select.value
                         if not fname or fname == "(none)": return
                         path_ = os.path.join(_active_flow_dir(), fname)
@@ -998,11 +945,6 @@ def build_web_ui():
                         _ui_state["flow_steps"] = steps_
                         _update_flow_list()
                         ui.notify(f"Loaded {len(steps_)} steps from {fname}", color="positive")
-                        rs.log_action(
-                            _ui_state.get("auth_session"),
-                            "load_flow",
-                            {"flow_file": fname, "step_count": len(steps_)},
-                        )
 
                     ui.button("📂 Load", on_click=do_load, color="teal"
                     ).props("flat dense").classes("text-sm")
@@ -1014,7 +956,7 @@ def build_web_ui():
                         web_run_status = ui.label("").classes("text-xs text-slate-400")
                     web_run_log = ui.log(max_lines=120).classes("w-full text-xs font-mono").style(
                         "height:150px; background:#0f172a; color:#86efac; border:1px solid #166534;"
-                    )
+                        )
                     with ui.row().classes("gap-1 mt-1 flex-wrap items-center"):
                         web_run_btn  = ui.button("▶ Run Flow", color="green").props("flat dense").classes("text-sm font-bold")
                         web_stop_btn = ui.button("⏹ Stop", color="red").props("flat dense").classes("text-sm")
@@ -1022,8 +964,6 @@ def build_web_ui():
                     _web_run_state = {"cancelled": False}
 
                     async def do_run_web_flow():
-                        if not _has_context():
-                            ui.notify("Activate recording context first", color="negative"); return
                         steps = list(_ui_state["flow_steps"])
                         if not steps:
                             ui.notify("No steps to run — add steps first", color="negative"); return
@@ -1066,25 +1006,10 @@ def build_web_ui():
                                 web_run_log.push(entry)
                             web_run_status.set_text(
                                 f"\u2705 {stats['passed']} passed  \u274c {stats['failed']} failed"
-                            )
-                            rs.log_action(
-                                _ui_state.get("auth_session"),
-                                "run_flow",
-                                {
-                                    "result": "completed",
-                                    "passed": stats["passed"],
-                                    "failed": stats["failed"],
-                                    "total_steps": len(all_steps),
-                                },
-                            )
+                                )
                         except Exception as _ex:
                             web_run_log.push(f"\u274c {_ex}")
                             web_run_status.set_text("\u274c Error")
-                            rs.log_action(
-                                _ui_state.get("auth_session"),
-                                "run_flow",
-                                {"result": "error", "error": str(_ex), "total_steps": len(all_steps)},
-                            )
                         finally:
                             web_run_btn.set_visibility(True)
                             web_stop_btn.set_visibility(False)
@@ -1115,7 +1040,7 @@ def build_web_ui():
                             if not n_: return
                             em.save_env(n_, {})
                             opts_ = em.list_envs()
-                            env_select.options = opts_; env_select.set_value(n_); env_select.update()
+                            env_select.set_options(opts_, value=n_)
                             new_env_input.set_value("")
                             ui.notify(f"Created: {n_}", color="positive")
                             _reload_env_fields()
@@ -1125,7 +1050,7 @@ def build_web_ui():
                             if n_ == "local": ui.notify("Cannot delete 'local'", color="negative"); return
                             em.delete_env(n_)
                             opts_ = em.list_envs()
-                            env_select.options = opts_ or ["local"]; env_select.set_value("local"); env_select.update()
+                            env_select.set_options(opts_ or ["local"], value="local")
                             ui.notify(f"Deleted: {n_}", color="warning")
                             _reload_env_fields()
                         ui.button("\U0001f5d1", on_click=do_delete_env, color="red").props("flat dense").classes("text-xs")
@@ -1177,14 +1102,12 @@ def build_web_ui():
                                     "auth_type": auth_type_select.value or "none",
                                 }
                             )
-                            rs.log_action(_ui_state.get("auth_session"), "save_env", {"env_name": n_})
                             ui.notify(f"\U0001f4be Saved env: {n_}", color="positive")
                         def do_apply_env():
                             do_save_env()
                             n_ = env_select.value or "local"
                             em.set_active_env(n_)
                             _snapshot_context_state(setup_options={"active_env_name": n_})
-                            rs.log_action(_ui_state.get("auth_session"), "apply_env", {"env_name": n_})
                             env_status_lbl.set_text(f"\u2705 active \u2014 {n_}")
                             ui.notify(f"\u2705 Active env \u2192 {n_}", color="positive")
                         ui.button("\U0001f4be Save", on_click=do_save_env, color="teal").props("flat dense").classes("text-xs")
@@ -1198,73 +1121,20 @@ def build_web_ui():
                       (raw or "").strip().lower().replace("-", "_"))[:40].strip("_")
 
     def _refresh_name_options():
-        name_input.options = list(_ui_state["known_names"])
-        name_input.update()
+        name_input.set_options(list(_ui_state["known_names"]), value=name_input.value)
 
     def _refresh_page_options():
-        page_name_input.options = list(_ui_state["known_pages"])
-        page_name_input.update()
+        page_name_input.set_options(list(_ui_state["known_pages"]), value=page_name_input.value)
 
     def _refresh_var_options():
         try:
             from nlp.variable_manager import RUNTIME_VARIABLES
-            extra_input.options = [f"${{{k}}}" for k in RUNTIME_VARIABLES]
-            extra_input.update()
+            extra_input.set_options([f"${{{k}}}" for k in RUNTIME_VARIABLES], value=extra_input.value)
         except Exception:
             pass
 
-    def _login_employee():
-        name = (auth_name_input.value or "").strip()
-        emp_id = (auth_id_input.value or "").strip()
-        try:
-            session = rs.start_session(
-                employee_name=name,
-                employee_id=emp_id,
-                recorder_kind="web",
-                client_id="",
-            )
-        except ValueError as ex:
-            ui.notify(str(ex), color="negative")
-            auth_status_lbl.set_text("❌ Login failed")
-            return
-        _ui_state["auth_session"] = session
-        auth_name_input.set_value(session["employee_name"])
-        auth_id_input.set_value(session["employee_id"])
-        auth_status_lbl.set_text(
-            f"✅ Logged in: {session['employee_name']} ({session['employee_id']})"
-        )
-        ui.notify("Login successful", color="positive")
 
-    def _logout_employee():
-        sess = _ui_state.get("auth_session")
-        rs.end_session(sess, reason="user_logout")
-        _ui_state["auth_session"] = None
-        _ui_state["recording_context"] = None
-        _ui_state["flow_steps"] = []
-        _ui_state["edit_step_idx"] = None
-        _ui_state["known_pages"] = []
-        _ui_state["known_names"] = []
-        _ui_state["latest_names"] = []
-        _ui_state["last_element"] = None
-        _refresh_name_options()
-        _refresh_page_options()
-        _refresh_flow_select()
-        _update_flow_list()
-        _update_live_panel()
-        auth_status_lbl.set_text("Logged out")
-        context_status_lbl.set_text("Context cleared — login required")
-        panel_status_lbl.set_text("Ready")
-        ui.notify("Logged out", color="warning")
-
-    auth_login_btn.on("click", _login_employee)
-    auth_logout_btn.on("click", _logout_employee)
-    if _has_auth_session():
-        s0 = _ui_state["auth_session"]
-        auth_status_lbl.set_text(
-            f"✅ Logged in: {s0['employee_name']} ({s0['employee_id']})"
-        )
-
-    def _snapshot_context_state(setup_options: dict | None = None):
+    def _snapshot_context_state(setup_options: dict | None = None, context_meta: dict | None = None):
         ctx = _ui_state.get("recording_context")
         if not ctx:
             return
@@ -1282,9 +1152,6 @@ def build_web_ui():
             logger.exception("Failed to snapshot context state")
 
     def _activate_recording_context():
-        if not _has_auth_session():
-            ui.notify("Employee login required before context activation", color="negative")
-            return
         plat = context_platform_select.value
         project = context_project_input.value or ""
         script = context_script_input.value or ""
@@ -1315,6 +1182,21 @@ def build_web_ui():
         _ui_state["latest_names"] = []
         _ui_state["last_element"] = None
 
+        # Always seed from the main DB first so existing elements are visible
+        try:
+            import json as _json
+            with open(DB_FILE, "r", encoding="utf-8") as _fh:
+                _main_data = _json.load(_fh)
+            for _page, _els in _main_data.items():
+                if _page not in _ui_state["known_pages"]:
+                    _ui_state["known_pages"].append(_page)
+                if isinstance(_els, dict):
+                    for _n in _els:
+                        if _n not in _ui_state["known_names"]:
+                            _ui_state["known_names"].append(_n)
+        except Exception:
+            pass
+
         context_platform_select.set_value(ctx["platform"]["label"])
         context_project_input.set_value(ctx["project_name"])
         context_script_input.set_value(ctx["script_name"])
@@ -1333,12 +1215,8 @@ def build_web_ui():
             setup_options={
                 "start_url": (start_url_input.value or "").strip(),
                 "flow_name_default": (flow_name_input.value or "").strip(),
-            }
-        )
-        rs.log_action(
-            _ui_state.get("auth_session"),
-            "activate_context",
-            {
+            },
+            context_meta={
                 "platform": ctx["platform"]["label"],
                 "project": ctx["project_name"],
                 "script": ctx["script_name"],
@@ -1399,11 +1277,6 @@ def build_web_ui():
                             _populate_form_from_step(s)
                             _update_flow_list()
                             ui.notify(f"Editing step {idx+1}", color="info", timeout=3000)
-                            rs.log_action(
-                                _ui_state.get("auth_session"),
-                                "edit_step_start",
-                                {"index": idx, "step": s},
-                            )
                         return _edit
 
                     def make_del(idx=i-1):
@@ -1415,11 +1288,6 @@ def build_web_ui():
                                     _ui_state["edit_step_idx"] = None
                                     record_btn.set_text("⚡ Add Step")
                                 _update_flow_list()
-                                rs.log_action(
-                                    _ui_state.get("auth_session"),
-                                    "delete_step",
-                                    {"mode": "row_delete", "index": idx, "step": removed_step},
-                                )
                         return _del
 
                     def make_up(idx=i-1):
@@ -1509,21 +1377,18 @@ def build_web_ui():
             opts = list(name_input.options or [])
             if name_found not in opts:
                 opts.append(name_found)
-                name_input.options = opts
-            name_input.set_value(name_found)
-            name_input.update()
+                name_input.set_options(opts, value=name_found)
+            else:
+                name_input.set_value(name_found)
         if extra_found is not None:
             opts2 = list(extra_input.options or [])
             if extra_found not in opts2:
                 opts2.append(extra_found)
-                extra_input.options = opts2
-            extra_input.set_value(extra_found)
-            extra_input.update()
+                extra_input.set_options(opts2, value=extra_found)
+            else:
+                extra_input.set_value(extra_found)
 
     def do_record():
-        if not _has_context():
-            ui.notify("Activate recording context first", color="negative")
-            return
         raw_name   = (name_input.value or "").strip()
         name       = _sanitise(raw_name)
         action     = action_select.value
@@ -1583,11 +1448,6 @@ def build_web_ui():
                 "last_page": page_name,
             }
         )
-        rs.log_action(
-            _ui_state.get("auth_session"),
-            "record_step",
-            {"mode": op_mode, "action": action, "page": page_name, "element": name},
-        )
 
     record_btn.on("click", do_record)
 
@@ -1600,8 +1460,6 @@ def build_web_ui():
 
     async def _tick():
         _tick_n["n"] += 1
-        if _has_auth_session():
-            rs.touch_session(_ui_state.get("auth_session"))
 
         # Keep dropdowns hot with elements saved from other UI screens/processes.
         if _locator_store_changed() and _seed_known_from_db():
@@ -1644,19 +1502,17 @@ def build_web_ui():
             opts = list(name_input.options or [])
             if suggested not in opts:
                 opts.append(suggested)
-                name_input.options = opts
-                name_input.update()
-            if not name_input.value:
+                name_input.set_options(opts, value=name_input.value or suggested)
+            elif not name_input.value:
                 name_input.set_value(suggested)
-                name_input.update()
 
             if not page_name_input.value and page_hint:
                 p_opts = list(page_name_input.options or [])
                 if page_hint not in p_opts:
                     p_opts.append(page_hint)
-                    page_name_input.options = p_opts
-                page_name_input.set_value(page_hint)
-                page_name_input.update()
+                    page_name_input.set_options(p_opts, value=page_hint)
+                else:
+                    page_name_input.set_value(page_hint)
 
             _ui_state["last_element"] = None
 

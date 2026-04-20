@@ -1,0 +1,23 @@
+{
+  "web_homepage": {
+    "skip": {
+      "tagName": "a",
+      "className": "jsx-dc424500fd9b5834 font13 fw500 color777 login_anchor",
+      "innerText": "Skip",
+      "rect": {
+        "x": 466,
+        "y": 648,
+        "width": 27,
+        "height": 18
+      },
+      "attributes": {
+        "href": "javascript:void(0)",
+        "role": "button",
+        "aria-label": "Skip Login",
+        "tabindex": "0",
+        "class": "jsx-dc424500fd9b5834 font13 fw500 color777 login_anchor"
+      },
+      "custom_xpath": "//a[@href='javascript:void(0)']"
+    }
+  }
+}

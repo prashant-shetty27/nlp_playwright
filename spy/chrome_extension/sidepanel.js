@@ -52,7 +52,7 @@ navGo.addEventListener('click', navigateTo);
 navInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') navigateTo(); });
 
 // Keep URL bar in sync as the user browses
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+chrome.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
   if (changeInfo.url && tab.active && !changeInfo.url.startsWith('chrome')) {
     navInput.value = changeInfo.url;
   }
@@ -64,9 +64,15 @@ chrome.tabs.onActivated.addListener(() => {
 });
 
 // ── Server status check (3s timeout — never gets stuck on "checking…") ────────
+let _serverWasOnline = false;
+
 function setStatus(online) {
   dot.className = online ? 'connected' : '';
   label.textContent = online ? 'localhost:8080' : 'offline — run: python ui_builder.py';
+}
+
+function reloadFrame() {
+  frame.src = 'http://localhost:8080?' + Date.now();  // cache-bust
 }
 
 async function checkServer() {
@@ -76,14 +82,19 @@ async function checkServer() {
     await fetch('http://127.0.0.1:8080', { method: 'HEAD', cache: 'no-store', signal: ctrl.signal });
     clearTimeout(t);
     setStatus(true);
+    if (!_serverWasOnline) {
+      _serverWasOnline = true;
+      reloadFrame();  // auto-reload iframe when server comes back online
+    }
   } catch {
     clearTimeout(t);
     setStatus(false);
+    _serverWasOnline = false;
   }
 }
 
 retryBtn.addEventListener('click', () => {
-  frame.src = 'http://localhost:8080';
+  reloadFrame();
   checkServer();
 });
 

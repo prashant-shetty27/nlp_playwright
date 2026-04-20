@@ -1714,5 +1714,20 @@
       },
       "custom_xpath": "//input[@id='main-auto']"
     }
+  },
+  "test_page": {
+    "test_btn": {
+      "tagName": "button",
+      "innerText": "Test",
+      "className": "btn",
+      "rect": {
+        "x": 10,
+        "y": 10,
+        "width": 100,
+        "height": 30
+      },
+      "attributes": {},
+      "custom_xpath": "//button[normalize-space(text())='Test']"
+    }
   }
 }

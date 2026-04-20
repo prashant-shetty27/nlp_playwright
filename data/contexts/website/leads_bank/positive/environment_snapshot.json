@@ -1,0 +1,13 @@
+{
+  "updated_at": "2026-04-19T09:16:28Z",
+  "active_env_name": "local",
+  "env": {
+    "base_url": "",
+    "domain_override": "",
+    "domain_source": "",
+    "auth_type": "none",
+    "username": "",
+    "password": "",
+    "notes": ""
+  }
+}

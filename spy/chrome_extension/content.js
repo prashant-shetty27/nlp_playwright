@@ -95,7 +95,7 @@ function showShadowModal(smartLocator, elementDNA) {
 
     shadow.innerHTML = `
         <style>
-            :host { all: initial; } 
+            :host { all: initial; display: block; pointer-events: all; }
             
             /* ARCHITECTURAL UPGRADE: Professional Polish Animation */
             @keyframes slideDown {
@@ -104,10 +104,10 @@ function showShadowModal(smartLocator, elementDNA) {
             }
 
             .spy-container {
-                width: 340px; background: #ffffff; border: 2px solid #2563eb; 
-                border-radius: 8px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); 
+                width: 340px; background: #ffffff; border: 2px solid #2563eb;
+                border-radius: 8px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
                 font-family: system-ui, -apple-system, sans-serif; color: #000;
-                display: flex; flex-direction: column;
+                display: flex; flex-direction: column; pointer-events: all;
                 animation: slideDown 0.2s ease-out forwards;
             }
             .spy-header {
@@ -120,10 +120,13 @@ function showShadowModal(smartLocator, elementDNA) {
             .spy-header:active { cursor: grabbing; }
             .spy-body { padding: 16px; }
             label { display: block; font-size: 12px; font-weight: bold; color: #374151; margin-bottom: 4px; }
-            input { 
-                width: 100%; box-sizing: border-box; padding: 8px; 
-                border: 1px solid #d1d5db; border-radius: 4px; 
+            input {
+                width: 100%; box-sizing: border-box; padding: 8px;
+                border: 1px solid #d1d5db; border-radius: 4px;
                 margin-bottom: 15px; font-size: 14px;
+                pointer-events: all !important;
+                user-select: text !important;
+                -webkit-user-select: text !important;
             }
             input:focus { outline: 2px solid #3b82f6; border-color: transparent; }
             .btn-row { display: flex; justify-content: space-between; margin-top: 5px; }
@@ -186,6 +189,28 @@ function showShadowModal(smartLocator, elementDNA) {
 
     updateLocatorsDropdown(pageInput.value);
     pageInput.addEventListener('input', (e) => updateLocatorsDropdown(e.target.value));
+
+    // Block ALL events from escaping the modal into the host page.
+    // This prevents Justdial (and similar sites) from trapping focus or
+    // swallowing keyboard events via their modal backdrop / global handlers.
+    const _stop = e => { e.stopImmediatePropagation(); e.stopPropagation(); };
+    [pageInput, locatorInput].forEach(inp => {
+        inp.addEventListener('keydown',   _stop, true);
+        inp.addEventListener('keyup',     _stop, true);
+        inp.addEventListener('keypress',  _stop, true);
+        inp.addEventListener('click',     _stop, true);
+        // Force focus programmatically — host page's preventDefault() on mousedown
+        // blocks the browser's native focus, so we restore it manually.
+        inp.addEventListener('mousedown', e => {
+            _stop(e);
+            requestAnimationFrame(() => inp.focus());
+        }, true);
+    });
+
+    // Also block mousedown/click on the whole container so the backdrop
+    // (e.g. Justdial login overlay) can't swallow our interactions.
+    shadow.getElementById('spy-window').addEventListener('mousedown', _stop, true);
+    shadow.getElementById('spy-window').addEventListener('click',     _stop, true);
 
     // --- ARCHITECTURAL UPGRADE: Leak-Free Drag Logic ---
     const dragHandle = shadow.getElementById('spy-drag-handle');
