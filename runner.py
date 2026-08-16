@@ -121,6 +121,10 @@ def _load_run_config() -> dict:
 
 
 # ── NLP flow ──────────────────────────────────────────────────────────────────
+# Command types whose `target` is a variable name to look up or create, not a value.
+_VARIABLE_NAME_TARGETS = {"verify_var_contains", "create_variable", "extract_json"}
+
+
 def _execute_step_from_command(cmd, page):
     """Routes a parsed Command to the appropriate action function."""
     import execution.action_service as svc
@@ -128,6 +132,13 @@ def _execute_step_from_command(cmd, page):
     # Resolve active tab: if user ran "switch to tab N", actions run on that tab
     ep = svc.get_active_page(page)
     target = resolve_variables(cmd.target) if isinstance(getattr(cmd, "target", None), str) else getattr(cmd, "target", None)
+
+    # A few commands take a variable NAME as their target rather than a value.
+    # resolve_variables() substitutes a bare name for its own contents, so pre-resolving
+    # these hands the action the stored value where it expects the key — and the lookup
+    # that follows can then never succeed.
+    if cmd.type in _VARIABLE_NAME_TARGETS:
+        target = cmd.target
     text = resolve_variables(cmd.text) if isinstance(getattr(cmd, "text", None), str) else getattr(cmd, "text", None)
     attribute = resolve_variables(cmd.attribute) if isinstance(getattr(cmd, "attribute", None), str) else getattr(cmd, "attribute", None)
     first_value = (cmd.values or [None])[0] if hasattr(cmd, "values") else None
@@ -392,7 +403,10 @@ def run_nlp_flow_collect(file_path: str, capabilities: dict | None = None) -> di
 
     try:
         should_record_video = settings.ENABLE_VIDEO_RECORDING and bool(caps.get("record_video", False))
-        page = open_browser(session, record_video=should_record_video)
+        # Forward the suite's desired_capabilities so mobile-web emulation (device_name /
+        # mobile_web) reaches browser context creation. Desktop suites supply neither and
+        # are unaffected.
+        page = open_browser(session, record_video=should_record_video, capabilities=caps)
         logger.info("🚀 Starting flow (collect mode): %s", file_path)
         stats = _execute_nlp_flow_core(file_path, page)
     except FileNotFoundError as e:
@@ -420,6 +434,15 @@ def run_nlp_flow_collect(file_path: str, capabilities: dict | None = None) -> di
 
 
 # ── JSON / codeless flow ────────────────────────────────────────────────────────
+def _accepts_save_target(func) -> bool:
+    """True if a registered codeless action declares a `save_to_variable_name` parameter."""
+    import inspect
+    try:
+        return "save_to_variable_name" in inspect.signature(func).parameters
+    except (TypeError, ValueError):
+        return False
+
+
 def run_json_flow(json_path: str):
     """Codeless JSON flow runner using VariableManager and ACTION_REGISTRY."""
     _setup_logging()
@@ -458,7 +481,15 @@ def run_json_flow(json_path: str):
                 raise ValueError(f"Architecture Error: '{action_name}' is not registered.")
 
             resolved_params = runtime_memory.resolve_parameters(raw_params)
-            save_target = resolved_params.pop("save_to_variable_name", None)
+            save_target = resolved_params.get("save_to_variable_name")
+
+            # Most storing actions take save_to_variable_name themselves and write the
+            # variable internally; the rest return a value for us to save. Only strip the
+            # key when the action cannot accept it, otherwise the call loses a required
+            # argument and raises TypeError.
+            if save_target is not None and not _accepts_save_target(target_function):
+                resolved_params.pop("save_to_variable_name", None)
+
             step_result = target_function(page=page, **resolved_params)
 
             if save_target and step_result is not None:

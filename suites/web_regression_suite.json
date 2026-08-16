@@ -1,0 +1,58 @@
+{
+  "_comment": "Web regression set — authored to be AI-maintainable. Every script here passes `python tools/flow_lint.py suites/web_regression_suite.json` before it is allowed to run.",
+
+  "suite_name": "JustDial Web Regression Suite",
+  "description": "Homepage smoke, category search, result-to-detail continuity, data-driven search and the nonsense-query negative path.",
+  "platform": "web",
+
+  "scripts": [
+    "flows/web/jd_web_01_home_smoke.flow",
+    "flows/web/jd_web_02_search_happy_path.flow",
+    "flows/web/jd_web_03_result_to_detail.flow",
+    "flows/web/jd_web_04_search_data_driven.flow",
+    "flows/web/jd_web_05_search_negative.flow"
+  ],
+
+  "desired_capabilities": {
+    "browser": "chromium",
+    "_browser_options": ["chromium", "firefox", "webkit"],
+    "headless": false,
+    "viewport_width": 1920,
+    "viewport_height": 1080,
+    "locale": "en-IN",
+    "timezone_id": "Asia/Kolkata",
+    "record_video": false,
+    "slow_mo_ms": 0
+  },
+
+  "parameters": [
+    {
+      "name": "base_site",
+      "type": "string",
+      "value": "justdial",
+      "_note": "Site alias resolved via config/sites.json. Use a full URL to point at staging."
+    },
+    {
+      "name": "search_term",
+      "type": "string",
+      "value": "Restaurants"
+    },
+    {
+      "name": "verify_city",
+      "type": "string",
+      "value": "Mumbai"
+    },
+    {
+      "name": "home_heading_text",
+      "type": "string",
+      "value": "Search across",
+      "_note": "Partial/contains match — `verify text` does not require the full string."
+    },
+    {
+      "name": "junk_search_term",
+      "type": "string",
+      "value": "zzqxwvunlptest",
+      "_note": "Deliberately unmatchable. Keep it alphabetic — punctuation changes the URL shape."
+    }
+  ]
+}

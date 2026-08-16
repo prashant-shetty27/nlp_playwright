@@ -61,6 +61,9 @@ ACTION_TIMEOUT_MS: int = int(os.getenv("ACTION_TIMEOUT_MS", str(_ctrl("browser.a
 NAVIGATION_TIMEOUT_MS: int = int(os.getenv("NAVIGATION_TIMEOUT_MS", str(_ctrl("browser.navigation_timeout_ms", 30000))))
 DEFAULT_SCROLL_COUNT: int = int(os.getenv("DEFAULT_SCROLL_COUNT", str(_ctrl("browser.default_scroll_count", 20))))
 WAIT_TIMEOUT_MS: int = int(os.getenv("WAIT_TIMEOUT_MS", str(_ctrl("browser.wait_timeout_ms", 3000))))
+# Full-page captures stitch the entire scroll height, so they need more headroom than
+# a normal action. Falls back to a viewport capture if even this is exceeded.
+SCREENSHOT_TIMEOUT_MS: int = int(os.getenv("SCREENSHOT_TIMEOUT_MS", str(_ctrl("capture.screenshot_timeout_ms", 45000))))
 
 # ── Capture Controls ────────────────────────────────────────────────────────
 ENABLE_SCREENSHOTS: bool = _as_bool(os.getenv("ENABLE_SCREENSHOTS", _ctrl("capture.screenshots_enabled", False)), False)

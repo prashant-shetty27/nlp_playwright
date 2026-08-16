@@ -64,32 +64,156 @@ def get_default_scroll_count() -> int:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# MOBILE-WEB EMULATION
+#
+# Mobile emulation is suite-driven and opt-in. A suite requests it via:
+#
+#     "desired_capabilities": {
+#       "browser": "chromium",
+#       "device_name": "Pixel 7",
+#       "mobile_web": true
+#     }
+#
+# The device descriptor is read from Playwright's installed registry at runtime
+# (playwright.devices[...]), so no user-agent string or browser version is ever
+# hardcoded here. When neither capability is supplied the desktop context options
+# are returned byte-identical to the pre-existing behaviour.
+# ─────────────────────────────────────────────────────────────────────────────
+
+def wants_mobile_web(capabilities: dict | None) -> bool:
+    """True only when a suite explicitly opts in to mobile emulation."""
+    caps = capabilities or {}
+    if caps.get("mobile_web"):
+        return True
+    device_name = caps.get("device_name")
+    return isinstance(device_name, str) and device_name.strip() != ""
+
+
+def _suggest_devices(device_name: str, devices) -> str:
+    """Build a short 'did you mean' list for an unknown device name."""
+    try:
+        names = list(devices.keys())
+    except AttributeError:
+        return ""
+    needle = device_name.strip().lower().split()[0] if device_name.strip() else ""
+    near = [n for n in names if needle and needle in n.lower()][:8]
+    if near:
+        return f" Closest available: {', '.join(near)}."
+    return f" {len(names)} devices are available in this Playwright build."
+
+
+def build_context_options(capabilities: dict | None, devices) -> dict:
+    """
+    Translate suite desired_capabilities into Playwright new_context() kwargs.
+
+    Args:
+        capabilities: the suite's desired_capabilities dict (may be None/empty).
+        devices:      Playwright's device registry (playwright_instance.devices).
+
+    Returns:
+        kwargs for browser.new_context().
+
+    Raises:
+        ValueError: if mobile emulation is requested with an unknown/blank device name.
+    """
+    caps = capabilities or {}
+    use = load_playwright_config().get("use", {})
+    permissions = use.get("permissions", [])
+
+    # ── Desktop: unchanged from the original implementation ──────────────────
+    if not wants_mobile_web(caps):
+        return dict(no_viewport=True, permissions=permissions)
+
+    # ── Mobile: resolve the device descriptor from Playwright's registry ─────
+    device_name = str(caps.get("device_name") or settings.MOBILE_DEVICE_EMULATION or "").strip()
+    if not device_name:
+        raise ValueError(
+            "Mobile web emulation was requested (mobile_web=true) but no 'device_name' was "
+            "supplied and settings.MOBILE_DEVICE_EMULATION is empty. Set "
+            "desired_capabilities.device_name to a Playwright device, e.g. \"Pixel 7\"."
+        )
+
+    if device_name not in devices:
+        raise ValueError(
+            f"Unknown mobile device_name {device_name!r} — not present in this Playwright "
+            f"installation's device registry.{_suggest_devices(device_name, devices)}"
+        )
+
+    descriptor = dict(devices[device_name])
+    logger.info("📱 Mobile web emulation: %s", device_name)
+
+    default_browser = descriptor.get("default_browser_type", "chromium")
+    if default_browser != "chromium":
+        logger.warning(
+            "⚠️  Device '%s' expects browser type '%s' but this runner launches Chromium. "
+            "Rendering may differ from a real device.", device_name, default_browser,
+        )
+
+    options: dict = {
+        "viewport": descriptor["viewport"],
+        "user_agent": descriptor["user_agent"],
+        "device_scale_factor": descriptor["device_scale_factor"],
+        "is_mobile": descriptor["is_mobile"],
+        "has_touch": descriptor["has_touch"],
+        "permissions": permissions,
+    }
+
+    # ── Explicit suite overrides (mobile mode only) ──────────────────────────
+    # Deliberately not applied on desktop: existing desktop suites already declare
+    # viewport/locale/timezone that are currently ignored, and honouring them there
+    # would silently change established desktop runs.
+    width, height = caps.get("viewport_width"), caps.get("viewport_height")
+    if width and height:
+        options["viewport"] = {"width": int(width), "height": int(height)}
+        logger.info("   viewport override: %sx%s", width, height)
+    for cap_key, ctx_key in (("locale", "locale"), ("timezone_id", "timezone_id"),
+                             ("user_agent", "user_agent")):
+        if caps.get(cap_key):
+            options[ctx_key] = caps[cap_key]
+            logger.info("   %s override: %s", cap_key, caps[cap_key])
+
+    logger.info(
+        "   viewport=%(viewport)s scale=%(device_scale_factor)s "
+        "is_mobile=%(is_mobile)s has_touch=%(has_touch)s", options,
+    )
+    return options
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # BROWSER LIFECYCLE
 # ─────────────────────────────────────────────────────────────────────────────
-def open_browser(session: TestSession | None = None, record_video: bool = False):
+def open_browser(session: TestSession | None = None, record_video: bool = False,
+                 capabilities: dict | None = None):
     """
     Launches Chromium and returns the Playwright Page object.
     If a TestSession is provided, stores state on it.
     For backward compatibility, also works without a session (uses module-level state).
     Pass record_video=True to enable Playwright video recording; files land in
     data/videos/raw/ and are moved to data/videos/completed/ on close_browser().
+    Pass capabilities (a suite's desired_capabilities dict) to enable mobile-web
+    emulation — see build_context_options(). Omitting it keeps the desktop context.
     """
     full_config = load_playwright_config()
     use = full_config.get("use", {})
 
     w, h = get_system_resolution()
-    logger.info("🖥️ Desktop Resolution: %sx%s.", w, h)
 
     playwright_instance = sync_playwright().start()
+    try:
+        ctx_kwargs: dict = build_context_options(capabilities, playwright_instance.devices)
+    except Exception:
+        # Never leak a driver process when the configuration is rejected.
+        playwright_instance.stop()
+        raise
+
+    if not wants_mobile_web(capabilities):
+        logger.info("🖥️ Desktop Resolution: %sx%s.", w, h)
+
     browser = playwright_instance.chromium.launch(
         headless=use.get("headless", settings.HEADLESS),
         args=["--start-maximized", "--disable-infobars"],
     )
 
-    ctx_kwargs: dict = dict(
-        no_viewport=True,
-        permissions=use.get("permissions", []),
-    )
     if record_video:
         raw_dir = os.path.join(settings.VIDEOS_DIR, "raw")
         _ensure_dir(raw_dir)

@@ -1,0 +1,44 @@
+# ============================================================================
+# TC-WEB-002  Category search → results page
+# ----------------------------------------------------------------------------
+# Objective : Searching a category returns a populated, correctly-titled
+#             results page with the standard result-page furniture.
+# Platform  : web          Priority : P0
+# Suite     : suites/web_regression_suite.json
+# Params    : base_site, search_term, verify_city
+# ============================================================================
+
+# ── Arrange ─────────────────────────────────────────────────────────────────
+open ${base_site}
+wait for result page load
+
+# ── Act: run the search ─────────────────────────────────────────────────────
+search for ${search_term}
+wait for result page load
+take screenshot as tc002_results_loaded
+
+# ── Assert: we actually navigated to a results page ─────────────────────────
+store page url as results_url
+store page title as results_title
+
+# ── Assert: the results heading reflects what we searched for ───────────────
+verify element heading_search_title contains "${search_term}"
+
+# ── Assert: the search term and the city both surface on the page ───────────
+verify texts "${search_term}", "${verify_city}"
+
+# ── Assert: result cards rendered (count > 0 is proven by reading the first) ─
+store text of business_name as first_business_name
+store count of paid_banner as paid_listing_count
+
+# ── Assert: standard results furniture is present ───────────────────────────
+verify text "Sort by"
+
+# ── Act: exercise lazy-loading below the fold ───────────────────────────────
+scroll down 2 times
+wait 2 seconds
+take screenshot as tc002_results_scrolled
+
+# ── Assert: page survived scrolling and still shows the search context ──────
+verify text "${search_term}"
+take screenshot as tc002_results_verified

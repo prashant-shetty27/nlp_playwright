@@ -1,0 +1,41 @@
+# ============================================================================
+# TC-WEB-003  Result → business detail continuity
+# ----------------------------------------------------------------------------
+# Objective : The business name captured on the results page is the same
+#             business shown after opening that listing. Catches the classic
+#             "clicked card A, landed on business B" regression.
+# Platform  : web          Priority : P1
+# Suite     : suites/web_regression_suite.json
+# Params    : base_site, search_term
+# ============================================================================
+
+# ── Arrange: get to a results page ──────────────────────────────────────────
+open ${base_site}
+wait for result page load
+search for ${search_term}
+wait for result page load
+
+# ── Capture the identity of the listing we are about to open ────────────────
+store text of business_name as expected_business
+store attribute href of business_name as expected_href
+take screenshot as tc003_before_click
+
+# ── Act: open the first listing ─────────────────────────────────────────────
+click business_name
+wait 3 seconds
+take screenshot as tc003_detail_opened
+
+# ── Assert: the detail view is about the business we clicked ────────────────
+verify text "${expected_business}"
+
+# ── Assert: we are on a different URL than the results page ─────────────────
+store page url as detail_url
+store page title as detail_title
+
+# ── Act: return to results ──────────────────────────────────────────────────
+press back
+wait 2 seconds
+take screenshot as tc003_back_on_results
+
+# ── Assert: back navigation restored the results context ────────────────────
+verify text "${search_term}"

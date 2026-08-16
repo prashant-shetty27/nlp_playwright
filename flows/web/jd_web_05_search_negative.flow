@@ -1,0 +1,51 @@
+# ============================================================================
+# TC-WEB-005  Unmatchable query resolves via autosuggest, never dead-ends
+# ----------------------------------------------------------------------------
+# Objective : A query with no literal match still lands the user on a populated,
+#             usable results page rather than a blank or broken one.
+# Platform  : web          Priority : P2
+# Suite     : suites/web_regression_suite.json
+# Params    : base_site, junk_search_term
+#
+# WHAT THIS DOES *NOT* TEST — read before editing:
+#   This is not an empty-state test, and it cannot be made into one with
+#   `search for`. The `search()` helper in execution/action_service.py types the
+#   term, then looks for an <li> matching it and CLICKS that suggestion, only
+#   falling back to Enter when none is visible. JustDial's AI autosuggest
+#   answers even nonsense terms, so the suggestion path is always taken and the
+#   `trkid=ai-auto` parameter appears in the resulting URL.
+#
+#   So the real behaviour under test is: autosuggest absorbs an unmatchable
+#   query and still delivers a working results page. That is worth guarding —
+#   a regression here means a blank page or a crash for fat-fingered searches.
+#   Testing a genuine no-results state needs a submit path that bypasses
+#   autosuggest, which the web runner has no command for today.
+# ============================================================================
+
+# ── Arrange ─────────────────────────────────────────────────────────────────
+open ${base_site}
+wait for result page load
+
+# ── Act: search a term with no literal match ────────────────────────────────
+search for ${junk_search_term}
+wait 5 seconds
+take screenshot as tc005_junk_results
+
+# ── Assert: still on JustDial, on a real page ───────────────────────────────
+store page url as junk_url
+store page title as junk_title
+verify stored junk_url contains "justdial"
+
+# ── Assert: autosuggest resolved it rather than dead-ending ─────────────────
+# The results heading must name whatever autosuggest matched. We deliberately do
+# not assert the junk term itself appears — autosuggest replaces it, so the
+# original string is gone from the visible page.
+store text of heading_search_title as junk_resolved_heading
+
+# ── Assert: the page is genuinely populated, not an empty shell ─────────────
+store text of business_name as junk_first_business
+
+# ── Assert: the page is still interactive — search box usable again ─────────
+store attribute placeholder of search_box as junk_search_placeholder
+
+take screenshot as tc005_verified

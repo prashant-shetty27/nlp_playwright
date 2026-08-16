@@ -1,0 +1,90 @@
+[
+  {
+    "_case": "TC-CL-001  Codeless: normalise a query, search it, capture the top result",
+    "action": "Replace Special Characters",
+    "parameters": {
+      "source_text_or_variable": "packers & movers",
+      "characters_to_remove": "&",
+      "save_to_variable_name": "clean_query"
+    }
+  },
+  {
+    "action": "Open Site",
+    "parameters": {
+      "target_url_or_key": "justdial"
+    }
+  },
+  {
+    "action": "Wait For Result Page Load",
+    "parameters": {}
+  },
+  {
+    "action": "Store Current Page URL",
+    "parameters": {
+      "save_to_variable_name": "home_url"
+    }
+  },
+  {
+    "action": "Verify Stored Variable Contains Partial Text",
+    "parameters": {
+      "saved_variable_name": "home_url",
+      "partial_text_to_find": "justdial"
+    }
+  },
+  {
+    "action": "Search for Category / Company / Product",
+    "parameters": {
+      "text_to_search": "${clean_query}"
+    }
+  },
+  {
+    "action": "Wait For Result Page Load",
+    "parameters": {}
+  },
+  {
+    "action": "Take Screenshot",
+    "parameters": {}
+  },
+  {
+    "action": "Verify Partial Text in Element",
+    "parameters": {
+      "locator_to_fetch_from": "heading_search_title",
+      "partial_text_to_match": "Packers",
+      "ignore_case_True_False": "True"
+    }
+  },
+  {
+    "action": "Store Element Text",
+    "parameters": {
+      "locator": "business_name",
+      "save_to_variable_name": "top_business"
+    }
+  },
+  {
+    "action": "Store Element Count",
+    "parameters": {
+      "locator": "paid_banner",
+      "save_to_variable_name": "paid_listings"
+    }
+  },
+  {
+    "action": "Store Current Page Title",
+    "parameters": {
+      "save_to_variable_name": "results_title"
+    }
+  },
+  {
+    "action": "Scroll Down Page",
+    "parameters": {}
+  },
+  {
+    "action": "Wait X Seconds",
+    "parameters": {
+      "seconds": "2"
+    }
+  },
+  {
+    "action": "Take Screenshot",
+    "parameters": {}
+  }
+]

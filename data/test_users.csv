@@ -1,0 +1,5 @@
+name,email,phone,password
+Alice,alice@test.com,9876543210,Pass@123
+Bob,bob@test.com,9876543211,Pass@456
+Carol,carol@test.com,9876543212,Pass@789
+Dave,dave@test.com,9876543213,Pass@012

@@ -1,0 +1,35 @@
+# ============================================================================
+# TC-WEB-001  Homepage smoke
+# ----------------------------------------------------------------------------
+# Objective : JustDial homepage loads and its primary entry points render.
+# Platform  : web          Priority : P0 (gate for every other web case)
+# Suite     : suites/web_regression_suite.json
+# Params    : base_site, home_heading_text
+#
+# Note: the web runner has no `verify element exists` (Appium-only). On web the
+# equivalent assertion is `store text of <el> as <var>` — it resolves the
+# locator, reads it, and raises if the element is absent, while also exercising
+# the self-healing path. Use that, not a bare existence check.
+# ============================================================================
+
+# ── Arrange ─────────────────────────────────────────────────────────────────
+open ${base_site}
+wait for result page load
+take screenshot as tc001_home_loaded
+
+# ── Assert: page identity ───────────────────────────────────────────────────
+store page url as home_url
+store page title as home_title
+verify stored home_url contains "justdial"
+
+# ── Assert: primary search affordance is present ────────────────────────────
+store attribute placeholder of search_box as search_placeholder
+
+# ── Assert: category entry points render ────────────────────────────────────
+store count of restaurant_hotkey as restaurant_tiles
+store count of b2b_hotkey as b2b_tiles
+
+# ── Assert: homepage marketing copy anchors the page ────────────────────────
+verify text "${home_heading_text}"
+
+take screenshot as tc001_home_verified

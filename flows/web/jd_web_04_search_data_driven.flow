@@ -1,0 +1,54 @@
+# ============================================================================
+# TC-WEB-004  Data-driven category search
+# ----------------------------------------------------------------------------
+# Objective : Search behaves consistently across several categories, driven
+#             from data/testdata/search_terms.csv rather than hardcoded terms.
+# Platform  : web          Priority : P1
+# Suite     : suites/web_regression_suite.json
+# Data      : data/testdata/search_terms.csv
+#             row 1 = Restaurants | row 2 = Gyms | row 3 = Dentists
+#             Named columns read via csv.DictReader, so the header line is
+#             consumed and row 1 is the first data row. Note: reading by column
+#             NUMBER instead uses the raw reader, where the header is NOT
+#             consumed and row 1 would be the header itself.
+#
+# Note: the .flow DSL has no loop construct — each dataset row is an explicit
+# block. Keep blocks short and repeat the read/act/assert triplet per row.
+# ============================================================================
+
+open ${base_site}
+wait for result page load
+
+# ── Row 1 ───────────────────────────────────────────────────────────────────
+read csv "data/testdata/search_terms.csv" row 1 col category as row1_category
+read csv "data/testdata/search_terms.csv" row 1 col expect_keyword as row1_keyword
+
+search for ${row1_category}
+wait for result page load
+verify element heading_search_title contains "${row1_keyword}"
+store text of business_name as row1_first_business
+take screenshot as tc004_row1_results
+
+# ── Row 2 ───────────────────────────────────────────────────────────────────
+read csv "data/testdata/search_terms.csv" row 2 col category as row2_category
+read csv "data/testdata/search_terms.csv" row 2 col expect_keyword as row2_keyword
+
+open ${base_site}
+wait for result page load
+search for ${row2_category}
+wait for result page load
+verify element heading_search_title contains "${row2_keyword}"
+store text of business_name as row2_first_business
+take screenshot as tc004_row2_results
+
+# ── Row 3 ───────────────────────────────────────────────────────────────────
+read csv "data/testdata/search_terms.csv" row 3 col category as row3_category
+read csv "data/testdata/search_terms.csv" row 3 col expect_keyword as row3_keyword
+
+open ${base_site}
+wait for result page load
+search for ${row3_category}
+wait for result page load
+verify element heading_search_title contains "${row3_keyword}"
+store text of business_name as row3_first_business
+take screenshot as tc004_row3_results

@@ -1,0 +1,19 @@
+{
+  "plan_name": "JustDial Web Regression Plan",
+  "description": "Runs the JustDial web regression suite on Chromium.",
+  "environment": "local",
+  "platform": "web",
+  "owner": "QA Team",
+
+  "execution": {
+    "parallel": false,
+    "retry_on_failure": true,
+    "max_retries": 1,
+    "rerun_on_failure": false,
+    "stop_on_first_failure": false
+  },
+
+  "selected_suites": [
+    "suites/web_regression_suite.json"
+  ]
+}

@@ -632,6 +632,10 @@ def _end_session(driver, label: str = "session"):
 # COMMAND DISPATCH
 # ─────────────────────────────────────────────────────────────────────────────
 
+# Command types whose `target` is a variable name to look up or create, not a value.
+_VARIABLE_NAME_TARGETS = {"verify_var_contains", "create_variable", "extract_json"}
+
+
 def _execute_step(cmd, driver, platform: str):
     """Route a parsed Command to the correct appium_action_service function."""
     import execution.appium_action_service as svc
@@ -639,6 +643,13 @@ def _execute_step(cmd, driver, platform: str):
     # Resolve any ${variables} in text/target fields
     target = resolve_variables(cmd.target or "")
     text   = resolve_variables(cmd.text   or "")
+
+    # A few commands take a variable NAME as their target rather than a value.
+    # resolve_variables() substitutes a bare name for its own contents, so pre-resolving
+    # these hands the action the stored value where it expects the key — and the lookup
+    # that follows can then never succeed.
+    if cmd.type in _VARIABLE_NAME_TARGETS:
+        target = cmd.target or ""
 
     # Extract index suffix from target (e.g. "login_btn[last]" → el_index="last")
     # _find_element handles this internally, but we also expose it for if-visible helpers.

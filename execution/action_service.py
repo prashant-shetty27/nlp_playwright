@@ -718,7 +718,21 @@ def take_screenshot(page_obj, label="capture"):
         return
     _ensure_dir(settings.SCREENSHOTS_DIR)
     filename = os.path.join(settings.SCREENSHOTS_DIR, f"{label}_{_timestamp()}.png")
-    page_obj.screenshot(path=filename, full_page=True)
+
+    # A full-page capture has to stitch the whole scroll height, which on tall
+    # lazy-loading pages can outlast the action timeout. Screenshots are diagnostic
+    # output, so fall back to the viewport rather than failing the step outright.
+    try:
+        page_obj.screenshot(path=filename, full_page=True,
+                            timeout=settings.SCREENSHOT_TIMEOUT_MS)
+    except PlaywrightTimeoutError:
+        logger.warning(
+            "⏱️  Full-page screenshot '%s' timed out after %dms — capturing viewport instead.",
+            label, settings.SCREENSHOT_TIMEOUT_MS,
+        )
+        page_obj.screenshot(path=filename, full_page=False,
+                            timeout=settings.SCREENSHOT_TIMEOUT_MS)
+
     logger.info("📸 Screenshot Saved: %s", filename)
 
 
