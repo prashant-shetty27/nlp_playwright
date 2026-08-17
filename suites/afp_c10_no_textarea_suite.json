@@ -1,0 +1,28 @@
+{
+  "suite_name": "TC_AFP_C10 \u2014 popup carries no free-text textarea",
+  "description": "Read-only. Opens the Ask More Photos popup and asserts no textarea is present. Submits nothing, sends no OTP, creates no lead \u2014 safe to re-run.",
+  "platform": "web",
+  "scripts": [
+    "data/drafts/popup_no_textarea.flow"
+  ],
+  "desired_capabilities": {
+    "browser": "chromium",
+    "mobile_web": true,
+    "device_name": "Pixel 7",
+    "headless": false,
+    "http_auth_domain": "designtest.justdial.com"
+  },
+  "execution": {
+    "stop_on_failure": false,
+    "retry_on_failure": false,
+    "max_retries": 0,
+    "max_flows_per_batch": 1
+  },
+  "parameters": [
+    {
+      "name": "product_url",
+      "type": "string",
+      "value": "https://designtest.justdial.com/jdmart/Chennai/Metal-And-Plastic-Laser-Level-(-Multicolor)/pid-2233271407/044PXX44-XX44-250214122451-W9P8"
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "suite_name": "Ask More Photos — one-time visible demo",
+  "description": "Single state-changing execution of the generated AFP flow. Secrets resolve from environment at runtime and are never written here.",
+  "platform": "web",
+  "scripts": ["data/drafts/ask_more_photos_mobile.flow"],
+  "desired_capabilities": {
+    "browser": "chromium",
+    "mobile_web": true,
+    "device_name": "Pixel 7",
+    "headless": false,
+    "http_auth_domain": "designtest.justdial.com"
+  },
+  "execution": {
+    "stop_on_failure": true,
+    "retry_on_failure": false,
+    "max_retries": 0,
+    "max_flows_per_batch": 1
+  },
+  "parameters": [
+    { "name": "product_url", "type": "string",
+      "value": "https://designtest.justdial.com/jdmart/Chennai/Metal-And-Plastic-Laser-Level-(-Multicolor)/pid-2233271407/044PXX44-XX44-250214122451-W9P8" },
+    { "name": "jd_test_mobile", "type": "secret", "env": "JD_TEST_MOBILE" },
+    { "name": "jd_test_static_otp", "type": "secret", "env": "JD_TEST_STATIC_OTP" }
+  ]
+}

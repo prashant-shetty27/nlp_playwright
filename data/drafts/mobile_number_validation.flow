@@ -1,0 +1,30 @@
+# Ask More Photos popup — mobile number field validations
+# Source : GJDT-21944_Ask_For_Photos_AI_Products_Testcases | TC_AFP_C05
+# Params : ${product_url}
+# Map    : data/drafts/mobile_number_validation.map.json  (step -> source row, locator, selector, expected)
+
+open ${product_url}
+click ask_more_photos_cta
+verify element mobile_number_input is visible
+store attribute class of popup_submit_button as submit_state_initial
+verify stored submit_state_initial contains "disbld"
+type "98765" into mobile_number_input
+store attribute class of popup_submit_button as submit_state_short
+verify stored submit_state_short contains "disbld"
+take screenshot as c05_01_five_digits_rejected
+type "abcdefghij" into mobile_number_input
+store value of mobile_number_input as typed_alpha
+verify stored typed_alpha is not "abcdefghij"
+store attribute class of popup_submit_button as submit_state_alpha
+verify stored submit_state_alpha contains "disbld"
+take screenshot as c05_02_alphabets_blocked
+type "0000000000" into mobile_number_input
+store attribute class of popup_submit_button as submit_state_series
+verify stored submit_state_series contains "disbld"
+type "1234567890" into mobile_number_input
+store attribute class of popup_submit_button as submit_state_startdigit
+verify stored submit_state_startdigit contains "disbld"
+type "98765432101" into mobile_number_input
+store value of mobile_number_input as typed_long
+verify stored typed_long is not "98765432101"
+take screenshot as c05_03_eleven_digits_rejected

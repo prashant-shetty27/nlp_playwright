@@ -1,0 +1,28 @@
+{
+  "suite_name": "TC_AFP_C05 \u2014 mobile number field validations",
+  "description": "Feeds five invalid mobile numbers into the popup and asserts each is rejected. No valid number is submitted, so no OTP SMS and no lead \u2014 safe to re-run.",
+  "platform": "web",
+  "scripts": [
+    "data/drafts/mobile_number_validation.flow"
+  ],
+  "desired_capabilities": {
+    "browser": "chromium",
+    "mobile_web": true,
+    "device_name": "Pixel 7",
+    "headless": false,
+    "http_auth_domain": "designtest.justdial.com"
+  },
+  "execution": {
+    "stop_on_failure": false,
+    "retry_on_failure": false,
+    "max_retries": 0,
+    "max_flows_per_batch": 1
+  },
+  "parameters": [
+    {
+      "name": "product_url",
+      "type": "string",
+      "value": "https://designtest.justdial.com/jdmart/Chennai/Metal-And-Plastic-Laser-Level-(-Multicolor)/pid-2233271407/044PXX44-XX44-250214122451-W9P8"
+    }
+  ]
+}

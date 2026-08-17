@@ -62,10 +62,18 @@ def suggest(body: SuggestRequest):
     results: list[dict] = []
 
     for _key, entry in KEYWORD_MAP.items():
+        # Deprecated entries name an action no runner dispatches. Their phrasing
+        # is kept in the map for the record, but suggesting them would hand the
+        # operator a step that cannot run.
+        if entry.get("deprecated"):
+            continue
         action = entry.get("action", "")
         for phrase in entry.get("phrases", []):
             if partial in phrase.lower():
-                results.append({"phrase": phrase, "action": action})
+                # `template` is the complete, parseable statement — the caller can
+                # insert it directly instead of reconstructing syntax from prose.
+                results.append({"phrase": phrase, "action": action,
+                                "template": entry.get("template", "")})
                 if len(results) >= body.limit:
                     return results
 

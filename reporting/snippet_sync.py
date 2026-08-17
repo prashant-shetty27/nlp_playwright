@@ -7,6 +7,7 @@ import glob
 import json
 import logging
 import os
+import re
 
 from config import settings
 
@@ -64,6 +65,66 @@ def harvest_locator_names() -> tuple[str, int]:
     return choice_list, len(all_names)
 
 
+# Slot → VS Code placeholder. {locator} becomes a dropdown of every saved
+# locator; the rest become plain tab-stops with a sensible default.
+_SLOT_DEFAULTS = {"text": "value", "number": "3", "variable": "my_var"}
+
+
+def _covered_actions(snippets: dict) -> set:
+    """Command types already reachable by typing a hand-written snippet."""
+    from nlp.parser import parse_step
+
+    covered = set()
+    for spec in snippets.values():
+        stmt = " ".join(spec.get("body", []))
+        stmt = re.sub(r"\$\{\d+\|([^|}]*)\|\}", lambda m: m.group(1).split(",")[0], stmt)
+        stmt = re.sub(r"\$\{\d+:([^}]*)\}", lambda m: m.group(1) or "x", stmt)
+        stmt = re.sub(r"\$\{\d+\}", "x", stmt)
+        try:
+            covered.add(parse_step(stmt.strip()).type)
+        except Exception:
+            continue          # a body that no longer parses simply covers nothing
+    return covered
+
+
+def _snippets_from_templates(choice_list: str, already: dict) -> dict:
+    """
+    Build VS Code snippets from the templates in nlp/keywords.py.
+
+    Only for actions no hand-written snippet already reaches, so nothing the
+    operator uses today is renamed, replaced or shadowed.
+    """
+    from nlp.keywords import KEYWORD_MAP
+
+    covered = _covered_actions(already)
+    out: dict = {}
+    for key, entry in KEYWORD_MAP.items():
+        template = entry.get("template")
+        action = entry.get("action", "")
+        if not template or entry.get("deprecated") or action in covered:
+            continue
+
+        body, tab = template, 0
+
+        def _next(_m, _slot):
+            nonlocal tab
+            tab += 1
+            if _slot == "locator":
+                return "${%d|%s|}" % (tab, choice_list)
+            return "${%d:%s}" % (tab, _SLOT_DEFAULTS.get(_slot, "value"))
+
+        for slot in re.findall(r"\{(\w+)\}", template):
+            body = body.replace("{%s}" % slot, _next(None, slot), 1)
+
+        out[f"NLP: {key.replace('_', ' ').title()}"] = {
+            "prefix": entry["phrases"][0],
+            "body": [body],
+            "description": f"{action} — generated from nlp/keywords.py template",
+        }
+        covered.add(action)
+    return out
+
+
 def sync_locators_to_snippets() -> None:
     """Main orchestrator: generates the VS Code snippets file from all locator databases."""
     snippets_path = get_snippets_path()
@@ -71,17 +132,20 @@ def sync_locators_to_snippets() -> None:
     snippets: dict = {}
 
     # --- 1. STATIC WAIT KEYWORDS ---
+    # The parser accepts only `wait N seconds`; "sleep"/"pause"/"force wait" are
+    # not keywords. The familiar prefixes are kept, but every body now emits the
+    # one form that actually runs.
     for prefix, label in {"wait": "Static Wait", "sleep": "Sleep", "pause": "Pause", "force wait": "Force Wait"}.items():
         snippets[f"Wait: {label}"] = {
             "prefix": prefix,
-            "body": [f"{prefix} ${{1:seconds}} seconds"],
-            "description": f"Static pause using {label}",
+            "body": ["wait ${1:3} seconds"],
+            "description": f"Static pause ({label}) — emits `wait N seconds`",
         }
 
     # --- 2. SCROLLING ---
     snippets["Action: Scroll Page"] = {
         "prefix": "scroll page",
-        "body": ["scroll page ${1|up,down|} by ${2:500} pixels"],
+        "body": ["scroll ${1|down,up|} ${2:500}"],
         "description": "Scrolls the viewport vertically by a pixel amount.",
     }
     snippets["Action: Scroll to Element"] = {
@@ -89,19 +153,21 @@ def sync_locators_to_snippets() -> None:
         "body": [f"scroll to element ${{1|{choice_list}|}}"],
         "description": "Scrolls until element is in viewport center.",
     }
+    # The web runner has no element-based scroll-until — only the text variant.
+    # The prefix is kept, but the body emits the form that actually runs.
     snippets["Scroll: Until Element Visible"] = {
         "prefix": "scroll until element visible",
-        "body": [f"scroll until element ${{1|{choice_list}|}} visible, scroll count ${{2:5}}, scroll wait ${{3:1}}"],
-        "description": "Looping scroll until element is found.",
+        "body": ['scroll until text "${1:visible text}" visible'],
+        "description": "Looping scroll until text appears (no element variant exists on web).",
     }
     snippets["Scroll: Until Text Visible"] = {
         "prefix": "scroll until text visible",
         "body": ["scroll until text \"${1:text}\" visible, scroll count ${2:5}, scroll wait ${3:1}"],
-        "description": "Looping scroll until specific text appears.",
+        "description": "Looping scroll until specific text appears.",  # text-based: the web runner has no element variant
     }
     snippets["Action: Scroll to End"] = {
         "prefix": "scroll to end",
-        "body": ["scroll to ${1|top,bottom|} of page"],
+        "body": ["scroll to ${1|bottom,top|}"],
         "description": "Instantly scrolls to top or bottom.",
     }
 
@@ -119,21 +185,25 @@ def sync_locators_to_snippets() -> None:
     }
 
     # --- 4. WAITS & VERIFICATIONS ---
-    verify_states = (
-        "visible,hidden,present,not present,displayed,not visible,"
-        "enabled,disabled,editable,clickable,selected,not selected,"
-        "empty,not empty,focused,not focused"
-    )
+    # ONLY the states nlp/parser.py actually accepts. This list previously offered
+    # sixteen; thirteen of them produced statements the parser rejects, so picking
+    # one from the dropdown produced a step that failed at run time.
+    verify_states = "visible,not visible,not present"
     snippets["Wait: Element State"] = {
         "prefix": "wait for element",
-        "body": [f"wait for element ${{1|{choice_list}|}} to be ${{2|{verify_states}|}} (timeout 10s)"],
+        "body": [f"wait until element ${{1|{choice_list}|}} is visible"],
         "description": "Smart wait for a specific element state.",
     }
-    for key, label in {"home": "home page", "result": "result page", "details": "details page"}.items():
-        snippets[f"Wait: {label.title()} Load"] = {
+    # Only the RESULT page has a dispatchable wait. The home/details variants were
+    # suggesting a command that has never existed on either runner, so all three
+    # prefixes now emit the one real form.
+    for key in ("result", "home", "details"):
+        snippets[f"Wait: {key.title()} Page Load"] = {
             "prefix": f"wait {key}",
-            "body": [f"wait for {label} to load (network idle, max 10s)"],
-            "description": f"Wait for {label} network idle",
+            "body": ["wait for result page load"],
+            "description": ("Wait for the result page to settle"
+                            if key == "result" else
+                            f"No '{key} page' wait exists — emits the result-page wait"),
         }
 
     # --- 5. CORE ACTIONS ---
@@ -142,7 +212,7 @@ def sync_locators_to_snippets() -> None:
         "Action: Click": {"prefix": "click", "body": [f"click on element ${{1|{choice_list}|}}"], "description": "Click a saved locator."},
         "Verify: Text on Page": {
             "prefix": "verify on page",
-            "body": ["verify [${1:text1}, ${2:text2}] is ${3|present,not present,visible,hidden|} on page, scroll ${4:count}, stop ${5|true,false|}"],
+            "body": ['verify texts ["${1:first}", "${2:second}"] on page'],
             "description": "Check multiple texts with optional scrolling",
         },
         "Action: Type Text": {"prefix": "type", "body": [f"type \"${{1:text}}\" into ${{2|{choice_list}|}}"], "description": "Types text into an input field."},
@@ -274,6 +344,15 @@ def sync_locators_to_snippets() -> None:
         "body": ["read csv \"${1:data/test_data.csv}\" row ${2:1} col ${3:1} as ${4:csv_val}"],
         "description": "Read a single cell from a CSV file",
     }
+
+    # --- 5b. GENERATED FROM KEYWORD_MAP TEMPLATES ---
+    # Everything above is hand-written and stays that way, so existing prefixes
+    # keep working. This step fills the gap: any command that has a template in
+    # nlp/keywords.py but is not already reachable from a hand-written snippet
+    # gets one generated for it. Adding a command therefore means editing
+    # KEYWORD_MAP only — the VS Code surface follows automatically, and
+    # tests/test_suggestions.py fails if a template stops parsing.
+    snippets.update(_snippets_from_templates(choice_list, already=snippets))
 
     # --- 6. WRITE ---
     try:

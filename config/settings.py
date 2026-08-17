@@ -64,6 +64,15 @@ WAIT_TIMEOUT_MS: int = int(os.getenv("WAIT_TIMEOUT_MS", str(_ctrl("browser.wait_
 # Full-page captures stitch the entire scroll height, so they need more headroom than
 # a normal action. Falls back to a viewport capture if even this is exceeded.
 SCREENSHOT_TIMEOUT_MS: int = int(os.getenv("SCREENSHOT_TIMEOUT_MS", str(_ctrl("capture.screenshot_timeout_ms", 45000))))
+# How long a negative assertion waits before concluding something did NOT appear.
+# An absence check that runs instantly always passes, so it must give the UI a
+# fair chance to render the thing it is asserting is absent.
+ABSENCE_SETTLE_MS: int = int(os.getenv("ABSENCE_SETTLE_MS", str(_ctrl("browser.absence_settle_ms", 3000))))
+# Evidence size controls. Full-page PNGs of tall SPA pages run to several MB each;
+# JPEG at a sane quality keeps them legible at roughly a tenth the size.
+SCREENSHOT_FORMAT: str = str(os.getenv("SCREENSHOT_FORMAT", _ctrl("capture.screenshot_format", "jpeg"))).lower()
+SCREENSHOT_QUALITY: int = int(os.getenv("SCREENSHOT_QUALITY", str(_ctrl("capture.screenshot_quality", 72))))
+SCREENSHOT_FULL_PAGE: bool = _as_bool(os.getenv("SCREENSHOT_FULL_PAGE", _ctrl("capture.screenshot_full_page", False)), False)
 
 # ── Capture Controls ────────────────────────────────────────────────────────
 ENABLE_SCREENSHOTS: bool = _as_bool(os.getenv("ENABLE_SCREENSHOTS", _ctrl("capture.screenshots_enabled", False)), False)

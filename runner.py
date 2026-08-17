@@ -122,7 +122,8 @@ def _load_run_config() -> dict:
 
 # ── NLP flow ──────────────────────────────────────────────────────────────────
 # Command types whose `target` is a variable name to look up or create, not a value.
-_VARIABLE_NAME_TARGETS = {"verify_var_contains", "create_variable", "extract_json"}
+_VARIABLE_NAME_TARGETS = {"verify_var_contains", "verify_var_not_equals",
+                          "create_variable", "extract_json"}
 
 
 def _execute_step_from_command(cmd, page):
@@ -172,6 +173,14 @@ def _execute_step_from_command(cmd, page):
         "verify_element_contains":   lambda: svc.verify_element_contains_text(ep, target, text),
         # ── Verification — Variables ─────────────────────────────────────────
         "verify_var_contains":       lambda: svc.verify_stored_variable_contains(target, text),
+        "verify_var_not_equals":     lambda: svc.verify_stored_variable_not_equals(target, text),
+        # ── Visibility / condition-based wait / multi-input OTP ───────────────
+        "verify_element_visible":    lambda: svc.verify_element_visible(ep, target),
+        "verify_element_not_exists": lambda: svc.verify_element_not_exists(ep, target),
+        "verify_element_not_visible": lambda: svc.verify_element_not_visible(ep, target),
+        "wait_until_visible":        lambda: svc.wait_until_element_visible(ep, target),
+        "wait_until_text_not":       lambda: svc.wait_until_element_text_not(ep, target, text),
+        "enter_otp":                 lambda: svc.enter_otp(ep, text, target),
         # ── Extract — Page info ──────────────────────────────────────────────
         "extract_url":               lambda: svc.extract_page_url(ep, cmd.variable_name),
         "extract_title":             lambda: svc.extract_page_title(ep, cmd.variable_name),

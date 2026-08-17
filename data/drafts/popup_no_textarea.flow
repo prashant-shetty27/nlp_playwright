@@ -1,0 +1,12 @@
+# Ask More Photos popup — no free-text textarea
+# Source : GJDT-21944_Ask_For_Photos_AI_Products_Testcases | TC_AFP_C10
+# Params : ${product_url}
+# Map    : data/drafts/popup_no_textarea.map.json  (step -> source row, locator, selector, expected)
+
+open ${product_url}
+verify element ask_more_photos_cta is visible
+click ask_more_photos_cta
+verify element mobile_number_input is visible
+take screenshot as c10_01_popup_open
+verify element popup_text_area is not present
+take screenshot as c10_02_no_textarea_confirmed

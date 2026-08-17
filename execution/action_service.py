@@ -17,7 +17,8 @@ from execution.browser_manager import (
 )
 from execution.session import TestSession
 from nlp.variable_manager import RUNTIME_VARIABLES, resolve_variables
-from locators.manager import get_locator_and_dna
+from locators.manager import (get_alternate_selectors, get_locator_and_dna,
+                              promote_selector)
 from core.healer import ml_heal_element
 from core.registry import codeless_snippet
 from config.settings import SITES
@@ -58,6 +59,50 @@ def _parse_boolean(val) -> bool:
     return str(val).strip().lower() in ('true', 'yes', '1', 'y')
 
 
+def _resolve_live(page, locator_name):
+    """
+    Resolve a locator against the page as it actually is right now.
+
+    Returns (selector, dna) exactly like get_locator_and_dna, so every caller's
+    existing recovery path is untouched — the only difference is WHICH selector
+    they start from. When the stored primary matches nothing and the entry has
+    recorded alternates, the alternates are tried in order and the winner is
+    promoted so the next run starts there.
+
+    Entries with a single recorded selector skip the probe entirely, so this is a
+    no-op for every locator captured before alternates existed.
+    """
+    primary, dna = get_locator_and_dna(locator_name)
+    if not primary:
+        raise Exception(f"Locator '{locator_name}' not found in any page.")
+    primary = resolve_variables(primary)
+
+    alts = get_alternate_selectors(locator_name)
+    if not alts:
+        return primary, dna
+
+    try:
+        if page.locator(primary).count() > 0:
+            return primary, dna
+    except Exception:
+        pass   # malformed/stale selector counts as a miss — fall through to alternates
+
+    for alt in alts:
+        candidate = resolve_variables(alt["value"])
+        try:
+            if page.locator(candidate).count() > 0:
+                logger.warning("🔁 Primary selector for '%s' matched nothing; using recorded "
+                               "alternate %r", locator_name, candidate)
+                promote_selector(locator_name, candidate, alt.get("type") or "css")
+                return candidate, dna
+        except Exception:
+            continue
+
+    # Nothing matched. Hand back the primary so the caller's own recovery
+    # (innerText retry, ML heal) still runs and reports against the real name.
+    return primary, dna
+
+
 def _stabilize_page(page):
     """
     Architectural barrier: waits for SPA/React routing and network stabilization.
@@ -70,11 +115,7 @@ def _stabilize_page(page):
 
 
 def _get_healed_element_locator(page, locator_name):
-    primary_xpath, dna = get_locator_and_dna(locator_name)
-    if not primary_xpath:
-        raise Exception(f"Locator '{locator_name}' not found in any page.")
-
-    primary_xpath = resolve_variables(primary_xpath)
+    primary_xpath, dna = _resolve_live(page, locator_name)
     root = _get_locator_root(page)   # frame-aware: uses iframe context when active
     loc = root.locator(primary_xpath).first
 
@@ -121,30 +162,41 @@ def open_site(page, url: str):
     if not target_domain:
         raise ValueError(f"Validation Error: '{sanitized_url}' could not be parsed into a valid domain.")
 
+    # ── Authentication ────────────────────────────────────────────────────────
+    # Preferred path: the browser context already carries HTTP Basic credentials
+    # (see browser_manager.apply_http_credentials). Nothing is added to the URL,
+    # so no credential can reach a log line, an exception or a report.
+    from execution.browser_manager import CONTEXT_AUTH_DOMAINS
+
     auth_registry = get_auth_registry()
-    if target_domain in auth_registry:
+    if target_domain in CONTEXT_AUTH_DOMAINS:
+        logger.info("🔒 '%s' is authenticated at the browser-context level; "
+                    "no credentials placed in the URL.", target_domain)
+    elif target_domain in auth_registry:
         credentials = auth_registry[target_domain]
         username = credentials.get("username")
         password = credentials.get("password")
         if not username or not password:
             raise ValueError(f"Security Error: Incomplete credentials for domain '{target_domain}'.")
-        logger.info(f"🔒 Secure domain '{target_domain}' detected. Injecting HTTP credentials.")
-        # Playwright requires credentials embedded in URL for HTTP Basic Auth
-        parsed_url = parsed_url._replace(
-            netloc=f"{username}:{password}@{target_domain}"
+        logger.warning(
+            "⚠️  '%s' has registered credentials but the browser context was not created "
+            "with them. Falling back to URL-embedded HTTP Basic auth. Prefer setting "
+            "\"http_auth_domain\" in the suite's desired_capabilities.", target_domain
         )
+        parsed_url = parsed_url._replace(netloc=f"{username}:{password}@{target_domain}")
         sanitized_url = parsed_url.geturl()
 
-    logger.info(f"🌐 Navigating to: {sanitized_url}")
+    # Never log or raise with a credential-bearing URL.
+    safe_url = f"{parsed_url.scheme}://{target_domain}{parsed_url.path}"
+    logger.info(f"🌐 Navigating to: {safe_url}")
     try:
         page.goto(sanitized_url, wait_until="domcontentloaded", timeout=30000)
-        # Let dynamic elements finish rendering
         try:
             page.wait_for_load_state("networkidle", timeout=10000)
         except Exception:
             pass  # networkidle timeout is non-fatal
     except Exception as e:
-        raise RuntimeError(f"Navigation Error: Failed to load '{sanitized_url}'. Details: {e}")
+        raise RuntimeError(f"Navigation Error: Failed to load '{safe_url}'. Details: {e}")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -152,11 +204,7 @@ def open_site(page, url: str):
 # ─────────────────────────────────────────────────────────────────────────────
 @with_retry(max_attempts=2, delay=1.0)
 def click_element(page, locator_name):
-    primary_xpath, dna = get_locator_and_dna(locator_name)
-    if not primary_xpath:
-        raise Exception(f"Locator '{locator_name}' not found in any page.")
-
-    primary_xpath = resolve_variables(primary_xpath)
+    primary_xpath, dna = _resolve_live(page, locator_name)
 
     try:
         logger.info(f"🖱️ Attempting click on: {locator_name}")
@@ -200,11 +248,7 @@ def click_element(page, locator_name):
 # ─────────────────────────────────────────────────────────────────────────────
 @with_retry(max_attempts=2, delay=1.0)
 def fill_element(page, text, locator_name):
-    primary_xpath, dna = get_locator_and_dna(locator_name)
-    if not primary_xpath:
-        raise Exception(f"Locator '{locator_name}' not found in any page.")
-
-    primary_xpath = resolve_variables(primary_xpath)
+    primary_xpath, dna = _resolve_live(page, locator_name)
 
     def execute_robust_fill(xpath):
         loc = page.locator(xpath).first
@@ -245,10 +289,7 @@ def fill_element(page, text, locator_name):
 # EXTRACTION
 # ─────────────────────────────────────────────────────────────────────────────
 def extract_element_text(page, locator_name, variable_name):
-    primary_xpath, dna = get_locator_and_dna(locator_name)
-    if not primary_xpath:
-        raise Exception(f"Locator '{locator_name}' not found in any page.")
-    primary_xpath = resolve_variables(primary_xpath)
+    primary_xpath, dna = _resolve_live(page, locator_name)
 
     def execute_extraction(xpath):
         loc = page.locator(xpath).first
@@ -290,10 +331,7 @@ def extract_input_value(page, locator_name, variable_name):
 
 
 def extract_element_count(page, locator_name, variable_name):
-    primary_xpath, _ = get_locator_and_dna(locator_name)
-    if not primary_xpath:
-        raise Exception(f"Locator '{locator_name}' not found in any page.")
-    primary_xpath = resolve_variables(primary_xpath)
+    primary_xpath, _ = _resolve_live(page, locator_name)
     count = page.locator(primary_xpath).count()
     RUNTIME_VARIABLES[variable_name] = str(count)
     logger.info(f"💾 EXTRACTED COUNT: {count} elements found -> Stored as '${variable_name}'")
@@ -681,7 +719,8 @@ def refresh_page(page):
 
 def scroll_to_element(page, target: str) -> None:
     """Scroll until the named element is visible in the viewport."""
-    from locators.manager import get_locator_and_dna
+    from locators.manager import (get_alternate_selectors, get_locator_and_dna,
+                              promote_selector)
     xpath, _ = get_locator_and_dna(target)
     if not xpath:
         raise Exception(f"Locator '{target}' not found for scroll_to")
@@ -711,27 +750,57 @@ def scroll_until_text_visible(page, text, max_scrolls=None, scroll_wait=2):
     return False
 
 
+#: Locator names whose content is blanked out of every screenshot.
+#: Empty by default — screenshots capture the page as-is. Populate this (e.g. with
+#: "mobile_number_input", "otp_input", "otp_sent_number") when runs use real customer
+#: data or when evidence leaves the local machine.
+SENSITIVE_SCREENSHOT_LOCATORS: list[str] = []
+
+
 def take_screenshot(page_obj, label="capture"):
     import os
     if not settings.ENABLE_SCREENSHOTS:
         logger.info("📵 Screenshots are disabled (ENABLE_SCREENSHOTS=false). Skipping capture '%s'.", label)
         return
     _ensure_dir(settings.SCREENSHOTS_DIR)
-    filename = os.path.join(settings.SCREENSHOTS_DIR, f"{label}_{_timestamp()}.png")
+    _fmt = "jpeg" if settings.SCREENSHOT_FORMAT in ("jpeg", "jpg") else "png"
+    _ext = "jpg" if _fmt == "jpeg" else "png"
+    filename = os.path.join(settings.SCREENSHOTS_DIR, f"{label}_{_timestamp()}.{_ext}")
+    _shot_kwargs = {"type": _fmt}
+    if _fmt == "jpeg":
+        _shot_kwargs["quality"] = settings.SCREENSHOT_QUALITY
+
+    # Blank any sensitive field before the image is written. Playwright paints a solid
+    # box over each masked locator, so a captured mobile number or OTP can never reach
+    # a PNG on disk or a report attachment.
+    masks = []
+    for _name in SENSITIVE_SCREENSHOT_LOCATORS:
+        try:
+            _sel, _ = get_locator_and_dna(_name)
+            if not _sel:
+                continue
+            _loc = page_obj.locator(_sel)
+            if _loc.count():
+                masks.append(_loc)
+        except Exception:
+            continue
+    if masks:
+        logger.info("🙈 Masking %d sensitive element(s) in screenshot '%s'", len(masks), label)
 
     # A full-page capture has to stitch the whole scroll height, which on tall
     # lazy-loading pages can outlast the action timeout. Screenshots are diagnostic
     # output, so fall back to the viewport rather than failing the step outright.
     try:
-        page_obj.screenshot(path=filename, full_page=True,
-                            timeout=settings.SCREENSHOT_TIMEOUT_MS)
+        page_obj.screenshot(path=filename, full_page=settings.SCREENSHOT_FULL_PAGE,
+                            mask=masks, timeout=settings.SCREENSHOT_TIMEOUT_MS,
+                            **_shot_kwargs)
     except PlaywrightTimeoutError:
         logger.warning(
             "⏱️  Full-page screenshot '%s' timed out after %dms — capturing viewport instead.",
             label, settings.SCREENSHOT_TIMEOUT_MS,
         )
-        page_obj.screenshot(path=filename, full_page=False,
-                            timeout=settings.SCREENSHOT_TIMEOUT_MS)
+        page_obj.screenshot(path=filename, full_page=False, mask=masks,
+                            timeout=settings.SCREENSHOT_TIMEOUT_MS, **_shot_kwargs)
 
     logger.info("📸 Screenshot Saved: %s", filename)
 
@@ -1253,7 +1322,8 @@ def _resolve_to_selector(target: str) -> str:
     Falls back to using target as a raw CSS/XPath if lookup fails.
     """
     try:
-        from locators.manager import get_locator_and_dna
+        from locators.manager import (get_alternate_selectors, get_locator_and_dna,
+                              promote_selector)
         xpath, _ = get_locator_and_dna(target)
         if xpath:
             return xpath
@@ -1431,3 +1501,219 @@ def js_dispatch_event(page, event_name: str, target: str) -> None:
         logger.info("✅ JS dispatch %s on: %s", event_name, target)
     except Exception as e:
         raise Exception(f"JS dispatch '{event_name}' failed on '{target}': {e}") from e
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# VISIBILITY ASSERTIONS AND MULTI-INPUT OTP ENTRY
+#
+# Added for the Ask More Photos source testcases (TC_AFP_C01/C02/C03), which need
+# real visibility assertions rather than a `store text` side effect, a
+# condition-based wait rather than a sleep, and a six-box OTP field.
+# None of these change existing fill/verify behaviour.
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _resolve_locator_or_raise(locator_name: str, page=None) -> str:
+    if page is not None:
+        return _resolve_live(page, locator_name)[0]
+    xpath, _dna = get_locator_and_dna(locator_name)
+    if not xpath:
+        raise Exception(f"Locator '{locator_name}' not found in any page.")
+    return resolve_variables(xpath)
+
+
+def verify_element_visible(page, locator_name):
+    """Assert the resolved element is visible (proper Playwright assertion)."""
+    selector = _resolve_locator_or_raise(locator_name, page)
+    logger.info("🔎 Verifying element '%s' is visible", locator_name)
+    try:
+        expect(page.locator(selector).first).to_be_visible(timeout=settings.ACTION_TIMEOUT_MS)
+    except AssertionError as e:
+        raise Exception(
+            f"Visibility assertion failed for '{locator_name}' ({selector}): {e}"
+        ) from e
+    logger.info("✅ Element '%s' is visible.", locator_name)
+
+
+def verify_element_not_exists(page, locator_name, settle_ms: int | None = None):
+    """
+    Assert the element is ABSENT FROM THE DOM.
+
+    An absence check that runs the instant the previous step finishes always
+    passes — the thing it is looking for may simply not have rendered yet. So this
+    waits a settle period first and only then asserts, which is why it uses a plain
+    count rather than a retrying assertion (`to_have_count(0)` would succeed the
+    moment the element disappeared, which is a different claim).
+    """
+    selector = _resolve_locator_or_raise(locator_name, page)
+    settle = int(settle_ms if settle_ms is not None else settings.ABSENCE_SETTLE_MS)
+    logger.info("🔎 Verifying element '%s' is absent from the DOM (settling %dms)",
+                locator_name, settle)
+    page.wait_for_timeout(settle)
+    count = page.locator(selector).count()
+    if count:
+        raise Exception(
+            f"Element '{locator_name}' ({selector}) should be absent from the DOM "
+            f"but {count} match(es) are present."
+        )
+    logger.info("✅ Element '%s' is absent from the DOM.", locator_name)
+
+
+def verify_element_not_visible(page, locator_name, settle_ms: int | None = None):
+    """
+    Assert the element is NOT VISIBLE — either absent, or present but hidden.
+
+    The weaker of the two negative assertions, and the right one for "the success
+    toaster must not appear": a toaster that exists in the DOM but is never shown
+    still means no success was signalled to the user. Settles first, for the same
+    reason as verify_element_not_exists.
+    """
+    selector = _resolve_locator_or_raise(locator_name, page)
+    settle = int(settle_ms if settle_ms is not None else settings.ABSENCE_SETTLE_MS)
+    logger.info("🔎 Verifying element '%s' is not visible (settling %dms)",
+                locator_name, settle)
+    page.wait_for_timeout(settle)
+    loc = page.locator(selector)
+    if loc.count() and loc.first.is_visible():
+        raise Exception(
+            f"Element '{locator_name}' ({selector}) is visible but should not be."
+        )
+    logger.info("✅ Element '%s' is not visible.", locator_name)
+
+
+def wait_until_element_visible(page, locator_name, timeout_ms: int | None = None):
+    """Condition-based wait for visibility — never a fixed sleep."""
+    selector = _resolve_locator_or_raise(locator_name, page)
+    timeout = int(timeout_ms or settings.ACTION_TIMEOUT_MS)
+    logger.info("⏳ Waiting up to %dms for '%s' to become visible", timeout, locator_name)
+    try:
+        page.locator(selector).first.wait_for(state="visible", timeout=timeout)
+    except PlaywrightTimeoutError as e:
+        raise Exception(
+            f"'{locator_name}' ({selector}) did not become visible within {timeout}ms"
+        ) from e
+    logger.info("✅ Element '%s' became visible.", locator_name)
+
+
+def enter_otp(page, otp_value, locator_name):
+    """
+    Distribute an N-digit OTP across N ordered single-character inputs.
+
+    The value is never logged, echoed or included in any error message — only its
+    length is ever mentioned. Fails safely when the digit count and the resolved
+    input count disagree, rather than partially filling the field.
+    """
+    selector = _resolve_locator_or_raise(locator_name, page)
+    code = str(resolve_variables(str(otp_value))).strip()
+
+    if not code.isdigit():
+        raise Exception(
+            f"OTP for '{locator_name}' must be digits only "
+            f"(received {len(code)} characters; value withheld)."
+        )
+
+    inputs = page.locator(selector)
+    count = inputs.count()
+    if count == 0:
+        raise Exception(f"OTP locator '{locator_name}' ({selector}) matched no inputs.")
+    if count != len(code):
+        raise Exception(
+            f"OTP locator '{locator_name}' resolved {count} inputs but the supplied "
+            f"value has {len(code)} digits — refusing to enter a partial code."
+        )
+
+    logger.info("🔐 Entering %d-digit OTP into '%s' (%d inputs). Value withheld.",
+                len(code), locator_name, count)
+    for i, digit in enumerate(code):
+        box = inputs.nth(i)
+        box.click()
+        box.fill(digit)
+    logger.info("✅ OTP entered across %d inputs.", count)
+
+
+def verify_stored_variable_not_equals(variable_name, unexpected_text, ignore_case=False):
+    """Assert a stored variable does NOT exactly equal the given value."""
+    if variable_name not in RUNTIME_VARIABLES:
+        raise Exception(
+            f"❌ Execution Error: Variable '{variable_name}' is not stored in memory. "
+            f"Did you run the extraction step first?"
+        )
+    stored = str(RUNTIME_VARIABLES[variable_name])
+    ignore_casing = _parse_boolean(ignore_case)
+    lhs = stored.lower() if ignore_casing else stored
+    rhs = str(unexpected_text).lower() if ignore_casing else str(unexpected_text)
+    logger.info("🔎 Verifying stored '%s' is NOT '%s'", variable_name, unexpected_text)
+    if lhs == rhs:
+        raise Exception(
+            f"❌ Match Failed: stored variable '{variable_name}' still equals "
+            f"'{unexpected_text}' (expected it to have changed)."
+        )
+    logger.info("✅ Stored '%s' differs from '%s' (actual: '%s').",
+                variable_name, unexpected_text, stored)
+
+
+def wait_until_element_text_not(page, locator_name, unexpected_text, timeout_ms: int | None = None):
+    """
+    Condition-based wait for an element's text to STOP being `unexpected_text`.
+
+    Uses Playwright auto-waiting via expect(...).not_to_have_text with a bounded
+    timeout — never a fixed sleep. Needed where an element stays visible while its
+    label is still changing, so a visibility wait would return too early.
+    """
+    selector = _resolve_locator_or_raise(locator_name, page)
+    timeout = int(timeout_ms or settings.ACTION_TIMEOUT_MS)
+    logger.info("⏳ Waiting up to %dms for '%s' text to differ from '%s'",
+                timeout, locator_name, unexpected_text)
+    try:
+        expect(page.locator(selector).first).not_to_have_text(str(unexpected_text), timeout=timeout)
+    except AssertionError as e:
+        raise Exception(
+            f"'{locator_name}' text still equals '{unexpected_text}' after {timeout}ms"
+        ) from e
+    logger.info("✅ Element '%s' text changed.", locator_name)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CODELESS UI BINDINGS for the visibility / wait / OTP actions
+# Same convention as the rest of this file: the core function holds the logic,
+# the ui_* wrapper is the registry surface and uses operator-facing parameter
+# names so the dashboard can label its inputs.
+# ─────────────────────────────────────────────────────────────────────────────
+
+@codeless_snippet("Verify Element Is Visible")
+def ui_verify_element_visible(page, locator):
+    verify_element_visible(page, locator)
+
+
+@codeless_snippet("Verify Element Is Not Present")
+def ui_verify_element_not_exists(page, locator, settle_ms_optional=""):
+    verify_element_not_exists(page, locator,
+                              int(settle_ms_optional) if settle_ms_optional else None)
+
+
+@codeless_snippet("Verify Element Is Not Visible")
+def ui_verify_element_not_visible(page, locator, settle_ms_optional=""):
+    verify_element_not_visible(page, locator,
+                               int(settle_ms_optional) if settle_ms_optional else None)
+
+
+@codeless_snippet("Wait Until Element Is Visible")
+def ui_wait_until_element_visible(page, locator, timeout_ms_optional=""):
+    wait_until_element_visible(page, locator, int(timeout_ms_optional) if timeout_ms_optional else None)
+
+
+@codeless_snippet("Wait Until Element Text Is Not")
+def ui_wait_until_element_text_not(page, locator, unexpected_text, timeout_ms_optional=""):
+    wait_until_element_text_not(page, locator, unexpected_text,
+                                int(timeout_ms_optional) if timeout_ms_optional else None)
+
+
+@codeless_snippet("Enter OTP Across Multiple Inputs")
+def ui_enter_otp(page, locator, otp_value_or_variable):
+    enter_otp(page, otp_value_or_variable, locator)
+
+
+@codeless_snippet("Verify Stored Variable Is Not")
+def ui_verify_stored_var_is_not(page, saved_variable_name, unexpected_text,
+                                ignore_case_True_False="False"):
+    verify_stored_variable_not_equals(saved_variable_name, unexpected_text,
+                                      ignore_case_True_False)

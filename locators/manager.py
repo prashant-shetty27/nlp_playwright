@@ -116,6 +116,71 @@ def _resolve_selector(entry: dict) -> str | None:
     return None
 
 
+def get_alternate_selectors(locator_name: str) -> list[dict]:
+    """
+    Every recorded selector for this locator EXCEPT the one currently resolved.
+
+    These are the runner-up candidates captured alongside the primary (or found
+    when an operator supplied one). They exist so that when the primary stops
+    matching there is already a vetted second choice, instead of falling straight
+    through to an ML scan that needs DNA the entry may not have.
+
+    Returns [] for every entry that has only one recorded selector, which keeps
+    resolution byte-identical for locators captured before alternates existed.
+    """
+    primary, entry = get_locator_and_dna(locator_name)
+    if not isinstance(entry, dict):
+        return []
+    alts = []
+    for sel in entry.get("selectors", []) or []:
+        val = sel.get("value") if isinstance(sel, dict) else sel
+        if val and val != primary:
+            alts.append({"value": val,
+                         "type": (sel.get("type") if isinstance(sel, dict) else "") or "css",
+                         "weight": (sel.get("weight") if isinstance(sel, dict) else None)})
+    return alts
+
+
+def promote_selector(locator_name: str, winner: str, winner_type: str = "css") -> bool:
+    """
+    Record that `winner` resolved when the stored primary did not.
+
+    The displaced selector is kept in selectors[] rather than discarded — a DOM
+    change can be reverted, and the old value is the fastest way to notice that it
+    was. The swap is stamped so a reader can tell an automatic promotion from a
+    hand-edit.
+    """
+    path = settings.MANUAL_LOCATORS_FILE
+    if not os.path.exists(path):
+        return False
+    try:
+        with file_lock(path, exclusive=True):
+            data = read_json(path, retries=2) or {}
+            for _group, elements in data.items():
+                if not isinstance(elements, dict) or locator_name not in elements:
+                    continue
+                entry = elements[locator_name]
+                if not isinstance(entry, dict):
+                    return False
+                displaced = entry.get("custom_xpath")
+                sels = entry.get("selectors", []) or []
+                if displaced and not any(
+                        (x.get("value") if isinstance(x, dict) else x) == displaced for x in sels):
+                    sels.append({"type": entry.get("last_success", "css"), "value": displaced})
+                entry["selectors"] = sels
+                entry["custom_xpath"] = winner
+                entry["last_success"] = winner_type
+                entry["_promoted_from"] = displaced
+                entry["_promoted_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+                atomic_write_json(path, data)
+                logger.info("📌 Promoted alternate for '%s': %r -> %r",
+                            locator_name, displaced, winner)
+                return True
+    except Exception as e:
+        logger.error("❌ Could not promote alternate for '%s': %s", locator_name, e)
+    return False
+
+
 def get_locator_and_dna(locator_name: str) -> tuple:
     """
     Master dispatcher: scans both ML database and manual database.

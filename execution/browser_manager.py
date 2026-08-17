@@ -179,6 +179,39 @@ def build_context_options(capabilities: dict | None, devices) -> dict:
     return options
 
 
+# Domains authenticated at the browser-context level for the current session.
+# open_site() consults this so it never falls back to embedding credentials in a URL.
+CONTEXT_AUTH_DOMAINS: set[str] = set()
+
+
+def apply_http_credentials(options: dict, capabilities: dict | None) -> dict:
+    """
+    Attach Playwright context-level HTTP Basic credentials for a domain.
+
+    A suite requests this with `"http_auth_domain": "<host>"`; the secret itself is
+    read from the environment-backed auth registry and never appears in a URL, a
+    log line, an exception or a report. Domains handled here are recorded in
+    CONTEXT_AUTH_DOMAINS so open_site() skips its legacy URL-embedding path.
+    """
+    caps = capabilities or {}
+    domain = str(caps.get("http_auth_domain") or "").strip()
+    if not domain:
+        return options
+
+    registry = settings.get_auth_registry()
+    creds = registry.get(domain)
+    if not creds or not creds.get("username") or not creds.get("password"):
+        raise ValueError(
+            f"Security Error: no complete credentials registered for '{domain}'. "
+            f"Set AUTH_<NAME>_DOMAIN / _USERNAME / _PASSWORD in .env."
+        )
+
+    options["http_credentials"] = {"username": creds["username"], "password": creds["password"]}
+    CONTEXT_AUTH_DOMAINS.add(domain)
+    logger.info("🔒 HTTP credentials attached at context level for '%s' (value withheld)", domain)
+    return options
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # BROWSER LIFECYCLE
 # ─────────────────────────────────────────────────────────────────────────────
@@ -201,6 +234,7 @@ def open_browser(session: TestSession | None = None, record_video: bool = False,
     playwright_instance = sync_playwright().start()
     try:
         ctx_kwargs: dict = build_context_options(capabilities, playwright_instance.devices)
+        ctx_kwargs = apply_http_credentials(ctx_kwargs, capabilities)
     except Exception:
         # Never leak a driver process when the configuration is rejected.
         playwright_instance.stop()

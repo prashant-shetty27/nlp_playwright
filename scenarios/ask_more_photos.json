@@ -1,0 +1,189 @@
+{
+  "name": "Ask More Photos — end-to-end (mobile web)",
+  "description": "One positive journey: open the JDMart PDP, confirm the Ask More Photos CTA, submit the photo request through mobile-number + OTP login, and prove the CTA label changed. The workbook splits this across C01/C02/C03 and contains steps outside the journey; only the rows below are emitted.",
+  "platform": "web",
+  "output": "data/drafts/ask_more_photos_mobile.flow",
+  "source": {
+    "xlsx": "~/Downloads/GJDT-21944_Ask_For_Photos_AI_Products_Testcases.xlsx"
+  },
+  "testcases": [
+    "TC_AFP_C01",
+    "TC_AFP_C02",
+    "TC_AFP_C03"
+  ],
+  "steps": {
+    "include_rows": [
+      84,
+      85,
+      86,
+      88,
+      89,
+      90,
+      92
+    ],
+    "exclude_rows": {
+      "83": "clear cookies — excluded by request (a fresh browser context is created per run anyway)",
+      "87": "popup-title verification — excluded by request; not in the requested journey",
+      "91": "resend-OTP verification — excluded by request; not in the requested journey",
+      "93": "click OtpSubmitButton — EXCLUDED ON LIVE EVIDENCE: the OTP field auto-submits on the sixth digit. Screenshot afp_04_otp_entered shows the popup already closed and 'Connecting...' displayed before any Login click, and the click failed twice with two different selectors because no button remained.",
+      "94": "success-toaster wait — excluded by request; not in the requested journey",
+      "95": "success-toaster text assertion — excluded by request; not in the requested journey"
+    }
+  },
+  "locator_overrides": {
+    "90": "otp_input_container"
+  },
+  "variable_bindings": {
+    "TEST_MOBILE": "${jd_test_mobile}",
+    "VALID_OTP": "${jd_test_static_otp}",
+    "NEW_VALID_OTP": "${jd_test_static_otp}",
+    "PDP_URL_AI_3IMG": "${product_url}",
+    "PDP_URL_AI_1IMG": "${product_url}",
+    "PDP_URL_AI_2IMG": "${product_url}"
+  },
+  "placeholders": {
+    "${product_url}": "suite parameter — DesignTest JDMart product page under test",
+    "${jd_test_mobile}": "secure runtime config (JD_TEST_MOBILE) — never stored in this file",
+    "${jd_test_static_otp}": "secure runtime config (JD_TEST_STATIC_OTP) — never stored in this file"
+  },
+  "inject": {
+    "after_row": {
+      "84": [
+        {
+          "statement": "verify element ask_more_photos_cta is visible",
+          "why": "Verify Ask More Photos is present",
+          "source": "requirement initial-state"
+        },
+        {
+          "statement": "verify element ask_more_photos_cta has text \"Ask More Photos\"",
+          "why": "Verify the CTA has the expected initial text \"Ask More Photos\"",
+          "source": "requirement initial-state"
+        },
+        {
+          "statement": "take screenshot as afp_01_pdp_cta_initial",
+          "why": "Capture evidence: PDP loaded, CTA present with initial text",
+          "source": "requirement evidence"
+        }
+      ],
+      "86": [
+        {
+          "statement": "take screenshot as afp_02_login_popup_open",
+          "why": "Capture evidence: login popup open, mobile field present",
+          "source": "requirement evidence"
+        }
+      ],
+      "89": [
+        {
+          "statement": "take screenshot as afp_03_otp_screen",
+          "why": "Capture evidence: OTP screen reached after submitting the number",
+          "source": "requirement evidence"
+        }
+      ],
+      "92": [
+        {
+          "statement": "take screenshot as afp_04_otp_entered",
+          "why": "Capture evidence: six digits entered — OTP auto-submits here",
+          "source": "requirement evidence"
+        }
+      ]
+    },
+    "end": [
+      {
+        "statement": "wait until element ask_more_photos_cta text is not \"Ask More Photos\"",
+        "why": "Wait for the CTA text to change after submission",
+        "source": "requirement post-submission",
+        "note": "the CTA stays visible while its label changes, so a visibility wait would return too early"
+      },
+      {
+        "statement": "store text of ask_more_photos_cta as updated_cta_text",
+        "why": "Capture the actual updated CTA text",
+        "source": "requirement post-submission"
+      },
+      {
+        "statement": "verify stored updated_cta_text is not \"Ask More Photos\"",
+        "why": "Verify the CTA text is no longer Ask More Photos",
+        "source": "requirement post-submission",
+        "note": "proves the label changed, whatever it changed to"
+      },
+      {
+        "statement": "verify stored updated_cta_text contains \"Photos Requested\"",
+        "why": "Verify the CTA shows the expected submitted label \"Photos Requested\"",
+        "source": "requirement post-submission",
+        "note": "expected value supplied by the operator; NOT yet DOM-observed. Case- and spacing-sensitive."
+      },
+      {
+        "statement": "take screenshot as afp_06_request_submitted",
+        "why": "Capture the final screenshot",
+        "source": "requirement post-submission"
+      }
+    ]
+  },
+  "notes": [
+    "The exact post-submission CTA label has NOT been DOM-observed. 'Photos Requested' is operator-supplied; the actual text is captured and reported on execution."
+  ],
+  "capture": {
+    "locator_group": "jdmart_pdp_mobile",
+    "device": "Pixel 7",
+    "http_auth_domain": "designtest.justdial.com",
+    "start_url": "https://designtest.justdial.com/jdmart/Chennai/Metal-And-Plastic-Laser-Level-(-Multicolor)/pid-2233271407/044PXX44-XX44-250214122451-W9P8",
+    "stages": [
+      {
+        "name": "pdp",
+        "reach": [],
+        "state_changing": false,
+        "elements": {
+          "ask_more_photos_cta": {
+            "element": "AskMorePhotosCTA",
+            "text_hint": "Ask More Photos"
+          }
+        }
+      },
+      {
+        "name": "login_popup",
+        "reach": [
+          "click ask_more_photos_cta"
+        ],
+        "state_changing": false,
+        "elements": {
+          "mobile_number_input": {
+            "element": "MobileNumberInput",
+            "scope": "form[name='UserQuickInfo']"
+          },
+          "popup_title": {
+            "element": "PopupTitle",
+            "text_hint": "You're almost there"
+          },
+          "popup_submit_button": {
+            "element": "PopupSubmitButton",
+            "text_hint": "Continue",
+            "scope": "form[name='UserQuickInfo']"
+          }
+        }
+      },
+      {
+        "name": "otp",
+        "reach": [
+          "type \"${jd_test_mobile}\" into mobile_number_input",
+          "click popup_submit_button"
+        ],
+        "state_changing": true,
+        "side_effect": "submits the test mobile number, which sends one real OTP SMS",
+        "elements": {
+          "otp_input": {
+            "element": "OtpInput",
+            "scope": "#otpfield"
+          },
+          "otp_input_container": {
+            "element": "OtpInputContainer"
+          },
+          "otp_submit_button": {
+            "element": "OtpSubmitButton",
+            "text_hint": "Login",
+            "scope": "form[name='verify']"
+          }
+        }
+      }
+    ],
+    "_start_url_note": "literal, not ${product_url}: capture does not read suites, and the page URL is not a secret. Secrets used by reach steps (jd_test_mobile) still resolve from the environment and are never written here."
+  }
+}

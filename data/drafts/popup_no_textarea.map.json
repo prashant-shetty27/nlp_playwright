@@ -1,0 +1,108 @@
+{
+  "flow_name": "Ask More Photos popup \u2014 no free-text textarea",
+  "flow_path": "/Users/prashantshetty/nlp_playwright/data/drafts/popup_no_textarea.flow",
+  "generated_at": "2026-08-17T09:23:02Z",
+  "source_testcases": [
+    "TC_AFP_C10"
+  ],
+  "source": {
+    "kind": "xlsx",
+    "title": "GJDT-21944_Ask_For_Photos_AI_Products_Testcases",
+    "location": "/Users/prashantshetty/Downloads/GJDT-21944_Ask_For_Photos_AI_Products_Testcases.xlsx",
+    "size_bytes": 54765,
+    "modified_utc": "2026-08-16T17:26:30Z",
+    "auth": "none required (local file)",
+    "access": "read-only (opened read_only=True)"
+  },
+  "placeholders": {
+    "${product_url}": "suite parameter \u2014 DesignTest JDMart product page under test"
+  },
+  "steps": [
+    {
+      "step": 1,
+      "line": 6,
+      "statement": "open ${product_url}",
+      "action": "open",
+      "source": "precondition",
+      "manual_instruction": "Load the AI product PDP under test",
+      "expected": "",
+      "note": ""
+    },
+    {
+      "step": 2,
+      "line": 7,
+      "statement": "verify element ask_more_photos_cta is visible",
+      "action": "verify_element_visible",
+      "source": "requirement initial-state",
+      "manual_instruction": "Confirm the CTA is present before opening the popup, so a failure on the absence assertion cannot be caused by the popup never opening",
+      "expected": "",
+      "note": "",
+      "locator": "ask_more_photos_cta",
+      "selector": "div.photoreqwrap",
+      "stored_in": "data/locators_manual.json",
+      "edit_hint": "change the 'custom_xpath'/'selectors' of 'ask_more_photos_cta' if the DOM moved"
+    },
+    {
+      "step": 3,
+      "line": 8,
+      "statement": "click ask_more_photos_cta",
+      "action": "click",
+      "source": "TC_AFP_C10 row 125",
+      "manual_instruction": "Click on element AskMorePhotosCTA",
+      "expected": "",
+      "note": "",
+      "locator": "ask_more_photos_cta",
+      "selector": "div.photoreqwrap",
+      "stored_in": "data/locators_manual.json",
+      "edit_hint": "change the 'custom_xpath'/'selectors' of 'ask_more_photos_cta' if the DOM moved"
+    },
+    {
+      "step": 4,
+      "line": 9,
+      "statement": "verify element mobile_number_input is visible",
+      "action": "verify_element_visible",
+      "source": "requirement guard",
+      "manual_instruction": "Confirm the popup actually opened. Without this, the textarea-absence assertion would pass trivially on a popup that never rendered.",
+      "expected": "",
+      "note": "",
+      "locator": "mobile_number_input",
+      "selector": "input[placeholder=\"Mobile Number\"]",
+      "stored_in": "data/locators_manual.json",
+      "edit_hint": "change the 'custom_xpath'/'selectors' of 'mobile_number_input' if the DOM moved"
+    },
+    {
+      "step": 5,
+      "line": 10,
+      "statement": "take screenshot as c10_01_popup_open",
+      "action": "screenshot",
+      "source": "evidence",
+      "manual_instruction": "Evidence of the popup contents at the moment of assertion",
+      "expected": "",
+      "note": ""
+    },
+    {
+      "step": 6,
+      "line": 11,
+      "statement": "verify element popup_text_area is not present",
+      "action": "verify_element_not_exists",
+      "source": "TC_AFP_C10 row 126",
+      "manual_instruction": "Verify that element PopupTextArea is not present in DOM",
+      "expected": "",
+      "note": "",
+      "locator": "popup_text_area",
+      "selector": "form[name=\"UserQuickInfo\"] textarea",
+      "stored_in": "data/locators_manual.json",
+      "edit_hint": "change the 'custom_xpath'/'selectors' of 'popup_text_area' if the DOM moved"
+    },
+    {
+      "step": 7,
+      "line": 12,
+      "statement": "take screenshot as c10_02_no_textarea_confirmed",
+      "action": "screenshot",
+      "source": "evidence",
+      "manual_instruction": "Evidence that the popup carries no free-text textarea",
+      "expected": "",
+      "note": ""
+    }
+  ]
+}

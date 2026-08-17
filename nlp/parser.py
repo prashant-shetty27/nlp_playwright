@@ -256,6 +256,40 @@ def parse_step(step: str) -> Command:
         return Command(type="scroll", count=amount)
 
     # =============================
+    # VERIFY ELEMENT IS VISIBLE  (proper Playwright visibility assertion)
+    # verify element <locator> is visible
+    # =============================
+    m = re.match(r'^verify\s+element\s+(\S+)\s+is\s+visible$', s, re.I)
+    if m:
+        return Command(type="verify_element_visible", target=m.group(1))
+
+    # =============================
+    # WAIT UNTIL ELEMENT TEXT IS NOT  (condition-based; waits for text to change)
+    # wait until element <locator> text is not "<value>"
+    # Must precede the visibility and generic wait rules below.
+    # =============================
+    m = re.match(r'^wait\s+until\s+element\s+(\S+)\s+text\s+is\s+not\s+"(.*?)"$', s, re.I)
+    if m:
+        return Command(type="wait_until_text_not", target=m.group(1), text=m.group(2))
+
+    # =============================
+    # WAIT UNTIL ELEMENT IS VISIBLE  (condition-based wait, not a sleep)
+    # wait until element <locator> is visible
+    # Must precede the generic `wait for|until <target>` rule below.
+    # =============================
+    m = re.match(r'^wait\s+until\s+element\s+(\S+)\s+is\s+visible$', s, re.I)
+    if m:
+        return Command(type="wait_until_visible", target=m.group(1))
+
+    # =============================
+    # ENTER OTP — distribute an N-digit code across N ordered inputs
+    # enter otp "<value>" into <locator>
+    # =============================
+    m = re.match(r'^enter\s+otp\s+"(.*?)"\s+(?:into|in)\s+(\S+)$', s, re.I)
+    if m:
+        return Command(type="enter_otp", text=m.group(1), target=m.group(2).strip())
+
+    # =============================
     # VERIFY ELEMENT EXISTS
     # verify element exists <locator>  |  assert element exists <locator>
     # =============================
@@ -270,6 +304,17 @@ def parse_step(step: str) -> Command:
     m = re.match(r'^(?:verify|assert)\s+element\s+not\s+exists\s+(\S+)$', s, re.I)
     if m:
         return Command(type="verify_element_not_exists", target=m.group(1))
+
+    # verify element <locator> is not present   (DOM absence — reads naturally
+    # alongside "verify element <locator> is visible")
+    m = re.match(r'^(?:verify|assert)\s+element\s+(\S+)\s+is\s+not\s+present$', s, re.I)
+    if m:
+        return Command(type="verify_element_not_exists", target=m.group(1))
+
+    # verify element <locator> is not visible   (absent OR present-but-hidden)
+    m = re.match(r'^(?:verify|assert)\s+element\s+(\S+)\s+is\s+not\s+visible$', s, re.I)
+    if m:
+        return Command(type="verify_element_not_visible", target=m.group(1))
 
     # =============================
     # VERIFY ELEMENT EXACT TEXT
@@ -369,6 +414,16 @@ def parse_step(step: str) -> Command:
     if m:
         num1, op, num2, var_name = m.groups()
         return Command(type="math", target=num1, text=op, values=[num2], variable_name=var_name)
+
+    # =============================
+    # VERIFY STORED VARIABLE IS NOT  (negative exact-match on a stored value)
+    # verify stored <var> is not "<value>"
+    # Must precede the `contains` rule below.
+    # =============================
+    m = re.match(r'^verify\s+(?:stored\s+)?(?:variable\s+)?(\S+)\s+is\s+not\s+"(.*?)"$', s, re.I)
+    if m:
+        var_name, value = m.groups()
+        return Command(type="verify_var_not_equals", target=var_name, text=value)
 
     # =============================
     # VERIFY STORED VARIABLE CONTAINS

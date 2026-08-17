@@ -191,11 +191,13 @@ _TARGET_IS_LOCATOR = {
     "verify_element_exact", "verify_element_contains",
     "extract_text", "store_text", "extract_attribute", "extract_input", "extract_count",
     "wait_for_element", "scroll_to", "clear",
+    "verify_element_visible", "verify_element_not_visible", "wait_until_visible", "wait_until_text_not", "enter_otp",
     "js_click", "js_scroll_to", "js_type", "js_set_value", "js_focus", "js_submit", "js_dispatch",
 }
 
 # Command types whose `target` is a variable name, not a locator.
-_TARGET_IS_VARIABLE = {"create_variable", "verify_var_contains", "math", "extract_json"}
+_TARGET_IS_VARIABLE = {"create_variable", "verify_var_contains", "verify_var_not_equals",
+                       "math", "extract_json"}
 
 # Command types that read a file path from `text`.
 _TEXT_IS_FILE = {"read_excel_cell", "read_excel_row", "read_csv_cell"}

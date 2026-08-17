@@ -123,12 +123,12 @@
         "xpath": "//XCUIElementTypeButton[@name='Not Now']"
       },
       "dont_allow_button": {
-        "_comment": "Contacts sharing dialog — 'Don't Allow' denies contact access without picker",
+        "_comment": "Contacts sharing dialog \u2014 'Don't Allow' denies contact access without picker",
         "accessibility_id": "Don't Allow",
         "xpath": "//XCUIElementTypeButton[@name=\"Don't Allow\"]"
       },
       "deny_button": {
-        "_comment": "Generic deny — alternate label on some iOS permission dialogs",
+        "_comment": "Generic deny \u2014 alternate label on some iOS permission dialogs",
         "accessibility_id": "Deny",
         "xpath": "//XCUIElementTypeButton[@name='Deny']"
       },
@@ -212,7 +212,7 @@
       },
       "don_t_allow": {
         "resource_id": "com.android.permissioncontroller:id/permission_deny_button",
-        "text": "Don’t allow",
+        "text": "Don\u2019t allow",
         "class_name": "android.widget.Button",
         "xpath": "//android.widget.Button[@resource-id='com.android.permissioncontroller:id/permission_deny_button']"
       },
@@ -305,12 +305,12 @@
       "maybe_later": {
         "custom_xpath": "//span[contains(@class,'jsx-55162c602a57c0bf')]",
         "tagName": "span",
-        "innerText": "‘5.3 Crore+‘ Businesses"
+        "innerText": "\u20185.3 Crore+\u2018 Businesses"
       },
       "maybe_later_recorded_element": {
         "custom_xpath": "//span[contains(@class,'jsx-55162c602a57c0bf')]",
         "tagName": "span",
-        "innerText": "‘5.3 Crore+‘ Businesses"
+        "innerText": "\u20185.3 Crore+\u2018 Businesses"
       },
       "search_box": {
         "custom_xpath": "//figcaption[contains(@class,'color111') and contains(@class,'pt-10')]",
@@ -327,6 +327,194 @@
         "tagName": "span",
         "innerText": ""
       }
+    }
+  },
+  "jdmart_pdp_mobile": {
+    "ask_more_photos_cta": {
+      "custom_xpath": "div.photoreqwrap",
+      "selectors": [
+        {
+          "type": "css",
+          "value": "div.photoreqwrap"
+        }
+      ],
+      "last_success": "css",
+      "_approved": "operator-approved candidate A (Pixel 7 read-only calibration)",
+      "_source_element": "AskMorePhotosCTA",
+      "_evidence": "unique on page (1 match), visible, enabled, onclick element, rect 125x31"
+    },
+    "mobile_number_input": {
+      "custom_xpath": "input[placeholder=\"Mobile Number\"]",
+      "selectors": [
+        {
+          "type": "css",
+          "value": "input[placeholder=\"Mobile Number\"]"
+        }
+      ],
+      "last_success": "css",
+      "_approved": "operator-approved (Pixel 7 read-only calibration, 2026-08-17)",
+      "_source_element": "MobileNumberInput",
+      "_evidence": "input[type=tel] maxlength=15 inside form[name=UserQuickInfo]; 372x48; n=1 UNIQUE",
+      "_note": "id #srchInpId and aria-label 'tel' both REJECTED \u2014 n=2, shared with the site search box"
+    },
+    "popup_title": {
+      "custom_xpath": "span.logoblotxtb2b",
+      "selectors": [
+        {
+          "type": "css",
+          "value": "span.logoblotxtb2b"
+        }
+      ],
+      "last_success": "css",
+      "_approved": "operator-approved (Pixel 7 read-only calibration, 2026-08-17)",
+      "_source_element": "PopupTitle",
+      "_evidence": "span 372x18 text \"You're almost there\"; n=1 UNIQUE",
+      "_note": "XPath rejected \u2014 apostrophe breaks the literal"
+    },
+    "popup_submit_button": {
+      "custom_xpath": "form[name=\"UserQuickInfo\"] button.continue_btn",
+      "selectors": [
+        {
+          "type": "css",
+          "value": "form[name=\"UserQuickInfo\"] button.continue_btn"
+        }
+      ],
+      "last_success": "css",
+      "_approved": "operator-approved (Pixel 7 read-only calibration, 2026-08-17)",
+      "_source_element": "PopupSubmitButton",
+      "_evidence": "button[type=submit] 372x48 text 'Continue'; n=1 UNIQUE",
+      "_note": "scoped by form[name=UserQuickInfo]; .continue_btn alone collides with otp_submit_button on the OTP stage. State class 'disbld' excluded.",
+      "_requires_runtime_validation": true
+    },
+    "_calibration_notes": {
+      "tnc_checkbox": "CORRECTION: tnc_checkbox WAS present in the login sheet and already checked (input.tnc__checkbox, n=1, aria-label='I agree to Terms and Conditions and Privacy Policy', attribute checked present). It was DELIBERATELY NOT SAVED \u2014 it is not part of the selected testcase TC_AFP_C01/C02/C03 and no flow statement was approved for it. An earlier note described it as 'verified absent', which was wrong: it was absent from the saved locator set, not from the page.",
+      "success_toaster": "REQUIRES_STATE_CHANGING_CALIBRATION \u2014 not present in the DOM (hidden or otherwise) at PDP load, after the CTA click, or at the login-sheet stage. Only the generic empty containers div.b2b_sentient_nudge and div.--sentient-top_ContextNudge match toaster-like markup, and neither is it. Calibrating it requires submitting a valid OTP and creating a real photo request. No guessed locator saved.",
+      "resend_otp_link": "NOT CALIBRATED. At the OTP stage the control is a countdown ('A new OTP has been sent.' + 'Retry in 00:59'), not a link. The actionable resend control appears only after the countdown expires and was not observed. TC_AFP_C02 row 91 asserts it, so the flow cannot cover that step until a timed pass captures it."
+    },
+    "otp_input": {
+      "custom_xpath": "#otpfield input.pin",
+      "selectors": [
+        {
+          "type": "css",
+          "value": "#otpfield input.pin"
+        }
+      ],
+      "last_success": "css",
+      "_approved": true,
+      "_source_element": "OtpInput",
+      "_expected_match_count": 6,
+      "_purpose": "ordered six-digit OTP input collection",
+      "_evidence": "div#otpfield.newotpfield > 6x input.pin[type=tel] ids 0-5, each 54x52, visible+enabled; DOM-observed on the OTP stage",
+      "_note": "ids 0-5 are invalid CSS (cannot start with a digit) \u2014 class-based selector used. Requires the enter_otp command; a single fill would be invalid."
+    },
+    "otp_submit_button": {
+      "custom_xpath": "button.continue_btn",
+      "selectors": [
+        {
+          "type": "css",
+          "value": "button.continue_btn"
+        }
+      ],
+      "last_success": "css",
+      "_approved": true,
+      "_source_element": "OtpSubmitButton",
+      "_evidence": "button[type=submit].continue_btn text 'Login', 372x48, inside form[name=verify]",
+      "_note": "bare .continue_btn \u2014 at the OTP stage form[name=UserQuickInfo] is unmounted so this resolves uniquely to the Login button. The previously-saved scoped selector form[name=verify] button.continue_btn failed at runtime (step 10).",
+      "_requires_runtime_validation": false,
+      "_validation_pending": "scoped selector observed in the OTP-stage DOM dump but not yet counted in an isolated UI-state validation pass"
+    },
+    "success_toaster": {
+      "custom_xpath": "text=\"Request has been sent successfully!\"",
+      "selectors": [
+        {
+          "type": "text",
+          "value": "Request has been sent successfully!"
+        }
+      ],
+      "last_success": "text",
+      "_approved": false,
+      "_requires_runtime_validation": true,
+      "_source": "TC_AFP_C03 row 95",
+      "_note": "PROVISIONAL \u2014 NOT DOM-calibrated. Derived solely from the source testcase's exact expected text. Absent from the DOM at PDP load, after the CTA click and at the login-sheet stage. Permanent selector to be captured during the first separately approved state-changing execution."
+    },
+    "otp_input_container": {
+      "custom_xpath": "#otpfield",
+      "selectors": [
+        {
+          "type": "css",
+          "value": "#otpfield"
+        }
+      ],
+      "last_success": "css",
+      "_approved": true,
+      "_source_element": "OtpInput (container)",
+      "_expected_match_count": 1,
+      "_evidence": "div#otpfield.newotpfield wrapping the six input.pin boxes; DOM-observed on the OTP stage"
+    },
+    "otp_sent_number": {
+      "custom_xpath": "span.otpsentnine_b2b",
+      "selectors": [
+        {
+          "type": "css",
+          "value": "span.otpsentnine_b2b"
+        }
+      ],
+      "last_success": "css",
+      "_approved": true,
+      "_sensitive": true,
+      "_evidence": "span.otpsentnine_b2b on the OTP stage echoing the submitted mobile number",
+      "_note": "SENSITIVE \u2014 exists only so screenshots can mask it. Never assert on its text."
+    },
+    "product_title": {
+      "custom_xpath": "h1",
+      "selectors": [
+        {
+          "type": "user",
+          "value": "h1"
+        },
+        {
+          "type": "css",
+          "value": "h1.prdcthd",
+          "weight": 2.3
+        },
+        {
+          "type": "xpath",
+          "value": "//h1[contains(@class, 'prdcthd')]",
+          "weight": 1.5
+        }
+      ],
+      "last_success": "user",
+      "_approved": true,
+      "_source": "operator-supplied",
+      "_evidence": "1 match, visible=True, enabled=True",
+      "tagName": "h1",
+      "id": null,
+      "className": "prdcthd font17",
+      "innerText": "Metal And Plastic Laser Level ( Multicolor)",
+      "rect": {
+        "x": 0,
+        "y": 464,
+        "width": 412,
+        "height": 44
+      },
+      "attributes": {
+        "class": "prdcthd font17"
+      }
+    },
+    "popup_text_area": {
+      "custom_xpath": "form[name=\"UserQuickInfo\"] textarea",
+      "selectors": [
+        {
+          "type": "user",
+          "value": "form[name=\"UserQuickInfo\"] textarea"
+        }
+      ],
+      "last_success": "user",
+      "_approved": true,
+      "_source": "operator-supplied",
+      "_absence_guard": true,
+      "_evidence": "0 matches \u2014 asserts this element is absent",
+      "_note": "Guard only. Use with 'verify element ... is not present'. It has no DNA because there is no element to describe, so ML healing does not apply."
     }
   }
 }

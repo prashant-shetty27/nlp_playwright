@@ -1,0 +1,11 @@
+{
+  "plan_name": "Ask More Photos \u2014 module C block (C05, C10)",
+  "description": "Two side-effect-free testcases from the CTA Click Behaviour module. Neither submits a valid mobile number, so no OTP SMS is sent and no lead is created.",
+  "selected_suites": [
+    "suites/afp_c10_no_textarea_suite.json",
+    "suites/afp_c05_mobile_validation_suite.json"
+  ],
+  "execution": {
+    "stop_on_failure": false
+  }
+}

@@ -1,0 +1,23 @@
+# Ask More Photos — end-to-end (mobile web)
+# Source : GJDT-21944_Ask_For_Photos_AI_Products_Testcases | TC_AFP_C01, TC_AFP_C02, TC_AFP_C03
+# Params : ${product_url} ${jd_test_mobile} ${jd_test_static_otp}
+# Map    : data/drafts/ask_more_photos_mobile.map.json  (step -> source row, locator, selector, expected)
+
+open ${product_url}
+verify element ask_more_photos_cta is visible
+verify element ask_more_photos_cta has text "Ask More Photos"
+take screenshot as afp_01_pdp_cta_initial
+click ask_more_photos_cta
+verify element mobile_number_input is visible
+take screenshot as afp_02_login_popup_open
+type "${jd_test_mobile}" into mobile_number_input
+click popup_submit_button
+take screenshot as afp_03_otp_screen
+wait until element otp_input_container is visible
+enter otp "${jd_test_static_otp}" into otp_input
+take screenshot as afp_04_otp_entered
+wait until element ask_more_photos_cta text is not "Ask More Photos"
+store text of ask_more_photos_cta as updated_cta_text
+verify stored updated_cta_text is not "Ask More Photos"
+verify stored updated_cta_text contains "Photos Requested"
+take screenshot as afp_06_request_submitted

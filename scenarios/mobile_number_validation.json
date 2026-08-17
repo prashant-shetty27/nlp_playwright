@@ -1,0 +1,154 @@
+{
+  "name": "Ask More Photos popup \u2014 mobile number field validations",
+  "description": "TC_AFP_C05. Feeds five invalid mobile numbers into the Ask More Photos login popup and asserts each one is rejected. No valid number is ever submitted, so no OTP SMS is sent and no lead is created.",
+  "platform": "web",
+  "output": "data/drafts/mobile_number_validation.flow",
+  "source": {
+    "xlsx": "~/Downloads/GJDT-21944_Ask_For_Photos_AI_Products_Testcases.xlsx"
+  },
+  "testcases": [
+    "TC_AFP_C05"
+  ],
+  "steps": {
+    "include_rows": [
+      100,
+      101,
+      102,
+      103,
+      104
+    ],
+    "exclude_rows": {}
+  },
+  "variable_bindings": {
+    "PDP_URL_AI_3IMG": "${product_url}",
+    "PDP_URL_AI_1IMG": "${product_url}",
+    "PDP_URL_AI_2IMG": "${product_url}"
+  },
+  "placeholders": {
+    "${product_url}": "suite parameter \u2014 DesignTest JDMart product page under test"
+  },
+  "inject": {
+    "before": [
+      {
+        "statement": "open ${product_url}",
+        "why": "Load the AI product PDP under test",
+        "source": "precondition"
+      },
+      {
+        "statement": "click ask_more_photos_cta",
+        "why": "Open the login popup that carries the mobile number field",
+        "source": "precondition"
+      },
+      {
+        "statement": "verify element mobile_number_input is visible",
+        "why": "Confirm the popup opened before any validation is exercised",
+        "source": "precondition"
+      },
+      {
+        "statement": "store attribute class of popup_submit_button as submit_state_initial",
+        "why": "Record the Continue button's starting state \u2014 it ships disabled, and every assertion below is that an invalid entry does not enable it",
+        "source": "requirement baseline"
+      },
+      {
+        "statement": "verify stored submit_state_initial contains \"disbld\"",
+        "why": "Baseline: Continue is disabled on an empty field",
+        "source": "requirement baseline"
+      }
+    ],
+    "after_row": {
+      "100": [
+        {
+          "statement": "store attribute class of popup_submit_button as submit_state_short",
+          "why": "Capture Continue's state after a 5-digit number",
+          "source": "expected: validation error shown / submit disabled"
+        },
+        {
+          "statement": "verify stored submit_state_short contains \"disbld\"",
+          "why": "A 5-digit number must not enable submission",
+          "source": "expected: validation error shown / submit disabled"
+        },
+        {
+          "statement": "take screenshot as c05_01_five_digits_rejected",
+          "why": "Evidence",
+          "source": "evidence"
+        }
+      ],
+      "101": [
+        {
+          "statement": "store value of mobile_number_input as typed_alpha",
+          "why": "Read back what the field actually accepted",
+          "source": "expected: alphabetic input is blocked by the numeric keypad/input mask"
+        },
+        {
+          "statement": "verify stored typed_alpha is not \"abcdefghij\"",
+          "why": "Verified live: the field is type=tel and holds '' after alphabetic input, so the mask blocks it at entry rather than showing an error",
+          "source": "expected: alphabetic input is blocked by the numeric keypad/input mask"
+        },
+        {
+          "statement": "store attribute class of popup_submit_button as submit_state_alpha",
+          "why": "Capture Continue's state after alphabetic input",
+          "source": "expected: submit disabled"
+        },
+        {
+          "statement": "verify stored submit_state_alpha contains \"disbld\"",
+          "why": "Alphabetic input must not enable submission",
+          "source": "expected: submit disabled"
+        },
+        {
+          "statement": "take screenshot as c05_02_alphabets_blocked",
+          "why": "Evidence",
+          "source": "evidence"
+        }
+      ],
+      "102": [
+        {
+          "statement": "store attribute class of popup_submit_button as submit_state_series",
+          "why": "Capture Continue's state after an invalid series (all zeroes)",
+          "source": "expected: validation error shown / submit disabled"
+        },
+        {
+          "statement": "verify stored submit_state_series contains \"disbld\"",
+          "why": "An all-zero series must not enable submission",
+          "source": "expected: validation error shown / submit disabled"
+        }
+      ],
+      "103": [
+        {
+          "statement": "store attribute class of popup_submit_button as submit_state_startdigit",
+          "why": "Capture Continue's state after an invalid starting digit",
+          "source": "expected: validation error shown / submit disabled"
+        },
+        {
+          "statement": "verify stored submit_state_startdigit contains \"disbld\"",
+          "why": "A number starting with an invalid digit must not enable submission",
+          "source": "expected: validation error shown / submit disabled"
+        }
+      ],
+      "104": [
+        {
+          "statement": "store value of mobile_number_input as typed_long",
+          "why": "Read back what the field accepted from an 11-digit entry",
+          "source": "expected: 11-digit number is rejected"
+        },
+        {
+          "statement": "verify stored typed_long is not \"98765432101\"",
+          "why": "Verified live: the field truncates 11 digits to the first 10 rather than showing an error, so 'rejected' means the 11-digit value never lands in the field. Asserting submit stays disabled here would fail \u2014 see the FINDING note.",
+          "source": "expected: 11-digit number is rejected",
+          "note": "Deliberately NOT asserting the Continue button here: truncation yields a valid 10-digit number, which legitimately enables submission."
+        },
+        {
+          "statement": "take screenshot as c05_03_eleven_digits_rejected",
+          "why": "Evidence",
+          "source": "evidence"
+        }
+      ]
+    }
+  },
+  "notes": [
+    "FINDING \u2014 the testcase's Expected column says a validation error 'Please enter a valid mobile number' is displayed. Probing the live DesignTest build with 98765, abcdefghij and 0000000000 produced NO new element carrying error text, and no [class*=err] or [class*=valid] node appeared anywhere. On this build the rejection is expressed only as (a) the input mask refusing non-digits and (b) the Continue button keeping its 'disbld' class. This flow asserts what the product actually does. Whether the missing inline error is a product gap or an inaccurate Expected column is a question for the author of TC_AFP_C05 \u2014 it is deliberately NOT asserted here, because asserting an element that does not exist would fail every run for the wrong reason.",
+    "FINDING (TC_AFP_C05 step 5, '11 digits') \u2014 the field carries maxlength=15 but truncates an 11-digit entry to its first 10 digits: typing 98765432101 leaves 9876543210 in the field, which is a VALID number, so Continue correctly becomes enabled. The step's stated expectation ('validation error / submit disabled') can therefore never hold through the UI. This flow asserts the truncation instead. Two things for the testcase author: (a) the 11-digit case is unreachable as written, and (b) truncation silently produces a DIFFERENT valid mobile number \u2014 if a user fat-fingers an extra digit and taps Continue, the OTP goes to a number they did not intend. This flow never clicks Continue, so no OTP was sent to the truncated number during verification.",
+    "OBSERVATION (not asserted) \u2014 the field also rewrites some 10-digit entries: 1234567890 becomes 23456789 and 0000000000 becomes 00000000. Continue stays disabled in both cases, so the testcase's intent holds and this flow asserts only that. The rewriting itself looks like input-mask behaviour worth a separate question to the product team.",
+    "Continue-button state is read via its class attribute containing 'disbld' rather than a locator on the disabled state. 'disbld' is a state class, and a locator that embeds state cannot distinguish 'button is disabled' from 'button is missing' \u2014 reading the attribute keeps the two apart.",
+    "No valid mobile number is entered anywhere in this flow, so it sends no OTP SMS and creates no lead. It is safe to re-run."
+  ]
+}

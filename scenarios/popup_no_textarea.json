@@ -1,0 +1,94 @@
+{
+  "name": "Ask More Photos popup — no free-text textarea",
+  "description": "TC_AFP_C10. Guards the GJDT-22160 removal ('remove textarea not needed') for AI products: opening the Ask More Photos popup must not present a free-text textarea. A pure absence assertion — nothing is submitted and no OTP is sent.",
+  "platform": "web",
+  "output": "data/drafts/popup_no_textarea.flow",
+  "source": {
+    "xlsx": "~/Downloads/GJDT-21944_Ask_For_Photos_AI_Products_Testcases.xlsx"
+  },
+  "testcases": ["TC_AFP_C10"],
+
+  "steps": {
+    "include_rows": [125, 126],
+    "exclude_rows": {}
+  },
+
+  "variable_bindings": {
+    "PDP_URL_AI_3IMG": "${product_url}",
+    "PDP_URL_AI_1IMG": "${product_url}",
+    "PDP_URL_AI_2IMG": "${product_url}"
+  },
+
+  "placeholders": {
+    "${product_url}": "suite parameter — DesignTest JDMart product page under test"
+  },
+
+  "inject": {
+    "before": [
+      {
+        "statement": "open ${product_url}",
+        "why": "Load the AI product PDP under test",
+        "source": "precondition"
+      },
+      {
+        "statement": "verify element ask_more_photos_cta is visible",
+        "why": "Confirm the CTA is present before opening the popup, so a failure on the absence assertion cannot be caused by the popup never opening",
+        "source": "requirement initial-state"
+      }
+    ],
+    "after_row": {
+      "125": [
+        {
+          "statement": "verify element mobile_number_input is visible",
+          "why": "Confirm the popup actually opened. Without this, the textarea-absence assertion would pass trivially on a popup that never rendered.",
+          "source": "requirement guard"
+        },
+        {
+          "statement": "take screenshot as c10_01_popup_open",
+          "why": "Evidence of the popup contents at the moment of assertion",
+          "source": "evidence"
+        }
+      ]
+    },
+    "end": [
+      {
+        "statement": "take screenshot as c10_02_no_textarea_confirmed",
+        "why": "Evidence that the popup carries no free-text textarea",
+        "source": "evidence"
+      }
+    ]
+  },
+
+  "notes": [
+    "popup_text_area is an ABSENCE GUARD, not an element locator: it resolves to 0 matches by design and is stored with _absence_guard true. It has no element DNA, so ML healing does not and cannot apply to it.",
+    "Selector is scoped to form[name='UserQuickInfo'] deliberately. The popup contains div.writtxtarea — a leftover class from the removed textarea that now wraps the PHONE INPUT. An unscoped [class*=txtarea] match would grab that wrapper and fail this test incorrectly.",
+    "Verified on the live DesignTest PDP: 0 textarea elements on the whole page, 0 inside the popup form. The testcase passes on the current build."
+  ],
+
+  "capture": {
+    "locator_group": "jdmart_pdp_mobile",
+    "device": "Pixel 7",
+    "http_auth_domain": "designtest.justdial.com",
+    "stages": [
+      {
+        "name": "pdp",
+        "elements": {
+          "ask_more_photos_cta": {
+            "element": "AskMorePhotosCTA",
+            "text_hint": "Ask More Photos"
+          }
+        }
+      },
+      {
+        "name": "login_popup",
+        "reach": ["click ask_more_photos_cta"],
+        "elements": {
+          "mobile_number_input": {
+            "element": "MobileNumberInput",
+            "scope": "form[name='UserQuickInfo']"
+          }
+        }
+      }
+    ]
+  }
+}
