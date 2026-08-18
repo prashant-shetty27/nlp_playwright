@@ -285,6 +285,20 @@ def parse_step(step: str) -> Command:
     # ENTER OTP — distribute an N-digit code across N ordered inputs
     # enter otp "<value>" into <locator>
     # =============================
+    # =============================
+    # FETCH OTP FROM THE QA PORTAL
+    #   fetch otp for "<mobile>" as <var>
+    #   fetch otp for "<mobile>" as <var> after "<previous>"
+    # The `after` form polls until the portal shows something DIFFERENT, which is
+    # the only way to prove the code is new — the portal exposes no timestamp.
+    # Must precede the `enter otp` rule so "otp" is not captured by it.
+    # =============================
+    m = re.match(r'^fetch\s+otp\s+for\s+"(.*?)"\s+as\s+(\S+)'
+                 r'(?:\s+after\s+"(.*?)")?$', s, re.I)
+    if m:
+        return Command(type="fetch_otp", text=m.group(1), variable_name=m.group(2),
+                       target=m.group(3) or "")
+
     m = re.match(r'^enter\s+otp\s+"(.*?)"\s+(?:into|in)\s+(\S+)$', s, re.I)
     if m:
         return Command(type="enter_otp", text=m.group(1), target=m.group(2).strip())

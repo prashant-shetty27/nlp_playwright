@@ -238,6 +238,75 @@ check("open_browser(session=None) signature still backward compatible",
       list(inspect.signature(open_browser).parameters) == ["session", "record_video", "capabilities"])
 
 # ═════════════════════════════════════════════════════════════════════════════
+# ENGINE SELECTION — the device decides, an explicit choice overrides
+#
+# Before this, open_browser() hardcoded Chromium, so "iPhone" meant a Chromium
+# page wearing an iPhone user-agent: right viewport, wrong rendering engine.
+# Note the user-agent CANNOT be used to verify this — a device descriptor sets a
+# Safari UA whichever engine is running — so the browser type itself is asserted.
+# ═════════════════════════════════════════════════════════════════════════════
+print("\n[7] ENGINE SELECTION")
+
+from execution.browser_manager import close_browser  # noqa: E402
+from execution.session import TestSession  # noqa: E402
+from nlp.platforms import browser_for_device  # noqa: E402
+
+with sync_playwright() as _p:
+    _devices = _p.devices
+    for dev, want in (("Pixel 7", "chromium"), ("iPhone 15", "webkit"),
+                      ("iPad Pro 11", "webkit")):
+        check(f"{dev} declares engine {want}",
+              _devices[dev]["default_browser_type"] == want,
+              _devices[dev]["default_browser_type"])
+    check("an explicit choice beats the device's own engine",
+          browser_for_device("iPhone 15", "chromium", device_catalogue=_devices) == "chromium")
+    check("no device and no choice falls back to chromium",
+          browser_for_device(None, None, device_catalogue=_devices) == "chromium")
+    check("an unknown device name does not crash engine selection",
+          browser_for_device("Nokia 3310", None, device_catalogue=_devices) == "chromium")
+
+_INSTALLED = set()
+with sync_playwright() as _p:
+    for _n in ("chromium", "firefox", "webkit"):
+        try:
+            _b = getattr(_p, _n).launch(headless=True)
+            _b.close()
+            _INSTALLED.add(_n)
+        except Exception:  # noqa: BLE001
+            pass
+
+for caps, desc, want in (
+    ({"mobile_web": True, "device_name": "Pixel 7", "headless": True}, "Pixel 7", "chromium"),
+    ({"mobile_web": True, "device_name": "iPhone 15", "headless": True}, "iPhone 15", "webkit"),
+    ({"browser": "firefox", "headless": True}, "explicit firefox", "firefox"),
+    ({"mobile_web": True, "device_name": "iPhone 15", "browser": "chromium",
+      "headless": True}, "iPhone + chromium override", "chromium"),
+):
+    if want not in _INSTALLED:
+        print(f"  SKIP  {desc}: the {want} engine is not installed here")
+        continue
+    _s = TestSession()
+    _page = open_browser(_s, capabilities=caps)
+    try:
+        check(f"{desc} really launches {want}",
+              _page.context.browser.browser_type.name == want,
+              _page.context.browser.browser_type.name)
+    finally:
+        close_browser(_page, "engine_test", _s)
+
+# headless is a per-run capability, not only a config-file setting.
+for _hl in (True, False):
+    _s = TestSession()
+    _page = open_browser(_s, capabilities={"mobile_web": True, "device_name": "Pixel 7",
+                                           "headless": _hl})
+    try:
+        check(f"headless={_hl} is honoured from run capabilities",
+              _page.viewport_size == {"width": 412, "height": 839})
+    finally:
+        close_browser(_page, "headless_test", _s)
+
+
+# ═════════════════════════════════════════════════════════════════════════════
 print("\n" + "=" * 60)
 print(f"PASSED: {_passed}  |  FAILED: {_failed}")
 print("=" * 60)

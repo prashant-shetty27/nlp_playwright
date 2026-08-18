@@ -1,7 +1,7 @@
 {
   "flow_name": "Ask More Photos \u2014 end-to-end (mobile web)",
   "flow_path": "/Users/prashantshetty/nlp_playwright/data/drafts/ask_more_photos_mobile.flow",
-  "generated_at": "2026-08-17T12:22:43Z",
+  "generated_at": "2026-08-18T15:11:01Z",
   "source_testcases": [
     "TC_AFP_C01",
     "TC_AFP_C02",
@@ -24,7 +24,7 @@
   "steps": [
     {
       "step": 1,
-      "line": 6,
+      "line": 10,
       "statement": "open ${product_url}",
       "action": "open",
       "source": "TC_AFP_C01 row 84",
@@ -34,7 +34,7 @@
     },
     {
       "step": 2,
-      "line": 7,
+      "line": 11,
       "statement": "verify element ask_more_photos_cta is visible",
       "action": "verify_element_visible",
       "source": "requirement initial-state",
@@ -48,7 +48,7 @@
     },
     {
       "step": 3,
-      "line": 8,
+      "line": 12,
       "statement": "verify element ask_more_photos_cta has text \"Ask More Photos\"",
       "action": "verify_element_exact",
       "source": "requirement initial-state",
@@ -62,7 +62,7 @@
     },
     {
       "step": 4,
-      "line": 9,
+      "line": 13,
       "statement": "take screenshot as afp_01_pdp_cta_initial",
       "action": "screenshot",
       "source": "requirement evidence",
@@ -72,7 +72,7 @@
     },
     {
       "step": 5,
-      "line": 10,
+      "line": 14,
       "statement": "click ask_more_photos_cta",
       "action": "click",
       "source": "TC_AFP_C01 row 85",
@@ -86,7 +86,7 @@
     },
     {
       "step": 6,
-      "line": 11,
+      "line": 15,
       "statement": "verify element mobile_number_input is visible",
       "action": "verify_element_visible",
       "source": "TC_AFP_C01 row 86",
@@ -100,7 +100,7 @@
     },
     {
       "step": 7,
-      "line": 12,
+      "line": 16,
       "statement": "take screenshot as afp_02_login_popup_open",
       "action": "screenshot",
       "source": "requirement evidence",
@@ -110,7 +110,7 @@
     },
     {
       "step": 8,
-      "line": 13,
+      "line": 17,
       "statement": "type \"${jd_test_mobile}\" into mobile_number_input",
       "action": "fill",
       "source": "TC_AFP_C02 row 88",
@@ -124,7 +124,7 @@
     },
     {
       "step": 9,
-      "line": 14,
+      "line": 18,
       "statement": "click popup_submit_button",
       "action": "click",
       "source": "TC_AFP_C02 row 89",
@@ -138,7 +138,7 @@
     },
     {
       "step": 10,
-      "line": 15,
+      "line": 19,
       "statement": "take screenshot as afp_03_otp_screen",
       "action": "screenshot",
       "source": "requirement evidence",
@@ -148,7 +148,7 @@
     },
     {
       "step": 11,
-      "line": 16,
+      "line": 20,
       "statement": "wait until element otp_input_container is visible",
       "action": "wait_until_visible",
       "source": "TC_AFP_C02 row 90",
@@ -162,7 +162,7 @@
     },
     {
       "step": 12,
-      "line": 17,
+      "line": 21,
       "statement": "enter otp \"${jd_test_static_otp}\" into otp_input",
       "action": "enter_otp",
       "source": "TC_AFP_C03 row 92",
@@ -176,7 +176,7 @@
     },
     {
       "step": 13,
-      "line": 18,
+      "line": 22,
       "statement": "take screenshot as afp_04_otp_entered",
       "action": "screenshot",
       "source": "requirement evidence",
@@ -186,7 +186,7 @@
     },
     {
       "step": 14,
-      "line": 19,
+      "line": 23,
       "statement": "wait until element ask_more_photos_cta text is not \"Ask More Photos\"",
       "action": "wait_until_text_not",
       "source": "requirement post-submission",
@@ -200,7 +200,7 @@
     },
     {
       "step": 15,
-      "line": 20,
+      "line": 24,
       "statement": "store text of ask_more_photos_cta as updated_cta_text",
       "action": "extract_text",
       "source": "requirement post-submission",
@@ -214,7 +214,7 @@
     },
     {
       "step": 16,
-      "line": 21,
+      "line": 25,
       "statement": "verify stored updated_cta_text is not \"Ask More Photos\"",
       "action": "verify_var_not_equals",
       "source": "requirement post-submission",
@@ -224,7 +224,7 @@
     },
     {
       "step": 17,
-      "line": 22,
+      "line": 26,
       "statement": "verify stored updated_cta_text contains \"Photos Requested\"",
       "action": "verify_var_contains",
       "source": "requirement post-submission",
@@ -234,7 +234,7 @@
     },
     {
       "step": 18,
-      "line": 23,
+      "line": 27,
       "statement": "take screenshot as afp_06_request_submitted",
       "action": "screenshot",
       "source": "requirement post-submission",

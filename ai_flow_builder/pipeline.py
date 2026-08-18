@@ -22,6 +22,9 @@ from ai_flow_builder.mapper import (NEEDS_LOCATOR, SUBSTITUTE, SUPPORTED,
                                     Mapper, StepMapping, summarise)
 
 BASE_DIR = catalogue_mod.BASE_DIR
+#: Temp previews are linted here rather than /tmp so relative paths in
+#: flow_lint output resolve the same way they do for a saved draft.
+DRAFTS_DIR = os.path.join(BASE_DIR, "data", "drafts")
 Progress = Callable[[str], None]
 
 
@@ -45,6 +48,7 @@ class GenerationResult:
     cli_command: str = ""
     annotated_text: str = ""
     map_path: str = ""
+    trace: dict = field(default_factory=dict)   # sidecar map, built even when not written
 
     @property
     def missing_locators(self) -> list[str]:
@@ -80,10 +84,18 @@ def generate(
     calibration_notes: list[str] | None = None,
     max_flows_per_batch: int = 1,
     overwrite: bool = False,
+    persist: bool = True,
     cli_command: str = "",
     progress: Progress = _stdout,
 ) -> GenerationResult:
-    """Generate exactly one flow spanning the given source testcases."""
+    """Generate exactly one flow spanning the given source testcases.
+
+    `persist=False` returns the rendered flow WITHOUT writing it. A UI regenerates
+    on every change of testcase selection or platform; writing each time would
+    litter data/drafts/ and clobber earlier work. Validation still runs — the flow
+    is linted through a temporary file that is removed afterwards — so a preview
+    is checked exactly as strictly as a saved flow.
+    """
     if max_flows_per_batch < 1:
         raise ValueError("max_flows_per_batch must be >= 1")
 
@@ -203,14 +215,17 @@ def generate(
                   and v not in (variable_bindings or {})]
 
     progress("[emit] rendering flow …")
-    map_path = out_path.replace(".flow", ".map.json")
+    # os.path.splitext, not str.replace: a path without ".flow" left the name
+    # unchanged, so the map JSON was written straight over the flow just emitted.
+    map_path = os.path.splitext(out_path)[0] + ".map.json"
     res.flow_text = emitter.render_clean(
         flow_name=flow_name,
         source_ids=list(testcase_ids),
         source_desc=bundle.source,
         mappings=mappings,
         placeholders=placeholders or {},
-        map_path=os.path.relpath(map_path, BASE_DIR),
+        map_path=os.path.relpath(map_path, BASE_DIR) if persist else "",
+        case_titles={t.testcase_id: t.title for t in selected},
     )
     res.annotated_text = emitter.render(
         flow_name=flow_name,
@@ -226,22 +241,41 @@ def generate(
         generated_by=cli_command or "ai_flow_builder.pipeline",
         calibration_notes=calibration_notes,
     )
-    res.flow_path = emitter.write(out_path, res.flow_text, overwrite=overwrite)
-    progress(f"[emit] wrote {res.flow_path}")
+    if persist:
+        res.flow_path = emitter.write(out_path, res.flow_text, overwrite=overwrite)
+        progress(f"[emit] wrote {res.flow_path}")
+    else:
+        progress("[emit] preview only — nothing written")
 
     trace = emitter.build_map(
         flow_name=flow_name, flow_path=res.flow_path,
         source_ids=list(testcase_ids), source_desc=bundle.source,
         mappings=mappings, placeholders=placeholders or {},
-        header_lines=5,
+        # Counted from the rendered text rather than assumed. render_clean emits a
+        # variable number of header lines (one per testcase under "# Verifies:"),
+        # so a hardcoded 5 made every `line` in the sidecar map wrong — pointing
+        # the reader at the wrong step of the very file the map exists to explain.
+        header_lines=_header_line_count(res.flow_text),
     )
-    with open(map_path, "w", encoding="utf-8") as f:
-        json.dump(trace, f, indent=2)
-    res.map_path = map_path
-    progress(f"[emit] wrote {map_path} ({len(trace['steps'])} traceable steps)")
+    if persist:
+        with open(map_path, "w", encoding="utf-8") as f:
+            json.dump(trace, f, indent=2)
+        res.map_path = map_path
+        progress(f"[emit] wrote {map_path} ({len(trace['steps'])} traceable steps)")
+    res.trace = trace
 
     _validate(res, platform, progress)
     return res
+
+
+def _header_line_count(flow_text: str) -> int:
+    """Lines before the first executable statement, including the blank spacer."""
+    n = 0
+    for line in flow_text.splitlines():
+        if line.strip() and not line.lstrip().startswith("#"):
+            break
+        n += 1
+    return n
 
 
 def _validate(res: GenerationResult, platform: str, progress: Progress) -> None:
@@ -265,10 +299,44 @@ def _validate(res: GenerationResult, platform: str, progress: Progress) -> None:
     progress(f"[validate] parser: {'OK' if res.parser_ok else f'{len(bad)} FAILED'}")
 
     progress("[validate] flow_lint …")
-    proc = subprocess.run(
-        [sys.executable, "tools/flow_lint.py", res.flow_path, "--platform", platform],
-        cwd=BASE_DIR, capture_output=True, text=True,
-    )
-    res.lint_exit = proc.returncode
-    res.lint_output = (proc.stdout + proc.stderr).strip()
+    # A preview has no file on disk, but it must still be linted as strictly as a
+    # saved one — otherwise "preview" would quietly mean "unchecked". Lint a
+    # temporary copy and remove it.
+    import tempfile
+
+    target, temporary = res.flow_path, False
+    if not target:
+        os.makedirs(DRAFTS_DIR, exist_ok=True)   # a fresh checkout has no drafts dir
+        fd, target = tempfile.mkstemp(suffix=".flow", prefix="preview_", dir=DRAFTS_DIR)
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(res.flow_text)
+        temporary = True
+    try:
+        # Bounded: generation runs inside an HTTP request handler, so a linter that
+        # hung would hold an API worker open indefinitely with no way to recover.
+        # A lint that cannot finish in a minute is a failure to report, not a wait.
+        proc = subprocess.run(
+            [sys.executable, "tools/flow_lint.py", target, "--platform", platform],
+            cwd=BASE_DIR, capture_output=True, text=True,
+            timeout=int(os.getenv("FLOW_LINT_TIMEOUT_S", "60")),
+        )
+        res.lint_exit = proc.returncode
+        res.lint_output = (proc.stdout + proc.stderr).strip()
+        if temporary:
+            # flow_lint prints paths relative to BASE_DIR, so both spellings of the
+            # throwaway filename have to go — otherwise the UI shows the operator a
+            # temp file that no longer exists and that they cannot open.
+            for form in (target, os.path.relpath(target, BASE_DIR),
+                         os.path.basename(target)):
+                res.lint_output = res.lint_output.replace(form, "<preview>")
+    except subprocess.TimeoutExpired:
+        # Report it as a validation failure with a readable reason rather than
+        # raising something the caller cannot interpret.
+        res.lint_exit = -1
+        res.lint_output = ("flow_lint did not finish within the timeout; the flow "
+                           "was generated but is UNVALIDATED.")
+        progress("[validate] flow_lint TIMED OUT — flow is unvalidated")
+    finally:
+        if temporary and os.path.exists(target):
+            os.unlink(target)
     progress(f"[validate] flow_lint exit={res.lint_exit}")

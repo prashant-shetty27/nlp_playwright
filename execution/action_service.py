@@ -1534,6 +1534,41 @@ def verify_element_visible(page, locator_name):
     logger.info("✅ Element '%s' is visible.", locator_name)
 
 
+def fetch_otp_from_portal(page, mobile, variable_name, after: str = "",
+                          timeout_s: int | None = None):
+    """
+    Read a live OTP from the QA portal and store it in a runtime variable.
+
+    The flow never pauses and nobody is prompted — the portal is driven in its own
+    browser context while the application page stays exactly where it is.
+
+    Normal usage is a bare fetch straight after the mobile number is submitted.
+    A short settle lets the SMS land first. If a stale code is somehow read, OTP
+    verification fails on the page like any other assertion and is investigated
+    as an ordinary failure — the optional `after` clause exists for flows that
+    would rather fail at the fetch than at the assertion.
+
+    The OTP is stored but never logged, echoed or included in an error message.
+    """
+    from execution.otp_portal import fetch_otp
+
+    number = resolve_variables(str(mobile))
+    previous = resolve_variables(str(after)) if after else ""
+    browser = page.context.browser
+    if browser is None:
+        raise Exception("Cannot reach the OTP portal: no browser is attached to this page.")
+
+    logger.info("📨 Fetching OTP from the QA portal%s",
+                " (waiting for a new message)" if previous else "")
+    code = fetch_otp(browser, number,
+                     after=previous,
+                     timeout_s=int(timeout_s or settings.OTP_PORTAL_TIMEOUT_S))
+    RUNTIME_VARIABLES[variable_name] = code
+    logger.info("💾 OTP stored as '$%s' (%d digits, value withheld)",
+                variable_name, len(code))
+    return code
+
+
 def verify_element_not_exists(page, locator_name, settle_ms: int | None = None):
     """
     Assert the element is ABSENT FROM THE DOM.
@@ -1682,6 +1717,16 @@ def wait_until_element_text_not(page, locator_name, unexpected_text, timeout_ms:
 @codeless_snippet("Verify Element Is Visible")
 def ui_verify_element_visible(page, locator):
     verify_element_visible(page, locator)
+
+
+@codeless_snippet("Fetch OTP From Portal")
+def ui_fetch_otp_from_portal(page, mobile_number, save_to_variable_name,
+                             previous_otp_optional="", timeout_seconds_optional=""):
+    fetch_otp_from_portal(
+        page, mobile_number, save_to_variable_name,
+        after=previous_otp_optional,
+        timeout_s=int(timeout_seconds_optional) if timeout_seconds_optional else None,
+    )
 
 
 @codeless_snippet("Verify Element Is Not Present")

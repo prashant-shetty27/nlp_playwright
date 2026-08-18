@@ -1,5 +1,9 @@
 # Ask More Photos — end-to-end (mobile web)
 # Source : GJDT-21944_Ask_For_Photos_AI_Products_Testcases | TC_AFP_C01, TC_AFP_C02, TC_AFP_C03
+# Verifies:
+#   TC_AFP_C01 — NON-LOGIN: Verify mobile number popup opens on tapping the CTA from upfront PDP
+#   TC_AFP_C02 — NON-LOGIN: Verify OTP is triggered on submitting a valid 10-digit mobile number
+#   TC_AFP_C03 — NON-LOGIN: Verify request is submitted successfully after entering a valid OTP
 # Params : ${product_url} ${jd_test_mobile} ${jd_test_static_otp}
 # Map    : data/drafts/ask_more_photos_mobile.map.json  (step -> source row, locator, selector, expected)
 

@@ -225,6 +225,15 @@ KEYWORD_MAP = {
         "template": "enter otp \"{text}\" into {locator}"
     },
 
+    "fetch_otp_from_portal": {
+        "phrases": [
+            "fetch otp", "fetch otp for", "get otp from portal", "read otp from portal",
+            "fetch otp for number", "retrieve otp", "pull otp from portal"
+        ],
+        "action": "fetch_otp",
+        "template": "fetch otp for \"{text}\" as {variable}"
+    },
+
     "verify_stored_variable_is_not": {
         "phrases": [
             "verify stored variable is not", "verify variable is not",

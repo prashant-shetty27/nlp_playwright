@@ -111,6 +111,8 @@ _NOOP = {
                             "always passes without comparing anything."},
 }
 
+# Kept for backwards compatibility with anything reading it directly; the table in
+# nlp/platforms.py is now the authority and covers aliases this dict never did.
 _PLATFORM_RUNNER = {
     "web": "web", "chromium": "web", "firefox": "web", "webkit": "web", "mobile": "web",
     "ios": "appium", "android": "appium", "hybrid": "appium",
@@ -118,7 +120,15 @@ _PLATFORM_RUNNER = {
 
 
 def _supported_for(platform: str) -> set[str]:
-    return _APPIUM_SUPPORTED if _PLATFORM_RUNNER.get(platform, "web") == "appium" else _WEB_SUPPORTED
+    """Commands dispatchable on `platform`.
+
+    Resolves through nlp/platforms.py so an unrecognised value raises instead of
+    silently returning the web set — which is how `appium` (a runner name, not a
+    platform) previously reported `enter_otp` as supported on mobile.
+    """
+    from nlp.platforms import runner_for
+
+    return _APPIUM_SUPPORTED if runner_for(platform) == "appium" else _WEB_SUPPORTED
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -196,7 +206,7 @@ _TARGET_IS_LOCATOR = {
 }
 
 # Command types whose `target` is a variable name, not a locator.
-_TARGET_IS_VARIABLE = {"create_variable", "verify_var_contains", "verify_var_not_equals",
+_TARGET_IS_VARIABLE = {"create_variable", "verify_var_contains", "verify_var_not_equals", "fetch_otp",
                        "math", "extract_json"}
 
 # Command types that read a file path from `text`.

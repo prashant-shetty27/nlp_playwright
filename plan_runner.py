@@ -132,7 +132,13 @@ def _inject_parameters(parameters: list[dict]) -> None:
             value = "true" if value.lower() in ("true", "1", "yes", "y") else "false"
 
         RUNTIME_VARIABLES[name] = value
-        logger.info("  🔑 Param injected: ${%s} = '%s'  [%s]", name, value, ptype)
+        # Never print the value of a secret-looking parameter. A password, OTP or
+        # test mobile number written to the log is leaked to every reader of that
+        # log and to any report that embeds it.
+        from config.settings import is_secret_name
+
+        shown = "<hidden>" if (ptype == "secret" or is_secret_name(name)) else f"'{value}'"
+        logger.info("  🔑 Param injected: ${%s} = %s  [%s]", name, shown, ptype)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

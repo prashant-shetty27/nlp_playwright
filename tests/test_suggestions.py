@@ -43,7 +43,7 @@ def check(label: str, cond: bool, detail: str = "") -> None:
 
 
 WEB = load_catalogue("web")
-APPIUM = load_catalogue("appium")
+APPIUM = load_catalogue("android")   # "appium" is a RUNNER, not a platform
 SLOT_FILL = {"locator": "my_loc", "text": "sample", "number": "3", "variable": "my_var"}
 _NUMERIC_DEFAULTS = {"seconds", "count", "n", "timeout", "pixels", "ms", "3", "500", "300", "10"}
 

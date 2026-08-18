@@ -68,6 +68,9 @@ SCREENSHOT_TIMEOUT_MS: int = int(os.getenv("SCREENSHOT_TIMEOUT_MS", str(_ctrl("c
 # An absence check that runs instantly always passes, so it must give the UI a
 # fair chance to render the thing it is asserting is absent.
 ABSENCE_SETTLE_MS: int = int(os.getenv("ABSENCE_SETTLE_MS", str(_ctrl("browser.absence_settle_ms", 3000))))
+# How long to keep polling the QA OTP portal for a NEW message before giving up.
+# An OTP that never arrives should fail the step, not hang the run.
+OTP_PORTAL_TIMEOUT_S: int = int(os.getenv("OTP_PORTAL_TIMEOUT_S", str(_ctrl("otp.portal_timeout_s", 60))))
 # Evidence size controls. Full-page PNGs of tall SPA pages run to several MB each;
 # JPEG at a sane quality keeps them legible at roughly a tenth the size.
 SCREENSHOT_FORMAT: str = str(os.getenv("SCREENSHOT_FORMAT", _ctrl("capture.screenshot_format", "jpeg"))).lower()
@@ -174,3 +177,19 @@ def get_auth_registry() -> dict:
             if domain and password:
                 registry[domain] = {"username": val, "password": password}
     return registry
+
+
+# ── Secret-looking parameter names ──────────────────────────────────────────
+#: Substrings that make a parameter's VALUE unsafe to log. Lives here, beside the
+#: other runtime settings, because both the CLI runner and the HTTP API need it —
+#: importing it from an API route dragged FastAPI into the CLI's import path.
+SECRET_NAME_HINTS = ("otp", "password", "passwd", "pwd", "token", "secret",
+                     "apikey", "api_key", "auth", "mobile", "phone", "pin",
+                     "credential")
+
+
+def is_secret_name(name: str, declared: set | None = None) -> bool:
+    """True when a parameter's value must never be written to a log or report."""
+    if declared and name in declared:
+        return True
+    return any(h in (name or "").lower() for h in SECRET_NAME_HINTS)

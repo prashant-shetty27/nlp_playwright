@@ -181,6 +181,8 @@ def _execute_step_from_command(cmd, page):
         "wait_until_visible":        lambda: svc.wait_until_element_visible(ep, target),
         "wait_until_text_not":       lambda: svc.wait_until_element_text_not(ep, target, text),
         "enter_otp":                 lambda: svc.enter_otp(ep, text, target),
+        "fetch_otp":                 lambda: svc.fetch_otp_from_portal(
+                                         ep, text, cmd.variable_name, after=target),
         # ── Extract — Page info ──────────────────────────────────────────────
         "extract_url":               lambda: svc.extract_page_url(ep, cmd.variable_name),
         "extract_title":             lambda: svc.extract_page_title(ep, cmd.variable_name),

@@ -243,10 +243,56 @@ def open_browser(session: TestSession | None = None, record_video: bool = False,
     if not wants_mobile_web(capabilities):
         logger.info("🖥️ Desktop Resolution: %sx%s.", w, h)
 
-    browser = playwright_instance.chromium.launch(
-        headless=use.get("headless", settings.HEADLESS),
-        args=["--start-maximized", "--disable-infobars"],
-    )
+    # ── Per-run settings ─────────────────────────────────────────────────────
+    # Precedence: this run's capabilities > playwright.config.json > settings.
+    # `use` is the STATIC config file, so reading device_name/browser/headless
+    # from it alone silently discarded whatever the caller asked for on this run.
+    caps = capabilities or {}
+
+    def _setting(key, fallback=None):
+        if caps.get(key) is not None:
+            return caps[key]
+        if use.get(key) is not None:
+            return use[key]
+        return fallback
+
+    # ── Engine selection ─────────────────────────────────────────────────────
+    # Previously hardcoded to Chromium, which meant an "iPhone" run was a Chromium
+    # page wearing an iPhone user-agent — the viewport was right but WebKit
+    # rendering and JS behaviour were not. The device descriptor already declares
+    # the engine it expects, so that now decides, unless capabilities name one.
+    from nlp.platforms import browser_for_device
+
+    engine = browser_for_device(_setting("device_name"), _setting("browser"),
+                                device_catalogue=playwright_instance.devices)
+    headless = bool(_setting("headless", settings.HEADLESS))
+    launch_kwargs = {"headless": headless}
+    if engine == "chromium":
+        # Chromium-only flags; Firefox and WebKit reject unknown args.
+        launch_kwargs["args"] = ["--start-maximized", "--disable-infobars"]
+
+    engine_factory = getattr(playwright_instance, engine, None)
+    if engine_factory is None:
+        playwright_instance.stop()
+        raise ValueError(
+            f"Unknown browser engine '{engine}'. Valid engines: chromium, firefox, webkit."
+        )
+    try:
+        browser = engine_factory.launch(**launch_kwargs)
+    except Exception as e:
+        playwright_instance.stop()
+        if "Executable doesn" in str(e) or "playwright install" in str(e):
+            raise RuntimeError(
+                f"The '{engine}' engine is not installed. "
+                f"Run:  python -m playwright install {engine}\n"
+                f"(selected because device "
+                f"{use.get('device_name') or '<none>'} expects it)"
+            ) from e
+        raise
+    logger.info("🌐 Engine: %s | %s%s", engine,
+                "headless" if headless else "headed",
+                f"  (engine chosen by device '{_setting('device_name')}')"
+                if _setting("device_name") and not _setting("browser") else "")
 
     if record_video:
         raw_dir = os.path.join(settings.VIDEOS_DIR, "raw")

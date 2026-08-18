@@ -20,6 +20,10 @@ class ParseRequest(BaseModel):
 
 class SuggestRequest(BaseModel):
     partial: str
+    # Required: a suggestion is only useful if the runner for this platform can
+    # actually dispatch it. Without it the endpoint offered web-only actions such
+    # as enter_otp while the operator was authoring a mobile flow.
+    platform: str
     limit: int = 10
 
 
@@ -58,6 +62,15 @@ def suggest(body: SuggestRequest):
         {"partial": "scroll"}
         → [{"phrase": "scroll down", "action": "scroll_down"}, ...]
     """
+    from ai_flow_builder.catalogue import load as load_catalogue
+    from nlp.platforms import UnknownPlatform, normalise
+
+    try:
+        platform = normalise(body.platform)
+    except UnknownPlatform as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
+
+    dispatchable = load_catalogue(platform).supported_commands
     partial = body.partial.strip().lower()
     results: list[dict] = []
 
@@ -68,13 +81,47 @@ def suggest(body: SuggestRequest):
         if entry.get("deprecated"):
             continue
         action = entry.get("action", "")
+        # Never suggest something this platform's runner cannot execute.
+        if action not in dispatchable:
+            continue
         for phrase in entry.get("phrases", []):
             if partial in phrase.lower():
                 # `template` is the complete, parseable statement — the caller can
                 # insert it directly instead of reconstructing syntax from prose.
                 results.append({"phrase": phrase, "action": action,
+                                "platform": platform,
                                 "template": entry.get("template", "")})
                 if len(results) >= body.limit:
                     return results
 
     return results
+
+
+@router.get("/platforms")
+def platforms(include_disabled: bool = True):
+    """
+    The platform vocabulary, so the UI never hardcodes it.
+
+    `enabled: false` means known but masked — native app support resolves and
+    validates, it is simply not offered in the picker yet. The UI should render
+    those greyed out rather than omitting them, so the list stays honest about
+    what exists.
+    """
+    from nlp.platforms import as_dicts
+
+    return {"platforms": as_dicts(include_disabled=include_disabled)}
+
+
+@router.get("/devices")
+def device_catalogue(curated_only: bool = True):
+    """
+    Device profiles a mobile-web run can emulate.
+
+    `curated_only=false` returns Playwright's full catalogue (~143 profiles,
+    including landscape duplicates and older hardware). Each entry names the
+    engine the device expects, so the UI can show that picking an iPhone will
+    launch WebKit rather than leaving that as a hidden surprise.
+    """
+    from nlp.platforms import devices
+
+    return {"devices": devices(curated_only=curated_only)}

@@ -32,6 +32,7 @@ def render_clean(
     mappings: list[StepMapping],
     placeholders: dict[str, str],
     map_path: str,
+    case_titles: dict[str, str] | None = None,
 ) -> str:
     """
     Dashboard-friendly rendering: one statement per line, minimal header.
@@ -44,10 +45,25 @@ def render_clean(
     lines = [
         f"# {flow_name}",
         f"# Source : {source_desc.get('title', '')} | {', '.join(source_ids)}",
-        f"# Params : {' '.join(placeholders) if placeholders else 'none'}",
-        f"# Map    : {map_path}  (step -> source row, locator, selector, expected)",
-        "",
     ]
+    # When one flow spans several testcases, their individual titles are otherwise
+    # lost — and a failing step gives no clue which case it belonged to. One line
+    # per case keeps that answerable from the flow file alone.
+    if case_titles and len(case_titles) > 1:
+        lines.append("# Verifies:")
+        for tid in source_ids:
+            title = (case_titles.get(tid) or "").strip()
+            if title:
+                lines.append(f"#   {tid} — {title[:88]}")
+    lines.append(f"# Params : {' '.join(placeholders) if placeholders else 'none'}")
+    # Only claim a sidecar map when one is actually written. A preview that points
+    # at a .map.json which does not exist sends the reader to a missing file.
+    lines.append(
+        f"# Map    : {map_path}  (step -> source row, locator, selector, expected)"
+        if map_path else
+        "# Map    : not written (preview)"
+    )
+    lines.append("")
     lines += [m.statement for m in mappings if m.emits]
     return "\n".join(lines) + "\n"
 

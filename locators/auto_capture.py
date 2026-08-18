@@ -22,10 +22,13 @@ Steps 1, 4 and 6 are new; 3 and 5 reuse existing project code.
 """
 from __future__ import annotations
 
+import logging
 import re
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 
 from healing.locator_builder import generate_locator
+
+logger = logging.getLogger(__name__)
 
 # Stability weights — single source of truth, reused from the ML engine.
 try:

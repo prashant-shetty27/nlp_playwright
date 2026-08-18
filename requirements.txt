@@ -51,3 +51,7 @@ faker
 
 # Excel / CSV data-driven testing
 openpyxl
+anthropic>=0.60.0
+
+pydantic>=2.0          # structured LLM output schemas (ai_flow_builder/prompt_source.py)
+requests>=2.31         # HTTP calls in execution/action_service.py
