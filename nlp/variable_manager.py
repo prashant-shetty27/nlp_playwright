@@ -1,3 +1,5 @@
+from nlp.variables import normalise as _normalise_var
+
 """
 nlp/variable_manager.py
 Unified variable/memory management for both NLP-flow and JSON-flow execution paths.
@@ -118,7 +120,14 @@ class VariableManager:
         """Sanitizes the variable name and saves it to runtime RAM."""
         if not raw_name:
             return
-        clean_name = re.sub(r'[^a-zA-Z0-9_]', '', str(raw_name))
+        # Normalised through nlp/variables so the name stored here is the same
+        # name resolve_parameters() will look up. This used to DELETE punctuation
+        # on write only: `store … as user-name` saved "username", and the next
+        # ${user-name} raised "not found in runtime memory".
+        clean_name = _normalise_var(str(raw_name))
+        if not clean_name:
+            logger.warning("Ignoring a variable with no usable name: %r", raw_name)
+            return
         self.memory[clean_name] = value
         logger.info(f"🧠 MEMORY SECURED: ${{{clean_name}}} = '{value}'")
 
@@ -135,8 +144,12 @@ class VariableManager:
                 matches = re.findall(r'\$\{([^}]+)\}', value)
 
                 for var_name in matches:
-                    if var_name in self.memory:
-                        actual_value = str(self.memory[var_name])
+                    # Same normalisation as save(), so a name written one way and
+                    # referenced another still resolves to one another.
+                    stored = (var_name if var_name in self.memory
+                              else _normalise_var(var_name))
+                    if stored in self.memory:
+                        actual_value = str(self.memory[stored])
                         resolved_value = resolved_value.replace(f'${{{var_name}}}', actual_value)
                         logger.info(f"🔄 RESOLVED: ${{{var_name}}} → '{actual_value}'")
                     else:

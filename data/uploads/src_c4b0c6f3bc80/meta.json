@@ -1,0 +1,25 @@
+{
+  "source_id": "src_c4b0c6f3bc80",
+  "filename": "draft.json",
+  "kind": "prompt",
+  "size_bytes": 2489,
+  "sha256": "1780bd33dfb0e157404f6b80712e58f8f8a22ace27d4fda48519cf02a412474a",
+  "uploaded_at": "2026-08-18T20:28:53Z",
+  "uploaded_by": "",
+  "extra": {
+    "prompt": "www.justdial.com\nif login popup seen then click \nmaybe_later else\nsearch for baldev engineering\n& select  first autosuggest",
+    "provider": "anthropic",
+    "model": "claude-sonnet-5",
+    "testcases": 2,
+    "values_found": {},
+    "inputs_needed": [],
+    "assumptions": [
+      "The login popup is represented by the existing locator 'welcome_login_f' and dismissed via 'maybe_later'.",
+      "No existing locator matches a generic 'first autosuggest suggestion' element, so a new element name 'FirstAutosuggestOption' was introduced for that step.",
+      "The search input field on the homepage corresponds to the existing locator 'search_box'."
+    ],
+    "unclear": [
+      "Whether the popup should be checked with a wait step before verifying its display state, since the request implies conditional visibility but framework steps are deterministic."
+    ]
+  }
+}

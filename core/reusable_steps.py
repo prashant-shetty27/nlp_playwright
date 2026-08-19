@@ -71,7 +71,35 @@ def get(name: str) -> List[str]:
     return data[name]["steps"]
 
 
-def save(name: str, steps: List[str], overwrite: bool = False) -> None:
+def list_for(platform: str = "") -> List[str]:
+    """
+    Names available on `platform`.
+
+    Groups are platform-scoped because the steps inside them are: a group that
+    taps an Android element is meaningless on the website, and offering it there
+    would suggest a step that cannot run. Groups saved before scoping existed
+    carry no platform and stay visible everywhere.
+    """
+    data = _load_raw()
+    if not platform:
+        return sorted(data)
+    return sorted(n for n, rec in data.items()
+                  if not rec.get("platform") or rec.get("platform") == platform)
+
+
+def describe(platform: str = "") -> List[dict]:
+    """Each group with its steps and platform, for a list screen."""
+    data = _load_raw()
+    return [{"name": n, "steps": rec.get("steps", []),
+             "step_count": rec.get("step_count", len(rec.get("steps", []))),
+             "platform": rec.get("platform", ""),
+             "created_at": rec.get("created_at", "")}
+            for n, rec in sorted(data.items())
+            if not platform or not rec.get("platform") or rec.get("platform") == platform]
+
+
+def save(name: str, steps: List[str], overwrite: bool = False,
+         platform: str = "") -> None:
     """
     Persist a named group of steps.
 
@@ -113,6 +141,7 @@ def save(name: str, steps: List[str], overwrite: bool = False) -> None:
             "steps": clean_steps,
             "created_at": datetime.now(timezone.utc).isoformat(),
             "step_count": len(clean_steps),
+            "platform": platform,
         }
         atomic_write_json(REUSABLE_PATH, data)
 

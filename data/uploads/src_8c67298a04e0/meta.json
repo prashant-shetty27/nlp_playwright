@@ -1,0 +1,26 @@
+{
+  "source_id": "src_8c67298a04e0",
+  "filename": "draft.json",
+  "kind": "prompt",
+  "size_bytes": 1849,
+  "sha256": "20498469f92dd8620321f3d6c36657a60d8ed3a3d15dfdb21225f906c6ad765a",
+  "uploaded_at": "2026-08-18T18:29:55Z",
+  "uploaded_by": "",
+  "extra": {
+    "prompt": "Test the Ask More Photos flow on https://designtest.justdial.com/jdmart/Mumbai/Apollo-Tyre/jdm-1113060-ent-4-23785 . A signed-out user taps Ask More Photos and a login popup asks for a mobile number. Enter 9324751210 and submit; an OTP screen appears.",
+    "provider": "anthropic",
+    "model": "claude-sonnet-5",
+    "testcases": 1,
+    "values_found": {
+      "url": "https://designtest.justdial.com/jdmart/Mumbai/Apollo-Tyre/jdm-1113060-ent-4-23785",
+      "mobile": "9324751210"
+    },
+    "inputs_needed": [],
+    "assumptions": [
+      "The login popup's submit button maps to the existing locator 'login_button'",
+      "The mobile number field on the login popup maps to the existing locator 'mobile_number_input'",
+      "The OTP entry screen's primary input maps to the existing locator 'otp_input'"
+    ],
+    "unclear": []
+  }
+}

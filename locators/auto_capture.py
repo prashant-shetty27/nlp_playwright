@@ -118,34 +118,25 @@ def find_existing(locator_name: str, selector: str = "") -> dict:
     recorded under a different name? The second catches the duplicate-locator drift
     that makes a repository unmaintainable.
     """
-    import json
-    import os
-
-    from config import settings
+    # Through the registry rather than by reading the two files directly: this
+    # was the last reader keeping its own list, so a third database would have
+    # been invisible here while showing up everywhere else.
+    from locators.sources import entries
 
     hit = {"by_name": None, "by_selector": []}
-    for path in (settings.RECORDED_ELEMENTS_FILE, settings.MANUAL_LOCATORS_FILE):
-        if not os.path.exists(path):
+    for e in entries("website"):
+        rec = e.record
+        if not isinstance(rec, dict):
             continue
-        try:
-            data = json.load(open(path, encoding="utf-8"))
-        except Exception:
-            continue
-        for group, els in (data or {}).items():
-            if not isinstance(els, dict):
-                continue
-            for name, entry in els.items():
-                if name.startswith("_") or not isinstance(entry, dict):
-                    continue
-                existing = (entry.get("custom_xpath") or entry.get("xpath")
-                            or entry.get("value") or "")
-                if name == locator_name and hit["by_name"] is None:
-                    hit["by_name"] = {"group": group, "selector": existing,
-                                      "file": os.path.basename(path),
-                                      "has_dna": bool(entry.get("tagName"))}
-                if selector and existing == selector and name != locator_name:
-                    hit["by_selector"].append({"name": name, "group": group,
-                                               "file": os.path.basename(path)})
+        existing = (rec.get("custom_xpath") or rec.get("xpath")
+                    or rec.get("value") or "")
+        if e.name == locator_name and hit["by_name"] is None:
+            hit["by_name"] = {"group": e.group, "selector": existing,
+                              "file": e.source_id,
+                              "has_dna": bool(rec.get("tagName"))}
+        if selector and existing == selector and e.name != locator_name:
+            hit["by_selector"].append({"name": e.name, "group": e.group,
+                                       "file": e.source_id})
     return hit
 
 

@@ -123,7 +123,7 @@ def _get_healed_element_locator(page, locator_name):
         logger.warning("Verification element not immediately visible. Attempting ML heal...")
         if dna:
             try:
-                healed_xpath = ml_heal_element(page, dna)  # ML heal always scans the real page DOM
+                healed_xpath = ml_heal_element(page, dna, locator_name)  # scans the real DOM; a confident heal is remembered
                 if healed_xpath:
                     logger.info("Healed verification element successfully!")
                     return root.locator(healed_xpath).first
@@ -231,7 +231,7 @@ def click_element(page, locator_name):
         if not dna:
             raise Exception(f"Element broken and no ML DNA available: {locator_name}")
         try:
-            healed_xpath = ml_heal_element(page, dna)
+            healed_xpath = ml_heal_element(page, dna, locator_name)
         except Exception as ml_err:
             raise Exception(f"Self-healing match failed: {ml_err}")
 
@@ -273,7 +273,7 @@ def fill_element(page, text, locator_name):
         if not dna:
             raise Exception(f"Element broken and no ML DNA available to heal: {locator_name}")
         try:
-            healed_xpath = ml_heal_element(page, dna)
+            healed_xpath = ml_heal_element(page, dna, locator_name)
         except Exception as ml_err:
             raise Exception(f"Self-healing match failed: {ml_err}")
 
@@ -305,7 +305,7 @@ def extract_element_text(page, locator_name, variable_name):
         logger.warning("⚠️ Primary read failed. Triggering ML Healer...")
         if not dna:
             raise Exception(f"Element broken and no ML DNA available: {locator_name}")
-        healed_xpath = ml_heal_element(page, dna)
+        healed_xpath = ml_heal_element(page, dna, locator_name)
         if healed_xpath:
             execute_extraction(healed_xpath)
             logger.info(f"🏥 Successfully healed and extracted text from '{locator_name}'!")
@@ -757,6 +757,386 @@ def scroll_until_text_visible(page, text, max_scrolls=None, scroll_wait=2):
 SENSITIVE_SCREENSHOT_LOCATORS: list[str] = []
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# BROWSER ALERTS
+#
+# An alert is drawn by the browser, so no locator can reach it and an unhandled
+# one stalls the run until it times out. Playwright answers a dialog through a
+# handler registered BEFORE the action that triggers it, so each of these arms a
+# one-shot handler and records what the dialog said for the verify variants.
+# ─────────────────────────────────────────────────────────────────────────────
+
+_LAST_DIALOG: dict = {"message": "", "type": "", "seen": False}
+
+
+def _arm_dialog(page, action: str, reply: str = "") -> None:
+    """Answer the next dialog once, remembering its text."""
+    def _handle(dialog):
+        _LAST_DIALOG.update({"message": dialog.message, "type": dialog.type,
+                             "seen": True})
+        try:
+            if action == "accept":
+                dialog.accept(reply) if reply else dialog.accept()
+            else:
+                dialog.dismiss()
+        except Exception:  # noqa: BLE001 — a dialog closed by the page itself
+            pass
+    page.once("dialog", _handle)
+
+
+def accept_alert(page, reply: str = "") -> None:
+    _arm_dialog(page, "accept", reply)
+    _settle_dialog(page)
+    logger.info("✅ Accepted browser alert%s", f" with '{reply}'" if reply else "")
+
+
+def dismiss_alert(page) -> None:
+    _arm_dialog(page, "dismiss")
+    _settle_dialog(page)
+    logger.info("✅ Dismissed browser alert")
+
+
+def type_into_alert(page, text: str) -> None:
+    """Answer a prompt() dialog with `text`."""
+    accept_alert(page, reply=text)
+
+
+def _settle_dialog(page, timeout_ms: int = 1500) -> None:
+    """Give an already-open dialog a moment to reach the handler."""
+    try:
+        page.wait_for_timeout(min(timeout_ms, 1500))
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def verify_alert_present(page) -> None:
+    if not _LAST_DIALOG.get("seen"):
+        _settle_dialog(page)
+    if not _LAST_DIALOG.get("seen"):
+        raise AssertionError(
+            "No browser alert appeared. If the alert is triggered by a step, put "
+            "`accept alert` or `dismiss alert` AFTER that step — the handler is "
+            "armed for the next dialog.")
+    logger.info("✅ Alert was present: %r", _LAST_DIALOG.get("message", ""))
+
+
+def verify_alert_text(page, expected: str) -> None:
+    verify_alert_present(page)
+    actual = _LAST_DIALOG.get("message", "")
+    if expected.strip().lower() not in actual.strip().lower():
+        raise AssertionError(f"Alert said {actual!r}, expected it to contain {expected!r}")
+    logger.info("✅ Alert text matched: %r", actual)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# COOKIES
+# ─────────────────────────────────────────────────────────────────────────────
+
+def delete_all_cookies(page) -> None:
+    page.context.clear_cookies()
+    logger.info("🍪 Cleared all cookies")
+
+
+def delete_cookie(page, name: str) -> None:
+    """Remove one cookie by re-adding every other cookie after a clear."""
+    ctx = page.context
+    keep = [c for c in ctx.cookies() if c.get("name") != name]
+    ctx.clear_cookies()
+    if keep:
+        ctx.add_cookies(keep)
+    logger.info("🍪 Deleted cookie %r", name)
+
+
+def verify_cookie(page, name: str) -> None:
+    if not any(c.get("name") == name for c in page.context.cookies()):
+        present = ", ".join(sorted(c.get("name", "") for c in page.context.cookies()))
+        raise AssertionError(f"Cookie {name!r} is not set. Present: {present or '(none)'}")
+    logger.info("✅ Cookie %r is set", name)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FILE UPLOAD / WINDOWS / FRAMES
+# ─────────────────────────────────────────────────────────────────────────────
+
+def upload_file(page, locator_name: str, file_path: str) -> None:
+    import os as _os
+
+    if not _os.path.exists(file_path):
+        raise ValueError(f"No file at {file_path!r} to upload.")
+    xpath, _dna = _resolve_live(page, locator_name)
+    _get_locator_root(page).locator(xpath).first.set_input_files(file_path)
+    logger.info("📎 Uploaded %s via %s", file_path, locator_name)
+
+
+def switch_window_title(page, title: str) -> None:
+    """Bring the window whose title contains `title` to the front."""
+    for candidate in page.context.pages:
+        try:
+            if title.strip().lower() in (candidate.title() or "").lower():
+                candidate.bring_to_front()
+                logger.info("🪟 Switched to window %r", candidate.title())
+                return candidate
+        except Exception:  # noqa: BLE001 — a page can close mid-iteration
+            continue
+    titles = []
+    for c in page.context.pages:
+        try:
+            titles.append(c.title())
+        except Exception:  # noqa: BLE001
+            pass
+    raise AssertionError(f"No open window titled like {title!r}. Open: {titles}")
+
+
+def parent_frame(page) -> None:
+    """Leave the current iframe for the one containing it."""
+    from execution import action_service as _self
+
+    setattr(_self, "_ACTIVE_FRAME", None)
+    logger.info("🖼️  Returned to the parent frame")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CONDITIONAL ACTIONS — "do this only if it is there"
+#
+# These existed on the Appium runner but not on web, so a step that ran fine on
+# Android failed to parse into anything dispatchable on the website. The case
+# they exist for is the same on both: a cookie banner, a login popup or an
+# interstitial that appears SOMETIMES. Without them a test either fails when the
+# popup is absent, or fails when it is present.
+#
+# A skipped step is logged, never silent — "it did nothing and said nothing" is
+# indistinguishable from a broken locator when a test later fails downstream.
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _visible_within(page, locator_name: str, timeout_s: float = 0):
+    """The element's locator if it becomes visible in time, else None."""
+    try:
+        xpath, _dna = _resolve_live(page, locator_name)
+    except Exception as e:  # noqa: BLE001 — an unknown element is simply absent here
+        logger.info("ℹ️  '%s' is not in the element database — treating as absent (%s)",
+                    locator_name, e)
+        return None
+    loc = _get_locator_root(page).locator(xpath).first
+    try:
+        loc.wait_for(state="visible", timeout=int(max(timeout_s, 0.5) * 1000))
+        return loc
+    except Exception:  # noqa: BLE001 — not appearing is the expected outcome
+        return None
+
+
+def click_if_visible(page, locator_name: str, timeout_s: float = 0) -> None:
+    loc = _visible_within(page, locator_name, timeout_s)
+    if loc is None:
+        logger.info("ℹ️  click_if_visible: '%s' not visible — skipped", locator_name)
+        return
+    try:
+        loc.click()
+        logger.info("✅ click_if_visible: clicked '%s'", locator_name)
+    except Exception as e:  # noqa: BLE001
+        # It was visible a moment ago and is not clickable now — an overlay
+        # closing, usually. Worth saying, not worth failing.
+        logger.info("ℹ️  click_if_visible: '%s' appeared but the click failed (%s)",
+                    locator_name, e)
+
+
+def fill_if_visible(page, locator_name: str, text: str, timeout_s: float = 0) -> None:
+    loc = _visible_within(page, locator_name, timeout_s)
+    if loc is None:
+        logger.info("ℹ️  fill_if_visible: '%s' not visible — skipped", locator_name)
+        return
+    try:
+        loc.fill(text)
+        logger.info("✅ fill_if_visible: filled '%s'", locator_name)
+    except Exception as e:  # noqa: BLE001
+        logger.info("ℹ️  fill_if_visible: '%s' appeared but the fill failed (%s)",
+                    locator_name, e)
+
+
+def verify_if_visible(page, locator_name: str, timeout_s: float = 0) -> None:
+    """Passes when the element is absent — it asserts nothing about presence."""
+    loc = _visible_within(page, locator_name, timeout_s)
+    if loc is None:
+        logger.info("ℹ️  verify_if_visible: '%s' not present — nothing to check",
+                    locator_name)
+        return
+    logger.info("✅ verify_if_visible: '%s' is present", locator_name)
+
+
+def click_if_exists(page, locator_name: str) -> None:
+    """
+    Clicks when the element is in the DOM, visible or not.
+
+    Distinct from click_if_visible on purpose: a menu item inside a collapsed
+    accordion exists but is not visible, and the two cases want different
+    answers.
+    """
+    try:
+        xpath, _dna = _resolve_live(page, locator_name)
+    except Exception:  # noqa: BLE001
+        logger.info("ℹ️  click_if_exists: '%s' is not in the element database — skipped",
+                    locator_name)
+        return
+    loc = _get_locator_root(page).locator(xpath).first
+    try:
+        if loc.count() == 0:
+            logger.info("ℹ️  click_if_exists: '%s' not in the DOM — skipped", locator_name)
+            return
+        loc.click()
+        logger.info("✅ click_if_exists: clicked '%s'", locator_name)
+    except Exception as e:  # noqa: BLE001
+        logger.info("ℹ️  click_if_exists: '%s' exists but the click failed (%s)",
+                    locator_name, e)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TEXT MATCHING
+#
+# "contains" and "exact" were the only two shapes available, which forces an
+# exact assertion on text that is only partly stable — an order id, a price with
+# a varying amount, a message whose wording changes. Asserting the whole string
+# then breaks on every unrelated copy change, so people stop asserting at all.
+#
+# Page-level matchers read the rendered body text once and compare in Python,
+# rather than asking the browser for a locator: "does the page end with X" is a
+# question about the whole document, not about an element.
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _page_text(page) -> str:
+    """The visible text of the page, whitespace-collapsed for comparison."""
+    try:
+        raw = page.inner_text("body")
+    except Exception:  # noqa: BLE001 — a page mid-navigation has no body yet
+        page.wait_for_load_state("domcontentloaded")
+        raw = page.inner_text("body")
+    return re.sub(r"\s+", " ", raw or "").strip()
+
+
+def _element_text(page, locator_name: str) -> str:
+    xpath, _dna = _resolve_live(page, locator_name)
+    raw = _get_locator_root(page).locator(xpath).first.inner_text()
+    return re.sub(r"\s+", " ", raw or "").strip()
+
+
+def _report(kind: str, where: str, expected: str, actual: str, ok: bool) -> None:
+    if ok:
+        logger.info("✅ %s %s %r", where, kind, expected)
+        return
+    # The actual text is quoted and trimmed: a failure that does not show what
+    # WAS there sends you to re-run it by hand just to find out.
+    shown = actual if len(actual) <= 300 else actual[:300] + "…"
+    raise AssertionError(
+        f"{where} does not {kind} {expected!r}.\n  actual: {shown!r}")
+
+
+def verify_page_contains(page, text: str) -> None:
+    body = _page_text(page)
+    _report("contain", "The page", text, body, str(text) in body)
+
+
+def verify_page_not_contains(page, text: str) -> None:
+    body = _page_text(page)
+    if str(text) in body:
+        raise AssertionError(f"The page DOES contain {text!r}, and should not.")
+    logger.info("✅ The page does not contain %r", text)
+
+
+def verify_page_starts(page, text: str) -> None:
+    body = _page_text(page)
+    _report("start with", "The page", text, body, body.startswith(str(text)))
+
+
+def verify_page_ends(page, text: str) -> None:
+    body = _page_text(page)
+    _report("end with", "The page", text, body, body.endswith(str(text)))
+
+
+def verify_page_matches(page, pattern: str) -> None:
+    body = _page_text(page)
+    try:
+        rx = re.compile(str(pattern))
+    except re.error as e:
+        # A bad pattern is an authoring mistake, not a test failure — say which.
+        raise ValueError(f"{pattern!r} is not a valid regular expression: {e}") from e
+    _report("match", "The page", pattern, body, bool(rx.search(body)))
+
+
+def verify_title_contains(page, text: str) -> None:
+    title = (page.title() or "").strip()
+    _report("contain", "The page title", text, title, str(text) in title)
+
+
+def verify_title_exact(page, text: str) -> None:
+    title = (page.title() or "").strip()
+    _report("equal", "The page title", text, title, title == str(text).strip())
+
+
+def verify_element_starts(page, locator_name: str, text: str) -> None:
+    actual = _element_text(page, locator_name)
+    _report("start with", f"'{locator_name}'", text, actual,
+            actual.startswith(str(text)))
+
+
+def verify_element_ends(page, locator_name: str, text: str) -> None:
+    actual = _element_text(page, locator_name)
+    _report("end with", f"'{locator_name}'", text, actual, actual.endswith(str(text)))
+
+
+def verify_element_matches(page, locator_name: str, pattern: str) -> None:
+    actual = _element_text(page, locator_name)
+    try:
+        rx = re.compile(str(pattern))
+    except re.error as e:
+        raise ValueError(f"{pattern!r} is not a valid regular expression: {e}") from e
+    _report("match", f"'{locator_name}'", pattern, actual, bool(rx.search(actual)))
+
+
+def verify_element_not_contains(page, locator_name: str, text: str) -> None:
+    actual = _element_text(page, locator_name)
+    if str(text) in actual:
+        raise AssertionError(
+            f"'{locator_name}' DOES contain {text!r}, and should not.\n"
+            f"  actual: {actual[:300]!r}")
+    logger.info("✅ '%s' does not contain %r", locator_name, text)
+
+
+def set_browser_permission(page, permission: str, decision: str) -> None:
+    """
+    Grant or refuse ONE browser permission mid-test.
+
+    Run Center sets a policy for the whole run; this is for the test that needs
+    geolocation granted and notifications refused. Playwright decides these at
+    the context, and auto-dismisses any prompt for a permission that was not
+    granted — so "deny" is expressed by revoking rather than by clicking a
+    dialog no locator can reach.
+
+    "once" grants the permission for the CURRENT page's origin only, which is
+    what a real prompt's "Allow this time" does.
+    """
+    context = page.context
+    perm = (permission or "").strip().lower()
+    decision = (decision or "allow").strip().lower()
+    try:
+        if decision == "deny":
+            context.clear_permissions()
+            logger.info("🔒 Refused browser permission '%s' (all grants cleared)", perm)
+            return
+        origin = None
+        if decision == "once":
+            try:
+                origin = page.url.split("/")[0] + "//" + page.url.split("/")[2]
+            except Exception:  # noqa: BLE001 — about:blank and similar
+                origin = None
+        context.grant_permissions([perm], origin=origin) if origin \
+            else context.grant_permissions([perm])
+        logger.info("🔓 Granted browser permission '%s'%s", perm,
+                    f" for {origin}" if origin else "")
+    except Exception as e:  # noqa: BLE001
+        # An unknown permission name is a test-authoring mistake, not a crash.
+        raise ValueError(
+            f"Could not set browser permission '{perm}': {e}. Valid names include "
+            f"geolocation, notifications, camera, microphone, clipboard-read.") from e
+
+
 def take_screenshot(page_obj, label="capture"):
     import os
     if not settings.ENABLE_SCREENSHOTS:
@@ -765,7 +1145,15 @@ def take_screenshot(page_obj, label="capture"):
     _ensure_dir(settings.SCREENSHOTS_DIR)
     _fmt = "jpeg" if settings.SCREENSHOT_FORMAT in ("jpeg", "jpg") else "png"
     _ext = "jpg" if _fmt == "jpeg" else "png"
-    filename = os.path.join(settings.SCREENSHOTS_DIR, f"{label}_{_timestamp()}.{_ext}")
+    # The label reaches a filesystem path, so it is sanitised HERE rather than
+    # trusting the caller. nlp/parser already strips separators from a `take
+    # screenshot as …` step, but that is one caller among several — a codeless
+    # JSON step, a plan, or a future snippet taking a label would each have to
+    # remember. Anything that is not a plain name becomes one.
+    safe_label = re.sub(r"[^A-Za-z0-9_.-]+", "_", str(label or "")).strip(".-")
+    if not safe_label or not any(ch.isalnum() for ch in safe_label):
+        safe_label = "capture"
+    filename = os.path.join(settings.SCREENSHOTS_DIR, f"{safe_label}_{_timestamp()}.{_ext}")
     _shot_kwargs = {"type": _fmt}
     if _fmt == "jpeg":
         _shot_kwargs["quality"] = settings.SCREENSHOT_QUALITY

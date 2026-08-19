@@ -263,12 +263,6 @@
         "class_name": "android.widget.TextView",
         "xpath": "//android.widget.TextView[@resource-id='com.justdial.search:id/icomp_name']"
       },
-      "11_a_luxury_spa": {
-        "resource_id": "com.justdial.search:id/icomp_name",
-        "text": "11 A Luxury Spa",
-        "class_name": "android.widget.TextView",
-        "xpath": "//android.widget.TextView[@resource-id='com.justdial.search:id/icomp_name']"
-      },
       "detailspage_companyname": {
         "resource_id": "com.justdial.search:id/tvCompanyName",
         "text": "11 A Luxury Spa",
@@ -280,6 +274,12 @@
         "text": "Spas Near Me",
         "class_name": "android.widget.TextView",
         "xpath": "//android.widget.TextView[@resource-id='com.justdial.search:id/displayTxt']"
+      },
+      "result_11_a_luxury_spa": {
+        "resource_id": "com.justdial.search:id/icomp_name",
+        "text": "11 A Luxury Spa",
+        "class_name": "android.widget.TextView",
+        "xpath": "//android.widget.TextView[@resource-id='com.justdial.search:id/icomp_name']"
       }
     },
     "otp_screen": {},
@@ -515,6 +515,28 @@
       "_absence_guard": true,
       "_evidence": "0 matches \u2014 asserts this element is absent",
       "_note": "Guard only. Use with 'verify element ... is not present'. It has no DNA because there is no element to describe, so ML healing does not apply."
+    }
+  },
+  "jd_business_select_business": {
+    "zxy_md_papad": {
+      "xpath": "//*[text()='Zxy Md Papad']",
+      "dna": {}
+    }
+  },
+  "qa_portal": {
+    "fetched_otp": {
+      "xpath": "//*[@id=\"otpMessageText\"]/span[1]",
+      "dna": {}
+    }
+  },
+  "business_listing": {
+    "popup_cross_assist_call": {
+      "xpath": "//button[@aria-label=\"close\"]",
+      "dna": {}
+    },
+    "mobile_field": {
+      "xpath": "//input[@aria-label=\"Enter Mobile Number 1\"]",
+      "dna": {}
     }
   }
 }

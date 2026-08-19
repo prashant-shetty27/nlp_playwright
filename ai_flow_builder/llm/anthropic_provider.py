@@ -20,8 +20,10 @@ from __future__ import annotations
 
 import os
 
+from pydantic import ValidationError
 from ai_flow_builder.llm import (Completion, ProviderError,
-                                 ProviderNotConfigured, ProviderRefused)
+                                 ProviderNotConfigured, ProviderRefused,
+                                 ProviderUnavailable)
 
 DEFAULT_MODEL = "claude-opus-5"
 
@@ -68,6 +70,51 @@ class AnthropicProvider:
         return anthropic.Anthropic()
 
     def complete_structured(self, *, system: str, user: str, schema) -> Completion:
+        import anthropic
+
+        # SDK exceptions must not escape this adapter. An unhandled 529 from the
+        # provider surfaced as a 500 with a stack trace, which tells the operator
+        # nothing actionable — the useful message is "overloaded, try again".
+        # (The SDK already retries 429/5xx twice; reaching here means those failed.)
+        try:
+            return self._parse(system=system, user=user, schema=schema)
+        except ValidationError as e:
+            # Structured output normally guarantees well-formed JSON, but a
+            # malformed body does get through (seen in the wild: a trailing
+            # comma). That surfaced as a pydantic traceback and an HTTP 500.
+            # One retry costs a few seconds and usually lands; two failures in a
+            # row is a real problem and says so in words.
+            try:
+                return self._parse(system=system, user=user, schema=schema)
+            except ValidationError as again:
+                raise ProviderError(
+                    "The model returned output that did not match the expected "
+                    f"shape, twice: {str(again)[:160]}. Try again, or reduce the "
+                    "number of testcases requested."
+                ) from e
+        except anthropic.RateLimitError as e:
+            retry = e.response.headers.get("retry-after") if e.response else None
+            raise ProviderUnavailable(
+                "Rate limited by Anthropic"
+                + (f"; retry after {retry}s" if retry else ""),
+                retry_after=int(retry) if retry and retry.isdigit() else None,
+            ) from e
+        except anthropic.APIStatusError as e:
+            if e.status_code in (429, 500, 502, 503, 529):
+                raise ProviderUnavailable(
+                    f"Anthropic is temporarily unavailable (HTTP {e.status_code}). "
+                    f"This is transient — try again in a moment."
+                ) from e
+            raise ProviderError(
+                f"Anthropic rejected the request (HTTP {e.status_code}): "
+                f"{getattr(e, 'message', str(e))[:200]}"
+            ) from e
+        except anthropic.APIConnectionError as e:
+            raise ProviderUnavailable(
+                f"Could not reach Anthropic: {str(e)[:160]}"
+            ) from e
+
+    def _parse(self, *, system: str, user: str, schema) -> Completion:
         res = self._client().messages.parse(
             model=self.model,
             max_tokens=16000,

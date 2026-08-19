@@ -1,0 +1,98 @@
+{
+  "flow_name": "ask_more_photos_prompt",
+  "flow_path": "/Users/prashantshetty/nlp_playwright/data/drafts/src_43c735155d39_TC_ASKMOREPHOTOS_01.flow",
+  "generated_at": "2026-08-18T17:36:14Z",
+  "source_testcases": [
+    "TC_ASKMOREPHOTOS_01"
+  ],
+  "source": {
+    "kind": "prompt",
+    "title": "Test the Ask More Photos flow on https://designtest.justdial.com/jdmart/Mumbai/A",
+    "location": "operator prompt",
+    "access": "drafted by anthropic/claude-sonnet-5",
+    "modified_utc": "n/a"
+  },
+  "placeholders": {},
+  "steps": [
+    {
+      "step": 1,
+      "line": 6,
+      "statement": "open ${test_url}",
+      "action": "open",
+      "source": "TC_ASKMOREPHOTOS_01 row 2",
+      "manual_instruction": "Navigate to ${test_url}",
+      "expected": "",
+      "note": ""
+    },
+    {
+      "step": 2,
+      "line": 7,
+      "statement": "click ask_more_photos_cta",
+      "action": "click",
+      "source": "TC_ASKMOREPHOTOS_01 row 3",
+      "manual_instruction": "Click on element AskMorePhotosCTA",
+      "expected": "",
+      "note": "",
+      "locator": "ask_more_photos_cta",
+      "selector": "div.photoreqwrap",
+      "stored_in": "data/locators_manual.json",
+      "edit_hint": "change the 'custom_xpath'/'selectors' of 'ask_more_photos_cta' if the DOM moved"
+    },
+    {
+      "step": 3,
+      "line": 8,
+      "statement": "verify element mobile_number_input is visible",
+      "action": "verify_element_visible",
+      "source": "TC_ASKMOREPHOTOS_01 row 4",
+      "manual_instruction": "Verify that element MobileNumberInput is displayed",
+      "expected": "",
+      "note": "",
+      "locator": "mobile_number_input",
+      "selector": "input[placeholder=\"Mobile Number\"]",
+      "stored_in": "data/locators_manual.json",
+      "edit_hint": "change the 'custom_xpath'/'selectors' of 'mobile_number_input' if the DOM moved"
+    },
+    {
+      "step": 4,
+      "line": 9,
+      "statement": "type \"${test_mobile}\" into mobile_number_input",
+      "action": "fill",
+      "source": "TC_ASKMOREPHOTOS_01 row 5",
+      "manual_instruction": "Enter ${test_mobile} in element MobileNumberInput",
+      "expected": "",
+      "note": "",
+      "locator": "mobile_number_input",
+      "selector": "input[placeholder=\"Mobile Number\"]",
+      "stored_in": "data/locators_manual.json",
+      "edit_hint": "change the 'custom_xpath'/'selectors' of 'mobile_number_input' if the DOM moved"
+    },
+    {
+      "step": 5,
+      "line": 10,
+      "statement": "click login_with_otp",
+      "action": "click",
+      "source": "TC_ASKMOREPHOTOS_01 row 6",
+      "manual_instruction": "Click on element LoginWithOtp",
+      "expected": "",
+      "note": "",
+      "locator": "login_with_otp",
+      "selector": "//button[@id='loginOtpTriggerBtn']",
+      "stored_in": "data/locators_manual.json",
+      "edit_hint": "change the 'custom_xpath'/'selectors' of 'login_with_otp' if the DOM moved"
+    },
+    {
+      "step": 6,
+      "line": 11,
+      "statement": "verify element otp_input is visible",
+      "action": "verify_element_visible",
+      "source": "TC_ASKMOREPHOTOS_01 row 7",
+      "manual_instruction": "Verify that element OtpInput is displayed",
+      "expected": "",
+      "note": "",
+      "locator": "otp_input",
+      "selector": "#otpfield input.pin",
+      "stored_in": "data/locators_manual.json",
+      "edit_hint": "change the 'custom_xpath'/'selectors' of 'otp_input' if the DOM moved"
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "source_id": "src_6995de25a8e7",
+  "filename": "draft.json",
+  "kind": "prompt",
+  "size_bytes": 3510,
+  "sha256": "89d136d5873f903f08e9e42d718fb8378b7f45557f38e43fe1cbcdf83b9faaaf",
+  "uploaded_at": "2026-08-19T06:33:47Z",
+  "uploaded_by": "",
+  "extra": {
+    "prompt": "open this url https://staging2.justdial.com/rne/JDM42UP7BK/JA\ncheck Referral Code (JDM42UP7BK) Applied  \u2022 You got 15 days Free trial\nthen enter number 7715882134 & then fetch otp open http://172.29.86.98:8080/tools enter mobile 7715882134 copy & enter otp \nverifiction select you business page - 'zxy md papad' proceed ahead\nverification calim your free trial page",
+    "provider": "anthropic",
+    "model": "claude-sonnet-5",
+    "testcases": 3,
+    "values_found": {
+      "referral_url": "https://staging2.justdial.com/rne/JDM42UP7BK/JA",
+      "mobile": "7715882134",
+      "otp_tool_url": "http://172.29.86.98:8080/tools"
+    },
+    "inputs_needed": [],
+    "assumptions": [],
+    "unclear": []
+  }
+}

@@ -1,6 +1,41 @@
 {
-  "Web_B2B_HomePage": {
-    "Login": {
+  "web_b2b_homepage": {
+    "search_box": {
+      "tagName": "input",
+      "className": "jdmart_search_input",
+      "innerText": null,
+      "rect": {
+        "x": 582,
+        "y": 21,
+        "width": 437,
+        "height": 39
+      },
+      "attributes": {
+        "id": "cpinput",
+        "type": "text",
+        "autocomplete": "off",
+        "aria-autocomplete": "list",
+        "aria-controls": "react-autowhatever-1",
+        "class": "jdmart_search_input",
+        "placeholder": "Search \"CCTV Camera\"",
+        "aria-label": "search input"
+      },
+      "custom_xpath": "//input[@id='cpinput']"
+    },
+    "cctv_autosuggestion": {
+      "tagName": "b",
+      "className": null,
+      "innerText": "tv",
+      "rect": {
+        "x": 615,
+        "y": 113,
+        "width": 13,
+        "height": 20
+      },
+      "attributes": {},
+      "custom_xpath": "//b[normalize-space(text())='tv']"
+    },
+    "login": {
       "tagName": "span",
       "id": null,
       "className": "jsx-ed7426680879169a headnav_item_text pl-5 font14 fw500 colorFFF",
@@ -229,21 +264,6 @@
       },
       "custom_xpath": "//span[contains(@class,'jsx-55162c602a57c0bf') and normalize-space(.)='Search across']"
     },
-    "53_crore_business_text": {
-      "tagName": "span",
-      "className": "jsx-55162c602a57c0bf",
-      "innerText": "\u20185.3 Crore+\u2018 Businesses",
-      "rect": {
-        "x": 238,
-        "y": 100,
-        "width": 418,
-        "height": 39
-      },
-      "attributes": {
-        "class": "jsx-55162c602a57c0bf"
-      },
-      "custom_xpath": "//span[contains(@class,'jsx-55162c602a57c0bf') and normalize-space(.)='\u20185.3 Crore+\u2018 Businesses']"
-    },
     "movies_thumbnail": {
       "tagName": "figcaption",
       "className": "color111 font14 pt-10",
@@ -312,6 +332,21 @@
         "class": "color111 font14 pt-10"
       },
       "custom_xpath": "//figcaption[contains(@class,'color111') and contains(@class,'pt-10') and normalize-space(.)='Caterers']"
+    },
+    "text_53_crore_business": {
+      "tagName": "span",
+      "className": "jsx-55162c602a57c0bf",
+      "innerText": "\u20185.3 Crore+\u2018 Businesses",
+      "rect": {
+        "x": 238,
+        "y": 100,
+        "width": 418,
+        "height": 39
+      },
+      "attributes": {
+        "class": "jsx-55162c602a57c0bf"
+      },
+      "custom_xpath": "//span[contains(@class,'jsx-55162c602a57c0bf') and normalize-space(.)='\u20185.3 Crore+\u2018 Businesses']"
     }
   },
   "home_page": {
@@ -1294,43 +1329,6 @@
       "custom_xpath": "//div[contains(@class,'jsx-29825056') and contains(@class,'hl_area_text_inner') and normalize-space(.)='Mumbai-400064']"
     }
   },
-  "web_b2b_homepage": {
-    "search_box": {
-      "tagName": "input",
-      "className": "jdmart_search_input",
-      "innerText": null,
-      "rect": {
-        "x": 582,
-        "y": 21,
-        "width": 437,
-        "height": 39
-      },
-      "attributes": {
-        "id": "cpinput",
-        "type": "text",
-        "autocomplete": "off",
-        "aria-autocomplete": "list",
-        "aria-controls": "react-autowhatever-1",
-        "class": "jdmart_search_input",
-        "placeholder": "Search \"CCTV Camera\"",
-        "aria-label": "search input"
-      },
-      "custom_xpath": "//input[@id='cpinput']"
-    },
-    "cctv_autosuggestion": {
-      "tagName": "b",
-      "className": null,
-      "innerText": "tv",
-      "rect": {
-        "x": 615,
-        "y": 113,
-        "width": 13,
-        "height": 20
-      },
-      "attributes": {},
-      "custom_xpath": "//b[normalize-space(text())='tv']"
-    }
-  },
   "web_b2b_prp": {
     "search_heading_title": {
       "tagName": "h1",
@@ -1498,7 +1496,22 @@
       },
       "custom_xpath": "//button[@id='loginOtpTriggerBtn']"
     },
-    "0": {
+    "your_friend_text": {
+      "tagName": "span",
+      "className": "jsx-a614deb88c926a86 font15 fw500",
+      "innerText": "Your friend Prashant rated 4/5",
+      "rect": {
+        "x": 353,
+        "y": 215,
+        "width": 224,
+        "height": 22
+      },
+      "attributes": {
+        "class": "jsx-a614deb88c926a86 font15 fw500"
+      },
+      "custom_xpath": "//span[contains(@class,'jsx-a614deb88c926a86') and contains(@class,'fw500') and normalize-space(.)='Your friend Prashant rated 4/5']"
+    },
+    "otp_digit_1": {
       "tagName": "input",
       "className": "jsx-c21ded63fbf3c5d8 otpfield",
       "innerText": null,
@@ -1523,7 +1536,7 @@
       },
       "custom_xpath": "//input[@id='0']"
     },
-    "1": {
+    "otp_digit_2": {
       "tagName": "input",
       "className": "jsx-c21ded63fbf3c5d8 otpfield",
       "innerText": null,
@@ -1548,7 +1561,7 @@
       },
       "custom_xpath": "//input[@id='1']"
     },
-    "2": {
+    "otp_digit_3": {
       "tagName": "input",
       "className": "jsx-c21ded63fbf3c5d8 otpfield",
       "innerText": null,
@@ -1573,7 +1586,7 @@
       },
       "custom_xpath": "//input[@id='2']"
     },
-    "3": {
+    "otp_digit_4": {
       "tagName": "input",
       "className": "jsx-c21ded63fbf3c5d8 otpfield",
       "innerText": null,
@@ -1598,7 +1611,7 @@
       },
       "custom_xpath": "//input[@id='3']"
     },
-    "4": {
+    "otp_digit_5": {
       "tagName": "input",
       "className": "jsx-c21ded63fbf3c5d8 otpfield",
       "innerText": null,
@@ -1623,7 +1636,7 @@
       },
       "custom_xpath": "//input[@id='4']"
     },
-    "5": {
+    "otp_digit_6": {
       "tagName": "input",
       "className": "jsx-c21ded63fbf3c5d8 otpfield",
       "innerText": null,
@@ -1647,21 +1660,6 @@
         "class": "jsx-c21ded63fbf3c5d8 otpfield"
       },
       "custom_xpath": "//input[@id='5']"
-    },
-    "your_friend_text": {
-      "tagName": "span",
-      "className": "jsx-a614deb88c926a86 font15 fw500",
-      "innerText": "Your friend Prashant rated 4/5",
-      "rect": {
-        "x": 353,
-        "y": 215,
-        "width": 224,
-        "height": 22
-      },
-      "attributes": {
-        "class": "jsx-a614deb88c926a86 font15 fw500"
-      },
-      "custom_xpath": "//span[contains(@class,'jsx-a614deb88c926a86') and contains(@class,'fw500') and normalize-space(.)='Your friend Prashant rated 4/5']"
     }
   },
   "web_result_page": {

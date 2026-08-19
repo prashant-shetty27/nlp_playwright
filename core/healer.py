@@ -102,10 +102,15 @@ def build_locator_from_dna(element_dna: dict) -> str:
     return f"//{tag}"
 
 
-def ml_heal_element(page, target_dna: dict) -> str | None:
+def ml_heal_element(page, target_dna: dict, locator_name: str = "") -> str | None:
     """
     Self-healing orchestration for web / mobile-web (Playwright).
     Scrapes current DOM, runs ML, returns healed XPath or None.
+
+    When `locator_name` is given and the match is confident, the result is
+    written back to the locator database as an alternate — so the next run
+    resolves it without another DOM scrape and ML pass, and a selector that has
+    genuinely moved stops being silently re-derived forever.
     """
     candidates = scrape_dom_web(page)
     logger.info("🧠 ML Engine analyzing %d candidates...", len(candidates))
@@ -115,7 +120,21 @@ def ml_heal_element(page, target_dna: dict) -> str | None:
         logger.error("❌ ML Engine could not confidently match an element.")
         return None
 
-    return build_locator_from_dna(winner_dna)
+    healed = build_locator_from_dna(winner_dna)
+    if healed and locator_name:
+        from locators.healing_memory import record_heal
+
+        report = record_heal(locator_name, healed,
+                             score=float(winner_dna.get("_heal_score", 0.0)),
+                             original_failed=True, dna=winner_dna)
+        if report.get("promoted"):
+            logger.info("🏥 %r now resolves to the healed selector by default.",
+                        locator_name)
+        elif report.get("stored"):
+            logger.info("🏥 Remembered healed selector for %r (use %d/%d before "
+                        "it becomes primary).", locator_name, report["uses"],
+                        __import__("locators.healing_memory", fromlist=["x"]).PROMOTE_AFTER)
+    return healed
 
 
 def ml_heal_element_appium(driver, target_dna: dict) -> str | None:

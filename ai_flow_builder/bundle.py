@@ -24,7 +24,10 @@ from ai_flow_builder.testcase import Rejection, Testcase, _norm
 
 # Testsigma variable syntax:  $|NAME|  →  framework syntax:  ${NAME}
 TESTSIGMA_VAR = re.compile(r"\$\|([A-Za-z0-9_.\-]+)\|")
-FRAMEWORK_VAR = re.compile(r"\$\{([A-Za-z0-9_.\-]+)\}")
+#: ${...} as the RUNTIME resolves it — see nlp/variables.REFERENCE_RE.
+#: A narrower pattern here meant a step could reference something the
+#: pipeline never counted as a variable at all.
+from nlp.variables import REFERENCE_RE as FRAMEWORK_VAR  # noqa: E402
 
 
 def convert_variables(text: str) -> tuple[str, list[tuple[str, str]]]:

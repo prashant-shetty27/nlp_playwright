@@ -1,0 +1,11 @@
+# ask_more_photos_prompt
+# Source : Test the Ask More Photos flow on https://designtest.justdial.com/jdmart/Mumbai/A | TC_ASKMOREPHOTOS_01
+# Params : test_url test_mobile
+# Map    : data/drafts/src_43c735155d39_TC_ASKMOREPHOTOS_01.map.json  (step -> source row, locator, selector, expected)
+
+open ${test_url}
+click ask_more_photos_cta
+verify element mobile_number_input is visible
+type "${test_mobile}" into mobile_number_input
+click login_with_otp
+verify element otp_input is visible

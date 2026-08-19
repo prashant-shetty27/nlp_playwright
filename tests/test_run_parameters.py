@@ -85,11 +85,19 @@ try:
 
     print("\n[2] VALUES REACH THE FLOW")
 
+    # A missing value is now refused BEFORE the browser opens. It used to launch
+    # and fail once per step with "Variable '${x}' is not stored in memory!" —
+    # five failures describing one omission, none of them saying what to do.
     j = run({"project": "_paramtest", "headless": True, "platform": "website"})
-    check("without the parameter the run fails", j.get("failed", 0) > 0)
-    check("and it fails for the RIGHT reason (variable not stored)",
-          any("not stored in memory" in (l.get("error") or "") for l in j.get("log", [])),
-          str([l.get("error") for l in j.get("log", [])][:1]))
+    check("a run with no value for a required parameter is refused up front",
+          j.get("http") == 422, str(j)[:160])
+    check("the refusal names the parameter that is missing",
+          "probe_url" in (j.get("detail") or ""), str(j.get("detail"))[:160])
+    check("and says where to supply it",
+          "Run Center" in (j.get("detail") or "") or "Test Data" in (j.get("detail") or ""),
+          str(j.get("detail"))[:160])
+    check("nothing was executed, so no half-run is recorded",
+          "passed" not in j, str(j)[:120])
 
     j = run({"project": "_paramtest", "headless": True, "platform": "website",
              "parameters": {"probe_url": "https://example.com/ok"}})
@@ -168,6 +176,149 @@ try:
 finally:
     if os.path.exists(PROBE):
         os.unlink(PROBE)
+
+# ═══════════════════════════════════════════════════════════════════════════
+# A generated flow must DECLARE the values it expects from its caller.
+#
+# Fourth defect, same family: a flow referencing ${test_url} carried the header
+# "# Params : none" — emitter.render_clean read a `placeholders` dict that
+# POST /generate never populated — and tools/flow_lint.py had no notion of run
+# inputs at all, so it rejected the parameterised flow it had just been handed
+# with E004 on the flow's own first statement. The flow was correct and runnable;
+# the gate could not see it. Both halves are asserted here against the live
+# emitter and the live linter, not against a fixture.
+# ═══════════════════════════════════════════════════════════════════════════
+print("\n[params header] declared, honoured, and not over-declared")
+
+import subprocess  # noqa: E402
+import tempfile  # noqa: E402
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+from ai_flow_builder.emitter import run_parameters  # noqa: E402
+
+check("a referenced-but-never-defined variable is a run parameter",
+      run_parameters(["open ${test_url}"]) == ["test_url"])
+check("order follows first use, so the header reads like the flow",
+      run_parameters(["open ${b}", 'type "${a}" into f']) == ["b", "a"])
+check("a variable an earlier step produces is NOT a run parameter",
+      run_parameters(["store text of loc as cap",
+                      'verify stored cap contains "x"']) == [])
+check("create variable counts as producing it",
+      run_parameters(['create variable v with value "x"', "open ${v}"]) == [])
+check("fetch otp counts as producing it",
+      run_parameters(['fetch otp for "9" as otp',
+                      'enter otp "${otp}" into f']) == [])
+check("used before the step that defines it is still a run parameter",
+      run_parameters(["open ${v}", 'create variable v with value "x"']) == ["v"])
+check("an unparseable line defines nothing and does not crash the deriver",
+      run_parameters(["!! not a statement !!", "open ${x}"]) == ["x"])
+
+# The linter half. Written to a real file because that is what flow_lint reads.
+def _lint(text: str) -> tuple[int, str]:
+    fd, path = tempfile.mkstemp(suffix=".flow", dir=os.path.join(BASE_DIR, "flows"))
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(text)
+        proc = subprocess.run(
+            [sys.executable, "tools/flow_lint.py", path, "--platform", "website"],
+            capture_output=True, text=True, cwd=BASE_DIR, timeout=120)
+        return proc.returncode, proc.stdout + proc.stderr
+    finally:
+        os.unlink(path)
+
+rc, out = _lint("# t\n# Params : declared_url\n\nopen ${declared_url}\n")
+check("a declared parameter satisfies the linter", rc == 0, out.strip()[:160])
+
+rc, out = _lint("# t\n# Params : none\n\nopen ${undeclared_url}\n")
+check("an UNdeclared variable is still an error — no blanket amnesty",
+      rc != 0 and "undeclared_url" in out, out.strip()[:160])
+
+rc, out = _lint("# t\n\nopen ${no_header_at_all}\n")
+check("a flow with no Params header is unaffected",
+      rc != 0 and "no_header_at_all" in out, out.strip()[:160])
+
+rc, out = _lint("# t\n# Params : a\n\nopen x\n# Params : b\nopen ${b}\n")
+check("only the header is read — a later '# Params' comment grants nothing",
+      rc != 0 and "'${b}'" in out, out.strip()[:160])
+
+# End to end: what the emitter writes must be what the linter accepts.
+from ai_flow_builder import emitter as _em  # noqa: E402
+from ai_flow_builder.mapper import SUPPORTED, StepMapping  # noqa: E402
+
+_maps = [StepMapping(statement="open ${test_url}", status=SUPPORTED, source_ref="r1"),
+         StepMapping(statement='type "${test_mobile}" into mobile_number_input',
+                     status=SUPPORTED, source_ref="r2")]
+_text = _em.render_clean(flow_name="hdr", source_ids=["TC1"], source_desc={"title": "t"},
+                         mappings=_maps, placeholders={}, map_path="")
+check("emitter declares both parameters even with placeholders={}",
+      "# Params : test_url test_mobile" in _text,
+      [l for l in _text.splitlines() if "Params" in l])
+rc, out = _lint(_text)
+check("the emitter's own output passes the linter unchanged", rc == 0, out.strip()[:200])
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# The editor's save path must produce the same quality of file as generation.
+#
+# Found by driving the UI: the New Test Case dialog generates with persist=False
+# and saves through PUT/POST /projects, which wrote bare statements. So a flow
+# authored in the browser failed E004 while byte-identical steps written by the
+# generator passed — and worse, _read_steps drops comments while update_project
+# rewrites the whole file, so editing one step of a GENERATED flow deleted its
+# "# Source" and "# Map" lines for good.
+# ═══════════════════════════════════════════════════════════════════════════
+print("\n[projects] editor saves are declared and keep their provenance")
+
+def _lint_named(name: str) -> tuple[int, str]:
+    proc = subprocess.run(
+        [sys.executable, "tools/flow_lint.py", f"flows/{name}.flow", "--platform", "website"],
+        capture_output=True, text=True, cwd=BASE_DIR, timeout=120)
+    return proc.returncode, proc.stdout + proc.stderr
+
+_A, _B = "_pt_create", "_pt_roundtrip"
+try:
+    c.delete(f"/projects/{_A}")
+    r = c.post("/projects", json={"name": _A, "steps": [
+        "open ${page_url}", 'type "${test_mobile}" into mobile_number_input']})
+    check("POST /projects accepts a parameterised flow", r.status_code == 201, r.text[:120])
+    _txt = open(os.path.join(BASE_DIR, "flows", f"{_A}.flow"), encoding="utf-8").read()
+    check("it declares both parameters",
+          "# Params : page_url test_mobile" in _txt,
+          [l for l in _txt.splitlines() if "Params" in l])
+    rc, out = _lint_named(_A)
+    check("a flow saved from the editor passes the linter", rc == 0, out.strip()[:160])
+
+    # A generated flow, opened in the editor and saved with one step added.
+    with open(os.path.join(BASE_DIR, "flows", f"{_B}.flow"), "w", encoding="utf-8") as f:
+        f.write("# gen\n# Source : sheet | TC1\n# Params : old\n"
+                "# Map    : data/drafts/x.map.json\n\nopen ${page_url}\n")
+    _steps = c.get(f"/projects/{_B}").json()["steps"]
+    check("the editor reads statements only (comments are not steps)",
+          _steps == ["open ${page_url}"], _steps)
+    c.put(f"/projects/{_B}", json={"steps": _steps + ['type "${test_mobile}" into mobile_number_input']})
+    _txt = open(os.path.join(BASE_DIR, "flows", f"{_B}.flow"), encoding="utf-8").read()
+    check("editing a generated flow keeps its Source line", "# Source : sheet | TC1" in _txt, _txt[:120])
+    check("editing a generated flow keeps its Map line", "# Map    : data/drafts/x.map.json" in _txt, _txt[:120])
+    check("the stale 'old' parameter is not carried over", "old" not in _txt, _txt[:120])
+    check("the newly-referenced parameter is declared",
+          "# Params : page_url test_mobile" in _txt,
+          [l for l in _txt.splitlines() if "Params" in l])
+    rc, out = _lint_named(_B)
+    check("the edited flow passes the linter", rc == 0, out.strip()[:160])
+
+    # Dropping the last ${variable} must drop the declaration, not keep a lie.
+    c.put(f"/projects/{_B}", json={"steps": ["click login_with_otp"]})
+    _txt = open(os.path.join(BASE_DIR, "flows", f"{_B}.flow"), encoding="utf-8").read()
+    check("removing every variable removes the Params line", "Params" not in _txt, _txt[:120])
+    check("the header still survives that write", "# Source : sheet | TC1" in _txt, _txt[:120])
+finally:
+    for _n in (_A, _B):
+        c.delete(f"/projects/{_n}")
+        _p = os.path.join(BASE_DIR, "flows", f"{_n}.flow")
+        if os.path.exists(_p):
+            os.unlink(_p)
+
 
 print("\n" + "=" * 60)
 print(f"PASSED: {_passed}  |  FAILED: {_failed}")

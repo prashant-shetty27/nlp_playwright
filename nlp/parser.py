@@ -11,6 +11,133 @@ def parse_step(step: str) -> Command:
     s = step.strip()
 
     # =============================
+    # TEXT MATCHING — page level and element level
+    #
+    # "contains" and "exact" existed; the rest did not, on either this framework
+    # or Testsigma (its 292 web templates have no starts-with, ends-with or
+    # regex at all). They matter for the things people actually assert: an order
+    # id whose prefix is fixed and whose suffix is not, a price whose currency
+    # symbol is the stable part, a message whose wording varies.
+    #
+    # These rules come BEFORE the "verify stored {variable} contains" rule, which
+    # was matching "verify page contains …" and treating the word `page` as a
+    # variable name — the step parsed, then failed at run time looking for a
+    # variable nobody had defined.
+    # =============================
+    _PAGE_MATCH = {
+        "contains": "verify_page_contains",
+        "has": "verify_page_contains",
+        "does not contain": "verify_page_not_contains",
+        "doesn't contain": "verify_page_not_contains",
+        "starts with": "verify_page_starts",
+        "begins with": "verify_page_starts",
+        "ends with": "verify_page_ends",
+        "matches": "verify_page_matches",
+        "matches regex": "verify_page_matches",
+    }
+    _pm = re.match(
+        r'^verify\s+(?:the\s+)?page\s+(does\s+not\s+contain|doesn\'t\s+contain|'
+        r'matches\s+regex|starts\s+with|begins\s+with|ends\s+with|contains|has|matches)'
+        r'\s+"([^"]*)"$', s, re.I)
+    if _pm:
+        op = re.sub(r"\s+", " ", _pm.group(1).strip().lower())
+        return Command(type=_PAGE_MATCH[op], text=_pm.group(2))
+
+    _pt = re.match(r'^verify\s+page\s+title\s+(contains|is|equals)\s+"([^"]*)"$',
+                   s, re.I)
+    if _pt:
+        return Command(type=("verify_title_exact"
+                             if _pt.group(1).lower() in ("is", "equals")
+                             else "verify_title_contains"),
+                       text=_pt.group(2))
+
+    _ELEM_MATCH = {
+        "starts with": "verify_element_starts",
+        "begins with": "verify_element_starts",
+        "ends with": "verify_element_ends",
+        "matches": "verify_element_matches",
+        "matches regex": "verify_element_matches",
+        "does not contain": "verify_element_not_contains",
+        "doesn't contain": "verify_element_not_contains",
+    }
+    _em = re.match(
+        r'^verify\s+element\s+([A-Za-z_][A-Za-z0-9_]*(?:\[[^\]]*\])?)\s+'
+        r'(does\s+not\s+contain|doesn\'t\s+contain|matches\s+regex|starts\s+with|'
+        r'begins\s+with|ends\s+with|matches)\s+"([^"]*)"$', s, re.I)
+    if _em:
+        op = re.sub(r"\s+", " ", _em.group(2).strip().lower())
+        return Command(type=_ELEM_MATCH[op], target=_em.group(1), text=_em.group(3))
+
+    # =============================
+    # BROWSER ALERTS  (Testsigma parity — the commonest cause of a stalled run)
+    #   accept alert / dismiss alert
+    #   verify alert is present
+    #   verify alert text "…"
+    #   type "…" into alert
+    # A browser alert is drawn by the BROWSER, so no locator reaches it and a run
+    # simply hangs. These are the four things anyone actually needs to do with one.
+    # =============================
+    if re.fullmatch(r"(accept|ok)\s+alert", s, re.I):
+        return Command(type="accept_alert")
+    if re.fullmatch(r"(dismiss|cancel)\s+alert", s, re.I):
+        return Command(type="dismiss_alert")
+    if re.fullmatch(r"verify\s+alert\s+(is\s+)?(present|displayed|visible)", s, re.I):
+        return Command(type="verify_alert_present")
+    _al = re.match(r'^verify\s+alert\s+text\s+"([^"]*)"$', s, re.I)
+    if _al:
+        return Command(type="verify_alert_text", text=_al.group(1))
+    _alt = re.match(r'^type\s+"([^"]*)"\s+into\s+alert$', s, re.I)
+    if _alt:
+        return Command(type="type_into_alert", text=_alt.group(1))
+
+    # =============================
+    # COOKIES
+    #   delete cookie "name" / delete all cookies / verify cookie "name" exists
+    # =============================
+    if re.fullmatch(r"delete\s+all\s+cookies", s, re.I):
+        return Command(type="delete_all_cookies")
+    _ck = re.match(r'^delete\s+cookie\s+"([^"]+)"$', s, re.I)
+    if _ck:
+        return Command(type="delete_cookie", text=_ck.group(1))
+    _ckv = re.match(r'^verify\s+cookie\s+"([^"]+)"\s+exists$', s, re.I)
+    if _ckv:
+        return Command(type="verify_cookie", text=_ckv.group(1))
+
+    # =============================
+    # FILE UPLOAD / WINDOW BY TITLE / PARENT FRAME
+    # =============================
+    _up = re.match(r'^upload\s+file\s+"([^"]+)"\s+(?:to|using)\s+([a-z_][a-z0-9_]*)$',
+                   s, re.I)
+    if _up:
+        return Command(type="upload_file", text=_up.group(1), target=_up.group(2))
+    _win = re.match(r'^switch\s+to\s+window\s+(?:with\s+)?title\s+"([^"]+)"$', s, re.I)
+    if _win:
+        return Command(type="switch_window_title", text=_win.group(1))
+    if re.fullmatch(r"switch\s+to\s+parent\s+frame", s, re.I):
+        return Command(type="parent_frame")
+
+    # =============================
+    # BROWSER PERMISSION, PER PERMISSION
+    #   allow browser permission geolocation
+    #   deny browser permission notifications
+    #   allow browser permission camera once
+    # Run Center sets a policy for the whole run; this is for the case where one
+    # test needs geolocation granted and notifications refused. "once" grants for
+    # the current page only, which is what a real prompt's "Allow this time" does.
+    # =============================
+    _perm = re.match(
+        r"^(allow|deny|grant|block)\s+browser\s+permission\s+([a-z][a-z0-9_-]*)"
+        r"(\s+once|\s+this\s+time)?$", s, re.I)
+    if _perm:
+        decision = _perm.group(1).lower()
+        return Command(
+            type="browser_permission",
+            target=_perm.group(2).strip().lower(),
+            text=("once" if _perm.group(3) else
+                  ("allow" if decision in ("allow", "grant") else "deny")),
+        )
+
+    # =============================
     # NAVIGATE / GO TO URL
     # Accepted aliases (all produce type="open"):
     #   go to url <url>        — recorder default

@@ -318,6 +318,196 @@ KEYWORD_MAP = {
         "template": "verify stored {variable} contains \"{text}\""
     },
 
+    # --- 10. CONDITIONAL ACTIONS -------------------------------------------
+    # Built and dispatchable, but absent from every suggestion surface — you had
+    # to already know the syntax to use a feature you had already paid for.
+    # Every template below was checked against the live parser.
+    "tap_if_visible": {
+        "phrases": ["click if visible", "tap if visible", "click only if visible",
+                    "click element if visible", "optional click"],
+        "action": "tap_if_visible",
+        "template": "click if visible {locator}"
+    },
+
+    "verify_if_visible": {
+        "phrases": ["verify if visible", "check if visible", "verify only if present"],
+        "action": "verify_if_visible",
+        "template": "verify if visible {locator}"
+    },
+
+    # --- 11. TABS & NAVIGATION ---------------------------------------------
+    "close_tab": {
+        "phrases": ["close tab", "close current tab"],
+        "action": "close_tab", "template": "close tab"
+    },
+    "close_all_tabs": {
+        "phrases": ["close all tabs", "close every tab"],
+        "action": "close_all_tabs", "template": "close all tabs"
+    },
+    "list_tabs": {
+        "phrases": ["list tabs", "show open tabs"],
+        "action": "list_tabs", "template": "list tabs"
+    },
+    "switch_tab": {
+        "phrases": ["switch to tab", "change tab", "go to tab"],
+        "action": "switch_tab", "template": "switch to tab {number}"
+    },
+    "go_forward": {
+        "phrases": ["go forward", "forward"], "action": "go_forward",
+        "template": "go forward"
+    },
+    "press_back": {
+        "phrases": ["press back", "go back", "browser back"],
+        "action": "press_back", "template": "press back"
+    },
+    "refresh": {
+        "phrases": ["refresh", "reload page", "refresh page"],
+        "action": "refresh", "template": "refresh page"
+    },
+
+    # --- 12. IFRAMES --------------------------------------------------------
+    "switch_iframe": {
+        "phrases": ["switch to iframe", "enter iframe", "go into frame"],
+        "action": "switch_iframe", "template": "switch to iframe {locator}"
+    },
+    "exit_iframe": {
+        "phrases": ["exit iframe", "leave iframe", "back to main frame"],
+        "action": "exit_iframe", "template": "exit iframe"
+    },
+
+    # --- 13. PAGE-LEVEL CAPTURE --------------------------------------------
+    "extract_title": {
+        "phrases": ["store page title", "capture page title", "save title"],
+        "action": "extract_title", "template": "store page title as {variable}"
+    },
+    "scroll_to": {
+        "phrases": ["scroll to element", "scroll to"],
+        "action": "scroll_to", "template": "scroll to {locator}"
+    },
+    "verify_exact_text": {
+        "phrases": ["verify exact text", "page has exactly"],
+        "action": "verify_exact_text", "template": "verify exact text \"{text}\""
+    },
+    "verify_multiple_texts": {
+        "phrases": ["verify texts", "verify multiple texts", "check several texts"],
+        "action": "verify_multiple_texts", "template": "verify texts \"{text}\""
+    },
+
+    # --- 14. JAVASCRIPT FALLBACKS ------------------------------------------
+    # For elements an ordinary click cannot reach (overlays, custom widgets).
+    "js_click": {
+        "phrases": ["js click", "javascript click", "force click"],
+        "action": "js_click", "template": "js click {locator}"
+    },
+
+    # --- 15. DATA & MATH ----------------------------------------------------
+    "generate_fake": {
+        "phrases": ["generate fake", "fake data", "random name"],
+        "action": "generate_fake", "template": "generate fake name as {variable}"
+    },
+    "math": {
+        "phrases": ["calculate", "compute", "math"],
+        "action": "math", "template": "calculate {number} + {number} as {variable}"
+    },
+    "api_get": {
+        "phrases": ["api get", "call api", "http get"],
+        "action": "api_get", "template": "api get \"{text}\" as {variable}"
+    },
+
+    # --- 16. BROWSER ALERTS / COOKIES / UPLOAD  (Testsigma parity) ----------
+    "accept_alert": {
+        "phrases": ["accept alert", "ok alert", "confirm alert"],
+        "action": "accept_alert", "template": "accept alert"},
+    "dismiss_alert": {
+        "phrases": ["dismiss alert", "cancel alert", "close alert"],
+        "action": "dismiss_alert", "template": "dismiss alert"},
+    "verify_alert_present": {
+        "phrases": ["verify alert is present", "alert should appear"],
+        "action": "verify_alert_present", "template": "verify alert is present"},
+    "verify_alert_text": {
+        "phrases": ["verify alert text", "alert says"],
+        "action": "verify_alert_text", "template": "verify alert text \"{text}\""},
+    "type_into_alert": {
+        "phrases": ["type into alert", "answer prompt"],
+        "action": "type_into_alert", "template": "type \"{text}\" into alert"},
+    "delete_all_cookies": {
+        "phrases": ["delete all cookies", "clear cookies"],
+        "action": "delete_all_cookies", "template": "delete all cookies"},
+    "delete_cookie": {
+        "phrases": ["delete cookie", "remove cookie"],
+        "action": "delete_cookie", "template": "delete cookie \"{text}\""},
+    "verify_cookie": {
+        "phrases": ["verify cookie", "cookie should exist"],
+        "action": "verify_cookie", "template": "verify cookie \"{text}\" exists"},
+    "upload_file": {
+        "phrases": ["upload file", "attach file", "choose file"],
+        "action": "upload_file", "template": "upload file \"{text}\" to {locator}"},
+    "switch_window_title": {
+        "phrases": ["switch to window title", "go to window named"],
+        "action": "switch_window_title",
+        "template": "switch to window title \"{text}\""},
+    "parent_frame": {
+        "phrases": ["switch to parent frame", "go to parent frame"],
+        "action": "parent_frame", "template": "switch to parent frame"},
+
+    # --- 17. TEXT MATCHING — beyond contains and exact -----------------------
+    # Neither this framework nor Testsigma had starts-with, ends-with or regex.
+    # They are what you need when only part of the text is stable: an order id
+    # with a fixed prefix, a price with a fixed currency, a message whose wording
+    # changes but whose shape does not.
+    "verify_page_contains": {
+        "phrases": ["verify page contains", "page contains", "verify page has"],
+        "action": "verify_page_contains",
+        "template": "verify page contains \"{text}\""},
+    "verify_page_not_contains": {
+        "phrases": ["verify page does not contain", "page should not contain"],
+        "action": "verify_page_not_contains",
+        "template": "verify page does not contain \"{text}\""},
+    "verify_page_starts": {
+        "phrases": ["verify page starts with", "page begins with"],
+        "action": "verify_page_starts",
+        "template": "verify page starts with \"{text}\""},
+    "verify_page_ends": {
+        "phrases": ["verify page ends with"],
+        "action": "verify_page_ends",
+        "template": "verify page ends with \"{text}\""},
+    "verify_page_matches": {
+        "phrases": ["verify page matches", "verify page regex", "page matches pattern"],
+        "action": "verify_page_matches",
+        "template": "verify page matches \"{text}\""},
+    "verify_title_contains": {
+        "phrases": ["verify page title contains", "title contains"],
+        "action": "verify_title_contains",
+        "template": "verify page title contains \"{text}\""},
+    "verify_title_exact": {
+        "phrases": ["verify page title is", "title equals"],
+        "action": "verify_title_exact",
+        "template": "verify page title is \"{text}\""},
+    "verify_element_starts": {
+        "phrases": ["verify element starts with", "element begins with"],
+        "action": "verify_element_starts",
+        "template": "verify element {locator} starts with \"{text}\""},
+    "verify_element_ends": {
+        "phrases": ["verify element ends with"],
+        "action": "verify_element_ends",
+        "template": "verify element {locator} ends with \"{text}\""},
+    "verify_element_matches": {
+        "phrases": ["verify element matches", "verify element regex"],
+        "action": "verify_element_matches",
+        "template": "verify element {locator} matches \"{text}\""},
+    "verify_element_not_contains": {
+        "phrases": ["verify element does not contain", "element should not contain"],
+        "action": "verify_element_not_contains",
+        "template": "verify element {locator} does not contain \"{text}\""},
+
+    "browser_permission": {
+        "phrases": ["allow browser permission", "deny browser permission",
+                    "grant permission", "block permission",
+                    "allow geolocation", "deny notifications"],
+        "action": "browser_permission",
+        "template": "allow browser permission {text}"
+    },
+
     "create_runtime_variable": {
         "phrases": ["create variable", "set variable", "define variable",
                     "store value as variable"],

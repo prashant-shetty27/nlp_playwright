@@ -30,8 +30,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.routes import (generate, health, locators, nlp, projects, sources,
-                        tests, websocket)
+from api.routes import (assist, generate, health, locators, nlp, projects, review, sources, stepgroups, testdata, tests, websocket)
 
 logger = logging.getLogger(__name__)
 
@@ -83,4 +82,8 @@ app.include_router(projects.router)
 app.include_router(tests.router)
 app.include_router(sources.router)
 app.include_router(generate.router)
+app.include_router(testdata.router)
+app.include_router(stepgroups.router)
+app.include_router(review.router)
+app.include_router(assist.router)
 app.include_router(websocket.router)

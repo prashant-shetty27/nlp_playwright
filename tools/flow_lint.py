@@ -151,69 +151,52 @@ def _read_json(path: str) -> dict:
 
 def load_locator_names(platform: str, extra_dbs: list[str] | None = None) -> set[str]:
     """
-    Return every locator name resolvable at runtime for `platform`.
+    Every locator name resolvable at run time for `platform`.
 
-    Mirrors the real resolution paths exactly:
-      • web    — locators/manager.get_locator_and_dna: flat scan over ALL top-level
-                 groups of recorded_elements.json then locators_manual.json.
-      • appium — execution/appium_action_service._get_appium_locator: only the
-                 data[<platform>] section, flat names plus one level of screen groups.
+    Delegates to locators/sources.py, which is the single declaration of which
+    databases exist and in what order the runners consult them. This function
+    used to keep its own copy of that list; when a database was added or the
+    precedence changed, the linter and the API drifted apart and the linter
+    would pass a flow the runner could not resolve (or vice versa).
     """
-    from config import settings
+    from locators.sources import names as _names
 
-    names: set[str] = set()
-    dbs = [settings.RECORDED_ELEMENTS_FILE, settings.MANUAL_LOCATORS_FILE] + list(extra_dbs or [])
-
-    is_appium = _PLATFORM_RUNNER.get(platform, "web") == "appium"
-
-    for db_path in dbs:
-        data = _read_json(db_path)
-        if is_appium:
-            section = data.get(platform, {})
-            if not isinstance(section, dict):
-                continue
-            for key, val in section.items():
-                if isinstance(val, dict) and val and all(isinstance(v, dict) for v in val.values()):
-                    names.update(val.keys())      # screen group → element names
-                    names.add(key)                # tolerate flat use of the group name
-                else:
-                    names.add(key)                # flat element directly under platform
-        else:
-            for group, elements in data.items():
-                if group in _APPIUM_PLATFORM_KEYS or not isinstance(elements, dict):
-                    continue
-                names.update(elements.keys())
-
-    names.discard("_comment")
-    return names
+    found = set(_names(platform))
+    for path in extra_dbs or []:
+        data = _read_json(path)
+        for group, elements in data.items():
+            if isinstance(elements, dict) and not group.startswith("_"):
+                found.update(k for k in elements if not k.startswith("_"))
+    return found
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Which Command fields carry a locator name (vs. free text / a variable / a URL)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-_TARGET_IS_LOCATOR = {
-    "click", "tap", "double_tap", "long_press", "fill",
-    "tap_if_visible", "click_if_visible", "fill_if_visible", "verify_if_visible",
-    "double_tap_if_visible", "long_press_if_visible", "store_text_if_visible",
-    "click_if_exists", "tap_if_exists", "fill_if_exists", "type_if_exists",
-    "verify_element_exists", "verify_element_not_exists",
-    "verify_element_exact", "verify_element_contains",
-    "extract_text", "store_text", "extract_attribute", "extract_input", "extract_count",
-    "wait_for_element", "scroll_to", "clear",
-    "verify_element_visible", "verify_element_not_visible", "wait_until_visible", "wait_until_text_not", "enter_otp",
-    "js_click", "js_scroll_to", "js_type", "js_set_value", "js_focus", "js_submit", "js_dispatch",
-}
+# Which field of a step means what. Shared with the step editor via
+# nlp/fields.py — a second copy here would let the editor offer a locator
+# picker for a field this linter checks as a variable.
+from nlp.fields import (TARGET_IS_LOCATOR as _TARGET_IS_LOCATOR,  # noqa: E402
+                        TARGET_IS_VARIABLE as _TARGET_IS_VARIABLE,
+                        TEXT_IS_FILE as _TEXT_IS_FILE)
 
-# Command types whose `target` is a variable name, not a locator.
-_TARGET_IS_VARIABLE = {"create_variable", "verify_var_contains", "verify_var_not_equals", "fetch_otp",
-                       "math", "extract_json"}
+# The RUNTIME grammar, not a stricter one. nlp/variable_manager resolves
+# ${anything-up-to-a-brace}, so a linter using a narrower pattern simply
+# could not see ${product.id} or ${user-name} — and reported nothing about
+# them, defined or not.
+from nlp.variables import REFERENCE_RE as _VAR_REF_RE  # noqa: E402
 
-# Command types that read a file path from `text`.
-_TEXT_IS_FILE = {"read_excel_cell", "read_excel_row", "read_csv_cell"}
-
-_VAR_REF_RE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
+#: A trailing "[last]" / "[2]" index on a locator reference.
 _INDEX_SUFFIX_RE = re.compile(r"\[[^\]]*\]$")
+_PARAMS_HEADER_RE = re.compile(r"^#\s*Params\s*:\s*(.*)$", re.I)
+
+
+def _declared_params(lines: list[str]) -> set[str]:
+    """Names listed on a leading `# Params :` comment (see nlp/variables)."""
+    from nlp.variables import declared_params
+
+    return declared_params(lines)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -283,6 +266,14 @@ def validate_flow(
 
     report.files_checked.append(path)
     screenshot_labels: dict[str, int] = {}
+
+    # A "# Params : a b c" header declares values the flow expects its caller to
+    # supply (POST /tests/run parameters, or a suite parameter). Without reading
+    # it, every parameterised flow failed E004 on its own first line — the flow
+    # was correct and runnable, the linter simply had no notion of run inputs.
+    # A flow that declares nothing is unaffected, so genuinely undefined
+    # variables are still reported.
+    defined.update(_declared_params(lines))
 
     for line_no, raw in enumerate(lines, 1):
         step = raw.strip()

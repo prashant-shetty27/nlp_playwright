@@ -1,0 +1,12 @@
+{
+  "jd_open_and_dismiss_login": {
+    "steps": [
+      "open www.justdial.com",
+      "wait 5 seconds",
+      "click if visible maybe_later_link"
+    ],
+    "created_at": "2026-08-18T21:22:40.685287+00:00",
+    "step_count": 3,
+    "platform": "website"
+  }
+}

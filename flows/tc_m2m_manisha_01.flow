@@ -1,0 +1,16 @@
+# Platform: website
+
+open https://staging2.justdial.com/rne/JDM42UP7BK/JA
+verify exact text "Referral Code (JDM42UP7BK) Applied • You got 15 days Free trial"
+type "7715882134" into mobile_field
+click login_with_otp
+open http://172.29.86.98:8080/
+type "7715882134" into fmobile
+click otp_submit_button
+store text of fetched_otp as fetchedOTP
+enter otp "fetchedOTP" into otp_input
+click otp_submit_button
+click business_name
+verify element business_name has text "zxy md papad"
+click zxy_md_papad
+verify text "Claim Your Free Trial" on page

@@ -1,0 +1,1393 @@
+"""
+ui/pages/platform/test_cases.py — Test Cases  (route: /platform/{platform})
+
+List and editor for NLP flow test cases.
+
+Layout (as specified):
+    Left panel  — test case list, search, [+ New Test Case]
+    Right panel — NLP step editor: ordered steps, inline edit, drag-to-reorder,
+                  [+ Add Step] with autocomplete, [Run], [Save]
+
+Two deliberate divergences from the spec:
+
+  ONE PAGE, NOT THREE. The spec carried byte-identical web/android/ios copies of
+  this module. Platform is a parameter of the same page instead — three copies of
+  one editor means a fix applied to one and forgotten in the other two, and the
+  platform vocabulary is now five, so the copy count would have grown.
+
+  [+ NEW TEST CASE] OFFERS THREE ORIGINS. The spec assumed hand-authoring only.
+  A test case can now also be generated from an uploaded spreadsheet or from a
+  written prompt; both routes produce the same reviewable step list, with each
+  step carrying the status the mapper assigned it. Hand-authoring is unchanged.
+"""
+from __future__ import annotations
+
+import json
+from urllib.parse import quote
+
+from nicegui import ui
+
+from ui import api_client as api
+from ui.components.nlp_input import NlpInput
+from ui.components.step_row import step_row
+from ui.layout.sidebar import sidebar
+from ui.layout.topbar import topbar
+from ui.theme import COLORS, TYPOGRAPHY
+
+
+class TestCasesPage:
+    def __init__(self, platform: str) -> None:
+        self.platform = platform
+        self.platforms: list[dict] = []
+        self.projects: list[str] = []
+        self.selected: str | None = None
+        self.steps: list[str] = []
+        self.step_meta: dict[int, dict] = {}     # 1-based -> generation metadata
+        self.filter = ""
+        #: Elements this platform's runner can resolve — what decides whether a
+        #: step will run, and therefore how its element token is coloured.
+        self._locator_labels: dict[str, str] = {}
+        #: Enough locator detail for the step editor to fork one into a new copy.
+        self._locator_details: dict[str, dict[str, str]] = {}
+        #: Elements that exist, but on some OTHER platform. Kept apart so the
+        #: token can say "recorded for Android, not for Website" instead of the
+        #: misleading "not in your element list", which invites a duplicate.
+        self._locators_elsewhere: dict[str, str] = {}
+        #: Where each ${variable} in this test gets its value — see
+        #: POST /nlp/variables. Refreshed per render, because inserting a
+        #: `store … as x` step changes the answer for every step below it.
+        self._vars: dict = {"defined": {}, "stored": [], "unresolved": []}
+        #: The list collapses while a test case is open so the editor gets the
+        #: width, and comes back from the chevron. It used to sit there at full
+        #: size competing with the thing you were actually editing.
+        self.list_open = True
+        #: 1-based indices ticked in the editor. Selection drives the bulk
+        #: actions — save as a step group, switch off, delete — so it is held
+        #: here rather than inside the rows, which are rebuilt constantly.
+        self.selection: set[int] = set()
+        #: Steps changed since the last save. Generated steps start dirty — they
+        #: exist only in this editor until Save writes a file, and a reload or a
+        #: dropped connection takes them with it. A whole drafted testcase was
+        #: lost that way, with nothing on screen suggesting it was at risk.
+        self.dirty = False
+        #: Bands the reader has folded away. Not saved to the file — how you are
+        #: reading a test is not part of what it does.
+        self.collapsed: set[int] = set()
+        self.select_mode = False
+        #: Where an inline "new step" composer is open, as a 0-based position in
+        #: self.steps. None means closed. A step could only ever be added at the
+        #: very end, so putting one into the middle of a written test meant
+        #: appending it and walking it up the list one press at a time.
+        self.compose_at: int | None = None
+
+    # ── data ────────────────────────────────────────────────────────────────
+    async def load(self) -> None:
+        try:
+            self.platforms = await api.platforms()
+            # Scoped to the selected platform: a Website author has no use for
+            # ios_e2e in their list, and cannot run it from there anyway.
+            raw = await api.list_projects(self.platform)
+            self.projects = sorted(
+                p if isinstance(p, str) else p.get("name", "") for p in raw)
+        except api.ApiError as e:
+            ui.notify(f"Could not load: {e.detail}", type="negative")
+
+    def open_project_guarded(self, name: str) -> None:
+        """Opening another testcase discards unsaved steps — so it asks first."""
+        if not self.dirty or name == self.selected:
+            ui.timer(0.01, lambda: self.open_project(name), once=True)
+            return
+        current = self.selected
+        dialog = ui.dialog().props("persistent")
+        with dialog, ui.card().style("width:30rem"):
+            ui.label(f"{current} has unsaved steps").style(
+                f"font-weight:{TYPOGRAPHY['weight_bold']}")
+            ui.label("Opening another test case discards them. They are not "
+                     "written to a file until you save.").style(
+                f"font-size:{TYPOGRAPHY['size_sm']}; color:{COLORS['text_muted']}")
+
+            async def save_then() -> None:
+                dialog.close()
+                await self.save()
+                await self.open_project(name)
+
+            async def discard() -> None:
+                dialog.close()
+                self.dirty = False
+                await self.open_project(name)
+
+            with ui.row().classes("w-full justify-end gap-2"):
+                ui.button("Cancel", on_click=dialog.close).props("flat")
+                ui.button("Discard them", on_click=discard).props("flat color=negative")
+                ui.button("Save first", on_click=save_then).props("unelevated")
+        dialog.open()
+
+    async def open_project(self, name: str) -> None:
+        try:
+            data = await api.get_project(name)
+        except api.ApiError as e:
+            ui.notify(f"Could not open {name}: {e.detail}", type="negative")
+            return
+        self.selected = name
+        # Header comments are dropped, but the two markers that ARE content are
+        # kept: a purpose band, and a step switched off. Stripping every "#" line
+        # meant both vanished the moment a test case was reopened — the file
+        # still held them and the editor did not.
+        self.steps = [
+            s for s in data.get("steps", [])
+            if s.strip() and (not s.strip().startswith("#")
+                              or s.strip().startswith((self.DISABLED, self.PURPOSE)))
+        ]
+        self.step_meta = {}
+        self.dirty = False
+        self.compose_at = None
+        self.selection.clear()
+        self.collapsed.clear()
+        # replaceState, not navigate: the address bar has to match what is open so
+        # a refresh restores it, but re-running the page would throw away the very
+        # editor being opened. The name is remembered at the same time, so that
+        # arriving with no ?flow at all — from the sidebar, or from a link that
+        # dropped the query string — still lands on what you were editing.
+        ui.run_javascript(
+            f"history.replaceState({{}},'',"
+            f"'/platform/{self.platform}?flow={quote(name, safe='')}');"
+            f"localStorage.setItem({json.dumps(self._remember_key)},"
+            f" {json.dumps(name)});")
+        await self.render_editor()
+
+    #: Where the last-opened test case is remembered, one key per platform.
+    #: Browser storage rather than the server: "the one I was last editing" is
+    #: a fact about the person at the keyboard, and it has to survive the
+    #: process being restarted, which server memory does not.
+    @property
+    def _remember_key(self) -> str:
+        return f"lastFlow:{self.platform}"
+
+    async def restore_last(self) -> None:
+        """
+        Reopen whatever was last open on this platform.
+
+        Only when nothing is open already — a ?flow in the URL is an explicit
+        instruction and must not be overridden by a remembered one.
+        """
+        if self.selected:
+            return
+        try:
+            name = await ui.run_javascript(
+                f"localStorage.getItem({json.dumps(self._remember_key)})",
+                timeout=2.0)
+        except Exception:  # noqa: BLE001 — a page still connecting has no storage
+            return
+        if isinstance(name, str) and name in self.projects:
+            await self.open_project(name)
+
+    # ── rendering ───────────────────────────────────────────────────────────
+    def render(self) -> None:
+        sidebar(active=f"/platform/{self.platform}", platforms=self.platforms)
+        topbar(["Author", "Test Cases"], platforms=self.platforms,
+               platform=self.platform,
+               on_platform_change=lambda p: ui.navigate.to(f"/platform/{p}"))
+        with ui.row().classes("w-full no-wrap gap-4 p-4"):
+            self.left = ui.column().classes("gap-2").style("width:20rem; flex:none")
+            self.right = ui.column().classes("flex-grow gap-2")
+        self.render_list()
+        # Installed once per page. Without it the flag below is set on a window
+        # that has no handler reading it, which is how this shipped un-armed.
+        ui.timer(0.2, self._guard_unload, once=True)
+        with self.right:
+            ui.label("Select a test case, or create one.").style(
+                f"color:{COLORS['text_muted']}; font-size:{TYPOGRAPHY['size_sm']}")
+
+    def delete_dialog(self) -> None:
+        """
+        Delete a test case, after saying exactly what that does and does not do.
+
+        The worry with a delete button next to Save is that it takes the
+        elements and the test data with it. It does not, and the dialog says so
+        — an unqualified "Are you sure?" leaves the author to guess.
+        """
+        if not self.selected:
+            return
+        victim = self.selected
+        dialog = ui.dialog().props("persistent")
+        with dialog, ui.card().style("width:30rem"):
+            ui.label(f"Delete {victim}?").style(
+                f"font-size:{TYPOGRAPHY['size_lg']};"
+                f"font-weight:{TYPOGRAPHY['weight_bold']}")
+            ui.label(f"This removes the test case and its {len(self.steps)} step(s).").style(
+                f"font-size:{TYPOGRAPHY['size_sm']}")
+            ui.label("Your saved elements, test data and step groups are NOT "
+                     "affected — other test cases keep working.").style(
+                f"font-size:{TYPOGRAPHY['size_sm']}; color:{COLORS['text_muted']}")
+
+            async def do_delete() -> None:
+                try:
+                    await api.delete_project(victim)
+                except api.ApiError as e:
+                    ui.notify(f"Could not delete: {e.detail}", type="negative")
+                    return
+                dialog.close()
+                ui.notify(f"Deleted {victim}", type="positive")
+                # Forget it, or the next visit tries to reopen a test case that
+                # no longer exists and lands on the empty pane anyway.
+                ui.run_javascript(
+                    f"localStorage.removeItem({json.dumps(self._remember_key)})")
+                self.selected = None
+                self.steps = []
+                self.step_meta = {}
+                await self.load()
+                self.render_list()
+                self.right.clear()
+                with self.right:
+                    ui.label("Select a test case, or create one.").style(
+                        f"color:{COLORS['text_muted']};"
+                        f"font-size:{TYPOGRAPHY['size_sm']}")
+
+            with ui.row().classes("w-full justify-end gap-2"):
+                ui.button("Cancel", on_click=dialog.close).props("flat")
+                ui.button("Delete", on_click=do_delete) \
+                    .props("unelevated color=negative")
+        dialog.open()
+
+    def rename_dialog(self) -> None:
+        """
+        Rename, after showing what else it will change.
+
+        A flow is named by suites and plans, so renaming one can rewrite files
+        the author is not looking at. The preview is fetched first and listed;
+        nothing moves until they confirm it.
+        """
+        if not self.selected:
+            return
+        current = self.selected
+        dialog = ui.dialog().props("persistent")
+        with dialog, ui.card().style("width:34rem"):
+            ui.label(f"Rename {current}").style(
+                f"font-size:{TYPOGRAPHY['size_lg']};"
+                f"font-weight:{TYPOGRAPHY['weight_bold']}")
+            box = ui.input("New name", value=current).props("outlined dense").classes("w-full")
+            impact = ui.column().classes("w-full gap-1")
+            note = ui.label().style(f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['warning']}")
+
+            async def preview() -> None:
+                impact.clear()
+                note.set_text("")
+                new = (box.value or "").strip()
+                if not new or new == current:
+                    return
+                # Show the convention rather than enforcing it silently: the
+                # name is normalised on save, and the author should see the
+                # result before committing to it, not discover it afterwards.
+                try:
+                    nm = await api.check_flow_name(new)
+                    if not nm.get("ok"):
+                        note.set_text(f"{nm.get('reason','')} {nm.get('hint','')}")
+                        return
+                    if nm.get("changed"):
+                        note.set_text(f"Will be saved as “{nm['saved_as']}” — "
+                                      f"{nm.get('hint','')}")
+                except api.ApiError:
+                    pass
+                try:
+                    res = await api.rename_project(current, new, apply=False)
+                except api.ApiError as e:
+                    note.set_text(e.detail[:160])
+                    return
+                with impact:
+                    ui.label("This will change:").style(
+                        f"font-size:{TYPOGRAPHY['size_sm']};"
+                        f"font-weight:{TYPOGRAPHY['weight_medium']}")
+                    for ch in res.get("changes", []):
+                        ui.label(f"• {ch['kind']} — {ch['file']} {ch.get('detail','')}").style(
+                            f"font-size:{TYPOGRAPHY['size_xs']};"
+                            f"font-family:{TYPOGRAPHY['mono']};"
+                            f"color:{COLORS['text_muted']}")
+
+            async def do_rename() -> None:
+                new = (box.value or "").strip()
+                if not new or new == current:
+                    dialog.close()
+                    return
+                try:
+                    res = await api.rename_project(current, new, apply=True)
+                except api.ApiError as e:
+                    note.set_text(e.detail[:160])
+                    return
+                dialog.close()
+                ui.notify(f"Renamed to {res['new_name']}", type="positive")
+                self.selected = res["new_name"]
+                await self.load()
+                self.render_list()
+                await self.open_project(res["new_name"])
+
+            box.on_value_change(preview)
+            ui.timer(0.05, preview, once=True)
+            with ui.row().classes("w-full justify-end gap-2"):
+                ui.button("Cancel", on_click=dialog.close).props("flat")
+                ui.button("Rename", on_click=do_rename).props("unelevated")
+        dialog.open()
+
+    def _new_and_collapse(self) -> None:
+        """Open the create dialog and fold the list away behind its chevron."""
+        self.list_open = False
+        self.render_list()
+        self.new_dialog()
+
+    def _toggle_list(self) -> None:
+        self.list_open = not self.list_open
+        self.render_list()
+
+    def render_list(self) -> None:
+        """
+        Draw the whole left column: search box, list, and the new-testcase button.
+
+        The rows live in their own container (`self.list_box`) so that filtering
+        can redraw JUST them. Rebuilding this column on every keystroke destroyed
+        the search input mid-word — the text you had typed went with it, and the
+        filter ended up applied to whatever single character survived.
+        """
+        self.left.clear()
+        if not self.list_open:
+            # Collapsed: one chevron, so the list is one click away and the
+            # editor has the room.
+            self.left.style("width:2.5rem; flex:none")
+            with self.left:
+                ui.button(icon="chevron_right", on_click=self._toggle_list) \
+                    .props("flat dense").tooltip("Show test cases")
+                ui.label(str(len(self.projects))).style(
+                    f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']};"
+                    f"text-align:center; width:100%")
+            return
+        self.left.style("width:20rem; flex:none")
+        with self.left:
+            with ui.row().classes("w-full items-center no-wrap gap-1"):
+                self.search = ui.input(placeholder="Search test cases",
+                                       value=self.filter,
+                                       on_change=lambda e: self._filter(e.value)) \
+                    .props("outlined dense clearable").classes("flex-grow")
+                ui.button(icon="chevron_left", on_click=self._toggle_list) \
+                    .props("flat dense").tooltip("Hide the list")
+            self.list_box = ui.column().classes("w-full gap-0").style(
+                f"border:1px solid {COLORS['border']}; border-radius:6px;"
+                f"max-height:32rem; overflow-y:auto")
+            ui.button("+ New Test Case", icon="add", on_click=self._new_and_collapse) \
+                .props("unelevated").classes("w-full") \
+                .style(f"background:{COLORS['primary']}")
+        self.render_rows()
+
+    def render_rows(self) -> None:
+        """Redraw only the rows. Called on every keystroke; the input is untouched."""
+        if not getattr(self, "list_box", None):
+            return
+        self.list_box.clear()
+        shown = [p for p in self.projects if self.filter in p.lower()]
+        with self.list_box:
+            if not shown:
+                ui.label("Nothing matches that search" if self.filter
+                         else "No test cases yet").style(
+                    f"padding:10px; color:{COLORS['text_muted']};"
+                    f"font-size:{TYPOGRAPHY['size_sm']}")
+            for name in shown:
+                on = name == self.selected
+                with ui.row().classes("w-full items-center cursor-pointer") \
+                        .style(f"padding:7px 10px;"
+                               f"border-bottom:1px solid {COLORS['border']};"
+                               f"background:"
+                               f"{COLORS['primary'] + '12' if on else 'transparent'}") \
+                        .on("click", lambda n=name: self.open_project_guarded(n)):
+                    ui.label(name).style(
+                        f"font-size:{TYPOGRAPHY['size_sm']};"
+                        f"font-family:{TYPOGRAPHY['mono']}")
+
+    def _filter(self, value: str) -> None:
+        self.filter = (value or "").lower()
+        self.render_rows()
+
+    async def _guard_unload(self) -> None:
+        """
+        Ask the browser to warn before a reload discards unsaved steps.
+
+        The handler looks for the "unsaved" badge in the DOM rather than a flag
+        we have to keep updated. The badge is drawn from self.dirty on every
+        render, so it cannot fall out of step with the editor — an earlier
+        version kept a separate window variable and silently never set it.
+        """
+        try:
+            await ui.run_javascript(
+                "window.onbeforeunload = function (e) {"
+                "  if (!document.querySelector('[data-unsaved=\"1\"]')) return undefined;"
+                "  e.preventDefault(); e.returnValue = ''; return ''; };")
+        except Exception:  # noqa: BLE001 — a page still connecting has no window
+            pass
+
+    async def render_editor(self) -> None:
+        try:
+            await self._render_editor()
+        except Exception as e:  # noqa: BLE001
+            # An empty pane reads as "your work is gone". Whatever went wrong,
+            # say it, and leave a way back to the test case.
+            self.right.clear()
+            with self.right:
+                ui.label("Could not draw this test case").style(
+                    f"font-weight:{TYPOGRAPHY['weight_bold']}; color:{COLORS['danger']}")
+                ui.label(f"{type(e).__name__}: {str(e)[:200]}").style(
+                    f"font-size:{TYPOGRAPHY['size_xs']};"
+                    f"font-family:{TYPOGRAPHY['mono']}; color:{COLORS['text_muted']}")
+                ui.button("Reload it",
+                          on_click=lambda: ui.navigate.to(
+                              f"/platform/{self.platform}?flow={self.selected or ''}")) \
+                    .props("flat")
+            raise
+
+    async def _render_editor(self) -> None:
+        # Fetched here rather than inside each row: a forty-step flow would
+        # otherwise make forty identical calls just to draw itself. Once per
+        # RENDER rather than once per page, though — an element saved from a
+        # step token used to stay amber until the page was reloaded, because
+        # the map that decided its colour had been read before it existed. Two
+        # in-process reads cost a few milliseconds against the per-row work.
+        try:
+            self._locator_labels = await api.locator_labels(self.platform)
+            self._locator_details = _locator_detail_index(
+                await api.locators_for(self.platform))
+            everywhere = await api.locator_labels()
+            self._locators_elsewhere = {
+                n: label for n, label in everywhere.items()
+                if n not in self._locator_labels}
+        except api.ApiError:
+            self._locator_labels = {}
+            self._locator_details = {}
+            self._locators_elsewhere = {}
+        try:
+            self._vars = await api.step_variables(self.steps)
+        except api.ApiError:
+            self._vars = {"defined": {}, "stored": [], "unresolved": []}
+        self.right.clear()
+        with self.right:
+            with ui.row().classes("w-full items-center gap-2"):
+                ui.label(self.selected or "").style(
+                    f"font-size:{TYPOGRAPHY['size_lg']};"
+                    f"font-weight:{TYPOGRAPHY['weight_bold']};"
+                    f"font-family:{TYPOGRAPHY['mono']}")
+                ui.button(icon="drive_file_rename_outline",
+                          on_click=self.rename_dialog) \
+                    .props("flat dense size=sm").tooltip("Rename this test case")
+                # Bands are annotation, not steps — counting them made a
+                # four-step test claim six.
+                real = sum(1 for st in self.steps
+                           if not st.strip().startswith(self.PURPOSE))
+                ui.label(f"{real} steps").style(
+                    f"color:{COLORS['text_muted']}; font-size:{TYPOGRAPHY['size_sm']}")
+                if self.dirty:
+                    with ui.row().classes("items-center gap-1") \
+                            .props('data-unsaved="1"').style(
+                            f"background:{COLORS['warning']}1A; border-radius:4px;"
+                            f"padding:1px 8px"):
+                        ui.label("●").style(
+                            f"color:{COLORS['warning']}; font-size:0.6rem")
+                        ui.label("unsaved").style(
+                            f"color:{COLORS['warning']};"
+                            f"font-size:{TYPOGRAPHY['size_xs']}")
+                ui.space()
+                ui.button("Review", icon="auto_fix_high", on_click=self.review) \
+                    .props("flat dense").tooltip(
+                        "Check this test for hardcoded values, fixed waits, "
+                        "missing checks and repeated blocks")
+                ui.button("Save", icon="save", on_click=self.save).props("unelevated dense")
+                ui.button(icon="delete_outline", on_click=self.delete_dialog) \
+                    .props("flat dense color=negative").tooltip("Delete this test case")
+                ui.button("Run", icon="play_arrow", on_click=self.run) \
+                    .props("unelevated dense").style(f"background:{COLORS['success']}")
+
+            # Any step that cannot run is surfaced before the operator presses Run,
+            # not after — that is the whole point of carrying per-step status.
+            blocked = [i for i, m in self.step_meta.items()
+                       if m.get("status") not in ("", "SUPPORTED", "SUPPORTED_VIA_SUBSTITUTE")]
+            if blocked:
+                with ui.row().classes("w-full items-center gap-2").style(
+                        f"background:{COLORS['warning']}14; border:1px solid {COLORS['warning']}55;"
+                        f"border-radius:6px; padding:6px 10px"):
+                    ui.icon("info").style(f"color:{COLORS['warning']}")
+                    ui.label(f"{len(blocked)} step(s) need attention before this will run") \
+                        .style(f"font-size:{TYPOGRAPHY['size_sm']}")
+
+            # ── selection toolbar ────────────────────────────────────────
+            with ui.row().classes("w-full items-center gap-2").style(
+                    f"padding:4px 2px"):
+                ui.checkbox("Select", value=self.select_mode,
+                            on_change=lambda e: self._set_select_mode(bool(e.value))) \
+                    .props("dense")
+                if self.select_mode:
+                    ui.checkbox("All", value=len(self.selection) == len(self.steps)
+                                and bool(self.steps),
+                                on_change=lambda e: self._select_all(bool(e.value))) \
+                        .props("dense")
+                    rng = ui.input(placeholder="20-30").props("outlined dense") \
+                        .style("width:7rem")
+                    ui.button("Select range", on_click=lambda: self._select_range(rng.value)) \
+                        .props("flat dense")
+                    ui.label(f"{len(self.selection)} selected").style(
+                        f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}")
+                    if self.selection:
+                        ui.button("Club with a purpose", icon="segment",
+                                  on_click=self.club_dialog) \
+                            .props("flat dense").style(f"color:{COLORS['primary']}") \
+                            .tooltip("Explain what these steps do — annotation, "
+                                     "not a reusable group")
+                        ui.button("Save as step group", icon="bookmark_add",
+                                  on_click=self.save_group_dialog) \
+                            .props("flat dense").style(f"color:{COLORS['primary']}")
+                        ui.button("Switch off", icon="toggle_off",
+                                  on_click=lambda: self._bulk_enabled(False)) \
+                            .props("flat dense")
+                        ui.button("Switch on", icon="toggle_on",
+                                  on_click=lambda: self._bulk_enabled(True)) \
+                            .props("flat dense")
+                        ui.button("Delete", icon="delete_outline",
+                                  on_click=self._bulk_delete) \
+                            .props("flat dense color=negative")
+
+            with ui.column().classes("w-full gap-0").style(
+                    f"border:1px solid {COLORS['border']}; border-radius:6px"):
+                # A purpose band applies to every step below it until the
+                # next band. A hidden step is skipped, never renumbered, so what
+                # a reader sees always matches the file.
+                hidden = False
+                # A variable is only usable from the step AFTER the one that
+                # sets it. Carrying the running set down the list is what lets
+                # `${otp}` read as unset at step 9 and settled at step 11.
+                stored = set(self._vars.get("stored", []))
+                made: dict = self._vars.get("defined", {}) or {}
+                for i, text in enumerate(self.steps, 1):
+                    known_here = stored | {n for n, at in made.items() if at < i}
+                    if self.compose_at == i - 1:
+                        await self._compose_row()
+                    stripped = text.strip()
+                    if stripped.startswith(self.PURPOSE):
+                        hidden = i in self.collapsed
+                        self._purpose_band(i, stripped[len(self.PURPOSE):].strip(),
+                                           collapsed=hidden)
+                        continue
+                    if hidden:
+                        continue
+                    meta = self.step_meta.get(i, {})
+                    off = stripped.startswith(self.DISABLED)
+                    shown = stripped[len(self.DISABLED):] if off else text
+                    step_row(i, shown, action=meta.get("action", ""),
+                             platform=self.platform,
+                             target=meta.get("locator", ""), status=meta.get("status", ""),
+                             note=meta.get("note", ""), selector=meta.get("selector", ""),
+                             total=len(self.steps),
+                             locators=self._locator_labels,
+                             locator_details=self._locator_details,
+                             locators_elsewhere=self._locators_elsewhere,
+                             variables=self._variables(),
+                             known_values=known_here,
+                             selectable=self.select_mode,
+                             selected=i in self.selection,
+                             on_select=self._toggle_selected,
+                             disabled=off,
+                             on_toggle_enabled=self._toggle_enabled,
+                             on_drop=self.move_step_to,
+                             on_add=self._open_composer,
+                             on_edit=self.edit_step, on_delete=self.delete_step,
+                             on_move=self.move_step)
+                if self.compose_at == len(self.steps):
+                    await self._compose_row()
+
+            self.review_panel = ui.column().classes("w-full gap-1")
+
+            ui.label("Add a step").style(
+                f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']};"
+                f"margin-top:8px")
+            box = NlpInput(self.platform, self.add_step,
+                           known_variables=self._variables())
+            await box.load()
+
+    async def _compose_row(self) -> None:
+        """
+        A step being written, in the place it will land.
+
+        The same autocomplete as the box at the bottom of the editor, so a step
+        inserted mid-test is written with the same help as one appended to the
+        end. It stays open at the next position after each insert: adding three
+        steps in a row is one continuous action rather than three round trips
+        through the row buttons.
+        """
+        where = self.compose_at or 0
+        with ui.column().classes("w-full gap-1").style(
+                f"background:{COLORS['primary']}0D;"
+                f"border-top:1px solid {COLORS['primary']}44;"
+                f"border-bottom:1px solid {COLORS['primary']}44; padding:6px 10px"):
+            with ui.row().classes("w-full items-center gap-2"):
+                ui.label(f"New step — goes in at position {where + 1}").style(
+                    f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['primary']};"
+                    f"font-weight:{TYPOGRAPHY['weight_medium']}")
+                ui.space()
+                ui.button("Done", icon="close", on_click=self._close_composer) \
+                    .props("flat dense").tooltip("Stop adding steps here")
+            box = NlpInput(self.platform,
+                           lambda text, at=where: self.insert_step(at, text),
+                           placeholder="Type the step to insert here",
+                           known_variables=self._variables())
+            await box.load()
+
+    def _open_composer(self, index: int, where: str) -> None:
+        """Open the composer above or below the 1-based step `index`."""
+        self.compose_at = index - 1 if where == "above" else index
+        ui.timer(0.01, self.render_editor, once=True)
+
+    def _close_composer(self) -> None:
+        self.compose_at = None
+        ui.timer(0.01, self.render_editor, once=True)
+
+    def _variables(self) -> list[str]:
+        """
+        Every variable name worth offering as a ${completion}.
+
+        References already written in the steps, PLUS the ones steps CREATE —
+        `store text of … as otp_code` puts `otp_code` in scope without ever
+        writing `${otp_code}`, so a list built only from references never
+        offered the variable the previous step had just made, and it had to be
+        typed from memory. Plus Test Data, which every run resolves.
+        """
+        import re
+        found: set[str] = set()
+        for s in self.steps:
+            found |= set(re.findall(r"\$\{([A-Za-z0-9_]+)\}", s))
+        found |= set(self._vars.get("defined", {}) or {})
+        found |= set(self._vars.get("stored", []) or [])
+        return sorted(found)
+
+    # ── review ──────────────────────────────────────────────────────────────
+    async def review(self) -> None:
+        """
+        Read the test and offer improvements, each with its reasoning.
+
+        Deterministic: the same test gives the same findings every time, in
+        milliseconds, with no model call. A finding that can be corrected
+        automatically carries the corrected step, so it is one click rather than
+        a description to act on by hand.
+        """
+        try:
+            res = await api.review_steps(self.steps, self.platform,
+                                         flow_name=self.selected or "")
+        except api.ApiError as e:
+            ui.notify(f"Could not review: {e.detail}", type="negative")
+            return
+        findings = res.get("findings", [])
+        self.review_panel.clear()
+        with self.review_panel:
+            if not findings:
+                with ui.row().classes("w-full items-center gap-2").style(
+                        f"background:{COLORS['success']}14; border-radius:6px;"
+                        f"padding:8px 10px"):
+                    ui.icon("check_circle").style(f"color:{COLORS['success']}")
+                    ui.label("Nothing to improve — no hardcoded values, fixed "
+                             "waits, missing checks or unknown elements.").style(
+                        f"font-size:{TYPOGRAPHY['size_sm']}")
+                return
+            c = res.get("counts", {})
+            labels = res.get("labels", {})
+            ui.label(f"{res['total']} suggestion(s) — {c.get('must', 0)} must do, "
+                     f"{c.get('can', 0)} could, {c.get('optional', 0)} optional").style(
+                f"font-weight:{TYPOGRAPHY['weight_bold']};"
+                f"font-size:{TYPOGRAPHY['size_sm']}; margin-top:6px")
+            # Grouped by what you are being asked to DO. Presenting everything as
+            # one flat list of problems is what makes a review screen get skipped.
+            for bucket in res.get("buckets", ["must", "can", "optional"]):
+                rows = [f for f in findings if f.get("bucket") == bucket]
+                if not rows:
+                    continue
+                tint = {"must": COLORS["danger"], "can": COLORS["warning"]}.get(
+                    bucket, COLORS["text_muted"])
+                with ui.row().classes("w-full items-center gap-2").style(
+                        "margin-top:8px"):
+                    ui.label(labels.get(bucket, bucket)).style(
+                        f"color:{tint}; font-size:{TYPOGRAPHY['size_xs']};"
+                        f"font-weight:{TYPOGRAPHY['weight_bold']};"
+                        f"letter-spacing:.04em; text-transform:uppercase")
+                    ui.label(f"({len(rows)})").style(
+                        f"color:{COLORS['text_muted']};"
+                        f"font-size:{TYPOGRAPHY['size_xs']}")
+                for f in rows:
+                    self._finding_row(f)
+
+    def _change_block(self, caption: str, nlp: str, label: str, icon: str,
+                      handler, colour: str) -> None:
+        """
+        The proposed step, written out, with the button that applies it.
+
+        Upfront and verbatim, next to its own button. A finding that describes a
+        change in prose leaves the author to reconstruct the step from the
+        description and type it themselves — which is most of the work, and the
+        reason a suggestion gets read and then skipped.
+        """
+        with ui.row().classes("w-full items-center gap-2 no-wrap").style(
+                f"background:{COLORS['surface']}; border:1px solid {colour}55;"
+                f"border-radius:4px; padding:4px 8px; margin-top:4px"):
+            ui.label(caption).style(
+                f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']};"
+                f"white-space:nowrap")
+            ui.label(nlp).classes("flex-grow").style(
+                f"font-family:{TYPOGRAPHY['mono']};"
+                f"font-size:{TYPOGRAPHY['size_sm']}; color:{colour};"
+                f"word-break:break-all")
+            ui.button(label, icon=icon, on_click=handler).props("unelevated dense") \
+                .style(f"background:{colour}; white-space:nowrap")
+
+    def _finding_row(self, f: dict) -> None:
+        colour = {"high": COLORS["danger"], "medium": COLORS["warning"]}.get(
+            f["severity"], COLORS["text_muted"])
+        with ui.column().classes("w-full gap-0").style(
+                f"border-left:3px solid {colour}; background:{colour}0D;"
+                f"border-radius:4px; padding:6px 10px"):
+            with ui.row().classes("w-full items-center gap-2 no-wrap"):
+                ui.label(f["severity"].upper()).style(
+                    f"color:{colour}; font-size:{TYPOGRAPHY['size_xs']};"
+                    f"font-family:{TYPOGRAPHY['mono']}; width:4.2rem")
+                where = f"step {f['step_index']}" if f["step_index"] else "this test"
+                ui.label(where).style(
+                    f"font-size:{TYPOGRAPHY['size_xs']};"
+                    f"color:{COLORS['text_muted']}; width:4rem")
+                ui.label(f["message"]).style(f"font-size:{TYPOGRAPHY['size_sm']}")
+                ui.space()
+                # Every finding gets the action its KIND allows. A description
+                # with no way to act on it is why review screens get ignored.
+                # The step-rewriting actions are NOT here — they sit with the
+                # step they propose, further down, so the button and the text it
+                # will write are read together.
+                if f.get("extra"):
+                    ui.button("Make a step group", icon="bookmark_add",
+                              on_click=lambda ff=f: self._group_from_finding(ff)) \
+                        .props("flat dense").style(f"color:{COLORS['primary']}")
+                if f.get("kind") == "unknown_element":
+                    # Needs a selector, which nothing can invent — so open the
+                    # form with the name already filled in.
+                    ui.button("Add this element", icon="add_location_alt",
+                              on_click=lambda ff=f: self._add_element_for(ff)) \
+                        .props("flat dense").style(f"color:{COLORS['primary']}") \
+                        .tooltip("Record it now so the step can run")
+                if f.get("kind") == "unstored_value":
+                    ui.button("Save as test data", icon="dataset",
+                              on_click=lambda ff=f: ui.navigate.to("/data/variables")) \
+                        .props("flat dense").style(f"color:{COLORS['primary']}")
+                if f.get("kind") == "no_assertion":
+                    # A judgement, not a rule — this is where a model earns a turn.
+                    ui.button("Suggest checks", icon="auto_awesome",
+                              on_click=lambda ff=f: self._propose_for(ff)) \
+                        .props("flat dense").style(f"color:{COLORS['primary']}") \
+                        .tooltip("Read the steps and propose what this test should verify")
+            # The reasoning is shown, not hidden behind a tooltip: a suggestion
+            # you cannot evaluate is one you either follow blindly or ignore.
+            ui.label(f["why"]).style(
+                f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}")
+            if f.get("bucket_note"):
+                ui.label(f"({f['bucket_note']})").style(
+                    f"font-size:{TYPOGRAPHY['size_xs']};"
+                    f"color:{COLORS['text_muted']}; font-style:italic")
+            # The approaches, best first — so the choice is informed rather than
+            # a single instruction to obey.
+            for opt in f.get("options", []):
+                mark = "★" if opt.get("best") else "○"
+                colour = COLORS["success"] if opt.get("best") else COLORS["text_muted"]
+                with ui.row().classes("items-start gap-2").style("padding-left:2px"):
+                    ui.label(mark).style(f"color:{colour}; width:1rem")
+                    with ui.column().classes("gap-0"):
+                        ui.label(opt.get("approach", "")).style(
+                            f"font-family:{TYPOGRAPHY['mono']};"
+                            f"font-size:{TYPOGRAPHY['size_xs']}; color:{colour}")
+                        ui.label(opt.get("note", "")).style(
+                            f"font-size:{TYPOGRAPHY['size_xs']};"
+                            f"color:{COLORS['text_muted']}")
+            # ── the change itself, verbatim, each with its own button ────
+            idx = int(f.get("step_index") or 0)
+            if f.get("fix"):
+                self._change_block(f"step {idx} becomes", f["fix"], "Apply", "done",
+                                   lambda ff=f: self._apply_fix(ff),
+                                   COLORS["primary"])
+            if f.get("add_step"):
+                self._change_block(f"add as step {f.get('add_at') or idx}",
+                                   f["add_step"], "Add", "add",
+                                   lambda ff=f: self._add_from_finding(ff),
+                                   COLORS["primary"])
+            if f.get("remove") and 0 < idx <= len(self.steps):
+                self._change_block(f"remove step {idx}", self.steps[idx - 1],
+                                   "Remove", "delete_outline",
+                                   lambda ff=f: self._remove_from_finding(ff),
+                                   COLORS["danger"])
+            # Where model-written proposals land, so they appear under the
+            # finding that asked for them rather than in a dialog over it.
+            if f.get("kind") == "no_assertion":
+                f["_box"] = ui.column().classes("w-full gap-1")
+
+    def _add_from_finding(self, f: dict) -> None:
+        """Put the finding's proposed step into the test, where it says."""
+        at = int(f.get("add_at") or 0)
+        pos = self._insert_at(at - 1 if at else len(self.steps),
+                              f.get("add_step", ""))
+        if pos < 0:
+            return
+        ui.notify(f"Added as step {pos + 1} — Save to keep it", type="positive")
+        ui.timer(0.01, self._rerun_review, once=True)
+
+    def _remove_from_finding(self, f: dict) -> None:
+        """Take out the step this finding says should not be there."""
+        idx = int(f.get("step_index") or 0)
+        if not 0 < idx <= len(self.steps):
+            return
+        gone = self.steps.pop(idx - 1)
+        self.step_meta = {}
+        self.selection.clear()
+        self.dirty = True
+        ui.notify(f"Removed step {idx}: {gone.strip()[:60]} — Save to keep it",
+                  type="positive")
+        ui.timer(0.01, self._rerun_review, once=True)
+
+    def _add_element_for(self, f: dict) -> None:
+        """Open the save-element form for the name this step could not resolve."""
+        import re as _re
+
+        m = _re.search(r"'([^']+)'", f.get("message", ""))
+        name = m.group(1) if m else ""
+        from ui.components.token_step import _unknown_locator_dialog
+
+        idx = f.get("step_index", 0)
+        _unknown_locator_dialog(
+            name, self.platform,
+            on_saved=lambda saved: self._element_saved(f, saved),
+            on_use_anyway=lambda: None,
+            step=self.steps[idx - 1] if 0 < idx <= len(self.steps) else "")
+
+    def _element_saved(self, f: dict, saved: str) -> None:
+        idx = f.get("step_index", 0)
+        if idx and saved:
+            import re as _re
+
+            m = _re.search(r"'([^']+)'", f.get("message", ""))
+            if m and m.group(1) != saved:
+                self.steps[idx - 1] = self.steps[idx - 1].replace(m.group(1), saved)
+        ui.timer(0.01, self._rerun_review, once=True)
+
+    async def _propose_for(self, f: dict) -> None:
+        """
+        Ask for candidate assertions and show them under the finding.
+
+        Never applied automatically, and never all at once. An assertion
+        inserted without being read is how a suite fills up with checks that
+        pass whatever the page does — which is the very problem this finding is
+        about. Each candidate is shown as the step it would become, with its own
+        Add button, so taking one and ignoring the rest is a single click.
+        """
+        box = f.get("_box")
+        if box is None:
+            return
+        box.clear()
+        with box:
+            ui.label("Reading the steps…").style(
+                f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}")
+        try:
+            res = await api.review_assist(f.get("kind", ""), self.steps,
+                                          self.platform, f.get("step_index", 0),
+                                          self.selected or "")
+        except api.ApiError as e:
+            box.clear()
+            with box:
+                ui.label(e.detail[:220]).style(
+                    f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['danger']}")
+            return
+
+        try:
+            self._render_proposals(box, res)
+        except Exception as e:  # noqa: BLE001
+            # Drawing the proposals used to fail silently: the model answered,
+            # the request succeeded, and nothing appeared on screen.
+            ui.notify(f"Could not show the proposals: {type(e).__name__}: {e}",
+                      type="negative", timeout=9000)
+
+    def _render_proposals(self, box, res: dict) -> None:
+        """Draw each candidate assertion as a step with its own Add button."""
+        proposals = res.get("proposals", [])
+        box.clear()
+        with box:
+            if not proposals:
+                ui.label("No assertion could be proposed from these steps — "
+                         + ("; ".join(res.get("unclear", []))
+                            or "the intent is unclear.")).style(
+                    f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['warning']}")
+                return
+            ui.label(f"Proposed by {res.get('model', 'the model')} — each one "
+                     f"parses and uses only elements already in your steps. Add "
+                     f"the ones that match what the test is for; ignore the "
+                     f"rest.").style(
+                f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']};"
+                f"margin-top:4px")
+            for prop in proposals:
+                pos = int(prop.get("insert_after", 0))
+                with ui.row().classes("w-full items-center gap-2 no-wrap").style(
+                        f"background:{COLORS['surface']};"
+                        f"border:1px solid {COLORS['primary']}55;"
+                        f"border-radius:4px; padding:4px 8px"):
+                    with ui.column().classes("gap-0 flex-grow"):
+                        ui.label(prop["step"]).style(
+                            f"font-family:{TYPOGRAPHY['mono']};"
+                            f"font-size:{TYPOGRAPHY['size_sm']};"
+                            f"color:{COLORS['primary']}")
+                        # Where it lands, in the test's own numbering — an
+                        # assertion in the wrong place checks the wrong moment.
+                        where = (f"goes in at step {pos + 1}, right after "
+                                 f"“{prop.get('after_step_text', '')}”" if pos
+                                 else "goes in as the first step")
+                        ui.label(where).style(
+                            f"font-size:{TYPOGRAPHY['size_xs']};"
+                            f"color:{COLORS['text_muted']}")
+                        ui.label(prop.get("reason", "")).style(
+                            f"font-size:{TYPOGRAPHY['size_xs']};"
+                            f"color:{COLORS['text_muted']}")
+                    ui.button("Add", icon="add",
+                              on_click=lambda p=prop: self._add_proposal(p)) \
+                        .props("unelevated dense") \
+                        .style(f"background:{COLORS['primary']}; white-space:nowrap")
+            for bad in res.get("rejected", []):
+                ui.label(f"Discarded: {bad['step']} — {bad['why']}").style(
+                    f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['danger']}")
+            if res.get("unclear"):
+                ui.label("Unclear from the steps: " + "; ".join(res["unclear"])).style(
+                    f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['warning']}")
+
+    def _add_proposal(self, prop: dict) -> None:
+        """Insert one proposed assertion where the proposal said it belongs."""
+        pos = self._insert_at(int(prop.get("insert_after", len(self.steps))),
+                              prop.get("step", ""))
+        if pos < 0:
+            return
+        ui.notify(f"Added as step {pos + 1} — Save to keep it", type="positive")
+        ui.timer(0.01, self._rerun_review, once=True)
+
+    def _apply_fix(self, f: dict) -> None:
+        idx = f.get("step_index", 0)
+        if not idx or not f.get("fix"):
+            return
+        self.steps[idx - 1] = f["fix"]
+        ui.notify(f"Step {idx} updated — Save to keep it", type="positive")
+        ui.timer(0.01, self._rerun_review, once=True)
+
+    async def _rerun_review(self) -> None:
+        await self.render_editor()
+        await self.review()
+
+    def _group_from_finding(self, f: dict) -> None:
+        block = f.get("extra") or []
+        start = f.get("step_index", 1)
+        self.select_mode = True
+        self.selection = set(range(start, start + len(block)))
+        ui.timer(0.01, self.render_editor, once=True)
+        ui.timer(0.35, self.save_group_dialog, once=True)
+
+    # ── purpose bands ───────────────────────────────────────────────────────
+    def _purpose_band(self, index: int, purpose: str, collapsed: bool) -> None:
+        """
+        A one-line explanation above the steps it covers.
+
+        Expanded by default: the steps ARE the test, and a reader forced to
+        unfold everything is worse off than one reading a flat list. Folding is
+        for sections you already understand.
+        """
+        n = self._band_size(index)
+        with ui.row().classes("w-full items-center gap-2 no-wrap").style(
+                f"background:{COLORS['primary']}0D;"
+                f"border-top:1px solid {COLORS['primary']}33;"
+                f"padding:5px 10px"):
+            ui.button(icon="expand_more" if not collapsed else "chevron_right",
+                      on_click=lambda i=index: self._toggle_band(i)) \
+                .props("flat dense size=xs") \
+                .tooltip("Fold these away" if not collapsed else "Show them again")
+            ui.label("Purpose").style(
+                f"background:{COLORS['primary']}1A; color:{COLORS['primary']};"
+                f"border-radius:4px; padding:0 6px;"
+                f"font-size:{TYPOGRAPHY['size_xs']};"
+                f"font-family:{TYPOGRAPHY['mono']}")
+            ui.label(purpose).style(
+                f"font-size:{TYPOGRAPHY['size_sm']};"
+                f"font-weight:{TYPOGRAPHY['weight_medium']}")
+            ui.label(f"{n} step(s)").style(
+                f"color:{COLORS['text_muted']}; font-size:{TYPOGRAPHY['size_xs']}")
+            ui.space()
+            ui.button(icon="edit",
+                      on_click=lambda i=index, t=purpose: self._edit_band(i, t)) \
+                .props("flat dense size=xs").tooltip("Reword it")
+            ui.button(icon="close", on_click=lambda i=index: self._remove_band(i)) \
+                .props("flat dense size=xs") \
+                .tooltip("Remove the band — the steps stay exactly as they are")
+
+    def _band_size(self, index: int) -> int:
+        n = 0
+        for st in self.steps[index:]:
+            if st.strip().startswith(self.PURPOSE):
+                break
+            n += 1
+        return n
+
+    def _toggle_band(self, index: int) -> None:
+        if index in self.collapsed:
+            self.collapsed.discard(index)
+        else:
+            self.collapsed.add(index)
+        ui.timer(0.01, self.render_editor, once=True)
+
+    def _remove_band(self, index: int) -> None:
+        """Drop the annotation, keep every step it covered."""
+        self.steps.pop(index - 1)
+        self.collapsed.discard(index)
+        self.step_meta = {}
+        self.dirty = True
+        ui.notify("Band removed — the steps are untouched", type="positive")
+        ui.timer(0.01, self.render_editor, once=True)
+
+    def _edit_band(self, index: int, current: str) -> None:
+        dialog = ui.dialog().props("persistent")
+        with dialog, ui.card().style("width:32rem"):
+            ui.label("What are these steps for?").style(
+                f"font-weight:{TYPOGRAPHY['weight_bold']}")
+            box = ui.input(value=current,
+                           placeholder="sign in and reach the dashboard") \
+                .props("outlined dense").classes("w-full")
+
+            def go() -> None:
+                text = (box.value or "").strip()
+                if not text:
+                    return
+                self.steps[index - 1] = self.PURPOSE + text
+                self.dirty = True
+                dialog.close()
+                ui.timer(0.01, self.render_editor, once=True)
+
+            with ui.row().classes("w-full justify-end gap-2"):
+                ui.button("Cancel", on_click=dialog.close).props("flat")
+                ui.button("Save", on_click=go).props("unelevated")
+        dialog.open()
+
+    def club_dialog(self) -> None:
+        """
+        Put a purpose band above the selected steps.
+
+        Deliberately NOT a step group: nothing becomes reusable or callable. It
+        is a sentence explaining what a run of steps achieves, so a reader can
+        skip five lines they already understand.
+        """
+        if not self.selection:
+            return
+        first = min(self.selection)
+        chosen = [self.steps[i - 1] for i in sorted(self.selection)]
+        dialog = ui.dialog().props("persistent")
+        with dialog, ui.card().style("width:34rem"):
+            ui.label("Club these steps under a purpose").style(
+                f"font-size:{TYPOGRAPHY['size_lg']};"
+                f"font-weight:{TYPOGRAPHY['weight_bold']}")
+            ui.label("One line saying what they achieve together. Annotation "
+                     "only — the steps run exactly as they do now, and removing "
+                     "the band leaves them alone.").style(
+                f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}")
+            box = ui.input("Purpose",
+                           placeholder="verify the referral banner and free trial") \
+                .props("outlined dense").classes("w-full")
+            with ui.column().classes("w-full gap-0").style(
+                    f"border:1px solid {COLORS['border']}; border-radius:6px;"
+                    f"max-height:11rem; overflow-y:auto"):
+                for st in chosen:
+                    ui.label(st).style(
+                        f"font-family:{TYPOGRAPHY['mono']};"
+                        f"font-size:{TYPOGRAPHY['size_xs']}; padding:3px 8px")
+
+            def go() -> None:
+                text = (box.value or "").strip()
+                if not text:
+                    ui.notify("Say what they are for", type="warning")
+                    return
+                self.steps.insert(first - 1, self.PURPOSE + text)
+                self.selection.clear()
+                self.step_meta = {}
+                self.dirty = True
+                dialog.close()
+                ui.notify("Clubbed — fold it away with the chevron", type="positive")
+                ui.timer(0.01, self.render_editor, once=True)
+
+            with ui.row().classes("w-full justify-end gap-2"):
+                ui.button("Cancel", on_click=dialog.close).props("flat")
+                ui.button("Club them", on_click=go).props("unelevated")
+        dialog.open()
+
+    # ── selection ───────────────────────────────────────────────────────────
+    DISABLED = "# OFF: "
+    #: A one-line explanation of what the steps BELOW it are collectively doing.
+    #: A comment in the file, so the runner and the linter ignore it. Not a step
+    #: group: nothing becomes reusable, nothing is called by name, and removing
+    #: the band leaves every step exactly where it was.
+    PURPOSE = "# --- Purpose: "
+
+    def _set_select_mode(self, on: bool) -> None:
+        self.select_mode = on
+        if not on:
+            self.selection.clear()
+        ui.timer(0.01, self.render_editor, once=True)
+
+    def _toggle_selected(self, index: int, on: bool) -> None:
+        self.selection.add(index) if on else self.selection.discard(index)
+
+    def _select_all(self, on: bool) -> None:
+        self.selection = set(range(1, len(self.steps) + 1)) if on else set()
+        ui.timer(0.01, self.render_editor, once=True)
+
+    def _select_range(self, text: str) -> None:
+        """Accepts "20-30", "20 to 30" or a single number."""
+        import re
+
+        nums = [int(n) for n in re.findall(r"\d+", text or "")]
+        if not nums:
+            ui.notify("Give a range like 20-30", type="warning")
+            return
+        lo, hi = (nums[0], nums[-1]) if len(nums) > 1 else (nums[0], nums[0])
+        lo, hi = max(1, min(lo, hi)), min(len(self.steps), max(lo, hi))
+        self.selection |= set(range(lo, hi + 1))
+        ui.notify(f"Selected steps {lo}–{hi}", type="positive")
+        ui.timer(0.01, self.render_editor, once=True)
+
+    def _toggle_enabled(self, index: int) -> None:
+        step = self.steps[index - 1]
+        self.dirty = True
+        if step.strip().startswith(self.DISABLED):
+            self.steps[index - 1] = step.strip()[len(self.DISABLED):]
+        else:
+            self.steps[index - 1] = self.DISABLED + step.strip()
+        ui.timer(0.01, self.render_editor, once=True)
+
+    def _bulk_enabled(self, on: bool) -> None:
+        self.dirty = True
+        for i in sorted(self.selection):
+            step = self.steps[i - 1]
+            is_off = step.strip().startswith(self.DISABLED)
+            if on and is_off:
+                self.steps[i - 1] = step.strip()[len(self.DISABLED):]
+            elif not on and not is_off:
+                self.steps[i - 1] = self.DISABLED + step.strip()
+        ui.notify(f"{len(self.selection)} step(s) switched "
+                  f"{'on' if on else 'off'}", type="positive")
+        ui.timer(0.01, self.render_editor, once=True)
+
+    def _bulk_delete(self) -> None:
+        self.dirty = True
+        for i in sorted(self.selection, reverse=True):
+            self.steps.pop(i - 1)
+        n = len(self.selection)
+        self.selection.clear()
+        self.step_meta = {}
+        ui.notify(f"Removed {n} step(s)", type="positive")
+        ui.timer(0.01, self.render_editor, once=True)
+
+    def save_group_dialog(self) -> None:
+        """
+        Save the ticked steps as a reusable group.
+
+        The steps are stored under one name and offered while typing as
+        `call <name>` with an (sg) tag, so a sequence you repeat — open the site,
+        wait, dismiss the login popup — is written once.
+        """
+        chosen = [self.steps[i - 1] for i in sorted(self.selection)]
+        chosen = [c.strip()[len(self.DISABLED):] if c.strip().startswith(self.DISABLED)
+                  else c for c in chosen]
+        dialog = ui.dialog().props("persistent")
+        with dialog, ui.card().style("width:34rem"):
+            ui.label("Save as step group").style(
+                f"font-size:{TYPOGRAPHY['size_lg']};"
+                f"font-weight:{TYPOGRAPHY['weight_bold']}")
+            name = ui.input("Group name", placeholder="jd_open_and_dismiss_login") \
+                .props("outlined dense").classes("w-full")
+            ui.label("Lowercase letters, digits and underscores.").style(
+                f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}")
+            with ui.column().classes("w-full gap-0").style(
+                    f"border:1px solid {COLORS['border']}; border-radius:6px;"
+                    f"max-height:12rem; overflow-y:auto"):
+                for st in chosen:
+                    ui.label(st).style(
+                        f"font-family:{TYPOGRAPHY['mono']};"
+                        f"font-size:{TYPOGRAPHY['size_xs']}; padding:3px 8px")
+            note = ui.label().style(
+                f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['warning']}")
+
+            async def do_save(overwrite: bool = False) -> None:
+                try:
+                    await api.save_step_group((name.value or "").strip(), chosen,
+                                              self.platform, overwrite=overwrite)
+                except api.ApiError as e:
+                    if e.status == 409 and not overwrite:
+                        note.set_text(f"{e.detail} ")
+                        ui.button("Replace it", on_click=lambda: do_save(True)) \
+                            .props("flat dense color=negative")
+                        return
+                    note.set_text(e.detail[:160])
+                    return
+                dialog.close()
+                ui.notify(f"Saved step group — type 'call {name.value}' to reuse it",
+                          type="positive")
+                self.selection.clear()
+                await self.render_editor()
+
+            with ui.row().classes("w-full justify-end gap-2"):
+                ui.button("Cancel", on_click=dialog.close).props("flat")
+                ui.button("Save group", on_click=lambda: do_save(False)) \
+                    .props("unelevated")
+        dialog.open()
+
+    def move_step_to(self, src: int, dst: int) -> None:
+        """Drag-and-drop reorder."""
+        if src == dst:
+            return
+        self.dirty = True
+        self.steps.insert(dst - 1, self.steps.pop(src - 1))
+        self.step_meta = {}
+        self.selection.clear()
+        ui.timer(0.01, self.render_editor, once=True)
+
+    # ── step mutation ───────────────────────────────────────────────────────
+    def add_step(self, text: str) -> None:
+        self.steps.append(text)
+        self.dirty = True
+        ui.timer(0.01, self.render_editor, once=True)
+
+    def _insert_at(self, at: int, text: str) -> int:
+        """
+        Put a new step in at a 0-based position and say where it landed, or -1.
+
+        Selection and per-step metadata are dropped because both are keyed by
+        position, and every position from here on has just moved — stale entries
+        would tick the wrong rows and label the wrong steps.
+
+        Shared by the row composer and the review panel so that a step added
+        from a suggestion and a step typed by hand are the same operation.
+        """
+        text = (text or "").strip()
+        if not text:
+            return -1
+        at = max(0, min(at, len(self.steps)))
+        self.steps.insert(at, text)
+        self.step_meta = {}
+        self.selection.clear()
+        self.dirty = True
+        return at
+
+    def insert_step(self, at: int, text: str) -> None:
+        """Insert from the composer, and leave it open ready for the next one."""
+        pos = self._insert_at(at, text)
+        if pos < 0:
+            return
+        # Left open one place further down, so a run of steps can be typed
+        # straight through without reaching for the row buttons again.
+        self.compose_at = pos + 1
+        ui.notify(f"Inserted at step {pos + 1} — Save to keep it", type="positive")
+        ui.timer(0.01, self.render_editor, once=True)
+
+    def edit_step(self, index: int, text: str) -> None:
+        if text:
+            self.steps[index - 1] = text
+            self.dirty = True
+        ui.timer(0.01, self.render_editor, once=True)
+
+    def delete_step(self, index: int) -> None:
+        self.steps.pop(index - 1)
+        self.dirty = True
+        self.step_meta = {}          # positions shifted; stale metadata would mislead
+        ui.timer(0.01, self.render_editor, once=True)
+
+    def move_step(self, src: int, dst: int) -> None:
+        self.steps.insert(dst - 1, self.steps.pop(src - 1))
+        self.dirty = True
+        self.step_meta = {}
+        ui.timer(0.01, self.render_editor, once=True)
+
+    # ── actions ─────────────────────────────────────────────────────────────
+    async def save(self) -> None:
+        if not self.selected:
+            return
+        try:
+            await api.save_project(self.selected, self.steps, self.platform)
+            self.dirty = False
+            ui.notify(f"Saved {self.selected}", type="positive")
+            await self.render_editor()      # drop the "unsaved" badge
+            await self.load()
+            self.render_list()
+        except api.ApiError as e:
+            ui.notify(f"Save failed: {e.detail}", type="negative")
+
+    def run(self) -> None:
+        if self.selected:
+            ui.navigate.to(f"/run?flow={self.selected}&platform={self.platform}")
+
+    def new_dialog(self) -> None:
+        from ui.pages.platform.new_test_case import new_test_case_dialog
+        new_test_case_dialog(self.platform, on_created=self._after_create)
+
+    async def _after_create(self, name: str, steps: list[str],
+                            meta: dict[int, dict] | None = None) -> None:
+        self.selected = name
+        self.steps = steps
+        self.step_meta = meta or {}
+        self.compose_at = None
+        self.selection.clear()
+        self.collapsed.clear()
+        # Generated steps exist only in this editor until Save writes a file.
+        # A whole drafted testcase was lost that way, with nothing on screen
+        # saying it was at risk.
+        self.dirty = bool(steps)
+        await self.load()
+        self.render_list()
+        await self.render_editor()
+
+
+async def render(platform: str, flow: str = "") -> None:
+    page = TestCasesPage(platform)
+    await page.load()
+    page.render()
+    # Reopen whatever the URL names. The editor's state lived only in server
+    # memory, so a reload — or a websocket reconnect after the server restarted —
+    # dropped back to "Select a test case" with the author's place lost.
+    if flow and flow in page.projects:
+        await page.open_project(flow)
+    else:
+        # Nothing named in the URL: reopen what was last open rather than
+        # showing an empty pane. Deferred by a tick because reading browser
+        # storage needs a connected client.
+        ui.timer(0.3, page.restore_last, once=True)
+
+
+def _selector_from_record(rec: dict | str | None) -> str:
+    """Turn a saved locator record into the selector string shown in editors."""
+    if isinstance(rec, str):
+        return rec
+    if not isinstance(rec, dict):
+        return ""
+    if rec.get("custom_xpath"):
+        return rec["custom_xpath"]
+    if rec.get("xpath"):
+        return rec["xpath"]
+    sels = rec.get("selectors")
+    if isinstance(sels, list) and sels and isinstance(sels[0], dict):
+        return sels[0].get("value", "")
+    return ""
+
+
+def _locator_detail_index(groups: dict) -> dict[str, dict[str, str]]:
+    """Flatten grouped locators into {name: {group, selector}} for step menus."""
+    out: dict[str, dict[str, str]] = {}
+    if not isinstance(groups, dict):
+        return out
+    for group, locators in groups.items():
+        if not isinstance(locators, dict):
+            continue
+        for name, rec in locators.items():
+            if not name:
+                continue
+            out[name] = {
+                "group": str(group),
+                "selector": _selector_from_record(rec),
+            }
+    return out

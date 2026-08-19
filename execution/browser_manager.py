@@ -120,6 +120,28 @@ def build_context_options(capabilities: dict | None, devices) -> dict:
     use = load_playwright_config().get("use", {})
     permissions = use.get("permissions", [])
 
+    # Browser permission prompts — geolocation, notifications, camera, clipboard —
+    # are drawn by the BROWSER, so no locator can reach them and a run just stalls
+    # behind one. Playwright decides them at context level, before any page loads.
+    #
+    # This covers browser permissions only. A cookie banner or a login popup is
+    # part of the site, is reachable by an ordinary locator, and is deliberately
+    # left to the test to handle: silently dismissing site dialogs would hide the
+    # very things a test is often there to check.
+    BROWSER_PERMISSIONS = [
+        "geolocation", "notifications", "camera", "microphone",
+        "clipboard-read", "clipboard-write", "midi", "background-sync",
+        "accelerometer", "gyroscope", "magnetometer", "payment-handler",
+    ]
+    decision = str(caps.get("browser_permissions")
+                   or use.get("browser_permissions") or "").strip().lower()
+    if decision in ("allow", "allow_all", "allow all"):
+        permissions = list(dict.fromkeys(list(permissions) + BROWSER_PERMISSIONS))
+    elif decision in ("deny", "deny_all", "deny all", "block"):
+        # An empty grant list IS the denial: Playwright auto-dismisses any prompt
+        # for a permission that was not granted, so nothing blocks the run.
+        permissions = []
+
     # ── Desktop: unchanged from the original implementation ──────────────────
     if not wants_mobile_web(caps):
         return dict(no_viewport=True, permissions=permissions)

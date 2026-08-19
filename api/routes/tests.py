@@ -66,6 +66,12 @@ class RunRequest(BaseModel):
     # not executable without these — `open ${product_url}` has nothing to open
     # until product_url has a value.
     parameters: dict[str, str] = {}
+    #: Which environment's saved Test Data counts as supplied for this run.
+    environment: str = ""
+    #: "allow" | "deny" | "" — how to answer BROWSER permission prompts
+    #: (geolocation, notifications, camera…). Site popups are not covered; those
+    #: are page content and belong to the test.
+    browser_permissions: str = ""
     # Names within `parameters` whose values must never be logged or echoed back.
     secret_parameters: list[str] = []
 
@@ -88,7 +94,8 @@ from config.settings import is_secret_name as _is_secret  # noqa: E402
 def _run_flow_sync(run_id: str, flow_path: str, headless: bool,
                    capabilities: dict | None = None,
                    parameters: dict | None = None,
-                   secret_parameters: list | None = None) -> dict:
+                   secret_parameters: list | None = None,
+                   environment: str = "") -> dict:
     """
     Runs the NLP flow in a thread, captures step results,
     persists a JSON report, and returns the summary dict.
@@ -118,6 +125,23 @@ def _run_flow_sync(run_id: str, flow_path: str, headless: bool,
 
     declared = set(secret_parameters or [])
     injected = []
+    # Saved Test Data first, then this run's own values on top.
+    #
+    # The pre-flight check already counted the store as a source, so a flow
+    # whose values were all saved was allowed to start — and then failed on
+    # every step with "Variable '${username}' is not stored in memory!", because
+    # nothing ever put the store INTO the run. Validated as available and never
+    # supplied is the worst of both.
+    try:
+        from execution.test_data import resolved
+
+        for name, value in resolved(environment).items():
+            RUNTIME_VARIABLES[name] = str(value)
+        logger.info("📦 Test Data loaded: %s", ", ".join(sorted(resolved(environment)))
+                    or "nothing stored")
+    except Exception as e:  # noqa: BLE001 — a run must not die on the store
+        logger.warning("Could not load Test Data for this run: %s", e)
+
     for name, value in (parameters or {}).items():
         key = str(name).strip()
         if not key:
@@ -238,7 +262,38 @@ def run_test(body: RunRequest, background_tasks: BackgroundTasks):
         "mobile_web": bool(device),
         "device_name": device,
         "browser": body.browser or "",
+        "browser_permissions": body.browser_permissions or "",
     }
+
+    # A flow that needs values must not be launched without them. Starting anyway
+    # produced one cryptic "Variable '${x}' is not stored in memory!" per step —
+    # five failures describing the same single omission, none of them saying what
+    # to do. Say it once, before the browser opens.
+    try:
+        with open(flow_path, "r", encoding="utf-8") as f:
+            flow_text = f.read()
+        from ai_flow_builder.emitter import run_parameters
+        from execution.test_data import get_all
+
+        needed = run_parameters([ln for ln in flow_text.splitlines()
+                                 if ln.strip() and not ln.strip().startswith("#")])
+        supplied = set(body.parameters or {}) | set(get_all(body.environment).keys())
+        missing = [n for n in needed if n not in supplied]
+    except Exception:  # noqa: BLE001 — never block a run on this check failing
+        missing = []
+
+    if missing:
+        raise HTTPException(
+            status_code=422,
+            detail=(f"This test needs a value for: {', '.join(missing)}. "
+                    f"Enter them in Run Center, or save them under Test Data so "
+                    f"every run picks them up."),
+        )
+
+    # Remember how this flow was launched so it can be repeated without
+    # re-answering every question. Secret VALUES are never written — only the
+    # names, so Quick Run knows what to ask for again rather than storing it.
+    _remember_setup(body)
 
     run_id = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S_%f")
 
@@ -247,7 +302,8 @@ def run_test(body: RunRequest, background_tasks: BackgroundTasks):
     def _task():
         _run_flow_sync(run_id, flow_path, body.headless, capabilities=caps,
                        parameters=body.parameters,
-                       secret_parameters=body.secret_parameters)
+                       secret_parameters=body.secret_parameters,
+                       environment=getattr(body, "environment", ""))
 
     background_tasks.add_task(_task)
 
@@ -279,6 +335,100 @@ def list_results():
             in_memory.append({"run_id": run_id, "status": info["status"]})
 
     return {"saved_reports": saved, "session_runs": in_memory}
+
+
+#: Last-used launch settings per flow, so a repeat run needs no setup.
+LAST_SETUP_PATH = os.path.join(LOGS_DIR, "_last_run_setup.json")
+
+
+def _remember_setup(body) -> None:
+    """Persist how a flow was launched. Never stores a secret value."""
+    try:
+        current = {}
+        if os.path.exists(LAST_SETUP_PATH):
+            with open(LAST_SETUP_PATH, "r", encoding="utf-8") as f:
+                current = json.load(f) or {}
+        secret = set(body.secret_parameters or [])
+        current[body.project] = {
+            "platform": body.platform,
+            "headless": body.headless,
+            "device_name": body.device_name,
+            "browser": body.browser,
+            "environment": getattr(body, "environment", ""),
+            "browser_permissions": getattr(body, "browser_permissions", ""),
+            # Non-secret values are kept so a repeat is genuinely one click.
+            # A secret is recorded by NAME only and must be supplied again.
+            "parameters": {k: v for k, v in (body.parameters or {}).items()
+                           if k not in secret and not _is_secret(k)},
+            "needs_secrets": sorted(n for n in (body.parameters or {})
+                                    if n in secret or _is_secret(n)),
+            "at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        }
+        tmp = LAST_SETUP_PATH + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(current, f, indent=2)
+        os.replace(tmp, LAST_SETUP_PATH)
+    except Exception as e:  # noqa: BLE001 — never fail a run over bookkeeping
+        logger.debug("Could not record last-run setup: %s", e)
+
+
+@router.get("/last-setup/{flow}")
+def last_setup(flow: str):
+    """
+    How this flow was launched last time, for Quick Run.
+
+    Returns {} when it has never been run, so the caller shows the full setup
+    form rather than a Quick Run button that would launch something unspecified.
+    """
+    try:
+        with open(LAST_SETUP_PATH, "r", encoding="utf-8") as f:
+            return json.load(f).get(flow, {})
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+@router.get("/history")
+def run_history(limit: int = 50):
+    """
+    Past runs, newest first, with enough detail to scan them.
+
+    /results returns bare filenames, which is why nothing could show a history:
+    the caller would have had to fetch every report just to learn what flow it
+    was for and whether it passed. This reads each report's summary once.
+    """
+    rows = []
+    for fname in sorted(os.listdir(LOGS_DIR), reverse=True):
+        if not fname.endswith(".json"):
+            continue
+        # Reports for fixture flows (a leading underscore) come from the tool's
+        # own test suite. They are not runs the author made and burying real
+        # runs under dozens of them makes the screen useless.
+        if fname.startswith("report___") or fname.startswith("report__"):
+            continue
+        run_id = fname[:-len(".json")]
+        try:
+            with open(os.path.join(LOGS_DIR, fname), "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except (OSError, json.JSONDecodeError):
+            # A half-written or hand-edited report must not hide the rest.
+            rows.append({"run_id": run_id, "flow": "", "started_at": "",
+                         "summary": {}, "status": "unreadable", "steps": 0})
+            continue
+        summary = data.get("summary", {}) or {}
+        failed = int(summary.get("failed", 0) or 0)
+        total = int(summary.get("total", 0) or 0)
+        rows.append({
+            "run_id": run_id,
+            "flow": data.get("testplan", ""),
+            "executer": data.get("executer", ""),
+            "started_at": data.get("started_at", "") or data.get("generated_at", ""),
+            "summary": summary,
+            "steps": total,
+            "status": "passed" if total and not failed else ("failed" if failed else "empty"),
+        })
+        if len(rows) >= limit:
+            break
+    return {"runs": rows}
 
 
 @router.get("/results/{run_id}")

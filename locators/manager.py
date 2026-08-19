@@ -6,6 +6,7 @@ LocatorWatcher has been moved to locators/watcher.py.
 import json
 import logging
 import os
+import re
 from datetime import datetime, timezone, timedelta
 
 from config import settings
@@ -42,10 +43,33 @@ def save_locators(data: dict) -> None:
         logger.error("❌ Failed to save locators to disk: %s", e)
 
 
+#: A group or locator name that differs only by case creates a SECOND entry that
+#: looks identical to a human — `Web_B2B_HomePage` and `web_b2b_homepage` both
+#: existed for exactly this reason. Names are normalised at every write so the
+#: database cannot drift into case variants again.
+_NAME_OK = re.compile(r"^[a-z][a-z0-9_]*$")
+
+
+def normalise_name(raw: str, *, kind: str = "name") -> str:
+    """
+    Lowercase, snake_case form of a group or locator name.
+
+    Digit-led names (the recorder used to emit `0`, `1` … from `<input id="0">`)
+    get a prefix, because a bare number tells a reader nothing about what it
+    points at and cannot be distinguished from a numeric argument in a step.
+    """
+    cleaned = re.sub(r"[^a-z0-9]+", "_", str(raw or "").strip().lower()).strip("_")
+    if not cleaned:
+        raise ValueError(f"{kind} is empty after normalisation: {raw!r}")
+    if cleaned[0].isdigit():
+        cleaned = f"item_{cleaned}"
+    return cleaned
+
+
 def add_locator(page_name: str, name: str, locator: str) -> bool:
     """Adds a locator with duplicate-XPath prevention and data scrubbing."""
-    clean_page = page_name.split(":")[0].strip().replace('"', '').replace('{', '')
-    clean_name = name.strip().replace('"', '').replace(',', '')
+    clean_page = normalise_name(page_name.split(":")[0], kind="group")
+    clean_name = normalise_name(name, kind="locator")
 
     locs = load_locators()
 
@@ -301,49 +325,21 @@ def get_stale_locators(max_age_days: int = 30) -> list[dict]:
     return stale
 
 
-def get_all_locators() -> dict:
+def get_all_locators(platform: str = "") -> dict:
     """
-    Loads and merges locator names from manual + recorded databases for UI dropdowns.
-    Returns: {locator_name: "PAGE ➔ locator_name"} — platform-aware for Appium sections.
+    {locator_name: "PAGE ➔ locator_name"} for UI dropdowns, across every source.
+
+    `platform` narrows it to what that platform's runner can resolve. Left
+    empty it spans every platform, which is right for a picker that has not
+    been told what the test targets and wrong for anything deciding whether a
+    step will run.
+
+    Delegates to locators/sources.py so the dropdown, the Elements screen, the
+    linter and the snippet file cannot disagree about what exists. This function
+    used to walk the two database files itself, in its own order, with its own
+    handling of appium screen groups — a fourth independent copy of a rule that
+    only the runner is entitled to define.
     """
-    locator_mapping: dict = {}
+    from locators.sources import display_map
 
-    # Manual locators
-    manual_path = settings.MANUAL_LOCATORS_FILE
-    if os.path.exists(manual_path):
-        try:
-            with file_lock(manual_path, exclusive=False):
-                data = read_json(manual_path, retries=2)
-            for page_name, locators in (data or {}).items():
-                if not isinstance(locators, dict):
-                    continue
-                if page_name in _APPIUM_PLATFORM_KEYS:
-                    # Recurse into screen groups
-                    for screen_name, screen_els in locators.items():
-                        if isinstance(screen_els, dict):
-                            for element_name in screen_els.keys():
-                                locator_mapping[element_name] = (
-                                    f"{page_name.upper()} / {screen_name} ➔ {element_name}"
-                                )
-                else:
-                    for element_name in locators.keys():
-                        locator_mapping[element_name] = (
-                            f"{str(page_name).upper()} ➔ {element_name}"
-                        )
-        except Exception as e:
-            logger.warning("Could not read manual locator DB for dropdowns: %s", e)
-
-    # Recorded/ML locators
-    recorded_path = settings.RECORDED_ELEMENTS_FILE
-    if os.path.exists(recorded_path):
-        try:
-            with file_lock(recorded_path, exclusive=False):
-                data = read_json(recorded_path, retries=2)
-            for page_name, locators in (data or {}).items():
-                if isinstance(locators, dict):
-                    for element_name in locators.keys():
-                        locator_mapping[element_name] = f"{str(page_name).upper()} ➔ {element_name}"
-        except Exception as e:
-            logger.warning("Could not read recorded locator DB for dropdowns: %s", e)
-
-    return locator_mapping
+    return display_map(platform)

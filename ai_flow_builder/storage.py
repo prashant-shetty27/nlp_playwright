@@ -39,6 +39,27 @@ logger = logging.getLogger(__name__)
 #: than accepted and then failing confusingly at parse time.
 SUPPORTED_EXTENSIONS = {".xlsx": "xlsx"}
 
+#: A drafted-from-prompt source is stored like any other: same id scheme, same
+#: listing, same retrieval. Generation then cannot tell where a testcase came
+#: from, which is the point — one code path, one set of guarantees.
+PROMPT_KIND = "prompt"
+PROMPT_FILENAME = "draft.json"
+
+
+def prompt_source_id(prompt: str, platform: str = "", max_testcases: int = 0) -> str:
+    """
+    The content address of a drafted prompt.
+
+    Keyed on the request, so re-asking the same question reaches the same source
+    instead of piling up near-identical ones. The platform and the requested
+    count are part of the request: the same words drafted for the website and
+    for the mobile site are two different drafts, and hashing the prompt alone
+    made the second silently overwrite the first under a shared id.
+    """
+    key = "\u0000".join([(prompt or "").strip(), (platform or "").strip(),
+                          str(max_testcases or 0)])
+    return "src_" + hashlib.sha256(key.encode("utf-8")).hexdigest()[:12]
+
 
 class UnsupportedSource(ValueError):
     """Raised for a file extension no adapter can read."""
@@ -98,6 +119,40 @@ class SourceStore(Protocol):
     name: str
 
     def put(self, data: bytes, filename: str, uploaded_by: str = "") -> StoredSource: ...
+    def put_prompt(self, draft: dict, prompt: str, uploaded_by: str = "",
+                   platform: str = "", max_testcases: int = 0) -> StoredSource:
+        """
+        Persist a drafted set of testcases as a first-class source.
+
+        Content-addressed on the PROMPT, not the draft: re-drafting the same
+        request produces a new id only if the request itself changed, so an
+        operator who regenerates does not accumulate near-identical sources.
+        """
+        payload = json.dumps({"prompt": prompt, "draft": draft},
+                             indent=2, sort_keys=True).encode("utf-8")
+        sid = prompt_source_id(prompt, platform, max_testcases)
+        d = self._dir(sid)
+        os.makedirs(d, exist_ok=True)
+        with open(os.path.join(d, PROMPT_FILENAME), "wb") as f:
+            f.write(payload)
+        rec = StoredSource(
+            source_id=sid, filename=PROMPT_FILENAME, kind=PROMPT_KIND,
+            size_bytes=len(payload), sha256=hashlib.sha256(payload).hexdigest(),
+            uploaded_at=_now(), uploaded_by=uploaded_by,
+            path=os.path.join(d, PROMPT_FILENAME),
+            extra={"prompt": prompt[:2000],
+                   "provider": draft.get("provider", ""),
+                   "model": draft.get("model", ""),
+                   "testcases": len(draft.get("testcases", [])),
+                   "values_found": draft.get("values_found", {}),
+                   "inputs_needed": draft.get("inputs_needed", []),
+                   "assumptions": draft.get("assumptions", []),
+                   "unclear": draft.get("unclear", [])},
+        )
+        with open(os.path.join(d, "meta.json"), "w", encoding="utf-8") as f:
+            json.dump(rec.to_dict(), f, indent=2)
+        return rec
+
     def get(self, source_id: str) -> StoredSource: ...
     def open_path(self, source_id: str) -> str: ...
     def list(self) -> list[StoredSource]: ...
@@ -141,6 +196,40 @@ class LocalSourceStore:
             source_id=sid, filename=safe, kind=kind, size_bytes=len(data),
             sha256=hashlib.sha256(data).hexdigest(), uploaded_at=_now(),
             uploaded_by=uploaded_by, path=os.path.join(d, safe),
+        )
+        with open(os.path.join(d, "meta.json"), "w", encoding="utf-8") as f:
+            json.dump(rec.to_dict(), f, indent=2)
+        return rec
+
+    def put_prompt(self, draft: dict, prompt: str, uploaded_by: str = "",
+                   platform: str = "", max_testcases: int = 0) -> StoredSource:
+        """
+        Persist a drafted set of testcases as a first-class source.
+
+        Content-addressed on the PROMPT, not the draft: re-drafting the same
+        request produces a new id only if the request itself changed, so an
+        operator who regenerates does not accumulate near-identical sources.
+        """
+        payload = json.dumps({"prompt": prompt, "draft": draft},
+                             indent=2, sort_keys=True).encode("utf-8")
+        sid = prompt_source_id(prompt, platform, max_testcases)
+        d = self._dir(sid)
+        os.makedirs(d, exist_ok=True)
+        with open(os.path.join(d, PROMPT_FILENAME), "wb") as f:
+            f.write(payload)
+        rec = StoredSource(
+            source_id=sid, filename=PROMPT_FILENAME, kind=PROMPT_KIND,
+            size_bytes=len(payload), sha256=hashlib.sha256(payload).hexdigest(),
+            uploaded_at=_now(), uploaded_by=uploaded_by,
+            path=os.path.join(d, PROMPT_FILENAME),
+            extra={"prompt": prompt[:2000],
+                   "provider": draft.get("provider", ""),
+                   "model": draft.get("model", ""),
+                   "testcases": len(draft.get("testcases", [])),
+                   "values_found": draft.get("values_found", {}),
+                   "inputs_needed": draft.get("inputs_needed", []),
+                   "assumptions": draft.get("assumptions", []),
+                   "unclear": draft.get("unclear", [])},
         )
         with open(os.path.join(d, "meta.json"), "w", encoding="utf-8") as f:
             json.dump(rec.to_dict(), f, indent=2)
@@ -210,6 +299,40 @@ class MirroredSourceStore:
                 self.backup_errors.append(f"{rec.source_id}: {e}")
         return rec
 
+    def put_prompt(self, draft: dict, prompt: str, uploaded_by: str = "",
+                   platform: str = "", max_testcases: int = 0) -> StoredSource:
+        """
+        Persist a drafted set of testcases as a first-class source.
+
+        Content-addressed on the PROMPT, not the draft: re-drafting the same
+        request produces a new id only if the request itself changed, so an
+        operator who regenerates does not accumulate near-identical sources.
+        """
+        payload = json.dumps({"prompt": prompt, "draft": draft},
+                             indent=2, sort_keys=True).encode("utf-8")
+        sid = prompt_source_id(prompt, platform, max_testcases)
+        d = self._dir(sid)
+        os.makedirs(d, exist_ok=True)
+        with open(os.path.join(d, PROMPT_FILENAME), "wb") as f:
+            f.write(payload)
+        rec = StoredSource(
+            source_id=sid, filename=PROMPT_FILENAME, kind=PROMPT_KIND,
+            size_bytes=len(payload), sha256=hashlib.sha256(payload).hexdigest(),
+            uploaded_at=_now(), uploaded_by=uploaded_by,
+            path=os.path.join(d, PROMPT_FILENAME),
+            extra={"prompt": prompt[:2000],
+                   "provider": draft.get("provider", ""),
+                   "model": draft.get("model", ""),
+                   "testcases": len(draft.get("testcases", [])),
+                   "values_found": draft.get("values_found", {}),
+                   "inputs_needed": draft.get("inputs_needed", []),
+                   "assumptions": draft.get("assumptions", []),
+                   "unclear": draft.get("unclear", [])},
+        )
+        with open(os.path.join(d, "meta.json"), "w", encoding="utf-8") as f:
+            json.dump(rec.to_dict(), f, indent=2)
+        return rec
+
     def get(self, source_id: str) -> StoredSource:
         try:
             return self.primary.get(source_id)
@@ -245,6 +368,12 @@ def adapter_for(rec: StoredSource):
         from ai_flow_builder.sources.xlsx_source import XlsxSource
 
         return XlsxSource(rec.path)
+    if rec.kind == PROMPT_KIND:
+        from ai_flow_builder.prompt_source import PromptSource
+
+        with open(rec.path, encoding="utf-8") as f:
+            payload = json.load(f)
+        return PromptSource(payload["draft"], payload.get("prompt", ""))
     raise UnsupportedSource(f"no adapter for kind {rec.kind!r}")
 
 

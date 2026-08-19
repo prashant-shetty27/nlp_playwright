@@ -188,6 +188,23 @@ SECRET_NAME_HINTS = ("otp", "password", "passwd", "pwd", "token", "secret",
                      "credential")
 
 
+#: The narrower set: a CREDENTIAL, which must never be written into a
+#: repository file at all. Distinct from SECRET_NAME_HINTS on purpose.
+#:
+#: An OTP or a test mobile number must be kept out of LOGS and REPORTS, but it is
+#: ordinary reusable test data and belongs in the test-data store — refusing to
+#: store it there just means every author pastes the digits into their steps
+#: instead, which is strictly worse. A password or an API key is different in
+#: kind: there is no version of it that belongs in a tracked file.
+CREDENTIAL_NAME_HINTS = ("password", "passwd", "pwd", "token", "secret",
+                         "apikey", "api_key", "credential", "auth")
+
+
+def is_credential_name(name: str) -> bool:
+    """True when a value must never be persisted to a repository file."""
+    return any(h in (name or "").lower() for h in CREDENTIAL_NAME_HINTS)
+
+
 def is_secret_name(name: str, declared: set | None = None) -> bool:
     """True when a parameter's value must never be written to a log or report."""
     if declared and name in declared:

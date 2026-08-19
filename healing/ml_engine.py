@@ -291,6 +291,14 @@ class LocatorHealer:
             "🏥 Heal accepted | ML distance=%.4f | validation=%.0f%% | tag=<%s>",
             ml_distance, validation_score * 100, winner_dna.get("tagName"),
         )
+        # Carried on the winner so callers can decide whether the match is strong
+        # enough to WRITE DOWN, which is a longer-lived claim than using it once.
+        winner_dna = dict(winner_dna)
+        winner_dna["_heal_score"] = round(
+            max(0.0, 1.0 - ml_distance / max(self.CONFIDENCE_THRESHOLD, 1e-6))
+            * 0.5 + validation_score * 0.5, 4)
+        winner_dna["_ml_distance"] = round(ml_distance, 4)
+        winner_dna["_validation"] = round(validation_score, 4)
         return winner_dna
 
 

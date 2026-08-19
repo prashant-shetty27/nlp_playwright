@@ -1,32 +1,56 @@
 """
-ui/components/log_viewer.py — Real-time Log Viewer
+ui/components/log_viewer.py — Live log panel
 
-A scrollable, auto-updating log panel for streaming runner output.
-
-Features:
-    - Monospace font, dark background
-    - Color-coded log levels:
-        INFO    → white
-        WARNING → amber
-        ERROR   → red
-        PASS    → green
-        FAIL    → red bold
-        DEBUG   → grey
-    - Autoscroll toggle (follows tail by default)
-    - [Clear] button
-    - [Download .txt] button
-    - Max lines buffer (default 500, older lines dropped)
+Real-time scrollable log with an autoscroll toggle.
 
 Props:
-    log_source: AsyncIterator[str] | list[str]
-        Pass an async generator for live streaming, or a list for replay
-    autoscroll: bool (default True)
-    max_lines:  int (default 500)
-    height:     str (default "400px")
+    max_lines: int — ring buffer size. A run can emit thousands of lines; keeping
+               them all would grow the page without bound, which on a long
+               execution is the difference between a responsive tab and a stalled
+               one. Oldest lines are dropped.
 
-Implementation note:
-    For live runs → bind to subprocess stdout via asyncio.create_subprocess_exec
-    For history  → read from data/*/logs/<run_id>.log
+Usage:
+    log = log_viewer()
+    log.push("step 1 passed")
+    log.clear()
 
-Used in: pages/executions/live.py, pages/reports/detail.py
+Used in: pages/executions/live.py
 """
+from __future__ import annotations
+
+from nicegui import ui
+
+from ui.theme import COLORS, TYPOGRAPHY
+
+
+class LogViewer:
+    def __init__(self, max_lines: int = 800) -> None:
+        self.max_lines = max_lines
+        self._lines: list[str] = []
+        with ui.column().classes("w-full gap-1"):
+            with ui.row().classes("w-full items-center gap-2"):
+                self.autoscroll = ui.switch("Autoscroll", value=True).props("dense")
+                ui.space()
+                ui.button("Clear", icon="clear_all",
+                          on_click=self.clear).props("flat dense size=sm")
+            self.area = ui.log(max_lines=max_lines).classes("w-full").style(
+                f"height:22rem; font-family:{TYPOGRAPHY['mono']};"
+                f"font-size:{TYPOGRAPHY['size_xs']}; background:{COLORS['surface_alt']};"
+                f"border:1px solid {COLORS['border']}; border-radius:6px")
+
+    def push(self, line: str) -> None:
+        self._lines.append(line)
+        if len(self._lines) > self.max_lines:
+            self._lines = self._lines[-self.max_lines:]
+        if self.autoscroll.value:
+            self.area.push(line)
+        else:
+            self.area.push(line)          # ui.log keeps its own scroll position
+
+    def clear(self) -> None:
+        self._lines.clear()
+        self.area.clear()
+
+
+def log_viewer(max_lines: int = 800) -> LogViewer:
+    return LogViewer(max_lines)

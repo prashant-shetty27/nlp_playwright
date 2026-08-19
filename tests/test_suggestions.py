@@ -159,6 +159,10 @@ check("generation is idempotent — nothing is emitted twice for one action",
 
 # The file on disk is the artefact the editor actually reads.
 path = get_snippets_path()
+check("the snippet file has been synced at least once",
+      os.path.exists(path),
+      f"{path} is missing — run reporting/snippet_sync.py; until then the "
+      f"on-disk check below cannot run")
 if os.path.exists(path):
     raw = re.sub(r"^\s*//.*$", "", open(path, encoding="utf-8").read(), flags=re.M)
     on_disk = json.loads(raw)
@@ -180,7 +184,9 @@ print("\n[5] STATE DROPDOWN — must offer only states the parser accepts")
 src = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                         "reporting", "snippet_sync.py"), encoding="utf-8").read()
 mo = re.search(r'verify_states\s*=\s*"([^"]*)"', src)
-check("verify_states is declared", bool(mo))
+check("verify_states is declared", bool(mo),
+      "snippet_sync no longer declares verify_states — the per-state checks "
+      "below are silently not running")
 if mo:
     states = [s.strip() for s in mo.group(1).split(",") if s.strip()]
     for st in states:

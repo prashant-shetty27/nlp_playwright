@@ -39,6 +39,20 @@ class ProviderNotConfigured(ProviderError):
     """Named provider exists but has no adapter or no credential."""
 
 
+class ProviderUnavailable(ProviderError):
+    """
+    Transient: the provider is rate-limited, overloaded, or unreachable.
+
+    Distinct from ProviderError because the operator's next action differs — this
+    one means "try again shortly", not "the request was wrong". Surfaced as a 503
+    so a caller can retry rather than treating it as a permanent failure.
+    """
+
+    def __init__(self, message: str, retry_after: int | None = None) -> None:
+        super().__init__(message)
+        self.retry_after = retry_after
+
+
 @dataclass
 class Completion:
     """What every provider returns, whatever its native response shape."""
@@ -65,16 +79,18 @@ class LLMProvider(Protocol):
 #: missing optional SDK only breaks the provider that needs it.
 _ADAPTERS: dict[str, str] = {
     "anthropic": "ai_flow_builder.llm.anthropic_provider:AnthropicProvider",
+    "openai": "ai_flow_builder.llm.openai_provider:OpenAIProvider",
+    # Grok and DeepSeek expose OpenAI-compatible endpoints, so they are the same
+    # adapter pointed at a different base URL rather than new code.
+    "grok": "ai_flow_builder.llm.openai_provider:OpenAIProvider",
+    "deepseek": "ai_flow_builder.llm.openai_provider:OpenAIProvider",
 }
 
 #: Providers the interface is designed for but which have no adapter yet. Named
 #: explicitly so an unimplemented choice fails with a useful message instead of
 #: looking like a typo.
 _PLANNED: dict[str, str] = {
-    "openai":   "OpenAI / ChatGPT — structured outputs via response_format json_schema",
-    "gemini":   "Google Gemini — response_schema on generate_content",
-    "grok":     "xAI Grok — OpenAI-compatible endpoint",
-    "deepseek": "DeepSeek — OpenAI-compatible endpoint",
+    "gemini": "Google Gemini — response_schema on generate_content",
 }
 
 DEFAULT_PROVIDER = "anthropic"

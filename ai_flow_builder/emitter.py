@@ -15,6 +15,48 @@ import textwrap
 from ai_flow_builder.mapper import (NEEDS_LOCATOR, SUBSTITUTE, SUPPORTED,
                                     StepMapping, summarise)
 
+#: Variables a flow references but never produces itself. These must be supplied
+#: from outside at run time (`/tests/run` parameters, or a suite parameter), so
+#: the "# Params" header has to list them or the reader — and tools/flow_lint.py —
+#: has no way to know the flow is parameterised.
+def run_parameters(statements: list[str]) -> list[str]:
+    """
+    Names the flow needs from its caller: every ${var} referenced, minus every
+    var an earlier step in the same flow defines.
+
+    Production is detected with the LIVE parser, exactly as tools/flow_lint.py
+    does it, so the header cannot claim a parameter the linter thinks is
+    step-produced (or omit one it thinks is missing).
+    """
+    from ai_flow_builder.bundle import referenced_variables
+    from nlp.parser import parse_step
+
+    produced: set[str] = set()
+    needed: list[str] = []
+    for stmt in statements:
+        for var in sorted(referenced_variables(stmt)):
+            # The header is whitespace-separated, so a name containing a space
+            # cannot be declared in it. Emitting one would split into two bogus
+            # names and corrupt the declaration; leaving it out means the linter
+            # reports it as undefined, which is the honest outcome.
+            if any(ch.isspace() for ch in var):
+                continue
+            if var not in produced and var not in needed:
+                needed.append(var)          # referenced before anything defined it
+        try:
+            cmd = parse_step(stmt)
+        except Exception:                   # noqa: BLE001 — unparseable lines define nothing
+            continue
+        vname = getattr(cmd, "variable_name", None)
+        if isinstance(vname, str) and vname:
+            produced.add(vname)
+        if getattr(cmd, "type", "") == "create_variable":
+            target = getattr(cmd, "target", None)   # create_variable names it `target`
+            if isinstance(target, str) and target:
+                produced.add(target)
+    return needed
+
+
 RULE = "# " + "=" * 76
 THIN = "# " + "-" * 76
 
@@ -55,7 +97,13 @@ def render_clean(
             title = (case_titles.get(tid) or "").strip()
             if title:
                 lines.append(f"#   {tid} — {title[:88]}")
-    lines.append(f"# Params : {' '.join(placeholders) if placeholders else 'none'}")
+    # Derived from the statements actually emitted, not from `placeholders`.
+    # Callers populate that dict inconsistently — POST /generate never sets it —
+    # so the header used to read "none" on flows that referenced two parameters,
+    # and flow_lint then rejected the flow it had just been handed.
+    emitted = [m.statement for m in mappings if m.emits]
+    params = list(placeholders) + [p for p in run_parameters(emitted) if p not in placeholders]
+    lines.append(f"# Params : {' '.join(params) if params else 'none'}")
     # Only claim a sidecar map when one is actually written. A preview that points
     # at a .map.json which does not exist sends the reader to a missing file.
     lines.append(

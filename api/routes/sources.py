@@ -13,6 +13,7 @@ import os
 import sys
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
+from pydantic import BaseModel
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 if BASE_DIR not in sys.path:
@@ -81,6 +82,108 @@ async def upload_source(file: UploadFile = File(...), uploaded_by: str = ""):
         ) from e
 
     return {**rec.to_dict(), "stored_in": default_store.name, **ingested}
+
+
+class PromptRequest(BaseModel):
+    prompt: str
+    platform: str                    # required — see nlp/platforms.py
+    max_testcases: int = 10
+    provider: str = ""               # blank = LLM_PROVIDER, else this adapter
+    model: str = ""                  # blank = the provider's default
+    uploaded_by: str = ""
+    #: Ask the model again instead of returning the draft already on file for
+    #: this exact request. Off by default: a model does not write the same
+    #: testcases twice, and silently re-drafting meant the same prompt produced
+    #: "${test_url}" one day and "${page_url}" the next, under the same id.
+    redraft: bool = False
+
+
+@router.post("/prompt", status_code=201)
+def draft_from_prompt(body: PromptRequest):
+    """
+    Draft testcases from a written request and store them as a source.
+
+    The result is an ordinary source: it lists, retrieves and generates exactly
+    like an uploaded workbook. Everything downstream — the mapper, locator reuse,
+    per-step statuses, linting — is the same code path, so a prompt gets the same
+    guarantees a spreadsheet does. In particular, nothing a model writes reaches
+    a flow without passing the live parser and the runner's dispatch table.
+    """
+    from ai_flow_builder.llm import (ProviderError, ProviderNotConfigured,
+                                     ProviderRefused, ProviderUnavailable)
+    from ai_flow_builder.prompt_source import draft_testcases
+    from nlp.platforms import UnknownPlatform, normalise
+
+    text = (body.prompt or "").strip()
+    if len(text) < 15:
+        raise HTTPException(
+            status_code=422,
+            detail="Describe what to test in a sentence or more — a few words "
+                   "cannot be turned into testcases without inventing the rest.",
+        )
+    if len(text) > 20000:
+        raise HTTPException(status_code=413, detail="Prompt is too long (20,000 char limit).")
+    if not 1 <= body.max_testcases <= 25:
+        raise HTTPException(status_code=422, detail="max_testcases must be between 1 and 25.")
+
+    try:
+        platform = normalise(body.platform)
+    except UnknownPlatform as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
+
+    # Same request, same answer. Re-asking returns what is already on file, so a
+    # prompt is reproducible and a second look does not cost a model call.
+    from ai_flow_builder.storage import prompt_source_id
+
+    if not body.redraft:
+        cached_id = prompt_source_id(text, platform, body.max_testcases)
+        try:
+            rec = default_store.get(cached_id)
+        except SourceNotFound:
+            rec = None
+        if rec is not None:
+            return {
+                **rec.to_dict(),
+                "stored_in": default_store.name,
+                "platform": platform,
+                "cached": True,
+                "values_found": rec.extra.get("values_found", {}),
+                "inputs_needed": rec.extra.get("inputs_needed", []),
+                "assumptions": rec.extra.get("assumptions", []),
+                "unclear": rec.extra.get("unclear", []),
+                **_ingest(rec),
+            }
+
+    try:
+        draft = draft_testcases(text, platform=platform,
+                                max_testcases=body.max_testcases,
+                                provider=body.provider or None,
+                                model=body.model or None)
+    except ProviderNotConfigured as e:
+        raise HTTPException(status_code=503, detail=str(e)) from e
+    except ProviderUnavailable as e:
+        # Transient, so the caller should retry rather than change the request.
+        headers = {"Retry-After": str(e.retry_after)} if e.retry_after else None
+        raise HTTPException(status_code=503, detail=str(e), headers=headers) from e
+    except ProviderRefused as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
+    except ProviderError as e:
+        raise HTTPException(status_code=502, detail=str(e)) from e
+
+    rec = default_store.put_prompt(draft, text, uploaded_by=body.uploaded_by,
+                                   platform=platform, max_testcases=body.max_testcases)
+    return {
+        **rec.to_dict(),
+        "stored_in": default_store.name,
+        "platform": platform,
+        "cached": False,
+        # Surfaced so the operator can judge the draft before generating from it.
+        "values_found": draft.get("values_found", {}),
+        "inputs_needed": draft.get("inputs_needed", []),
+        "assumptions": draft.get("assumptions", []),
+        "unclear": draft.get("unclear", []),
+        **_ingest(rec),
+    }
 
 
 @router.get("")

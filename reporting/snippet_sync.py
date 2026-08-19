@@ -23,46 +23,30 @@ def get_snippets_path() -> str:
 
 def harvest_locator_names() -> tuple[str, int]:
     """
-    Reads both manual and ML databases and returns a comma-separated choice list
-    for VS Code snippet dropdowns, plus a total count.
+    Comma-separated locator names for the VS Code snippet dropdown, and a count.
+
+    Delegates to locators/sources.py, the single declaration of which databases
+    exist. Reading the files here independently is how the snippet dropdown came
+    to offer a different set of names than the editor and the linter — including
+    "_calibration_notes", a metadata key that is not an element at all.
     """
-    all_names: set = set()
-    manual_count = 0
-    recorded_count = 0
+    from locators.sources import describe, display_map, problems
 
-    if os.path.exists(settings.MANUAL_LOCATORS_FILE):
-        try:
-            with open(settings.MANUAL_LOCATORS_FILE, "r") as f:
-                data = json.load(f)
-            if data:
-                keys = {key for page in data.values() for key in page.keys()}
-                all_names.update(keys)
-                manual_count = len(keys)
-        except Exception as e:
-            logger.warning("⚠️ Could not load manual locators: %s", e)
-
-    if os.path.exists(settings.RECORDED_ELEMENTS_FILE):
-        try:
-            with open(settings.RECORDED_ELEMENTS_FILE, "r") as f:
-                data = json.load(f)
-            if data:
-                keys = {key for page in data.values() for key in page.keys()}
-                all_names.update(keys)
-                recorded_count = len(keys)
-        except Exception as e:
-            logger.warning("⚠️ Could not load recorded elements: %s", e)
+    names = sorted(display_map())
 
     print("\n" + "=" * 35)
     print("📊 DATABASE HARVEST REPORT")
-    print(f"Manual Locators   : {manual_count}")
-    print(f"Recorded Locators : {recorded_count}")
+    for row in describe():
+        state = "missing" if not row["exists"] else (row["problem"] or "ok")
+        print(f"{row['label']:<20}: {state}")
+    print(f"{'Total locators':<20}: {len(names)}")
     print("=" * 35)
+    for source_id, why in problems().items():
+        print(f"⚠️  {source_id}: {why}")
 
-    if not all_names:
+    if not names:
         return "anywhere", 0
-
-    choice_list = ",".join(sorted(all_names))
-    return choice_list, len(all_names)
+    return ",".join(names), len(names)
 
 
 # Slot → VS Code placeholder. {locator} becomes a dropdown of every saved

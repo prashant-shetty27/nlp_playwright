@@ -1,0 +1,56 @@
+{
+  "draft": {
+    "assumptions": [
+      "The login popup is represented by the existing locator 'welcome_login_f' and dismissed via 'maybe_later'.",
+      "No existing locator matches a generic 'first autosuggest suggestion' element, so a new element name 'FirstAutosuggestOption' was introduced for that step.",
+      "The search input field on the homepage corresponds to the existing locator 'search_box'."
+    ],
+    "inputs_needed": [],
+    "model": "claude-sonnet-5",
+    "provider": "anthropic",
+    "testcases": [
+      {
+        "classification": "Positive",
+        "expected": "Login popup is dismissed via maybe_later, the search term is entered in the search box, and the first autosuggest suggestion is selected leading to the corresponding results page.",
+        "preconditions": [
+          "Browser is open and cookies cleared"
+        ],
+        "priority": "High",
+        "steps": [
+          "Navigate to ${justdial_url}",
+          "Verify that element welcome_login_f is displayed",
+          "Click on element maybe_later",
+          "Enter ${search_term} in element search_box",
+          "Click on element FirstAutosuggestOption"
+        ],
+        "testcase_id": "TC_JD_SEARCH_01",
+        "title": "Search for baldev engineering after dismissing login popup"
+      },
+      {
+        "classification": "Positive",
+        "expected": "When the login popup does not appear, the search term is entered directly and the first autosuggest suggestion is selected leading to the corresponding results page.",
+        "preconditions": [
+          "Browser is open and cookies cleared"
+        ],
+        "priority": "Medium",
+        "steps": [
+          "Navigate to ${justdial_url}",
+          "Verify that element welcome_login_f is not displayed",
+          "Enter ${search_term} in element search_box",
+          "Click on element FirstAutosuggestOption"
+        ],
+        "testcase_id": "TC_JD_SEARCH_02",
+        "title": "Search for baldev engineering when login popup is not shown"
+      }
+    ],
+    "unclear": [
+      "Whether the popup should be checked with a wait step before verifying its display state, since the request implies conditional visibility but framework steps are deterministic."
+    ],
+    "usage": {
+      "input_tokens": 3182,
+      "output_tokens": 2301
+    },
+    "values_found": {}
+  },
+  "prompt": "www.justdial.com\nif login popup seen then click \nmaybe_later else\nsearch for baldev engineering\n& select  first autosuggest"
+}

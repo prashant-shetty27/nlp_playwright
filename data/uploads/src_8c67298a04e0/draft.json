@@ -1,0 +1,47 @@
+{
+  "draft": {
+    "assumptions": [
+      "The login popup's submit button maps to the existing locator 'login_button'",
+      "The mobile number field on the login popup maps to the existing locator 'mobile_number_input'",
+      "The OTP entry screen's primary input maps to the existing locator 'otp_input'"
+    ],
+    "inputs_needed": [],
+    "model": "claude-sonnet-5",
+    "provider": "anthropic",
+    "renamed_variables": {
+      "page_url": "url",
+      "test_mobile": "mobile"
+    },
+    "testcases": [
+      {
+        "classification": "Positive",
+        "expected": "After entering the mobile number and submitting, the OTP input screen is displayed to the user",
+        "preconditions": [
+          "User is signed out",
+          "Browser session has no active login"
+        ],
+        "priority": "High",
+        "steps": [
+          "Navigate to ${url}",
+          "Click on element ask_more_photos_cta",
+          "Verify that element mobile_number_input is displayed",
+          "Enter ${mobile} in element mobile_number_input",
+          "Click on element login_button",
+          "Verify that element otp_input is displayed"
+        ],
+        "testcase_id": "TC_ASKMOREPHOTOS_01",
+        "title": "Signed-out user taps Ask More Photos and reaches OTP screen after entering mobile number"
+      }
+    ],
+    "unclear": [],
+    "usage": {
+      "input_tokens": 3257,
+      "output_tokens": 733
+    },
+    "values_found": {
+      "mobile": "9324751210",
+      "url": "https://designtest.justdial.com/jdmart/Mumbai/Apollo-Tyre/jdm-1113060-ent-4-23785"
+    }
+  },
+  "prompt": "Test the Ask More Photos flow on https://designtest.justdial.com/jdmart/Mumbai/Apollo-Tyre/jdm-1113060-ent-4-23785 . A signed-out user taps Ask More Photos and a login popup asks for a mobile number. Enter 9324751210 and submit; an OTP screen appears."
+}

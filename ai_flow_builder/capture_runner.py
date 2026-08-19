@@ -26,9 +26,9 @@ from ai_flow_builder.scenario import CaptureStage, Scenario  # noqa: E402
 from locators import auto_capture  # noqa: E402
 
 Progress = print
-_VAR = re.compile(r"\$\{([A-Za-z0-9_.\-]+)\}")
-
-
+#: The one definition, in nlp/variables. A private copy here agreed with
+#: it today and had nothing keeping it in step tomorrow.
+from nlp.variables import REFERENCE_RE as _VAR  # noqa: E402
 @dataclass
 class CaptureRun:
     captured: dict[str, str] = field(default_factory=dict)      # locator -> selector

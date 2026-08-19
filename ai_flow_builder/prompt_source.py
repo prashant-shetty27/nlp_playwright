@@ -65,6 +65,14 @@ verbatim when the step refers to one of them:
 
 {locators}
 
+Reusable step groups already saved on this platform. When the request describes a \
+sequence one of these already covers — opening the site and dismissing the login \
+popup, signing in, and so on — emit the single step `call <name>` instead of \
+rewriting its steps. Reusing one keeps the sequence defined in a single place, so \
+a change to it is one edit rather than one per testcase:
+
+{stepgroups}
+
 Rules that matter:
 
 - EVERY concrete value is a ${{variable}} in the steps. Never write a literal URL, \
@@ -132,7 +140,22 @@ def _models():
 
 
 # Same for URLs — a trailing . , ; ) ends the sentence, not the address.
-_URL = re.compile(r"https?://[^\s<>\"')\]]*[^\s<>\"')\].,;:]")
+#: A URL with OR without a scheme. Requiring "https://" meant a prompt that
+#: said "www.justdial.com" — which is how people actually write it — harvested
+#: nothing, and the generated flow then referenced ${justdial_url} with no value
+#: behind it.
+_URL = re.compile(
+    r"(?:https?://[^\s<>\"')\]]*[^\s<>\"')\].,;:]"
+    r"|(?:www\.)[\w.-]+\.[A-Za-z]{2,}(?:/[^\s<>\"')\]]*)?"
+    r"|(?<![\w.@])[\w-]+\.(?:com|in|net|org|io|co)(?:\.[A-Za-z]{2,})?(?:/[^\s<>\"')\]]*)?)")
+
+#: "search for baldev engineering" — the thing being searched for. A search term
+#: is one of the commonest values in a prompt and had no kind at all, so it could
+#: never be harvested no matter how plainly it was written.
+_SEARCH_TERM = re.compile(
+    r"search(?:ing)?\s+(?:for\s+)?[\"']?([A-Za-z0-9][A-Za-z0-9 &._-]{2,48}?)[\"']?"
+    r"(?=\s*(?:$|\n|,|\.|&|and\b|then\b|select\b|in\b|on\b))",
+    re.I | re.M)
 _MOBILE = re.compile(r"(?<!\d)(\d{10})(?!\d)")
 _OTP = re.compile(r"(?<!\d)(\d{4,8})(?!\d)")
 # Trailing sentence punctuation is not part of the address.
@@ -177,8 +200,10 @@ def harvest_values(prompt: str, draft: dict) -> dict:
     mobiles = _MOBILE.findall(residue)
     otps = [o for o in _OTP.findall(residue) if o not in mobiles and len(o) != 10]
 
+    searches = [m.strip() for m in _SEARCH_TERM.findall(prompt) if m.strip()]
     pools = {"url": list(urls), "email": list(emails),
-             "mobile": list(mobiles), "otp": list(otps)}
+             "mobile": list(mobiles), "otp": list(otps),
+             "search": searches}
 
     def kind_of(var: str) -> str:
         low = var.lower()
@@ -190,6 +215,8 @@ def harvest_values(prompt: str, draft: dict) -> dict:
             return "otp"
         if "email" in low or "mail" in low:
             return "email"
+        if any(k in low for k in ("search", "term", "query", "keyword")):
+            return "search"
         return ""
 
     found: dict[str, str] = {}
@@ -198,6 +225,148 @@ def harvest_values(prompt: str, draft: dict) -> dict:
         if kind and pools.get(kind):
             found[var] = pools[kind].pop(0)
     return found
+
+
+#: ${var} as written into a drafted step.
+from nlp.variables import REFERENCE_RE as _VAR_IN_STEP  # noqa: E402
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Canonical parameter names
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# The model names variables freely: the same prompt drafted twice produced
+# "${test_url}" one time and "${page_url}" the next. Both are internally
+# consistent, so nothing breaks — but two flows for the same thing then demand
+# differently-named inputs, and a suite cannot supply one value to both.
+#
+# Rather than ask the model to be consistent (it cannot promise that), the names
+# are normalised HERE, in code, after drafting. Deterministic, testable, and
+# independent of which provider or model produced the draft.
+#
+# Add a synonym to this table and every future draft picks it up; the canonical
+# names on the right are the vocabulary a suite writes against.
+_CANONICAL_VARIABLES = {
+    "url":         ("url", "page_url", "test_url", "site_url", "target_url",
+                    "product_url", "pdp_url", "landing_url", "base_url"),
+    "mobile":      ("mobile", "test_mobile", "mobile_number", "mobile_no", "phone",
+                    "phone_number", "contact_number", "msisdn"),
+    "otp":         ("otp", "test_otp", "otp_code", "verification_code", "one_time_password"),
+    "email":       ("email", "test_email", "email_id", "email_address", "user_email"),
+    "password":    ("password", "test_password", "passwd", "pwd", "user_password"),
+    "username":    ("username", "test_username", "user_name", "login_id", "user_id"),
+    "search_term": ("search_term", "search_text", "search_query", "query", "keyword",
+                    "search_keyword"),
+    "city":        ("city", "test_city", "city_name", "location"),
+    "pincode":     ("pincode", "pin_code", "postal_code", "zip_code"),
+}
+
+#: synonym -> canonical, built once.
+_SYNONYM_TO_CANONICAL = {
+    syn: canonical
+    for canonical, synonyms in _CANONICAL_VARIABLES.items()
+    for syn in synonyms
+}
+
+
+def canonical_name_for(name: str) -> str:
+    """The canonical parameter name for `name`, or `name` unchanged if unknown."""
+    return _SYNONYM_TO_CANONICAL.get((name or "").strip().lower(), name)
+
+
+def canonicalise_variables(draft: dict) -> dict:
+    """
+    Rename drafted variables to the canonical vocabulary, in place.
+
+    Two rules, both deterministic:
+
+      * a recognised synonym becomes its canonical name;
+      * if two DIFFERENT source names would collapse onto one canonical name,
+        the first (in step order) keeps it and later ones get a numeric suffix,
+        so two distinct URLs stay two distinct parameters rather than silently
+        becoming one.
+
+    Unrecognised names are left exactly as the model wrote them — inventing a
+    canonical form for something not in the table would be guessing.
+    """
+    renames: dict[str, str] = {}
+    taken: set[str] = set()
+
+    def claim(original: str) -> str:
+        if original in renames:
+            return renames[original]
+        canonical = canonical_name_for(original)
+        if canonical in taken and canonical != original:
+            n = 2
+            while f"{canonical}_{n}" in taken:
+                n += 1
+            canonical = f"{canonical}_{n}"
+        elif canonical in taken:
+            canonical = original          # keep its own name rather than collide
+        taken.add(canonical)
+        renames[original] = canonical
+        return canonical
+
+    # Step order decides who wins a canonical name, so the result does not depend
+    # on dict ordering.
+    for tc in draft.get("testcases", []) or []:
+        for step in tc.get("steps", []) or []:
+            for var in _VAR_IN_STEP.findall(step or ""):
+                claim(var)
+    for var in list((draft.get("values_found") or {}).keys()):
+        claim(var)
+
+    if not any(k != v for k, v in renames.items()):
+        return draft                      # nothing to do
+
+    def rewrite(text: str) -> str:
+        return _VAR_IN_STEP.sub(
+            lambda m: "${" + renames.get(m.group(1), m.group(1)) + "}", text or "")
+
+    for tc in draft.get("testcases", []) or []:
+        tc["steps"] = [rewrite(s) for s in tc.get("steps", []) or []]
+        if tc.get("expected"):
+            tc["expected"] = rewrite(tc["expected"])
+    draft["values_found"] = {renames.get(k, k): v
+                             for k, v in (draft.get("values_found") or {}).items()}
+    for item in draft.get("inputs_needed", []) or []:
+        if isinstance(item, dict) and item.get("name") in renames:
+            item["name"] = renames[item["name"]]
+    draft["renamed_variables"] = {k: v for k, v in renames.items() if k != v}
+    return draft
+
+
+def _suggest_groups(draft: dict, platform: str) -> list[dict]:
+    """
+    Sequences in the draft that an existing step group already covers.
+
+    The model is told about the groups, but it does not always take the hint —
+    so the draft is checked afterwards too. Reported, never applied: replacing
+    three written steps with a `call` changes what the testcase says, and that
+    is the author's decision.
+    """
+    try:
+        from core.reusable_steps import describe as _describe_groups
+
+        groups = _describe_groups(platform)
+    except Exception:  # noqa: BLE001
+        return []
+
+    out: list[dict] = []
+    for tc in draft.get("testcases", []) or []:
+        steps = [str(s).strip().lower() for s in tc.get("steps", []) or []]
+        for g in groups:
+            gs = [str(s).strip().lower() for s in g.get("steps", [])]
+            if not gs or len(gs) > len(steps):
+                continue
+            for i in range(len(steps) - len(gs) + 1):
+                if steps[i:i + len(gs)] == gs:
+                    out.append({"testcase_id": tc.get("testcase_id", ""),
+                                "group": g["name"], "at_step": i + 1,
+                                "replaces": len(gs),
+                                "call": f"call {g['name']}"})
+                    break
+    return out
 
 
 def draft_testcases(prompt: str, platform: str = "website",
@@ -214,10 +383,26 @@ def draft_testcases(prompt: str, platform: str = "website",
     from ai_flow_builder.llm import get_provider
 
     Draft = _models()
+    # Saved step groups are offered to the model so a repeated sequence becomes
+    # `call <name>` rather than being written out again. Without this the model
+    # cannot know they exist and every testcase re-states the same opening steps.
+    try:
+        from core.reusable_steps import describe as _describe_groups
+
+        groups = _describe_groups(platform)
+    except Exception:  # noqa: BLE001
+        groups = []
+    group_lines = "\n".join(
+        f"  call {g['name']}   — {'; '.join(g['steps'][:4])}"
+        + ("…" if len(g["steps"]) > 4 else "")
+        for g in groups[:40]
+    ) or "  (none saved yet)"
+
     system = SYSTEM.format(
         shapes="\n".join(f"  {s}" for s in STEP_SHAPES),
         locators=("\n".join(f"  {n}" for n in known[:200]) if known
                   else "  (none on file yet — name elements descriptively)"),
+        stepgroups=group_lines,
     )
 
     completion = get_provider(provider, model).complete_structured(
@@ -235,6 +420,10 @@ def draft_testcases(prompt: str, platform: str = "website",
     # values the operator had already supplied came back empty and they would
     # have had to type them again. Extraction is deterministic and cannot regress.
     d["values_found"] = harvest_values(prompt, d)
+    # Naming is normalised after harvesting so the values and the steps that
+    # reference them are renamed together and cannot drift apart.
+    canonicalise_variables(d)
+    d["group_suggestions"] = _suggest_groups(d, platform)
     d["provider"] = completion.provider
     d["model"] = completion.model
     d["usage"] = completion.usage

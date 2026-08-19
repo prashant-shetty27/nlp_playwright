@@ -1,0 +1,5 @@
+# Params : test_url
+# Platform: mobilesite
+
+open ${test_url}
+click ask_more_photos_cta

@@ -14,7 +14,7 @@ wait 5 seconds
 verify text "Spas Near Me"
 verify element exists bannnerrecycler
 verify element exists result_card
-store text from 11_a_luxury_spa as result_company_name_11_a_luxury_spa
+store text from result_11_a_luxury_spa as result_company_name_11_a_luxury_spa
 wait 5 seconds
 tap company_name
 verify text "${result_company_name_11_a_luxury_spa}"

@@ -1,0 +1,8 @@
+# Platform: website
+# Params : justdial_url search_term
+
+open ${justdial_url}
+verify element maybe_later is visible
+click maybe_later
+type "${search_term}" into main_search_box
+verify element business_name has text "${search_term}"

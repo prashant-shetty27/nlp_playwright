@@ -1,0 +1,22 @@
+{
+  "source_id": "src_a2a346a3ab69",
+  "filename": "draft.json",
+  "kind": "prompt",
+  "size_bytes": 1515,
+  "sha256": "0a336f85b0528e1593c3abf5fd31632e6b8209fa34dd1d2bd1c5019c7bc789ff",
+  "uploaded_at": "2026-08-18T18:30:03Z",
+  "uploaded_by": "",
+  "extra": {
+    "prompt": "Test the Ask More Photos flow on https://designtest.justdial.com/jdmart/Mumbai/Apollo-Tyre/jdm-1113060-ent-4-23785 . A signed-out user taps Ask More Photos and a login popup asks for a mobile number. Enter 9324751210 and submit; an OTP screen appears.",
+    "provider": "anthropic",
+    "model": "claude-sonnet-5",
+    "testcases": 1,
+    "values_found": {
+      "url": "https://designtest.justdial.com/jdmart/Mumbai/Apollo-Tyre/jdm-1113060-ent-4-23785",
+      "mobile": "9324751210"
+    },
+    "inputs_needed": [],
+    "assumptions": [],
+    "unclear": []
+  }
+}

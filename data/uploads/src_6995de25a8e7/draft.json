@@ -1,0 +1,80 @@
+{
+  "draft": {
+    "assumptions": [],
+    "group_suggestions": [],
+    "inputs_needed": [],
+    "model": "claude-sonnet-5",
+    "provider": "anthropic",
+    "renamed_variables": {
+      "test_mobile": "mobile"
+    },
+    "testcases": [
+      {
+        "classification": "Positive",
+        "expected": "The landing page displays the exact referral applied and free trial offer message.",
+        "preconditions": [
+          "Referral URL is valid and reachable"
+        ],
+        "priority": "High",
+        "steps": [
+          "Navigate to ${referral_url}",
+          "Verify that the text of element ReferralOfferMessage is \"Referral Code (${referral_code}) Applied \u2022 You got 15 days Free trial\""
+        ],
+        "testcase_id": "TC_REFERRAL_01",
+        "title": "Verify referral code applied and free trial offer message on landing page"
+      },
+      {
+        "classification": "Positive",
+        "expected": "After entering the mobile number and correct OTP fetched from the tool, the business selection page is displayed.",
+        "preconditions": [
+          "Referral landing page loaded with referral code applied",
+          "Access to internal OTP fetch tool at ${otp_tool_url} is available"
+        ],
+        "priority": "Critical",
+        "steps": [
+          "Navigate to ${referral_url}",
+          "Enter ${mobile} in element MobileNumberInput",
+          "Click on element GetOtpButton",
+          "Wait until element OtpInput is displayed",
+          "Navigate to ${otp_tool_url}",
+          "Enter ${mobile} in element ToolMobileNumberInput",
+          "Click on element ToolFetchOtpButton",
+          "Store the OTP displayed in element ToolOtpDisplay in variable fetched_otp",
+          "Navigate to ${referral_url}",
+          "Enter ${fetched_otp} in element OtpInput",
+          "Click on element OtpSubmitButton",
+          "Verify that element BusinessSelectionPage is displayed"
+        ],
+        "testcase_id": "TC_REFERRAL_02",
+        "title": "Verify mobile number entry and OTP verification using external OTP tool leads to business selection page"
+      },
+      {
+        "classification": "Positive",
+        "expected": "After selecting the business '${business_name}' and proceeding, the claim your free trial page is displayed.",
+        "preconditions": [
+          "User has completed mobile number and OTP verification",
+          "Business selection page is displayed"
+        ],
+        "priority": "Critical",
+        "steps": [
+          "Click on element BusinessNameOption for \"${business_name}\"",
+          "Click on element ProceedButton",
+          "Verify that element ClaimFreeTrialPage is displayed"
+        ],
+        "testcase_id": "TC_REFERRAL_03",
+        "title": "Verify selecting business and proceeding leads to claim free trial page"
+      }
+    ],
+    "unclear": [],
+    "usage": {
+      "input_tokens": 3450,
+      "output_tokens": 5290
+    },
+    "values_found": {
+      "mobile": "7715882134",
+      "otp_tool_url": "http://172.29.86.98:8080/tools",
+      "referral_url": "https://staging2.justdial.com/rne/JDM42UP7BK/JA"
+    }
+  },
+  "prompt": "open this url https://staging2.justdial.com/rne/JDM42UP7BK/JA\ncheck Referral Code (JDM42UP7BK) Applied  \u2022 You got 15 days Free trial\nthen enter number 7715882134 & then fetch otp open http://172.29.86.98:8080/tools enter mobile 7715882134 copy & enter otp \nverifiction select you business page - 'zxy md papad' proceed ahead\nverification calim your free trial page"
+}
