@@ -42,7 +42,11 @@ KEYWORD_MAP = {
             "visit justdial", "open jd", "launch justdial"
         ],
         "action": "open",
-        "template": "open {text}"
+        # {url}, not {text}: the slot's NAME is what tells the step editor which
+        # picker to offer — see SLOT_ROLE in nlp/fields.py. Called {text} it
+        # offered free text and saved test data for a field that takes an
+        # address, which is the wrong help at the one moment help is read.
+        "template": "open {url}"
     },
     
     "close_browser": {
@@ -351,6 +355,25 @@ KEYWORD_MAP = {
     "switch_tab": {
         "phrases": ["switch to tab", "change tab", "go to tab"],
         "action": "switch_tab", "template": "switch to tab {number}"
+    },
+    # Named tabs are offered separately from the numbered form: an index is
+    # only knowable if you have counted what is open, and the count changes the
+    # moment a click opens a popup — which is when you need to switch.
+    "switch_tab_named": {
+        "phrases": ["switch to parent tab", "parent tab", "back to the tab that "
+                    "opened this", "switch to child tab", "child tab",
+                    "switch to new tab", "switch to last tab",
+                    "switch to current tab", "switch to first tab"],
+        "action": "switch_tab", "template": "switch to parent tab"
+    },
+    "open_new_tab": {
+        "phrases": ["open new tab", "new tab", "open a new window"],
+        "action": "open_new_tab", "template": "open new tab"
+    },
+    "open_in_new_tab": {
+        "phrases": ["open in new tab", "open url in new tab", "open in a new window",
+                    "open link in new tab", "new tab with url"],
+        "action": "open_in_new_tab", "template": "open {url} in a new tab"
     },
     "go_forward": {
         "phrases": ["go forward", "forward"], "action": "go_forward",

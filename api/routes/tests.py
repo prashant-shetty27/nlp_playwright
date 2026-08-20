@@ -9,6 +9,7 @@ import os
 from collections import OrderedDict
 import re
 import threading
+import time
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException
@@ -68,10 +69,25 @@ class RunRequest(BaseModel):
     parameters: dict[str, str] = {}
     #: Which environment's saved Test Data counts as supplied for this run.
     environment: str = ""
+    #: Stop at the first failing step. On by default: once a step fails the page
+    #: is no longer where the test believes it is, so what follows tests nothing
+    #: and can act on the wrong screen. Set false to run everything regardless.
+    stop_on_failure: bool = True
+    #: Attach this domain's HTTP Basic credentials to the browser context rather
+    #: than embedding them in the URL. Empty (the default) keeps the URL path,
+    #: which is what existing setups are proven against. The domains that
+    #: have credentials come from AUTH_<NAME>_DOMAIN entries in .env.
+    http_auth_domain: str = ""
     #: "allow" | "deny" | "" — how to answer BROWSER permission prompts
     #: (geolocation, notifications, camera…). Site popups are not covered; those
     #: are page content and belong to the test.
     browser_permissions: str = ""
+    #: all | key | failure | off — see reporting/step_capture.py. A screenshot
+    #: per step is what makes a failed run readable; the mode is what stops it
+    #: costing tens of gigabytes a month.
+    screenshot_mode: str = "all"
+    #: For screenshot_mode="failure": how many steps BEFORE the failure to keep.
+    screenshot_context: int = 5
     # Names within `parameters` whose values must never be logged or echoed back.
     secret_parameters: list[str] = []
 
@@ -91,11 +107,32 @@ def _flow_path(project: str) -> str:
 from config.settings import is_secret_name as _is_secret  # noqa: E402
 
 
+def _runnable(lines: list, after: int):
+    """(line number, step) for every real step after `after` — comments skipped."""
+    for n, raw in enumerate(lines, 1):
+        if n <= after:
+            continue
+        step = raw.strip()
+        if step and not step.startswith("#"):
+            yield n, step
+
+
+def _rest(lines: list, after: int) -> list:
+    return list(_runnable(lines, after))
+
+
+def _remaining(lines: list, after: int) -> int:
+    return len(_rest(lines, after))
+
+
 def _run_flow_sync(run_id: str, flow_path: str, headless: bool,
                    capabilities: dict | None = None,
                    parameters: dict | None = None,
                    secret_parameters: list | None = None,
-                   environment: str = "") -> dict:
+                   environment: str = "",
+                   stop_on_failure: bool = True,
+                   screenshot_mode: str = "all",
+                   screenshot_context: int = 5) -> dict:
     """
     Runs the NLP flow in a thread, captures step results,
     persists a JSON report, and returns the summary dict.
@@ -157,7 +194,10 @@ def _run_flow_sync(run_id: str, flow_path: str, headless: bool,
     # "running" forever — the caller polls a run that will never finish.
     page = None
     log: list[dict] = []
-    passed = failed = 0
+    passed = failed = skipped_count = 0
+    from reporting.step_capture import StepCapture
+
+    shots = StepCapture(run_id, mode=screenshot_mode, context=screenshot_context)
 
     try:
         page = open_browser(session, capabilities=capabilities or None)
@@ -171,6 +211,7 @@ def _run_flow_sync(run_id: str, flow_path: str, headless: bool,
                 continue
 
             entry: dict = {"line": line_num, "step": step}
+            started = time.perf_counter()
 
             try:
                 # Same interpreter the CLI uses, so a step behaves identically
@@ -181,13 +222,40 @@ def _run_flow_sync(run_id: str, flow_path: str, headless: bool,
 
                 _interpret(step, page)
                 entry["status"] = "passed"
+                entry["duration_ms"] = round((time.perf_counter() - started) * 1000)
                 passed += 1
-                report.add_result(step, "passed")
+                # The report row is created FIRST and handed to the capture, so
+                # a frame promoted later — "failure" mode only learns a step
+                # mattered when a later one fails — can still be written into
+                # the row that was already recorded.
+                row = report.add_result(step, "passed",
+                                        duration_ms=entry["duration_ms"])
+                shots.after_step(page, entry, step, row)
             except Exception as e:
                 entry["status"] = "failed"
                 entry["error"] = str(e).strip()
+                entry["duration_ms"] = round((time.perf_counter() - started) * 1000)
                 failed += 1
-                report.add_result(step, "failed", reason=str(e).strip())
+                row = report.add_result(step, "failed", reason=str(e).strip(),
+                                        duration_ms=entry["duration_ms"])
+                shots.after_step(page, entry, step, row)
+                log.append(entry)
+                if stop_on_failure:
+                    # Everything after a failure is running against a page that
+                    # is not where the test thinks it is. Those steps do not
+                    # test anything — they produce a second, unrelated failure
+                    # that buries the first, and on a form they can submit
+                    # half-entered data. Stop, and say what was not reached.
+                    logger.error("⛔ Step %d failed — stopping. %d step(s) not run.",
+                                 line_num, _remaining(lines, line_num))
+                    for skipped_no, skipped in _rest(lines, line_num):
+                        log.append({"line": skipped_no, "step": skipped,
+                                    "status": "skipped",
+                                    "error": "not run — an earlier step failed"})
+                        report.add_result(skipped, "skipped",
+                                          reason="not run — an earlier step failed")
+                        skipped_count += 1
+                    break
 
             log.append(entry)
 
@@ -196,6 +264,9 @@ def _run_flow_sync(run_id: str, flow_path: str, headless: bool,
         failed += 1
 
     finally:
+        # Before the browser closes: in failure mode this deletes the rolling
+        # window that no failure ever claimed.
+        shots.finish()
         if page is not None:
             try:
                 close_browser(page, project_name, session)
@@ -204,14 +275,26 @@ def _run_flow_sync(run_id: str, flow_path: str, headless: bool,
                 # close leaks a process — record it rather than losing it.
                 logger.warning("Browser cleanup failed for run %s: %s", run_id, e)
 
+    # Recorded on the report itself, not just on the in-memory summary: the
+    # report file outlives the process, and it is the file the detail page reads
+    # when it explains why a step has no image.
+    report.meta["screenshots"] = shots.summary()
     json_path, _ = report.generate_report(LOGS_DIR)
 
     summary = {
         "run_id": run_id,
         "project": project_name,
-        "total": passed + failed,
+        "total": passed + failed + skipped_count,
         "passed": passed,
         "failed": failed,
+        # Counted separately from failed: a step that never ran did not fail,
+        # and a run that stops at step 3 of 14 should not read as 11 defects.
+        "skipped": skipped_count,
+        "stopped_early": bool(skipped_count),
+        # Which capture mode ran, how many frames it kept, and whether the cap
+        # was hit. Without it, "there is no screenshot for step 12" is
+        # indistinguishable from a bug.
+        "screenshots": shots.summary(),
         "log": log,
         "report_file": json_path,
         "finished_at": datetime.now(timezone.utc).isoformat(),
@@ -229,6 +312,34 @@ def _run_flow_sync(run_id: str, flow_path: str, headless: bool,
 
 
 # ── Routes ─────────────────────────────────────────────────────────────────────
+
+def _auth_domain_for(flow_path: str) -> str:
+    """
+    The first domain this flow opens that we hold HTTP Basic credentials for.
+
+    Offered as a SUGGESTION — Run Center shows it so the option is discoverable
+    — never applied on its own. A Basic-auth prompt is drawn by the browser, not
+    the page, so no locator can reach it; but which of the two ways of answering
+    it works is a property of the server, not something to decide for someone.
+    """
+    from urllib.parse import urlparse
+
+    try:
+        from config.settings import get_auth_registry
+
+        registry = get_auth_registry()
+        if not registry:
+            return ""
+        with open(flow_path, "r", encoding="utf-8") as f:
+            text = f.read()
+        for raw in re.findall(r"https?://[^\s\"']+", text):
+            host = urlparse(raw).netloc.split("@")[-1]
+            if host in registry:
+                return host
+    except Exception:  # noqa: BLE001 — auth discovery must never block a run
+        return ""
+    return ""
+
 
 @router.post("/run")
 def run_test(body: RunRequest, background_tasks: BackgroundTasks):
@@ -256,6 +367,17 @@ def run_test(body: RunRequest, background_tasks: BackgroundTasks):
             detail=f"Platform '{platform.name}' ({platform.label}) is not enabled yet.",
         )
 
+    # Context-level HTTP auth is OPT-IN, and deliberately so.
+    #
+    # It was briefly automatic: any flow opening a domain in the auth registry
+    # got credentials attached to the browser context. That is the better
+    # mechanism on paper — nothing lands in a URL — but it changes how the very
+    # first navigation is made, and it stopped a staging site loading that had
+    # been loading fine on the URL-embedded path. A theoretical improvement is
+    # not worth a working run, so the old path stays the default and this is
+    # asked for explicitly, per run.
+    auth_domain = (body.http_auth_domain or "").strip()
+
     device = body.device_name or platform.default_device or ""
     caps = {
         "headless": body.headless,
@@ -264,6 +386,8 @@ def run_test(body: RunRequest, background_tasks: BackgroundTasks):
         "browser": body.browser or "",
         "browser_permissions": body.browser_permissions or "",
     }
+    if auth_domain:
+        caps["http_auth_domain"] = auth_domain
 
     # A flow that needs values must not be launched without them. Starting anyway
     # produced one cryptic "Variable '${x}' is not stored in memory!" per step —
@@ -303,7 +427,10 @@ def run_test(body: RunRequest, background_tasks: BackgroundTasks):
         _run_flow_sync(run_id, flow_path, body.headless, capabilities=caps,
                        parameters=body.parameters,
                        secret_parameters=body.secret_parameters,
-                       environment=getattr(body, "environment", ""))
+                       environment=getattr(body, "environment", ""),
+                       stop_on_failure=getattr(body, "stop_on_failure", True),
+                       screenshot_mode=getattr(body, "screenshot_mode", "all"),
+                       screenshot_context=getattr(body, "screenshot_context", 5))
 
     background_tasks.add_task(_task)
 
@@ -397,7 +524,16 @@ def run_history(limit: int = 50):
     was for and whether it passed. This reads each report's summary once.
     """
     rows = []
-    for fname in sorted(os.listdir(LOGS_DIR), reverse=True):
+    # Sorted by the report's own timestamp, not by filename. The name begins
+    # with the FLOW, so a reverse filename sort ordered alphabetically by test
+    # case and only then by date — "newest first" put a week-old tc_search run
+    # above one from this morning, and anything reading row 0 as "the last run"
+    # got the wrong one.
+    def _stamp(fn: str) -> str:
+        m = re.search(r"(\d{8}_\d{6})", fn)
+        return m.group(1) if m else ""
+
+    for fname in sorted(os.listdir(LOGS_DIR), key=_stamp, reverse=True):
         if not fname.endswith(".json"):
             continue
         # Reports for fixture flows (a leading underscore) come from the tool's

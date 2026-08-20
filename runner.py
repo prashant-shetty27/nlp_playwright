@@ -254,10 +254,12 @@ def _execute_step_from_command(cmd, page):
         # ── Image ─────────────────────────────────────────────────────────────
         "verify_image":              lambda: None,  # handled in _interpret below
         # ── Tabs / Windows ───────────────────────────────────────────────────
-        "switch_tab":                lambda: svc.switch_tab(page, int(cmd.count or 0)),
+        "switch_tab":                lambda: svc.switch_tab(page, cmd.count,
+                                                              where=cmd.text or ""),
         "close_tab":                 lambda: svc.close_tab(page, int(cmd.count) if cmd.count is not None else None),
         "close_all_tabs":            lambda: svc.close_all_tabs(page),
         "open_new_tab":              lambda: svc.open_new_tab(page),
+        "open_in_new_tab":           lambda: svc.open_in_new_tab(page, target),
         "list_tabs":                 lambda: svc.list_tabs(page),
         # ── Iframes ──────────────────────────────────────────────────────────
         "switch_iframe":             lambda: svc.switch_iframe(page, target),

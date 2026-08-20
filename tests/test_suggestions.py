@@ -44,7 +44,11 @@ def check(label: str, cond: bool, detail: str = "") -> None:
 
 WEB = load_catalogue("web")
 APPIUM = load_catalogue("android")   # "appium" is a RUNNER, not a platform
-SLOT_FILL = {"locator": "my_loc", "text": "sample", "number": "3", "variable": "my_var"}
+#: One example per slot the editor knows about — see SLOT_ROLE in nlp/fields.py.
+#: `url` was missing, so the first template to use it failed this check for a
+#: slot the editor resolves perfectly well.
+SLOT_FILL = {"locator": "my_loc", "text": "sample", "number": "3",
+             "variable": "my_var", "url": "https://example.com"}
 _NUMERIC_DEFAULTS = {"seconds", "count", "n", "timeout", "pixels", "ms", "3", "500", "300", "10"}
 
 

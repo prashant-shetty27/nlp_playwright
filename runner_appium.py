@@ -658,6 +658,22 @@ def _execute_step(cmd, driver, platform: str):
     first_value = (cmd.values or [None])[0] if hasattr(cmd, "values") else None
     first_value = resolve_variables(first_value) if isinstance(first_value, str) else first_value
 
+    def _switch_window_cmd(svc, driver, cmd):
+        """
+        Native windows are a flat list — there is no opener graph, so
+        parent/child cannot be resolved. Saying so beats silently switching to
+        window 0, which looks like it worked and then asserts against the
+        wrong screen.
+        """
+        if cmd.text:
+            if cmd.text in ("first", "current"):
+                return svc.switch_window(driver, 0)
+            raise AssertionError(
+                f"❌ '{cmd.text} window' has no meaning on a native app — there "
+                f"is no parent/child relationship between native windows. Use "
+                f"'switch to window <number>'.")
+        return svc.switch_window(driver, int(cmd.count or 0))
+
     dispatch = {
         # ── App lifecycle ─────────────────────────────────────────────────
         "open":                      lambda: svc.open_url(driver, text or target),
@@ -752,11 +768,12 @@ def _execute_step(cmd, driver, platform: str):
         "js_submit":    lambda: driver.execute_script(f"document.querySelector('{target}').submit()"),
         "js_dispatch":  lambda: driver.execute_script(f"document.querySelector('{target}').dispatchEvent(new Event('{text}', {{bubbles: true}}))"),
         # ── Windows / Tabs ────────────────────────────────────────────────
-        "switch_tab":                lambda: svc.switch_window(driver, int(cmd.count or 0)),
+        "switch_tab":                lambda: _switch_window_cmd(svc, driver, cmd),
         "close_tab":                 lambda: svc.close_window(driver, int(cmd.count) if cmd.count is not None else None),
         "close_all_tabs":            lambda: svc.close_all_windows(driver),
         "list_tabs":                 lambda: svc.list_windows(driver),
         "open_new_tab":              lambda: logger.warning("⚠️  open_new_tab is not supported in native Appium context"),
+        "open_in_new_tab":           lambda: logger.warning("⚠️  open_in_new_tab is not supported in native Appium context"),
         # ── Iframes (WebView / mobile-browser context only) ───────────────
         "switch_iframe":             lambda: svc.switch_iframe(driver, target),
         "exit_iframe":               lambda: svc.exit_iframe(driver),

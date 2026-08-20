@@ -217,6 +217,12 @@ def apply_http_credentials(options: dict, capabilities: dict | None) -> dict:
     """
     caps = capabilities or {}
     domain = str(caps.get("http_auth_domain") or "").strip()
+    # Reset first. This set records what the CURRENT context carries, and
+    # open_site skips URL-embedded auth for anything in it. Left over from a
+    # previous run in the same process it made the next run skip URL auth for a
+    # context that had no credentials at all — so the page simply never loaded,
+    # and restarting the server "fixed" it.
+    CONTEXT_AUTH_DOMAINS.clear()
     if not domain:
         return options
 
@@ -228,9 +234,28 @@ def apply_http_credentials(options: dict, capabilities: dict | None) -> dict:
             f"Set AUTH_<NAME>_DOMAIN / _USERNAME / _PASSWORD in .env."
         )
 
-    options["http_credentials"] = {"username": creds["username"], "password": creds["password"]}
+    # `send` decides WHEN the Authorization header goes out.
+    #
+    #   unauthorized  (Playwright's default) — wait for the server to answer 401
+    #                 with a WWW-Authenticate challenge, then retry with
+    #                 credentials. Correct by the spec, and useless against a
+    #                 server that closes the connection instead of challenging,
+    #                 or sits behind a proxy that does.
+    #   always        — send it preemptively on every request. This is what
+    #                 URL-embedded auth effectively does, so it is the default
+    #                 here: a setup already proven on the URL path should not
+    #                 change behaviour just by moving the credentials off it.
+    send = str(caps.get("http_auth_send") or "always").strip().lower()
+    if send not in ("always", "unauthorized"):
+        raise ValueError(
+            f"http_auth_send must be 'always' or 'unauthorized', not {send!r}.")
+
+    options["http_credentials"] = {"username": creds["username"],
+                                   "password": creds["password"],
+                                   "send": send}
     CONTEXT_AUTH_DOMAINS.add(domain)
-    logger.info("🔒 HTTP credentials attached at context level for '%s' (value withheld)", domain)
+    logger.info("🔒 HTTP credentials attached at context level for '%s' "
+                "(send=%s, value withheld)", domain, send)
     return options
 
 

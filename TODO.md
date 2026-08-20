@@ -50,10 +50,74 @@ Related, already built and usable meanwhile:
   Prerequisite for the JIRA flow below.
 - JIRA ticket review — read a ticket, advise manual vs spreadsheet vs prompt,
   then generate with those purpose bands.
-- Testsigma import, batches 2+ — ~14 more web commands worth taking. Batch 1
-  (alerts, cookies, upload, window-by-title, parent frame) is done.
+- Testsigma import, batches 2+ — see section 4 below. Batch 1 (alerts, cookies,
+  upload, window-by-title, parent frame) is done.
 
-## 4. Housekeeping, agreed but deferred
+## 4. Testsigma command coverage — ANALYSED, NOT STARTED
+Analysed 2026-08-20. Nothing implemented yet; the numbers below come from
+`python3 tools/testsigma_gap.py`, which re-derives them from the exported
+catalogue and from the runner's own dispatch table. Re-run it rather than
+trusting these figures — both sides move.
+
+**Where it stands.** 581 catalogue rows in scope once Android and iOS are
+dropped (the user's call, for now). Folding duplicates away leaves **400 unique
+(keyword, grammar) pairs**: 89 already dispatchable, **311 missing**.
+
+Treat 311 as an UPPER BOUND. The join is a hand-written mapping of meaning
+(`HAVE` in the tool) because neither the keyword nor the grammar text resembles
+our wording, and anything absent from it counts as missing even if some command
+of ours turns out to cover it. Each confirmed equivalence moves into `HAVE` and
+the number drops honestly.
+
+**311 is not 311 pieces of work.** They collapse into families:
+
+     124  one-offs — element state, value comparisons, dropdown assertions,
+          waits on URL / title / alert
+      43  wait until <kind> with <attribute> is visible
+      23  control flow — loops and conditionals
+      17  web tables — cells, rows, columns
+      15  select in a list identified by <attribute>
+      13  mobile-only — OUT OF SCOPE, drop from any count
+      13  check a checkbox/radio found by <attribute>
+      11  files, spreadsheets and downloads
+      10  verify a button/link/element/image by its text
+       8  click a button/link/element by its text
+     7/6/6/5/4/3/3  keyboard, sessions, cookies, scroll-by-offset,
+          sort-order, execute-js, multi-select
+
+The top families (43 + 15 + 13 + 10 + 8 = 89) are ONE mechanism with a lookup
+table: find an element of kind K whose attribute A equals V, then act on it.
+Building that mechanism once covers roughly a third of the gap.
+
+**Proposed batch order** — biggest coverage per unit of work first, each batch
+usable on its own:
+  1. the by-attribute finder mechanism (unlocks the five families above)
+  2. element state and value assertions, from the one-offs
+  3. web tables
+  4. files and downloads
+
+**Two decisions needed before writing any of it:**
+  a. **Salesforce.** Largest single block (241 rows) and mostly duplicates of
+     the WebApplication grammars, already folded away by the dedupe. A few are
+     genuinely Salesforce-specific (`loginAs`, button groups). In or out?
+  b. **Control flow (23) and sessions (6).** `forloop`, `breakLoop`,
+     `IfVerifyElement`, `createDriver`/`switchDriver` are not step commands —
+     they are interpreter features, and need changes to the execution model
+     rather than new entries in a dispatch table. Belongs in its own piece of
+     work, not mixed into a command batch.
+
+**Catalogue traps**, all observed, none guessable from the data:
+  - `keyword` is not unique — `verifyTextContains` has six ids. Key on
+    (keyword, normalised grammar); treat keyword as one-to-many.
+  - Filter on each row's own `applicationType`; a WebApplication query also
+    returns Salesforce rows.
+  - `isAndroidSupported` / `isIosSupported` are false on all 779 offered rows.
+    They carry no information — filtering on them empties the result.
+  - The 112 legacy templates have no grammar and no API path to recover one.
+
+Source: `~/ai-automation-engineer/artifacts/testsigma-nlp-templates.json`.
+
+## 5. Housekeeping, agreed but deferred
 - **Split `ui/pages/platform/test_cases.py`** (600+ lines). It holds the editor,
   selection, bulk actions, the review panel, rename, delete and three dialogs.
   The review panel and the dialogs are separable. Deferred because it is pure

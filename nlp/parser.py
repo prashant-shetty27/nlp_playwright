@@ -154,6 +154,25 @@ def parse_step(step: str) -> Command:
         return Command(type="open", target=m.group(1).strip())
 
     # =============================
+    # OPEN A TAB — must be decided BEFORE the catch-all `open <target>` below,
+    # which is greedy enough to swallow anything following the word "open".
+    # `open new tab` was being read as a navigation to a site literally named
+    # "new tab", so the open_new_tab handler in both runners was unreachable.
+    # =============================
+    if re.fullmatch(r"open\s+(?:a\s+)?new\s+(?:tab|window)", s, re.I):
+        return Command(type="open_new_tab")
+
+    # Open a URL IN a new tab, in one step. Without this it takes two — a blank
+    # tab, then a navigation — and the pair only works if you remember that the
+    # blank tab has already stolen the focus.
+    #   open <url> in a new tab | open <url> in new window
+    #   go to url <url> in a new tab | navigate to <url> in a new tab
+    m = re.match(r'^(?:open(?:\s+url)?|go\s+to\s+url|navigate\s+to|browse\s+to|visit)'
+                 r'\s+(\S+)\s+in\s+(?:a\s+)?new\s+(?:tab|window)$', s, re.I)
+    if m:
+        return Command(type="open_in_new_tab", target=m.group(1).strip())
+
+    # =============================
     # OPEN  (site alias or bare URL, e.g. "open justdial" or "open https://…")
     # =============================
     if s.lower().startswith("open "):
@@ -634,6 +653,17 @@ def parse_step(step: str) -> Command:
     if m:
         return Command(type="switch_tab", count=int(m.group(1)))
 
+    # A tab named by its RELATIONSHIP rather than its number. An index is only
+    # knowable if you have counted what is open, and the count changes the
+    # moment a click opens a popup — which is exactly when you need to switch.
+    #   switch to parent tab | switch to child tab | switch to current tab
+    #   switch to first tab  | switch to last tab  | switch to new tab
+    m = re.match(r'^(?:switch\s+to|focus|go\s+to)\s+(?:the\s+)?'
+                 r'(parent|child|current|first|last|new|newest|previous)\s+'
+                 r'(?:tab|window)$', s, re.I)
+    if m:
+        return Command(type="switch_tab", text=m.group(1).lower())
+
     m = re.match(r'^close\s+(?:tab|window)\s+(\d+)$', s, re.I)
     if m:
         return Command(type="close_tab", count=int(m.group(1)))
@@ -831,7 +861,10 @@ def parse_step(step: str) -> Command:
     # CALL REUSABLE STEPS
     # call <name>  — inline-expands a saved reusable step group at runtime
     # =============================
-    m = re.match(r'^call\s+(\S+)$', s, re.I)
+    # The rest of the line, not the first word: a group name may contain
+    # spaces, so `\S+` silently truncated `call my login flow` to `my` and the
+    # step failed with "not found" naming something nobody had typed.
+    m = re.match(r'^call\s+(.+)$', s, re.I)
     if m:
         return Command(type="call_reusable", target=m.group(1).strip())
 

@@ -1,4 +1,6 @@
+# Platform: website
+
 open justdial
 search for Restaurants
 wait 3 seconds
-scroll until text "ExploreWERE OUR SEARCH RESULTS HELPFUL?" visible, scroll count 5, scroll wait 1
+scroll until text "Explore" visible, scroll count 5, scroll wait 1

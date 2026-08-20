@@ -20,7 +20,15 @@ logger = logging.getLogger(__name__)
 REUSABLE_PATH = os.path.join(
     os.path.dirname(__file__), "..", "data", "reusable_steps.json"
 )
-_NAME_RE = re.compile(r'^[a-z][a-z0-9_]{1,49}$')
+#: A group name has to start with a letter and be at least 3 characters. That
+#: is the whole rule.
+#:
+#: It used to also demand lowercase, digits and underscores only. Every other
+#: character — a capital, a space, a hyphen — was rejected with a paragraph
+#: telling the author to go and retype it, which is work the machine can do and
+#: the author cannot be expected to remember. The name is a label; the runner
+#: resolves it by lookup, not by parsing it into fields.
+_NAME_RE = re.compile(r'^[A-Za-z].{2,49}$', re.S)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -108,13 +116,16 @@ def save(name: str, steps: List[str], overwrite: bool = False,
     should offer an overwrite confirmation before calling again with overwrite=True.
     """
     # ── Name validation ──────────────────────────────────────────────────────
+    # Surrounding whitespace is trimmed rather than reported. A trailing space
+    # is invisible on screen, so "the name is wrong" is the least useful thing
+    # that can be said about it.
     name = (name or "").strip()
     if not name:
-        raise ValueError("Name cannot be empty")
+        raise ValueError("Give the group a name")
     if not _NAME_RE.match(name):
         raise ValueError(
-            "Name must start with a letter and contain only lowercase "
-            "letters, digits, or underscores (2–50 chars total)"
+            f"'{name}' cannot be used as a name: it must start with a letter "
+            f"and be at least 3 characters."
         )
 
     # ── Steps validation ─────────────────────────────────────────────────────
@@ -123,10 +134,10 @@ def save(name: str, steps: List[str], overwrite: bool = False,
         raise ValueError("Select at least one step to save")
 
     # ── Self-reference / circular check ──────────────────────────────────────
-    call_pattern = re.compile(r'^call\s+(\S+)$', re.I)
+    call_pattern = re.compile(r'^call\s+(.+)$', re.I)
     for step in clean_steps:
         m = call_pattern.match(step)
-        if m and m.group(1).lower() == name.lower():
+        if m and m.group(1).strip().lower() == name.lower():
             raise ValueError(
                 f"Circular reference: step '{step}' calls itself"
             )

@@ -87,3 +87,25 @@ app.include_router(stepgroups.router)
 app.include_router(review.router)
 app.include_router(assist.router)
 app.include_router(websocket.router)
+
+
+# ── Static files ───────────────────────────────────────────────────────────────
+# Run screenshots, so a report can show the page as each step saw it.
+#
+# Mounted on the FastAPI app rather than through NiceGUI: the UI is mounted on
+# this same app, so one mount serves the report page, the API and anything that
+# exports a report later. Reports store paths RELATIVE to this directory, which
+# is what makes a report still readable after the data directory moves.
+def _mount_screenshots() -> None:
+    import os
+
+    from fastapi.staticfiles import StaticFiles
+
+    from config.settings import SCREENSHOTS_DIR
+
+    os.makedirs(SCREENSHOTS_DIR, exist_ok=True)
+    app.mount("/screenshots", StaticFiles(directory=SCREENSHOTS_DIR),
+              name="screenshots")
+
+
+_mount_screenshots()

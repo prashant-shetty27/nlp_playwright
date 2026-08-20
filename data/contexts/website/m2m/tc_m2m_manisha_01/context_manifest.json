@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-08-20T03:23:42Z",
+  "platform": {
+    "label": "Website",
+    "key": "website"
+  },
+  "project_name": "m2m",
+  "script_name": "tc_m2m_manisha_01",
+  "recorder_kind": "web",
+  "paths": {
+    "data_dir": "/Users/prashantshetty/nlp_playwright/data/contexts/website/m2m/tc_m2m_manisha_01",
+    "flow_dir": "/Users/prashantshetty/nlp_playwright/flows/contexts/website/m2m/tc_m2m_manisha_01",
+    "manifest_file": "/Users/prashantshetty/nlp_playwright/data/contexts/website/m2m/tc_m2m_manisha_01/context_manifest.json",
+    "recorded_elements_file": "/Users/prashantshetty/nlp_playwright/data/contexts/website/m2m/tc_m2m_manisha_01/recorded_elements.json",
+    "manual_locators_file": "/Users/prashantshetty/nlp_playwright/data/contexts/website/m2m/tc_m2m_manisha_01/locators_manual.json",
+    "env_snapshot_file": "/Users/prashantshetty/nlp_playwright/data/contexts/website/m2m/tc_m2m_manisha_01/environment_snapshot.json",
+    "runtime_variables_file": "/Users/prashantshetty/nlp_playwright/data/contexts/website/m2m/tc_m2m_manisha_01/runtime_variables.json",
+    "setup_options_file": "/Users/prashantshetty/nlp_playwright/data/contexts/website/m2m/tc_m2m_manisha_01/setup_options.json"
+  },
+  "created_at": "2026-08-20T03:23:42Z",
+  "last_used_at": "2026-08-20T03:23:42Z"
+}

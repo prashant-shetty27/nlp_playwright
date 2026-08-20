@@ -1202,8 +1202,43 @@ class TestCasesPage:
                 f"font-weight:{TYPOGRAPHY['weight_bold']}")
             name = ui.input("Group name", placeholder="jd_open_and_dismiss_login") \
                 .props("outlined dense").classes("w-full")
-            ui.label("Lowercase letters, digits and underscores.").style(
+            rule = ui.label("Starts with a letter, at least 3 characters. "
+                            "Spaces and capitals are fine.").style(
                 f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}")
+
+            def check_name() -> bool:
+                """
+                Say whether the name will be accepted, as it is typed.
+
+                The rule used to be enforced only on Save, by the server. A name
+                that broke it left the dialog open with a line of small print
+                below the fold — which reads as the button doing nothing at all.
+                """
+                typed = (name.value or "").strip()
+                if not typed:
+                    rule.set_text("Starts with a letter, at least 3 characters. "
+                                  "Spaces and capitals are fine.")
+                    rule.style(f"font-size:{TYPOGRAPHY['size_xs']};"
+                               f"color:{COLORS['text_muted']}")
+                    return False
+                if not typed[0].isalpha() or len(typed) < 3:
+                    rule.set_text(f"'{typed}' will not be accepted — it must "
+                                  f"start with a letter and be at least 3 "
+                                  f"characters.")
+                    rule.style(f"font-size:{TYPOGRAPHY['size_xs']};"
+                               f"color:{COLORS['danger']}")
+                    return False
+                # Surrounding spaces are trimmed on save, so show the result
+                # rather than complaining about something invisible.
+                extra = (" — saved without the surrounding spaces"
+                         if typed != (name.value or "") else "")
+                rule.set_text(f"Saved as “{typed}”{extra}. "
+                              f"Reuse it with: call {typed}")
+                rule.style(f"font-size:{TYPOGRAPHY['size_xs']};"
+                           f"color:{COLORS['success']}")
+                return True
+
+            name.on_value_change(check_name)
             with ui.column().classes("w-full gap-0").style(
                     f"border:1px solid {COLORS['border']}; border-radius:6px;"
                     f"max-height:12rem; overflow-y:auto"):
@@ -1215,6 +1250,10 @@ class TestCasesPage:
                 f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['warning']}")
 
             async def do_save(overwrite: bool = False) -> None:
+                if not check_name():
+                    ui.notify("That name cannot be used — see the note under "
+                              "the box", type="warning")
+                    return
                 try:
                     await api.save_step_group((name.value or "").strip(), chosen,
                                               self.platform, overwrite=overwrite)
@@ -1224,10 +1263,11 @@ class TestCasesPage:
                         ui.button("Replace it", on_click=lambda: do_save(True)) \
                             .props("flat dense color=negative")
                         return
-                    note.set_text(e.detail[:160])
+                    note.set_text(str(e.detail)[:200])
                     return
                 dialog.close()
-                ui.notify(f"Saved step group — type 'call {name.value}' to reuse it",
+                ui.notify(f"Saved step group — type 'call "
+                          f"{(name.value or '').strip()}' to reuse it",
                           type="positive")
                 self.selection.clear()
                 await self.render_editor()

@@ -110,6 +110,24 @@ class RunCenter:
         self._render_left()
         self._render_right()
 
+    #: What each capture mode costs and covers, said plainly at the point of
+    #: choosing. "key"/"failure" leave gaps in the report, and a gap nobody was
+    #: warned about reads as a bug.
+    _SHOT_NOTES = {
+        "all": "Every step is photographed. Roughly 4 MB per 20-step run.",
+        "key": "Only verifications and steps that reach a new page. About a "
+               "third of the storage; other steps will have no image.",
+        "failure": "Every step is photographed, but only the failure and the "
+                   "steps just before it are kept. Cheapest — a run that "
+                   "passes stores nothing.",
+        "off": "No images. The report still records each step's result and "
+               "how long it took.",
+    }
+
+    def _shot_mode_changed(self, mode: str) -> None:
+        self.shot_context.set_visibility(mode == "failure")
+        self.shot_note.set_text(self._SHOT_NOTES.get(mode, ""))
+
     def _set_platform(self, p: str) -> None:
         self.platform = p
         self._render_right()
@@ -146,6 +164,32 @@ class RunCenter:
                 f"font-weight:{TYPOGRAPHY['weight_bold']}")
             self.headless = ui.switch("Headless", value=False).props("dense")
             ui.label("Off shows the browser while it runs.").style(
+                f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}")
+            # Screenshots per step. What makes a failed run readable afterwards
+            # — and the mode is what keeps it affordable: every step on a
+            # 20-step run is about 4 MB, so fifty runs a day is real storage.
+            self.shot_mode = ui.select(
+                {"all": "Screenshot every step",
+                 "key": "Only checks and new pages",
+                 "failure": "Only the failure and the steps before it",
+                 "off": "No screenshots"},
+                value="all", label="Screenshots",
+                on_change=lambda e: self._shot_mode_changed(e.value)) \
+                .props("outlined dense").classes("w-full")
+            self.shot_context = ui.number(
+                "Steps to keep before the failure", value=5, min=0, max=50,
+                format="%d").props("outlined dense").classes("w-full")
+            self.shot_context.set_visibility(False)
+            self.shot_note = ui.label(
+                "Every step is photographed. Roughly 4 MB per 20-step run.").style(
+                f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}")
+
+            self.stop_on_failure = ui.switch("Stop at the first failure",
+                                             value=True).props("dense")
+            ui.label("On, a failed step ends the run and the rest are marked not "
+                     "run. Off, every step is attempted — useful for seeing how "
+                     "much of a flow is broken at once, misleading for anything "
+                     "that submits a form.").style(
                 f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}")
 
             mobile = [d for d in self.devices if d.get("mobile")]
@@ -275,6 +319,9 @@ class RunCenter:
                 parameters=params,
                 secret_parameters=[n for n in params if _is_secret(n)],
                 browser_permissions=self.permissions.value or "",
+                stop_on_failure=bool(self.stop_on_failure.value),
+                screenshot_mode=self.shot_mode.value or "all",
+                screenshot_context=int(self.shot_context.value or 5),
             )
         except api.ApiError as e:
             ui.notify(f"Could not start: {e.detail}", type="negative")

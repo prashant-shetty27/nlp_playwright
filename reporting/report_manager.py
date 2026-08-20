@@ -23,19 +23,40 @@ class TestReportManager:
         self.executer_name = executer_name
         self.started_at = datetime.now().isoformat(timespec="seconds")
         self.results: list[dict] = []
+        #: Run-level facts that are not per-step and not counts — currently how
+        #: screenshots were captured. Persisted so a saved report can explain a
+        #: step with no image ("this run only kept the failure") instead of
+        #: leaving the reader to guess whether it is a gap or a bug.
+        self.meta: dict = {}
 
-    def add_result(self, test_name: str, status: str, reason: str | None = None) -> None:
+    def add_result(self, test_name: str, status: str, reason: str | None = None,
+                   *, screenshot: str = "", duration_ms: int | None = None) -> dict:
+        """
+        Record one step's outcome.
+
+        `screenshot` and `duration_ms` are keyword-only and optional on purpose:
+        plan_runner.py and select_and_run() below call this with the original
+        three positional arguments, and a report written by a caller that has no
+        screenshots is still a valid report.
+        """
         normalized = (status or "").strip().lower()
         if normalized not in {"passed", "failed", "skipped"}:
             normalized = "failed"
-        self.results.append(
-            {
+        # The appended row is returned so a caller can fill a field in later.
+        # Screenshot capture needs this: in "failure" mode a frame is only known
+        # to be worth keeping once a later step fails.
+        row = {
                 "test_name": test_name,
                 "status": normalized,
                 "reason": reason or "",
+                # Relative to data/screenshots, so a report survives the data
+                # directory being moved or copied to another machine.
+                "screenshot": screenshot or "",
+                "duration_ms": duration_ms,
                 "timestamp": datetime.now().isoformat(timespec="seconds"),
-            }
-        )
+        }
+        self.results.append(row)
+        return row
 
     def _summary(self) -> dict:
         total = len(self.results)
@@ -64,6 +85,7 @@ class TestReportManager:
             "generated_at": datetime.now().isoformat(timespec="seconds"),
             "summary": self._summary(),
             "results": self.results,
+            **self.meta,
         }
 
         with open(json_path, "w", encoding="utf-8") as f:

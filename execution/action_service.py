@@ -136,6 +136,37 @@ def _get_healed_element_locator(page, locator_name):
 # OPEN SITE
 # ─────────────────────────────────────────────────────────────────────────────
 @with_retry(max_attempts=3, delay=2.0)
+def _reachability_hint(host: str) -> str:
+    """
+    Say WHY a navigation never got a response, when the network can answer that.
+
+    ERR_CONNECTION_CLOSED against an internal address reads as a tool failure
+    and is not one: the host resolved, the TCP connection opened, and the far
+    end dropped it. Naming the address range turns "the automation is broken"
+    into "you are not on the VPN", which is the actual next action and is not
+    otherwise visible from a run report.
+    """
+    import ipaddress
+    import socket
+
+    try:
+        ip = ipaddress.ip_address(socket.gethostbyname(host))
+    except Exception:  # noqa: BLE001
+        return (f"'{host}' could not be resolved at all — check the spelling, "
+                f"or whether it only exists on an internal network. ")
+
+    # 100.64.0.0/10 is shared address space: carrier NAT and, in practice, the
+    # range corporate VPNs hand out. Python calls it neither private nor global.
+    shared = ip in ipaddress.ip_network("100.64.0.0/10")
+    if ip.is_private or shared:
+        return (f"'{host}' resolves to {ip}, which is an internal address — it "
+                f"is only routable from inside the corporate network. The name "
+                f"resolved and the connection opened, so this is not the test: "
+                f"check the VPN is connected, then confirm with "
+                f"`curl -I https://{host}/` before running again. ")
+    return ""
+
+
 def open_site(page, url: str):
     from urllib.parse import urlparse
     from config.settings import get_auth_registry
@@ -157,7 +188,17 @@ def open_site(page, url: str):
 
     sanitized_url = raw_url if raw_url.startswith(("http://", "https://")) else f"https://{raw_url}"
     parsed_url = urlparse(sanitized_url)
-    target_domain = parsed_url.netloc
+    # hostname, NOT netloc. netloc carries any `user:password@` the author wrote
+    # into the step, so using it as the domain meant three things went wrong at
+    # once: the auth registry never matched, DNS was asked to resolve
+    # "user:pass@host", and the "safe" URL built for logs and error messages
+    # carried the password — the one place that was supposed to be clean.
+    target_domain = (parsed_url.hostname or "").lower()
+    if parsed_url.port:
+        target_domain = f"{target_domain}:{parsed_url.port}"
+    #: What the author typed, credentials included — needed only to rebuild the
+    #: URL, never to display, log or resolve.
+    supplied_netloc = parsed_url.netloc
 
     if not target_domain:
         raise ValueError(f"Validation Error: '{sanitized_url}' could not be parsed into a valid domain.")
@@ -185,6 +226,7 @@ def open_site(page, url: str):
         )
         parsed_url = parsed_url._replace(netloc=f"{username}:{password}@{target_domain}")
         sanitized_url = parsed_url.geturl()
+        supplied_netloc = parsed_url.netloc
 
     # Never log or raise with a credential-bearing URL.
     safe_url = f"{parsed_url.scheme}://{target_domain}{parsed_url.path}"
@@ -196,7 +238,18 @@ def open_site(page, url: str):
         except Exception:
             pass  # networkidle timeout is non-fatal
     except Exception as e:
-        raise RuntimeError(f"Navigation Error: Failed to load '{safe_url}'. Details: {e}")
+        # Playwright reports a failure with the URL it was GIVEN, credentials
+        # and all. This line built a safe_url for its own text and then pasted
+        # the raw exception after it, so any failed navigation to a domain in
+        # the auth registry wrote the password into the run log and the report.
+        detail = str(e)
+        if sanitized_url != safe_url:
+            detail = detail.replace(sanitized_url, safe_url)
+        if "@" in supplied_netloc:
+            detail = detail.replace(supplied_netloc, target_domain)
+        raise RuntimeError(f"Navigation Error: Failed to load '{safe_url}'. "
+                           f"{_reachability_hint(parsed_url.hostname or '')}"
+                           f"Details: {detail}")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -251,17 +304,71 @@ def fill_element(page, text, locator_name):
     primary_xpath, dna = _resolve_live(page, locator_name)
 
     def execute_robust_fill(xpath):
+        """
+        Put `text` in the field and PROVE it landed.
+
+        Three strategies, weakest assumption last, each checked by reading the
+        value back. Without that read-back a fill could report success while the
+        field stayed empty — the run carried on to the submit, and the first
+        anyone knew was the site's own "enter mobile number" alert several steps
+        later, blamed on the wrong step.
+        """
         loc = page.locator(xpath).first
+        want = str(text)
+
+        def landed() -> bool:
+            try:
+                return loc.input_value(timeout=1500) == want
+            except PlaywrightError:
+                # Not an <input>; fall back to whatever the node holds.
+                try:
+                    return (loc.evaluate("el => el.value ?? el.textContent") or "") == want
+                except PlaywrightError:
+                    return False
+
         try:
-            loc.fill(str(text), timeout=3000)
-            return True
-        except PlaywrightTimeoutError:
-            if loc.count() > 0:
-                logger.warning("🛡️ Input field blocked. Forcing value via JavaScript...")
-                loc.evaluate("(el, v) => { el.value = v; }", text)
-                loc.dispatch_event("input")
+            loc.fill(want, timeout=3000)
+            if landed():
                 return True
-            raise
+            logger.warning("⚠️  fill() left '%s' holding %r — retyping as keystrokes.",
+                           locator_name, loc.input_value(timeout=1000))
+        except PlaywrightTimeoutError:
+            if loc.count() == 0:
+                raise
+            logger.warning("🛡️ Input field blocked. Trying real keystrokes...")
+
+        # Real keystrokes. A field that filters input per key, or an app that
+        # tracks its own copy of the value from key events, ignores a value set
+        # in one go — the DOM shows the number and the app still believes the
+        # field is empty.
+        try:
+            loc.click(timeout=2000)
+            loc.press_sequentially(want, delay=20, timeout=5000)
+            if landed():
+                return True
+        except PlaywrightError as e:
+            logger.warning("⚠️  Keystroke entry failed for '%s': %s", locator_name, e)
+
+        # Last resort: set the value through the NATIVE setter and fire the
+        # events a framework listens for. Assigning el.value directly is what
+        # React's value tracker ignores, so the field showed the number and the
+        # component's state never changed.
+        logger.warning("🛡️ Forcing value via JavaScript for '%s'...", locator_name)
+        loc.evaluate(
+            """(el, v) => {
+                const proto = el instanceof HTMLTextAreaElement
+                    ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+                const setter = Object.getOwnPropertyDescriptor(proto, 'value').set;
+                setter ? setter.call(el, v) : (el.value = v);
+                el.dispatchEvent(new Event('input',  {bubbles: true}));
+                el.dispatchEvent(new Event('change', {bubbles: true}));
+            }""", want)
+        if landed():
+            return True
+        raise AssertionError(
+            f"❌ Could not put {want!r} into '{locator_name}'. The field is "
+            f"present but its value did not change — it may be read-only, "
+            f"covered by an overlay, or reset by the page as fast as it is set.")
 
     try:
         logger.info(f"⌨️ Attempting to type '{text}' into: {locator_name}")
@@ -337,8 +444,28 @@ def extract_element_count(page, locator_name, variable_name):
     logger.info(f"💾 EXTRACTED COUNT: {count} elements found -> Stored as '${variable_name}'")
 
 
+def _strip_credentials(url: str) -> str:
+    """
+    Drop any user:password@ from a URL.
+
+    After URL-embedded Basic auth the browser's own `page.url` carries the
+    credentials, so every later read of "where are we" — a stored variable, a
+    log line, a tab listing — was a place the password could surface. The
+    address is still useful without them; the credentials never are.
+    """
+    try:
+        from urllib.parse import urlparse
+
+        parsed = urlparse(str(url or ""))
+        if "@" in parsed.netloc:
+            return parsed._replace(netloc=parsed.netloc.split("@", 1)[1]).geturl()
+    except Exception:  # noqa: BLE001 — a URL we cannot parse is returned as-is
+        pass
+    return str(url or "")
+
+
 def extract_page_url(page, variable_name):
-    url = page.url
+    url = _strip_credentials(page.url)
     RUNTIME_VARIABLES[variable_name] = str(url)
     logger.info(f"💾 EXTRACTED URL: '{url}' -> Stored as '${variable_name}'")
 
@@ -1197,18 +1324,80 @@ def take_screenshot(page_obj, label="capture"):
 # TAB / WINDOW MANAGEMENT (Playwright BrowserContext)
 # ─────────────────────────────────────────────────────────────────────────────
 
-def switch_tab(page, index: int):
-    """Focus a browser tab by 0-based index."""
+#: Tabs a step can name instead of counting to. An index is only knowable if
+#: you have counted what is open, and the count changes the moment a click
+#: opens a popup — which is precisely when a test needs to switch.
+TAB_NAMES = ("current", "parent", "child", "new", "newest", "first", "last",
+             "previous")
+
+
+def _tab_named(page, where: str):
+    """Resolve a named tab to a Page, or raise saying why it could not be."""
     pages = page.context.pages
-    if index < 0 or index >= len(pages):
-        raise AssertionError(
-            f"❌ Tab index {index} out of range. "
-            f"Open tabs: {len(pages)}  (valid: 0–{len(pages) - 1})"
-        )
-    _TEST_SESSION.active_page = pages[index]
+    active = _TEST_SESSION.active_page or page
+    where = (where or "").strip().lower()
+
+    if not pages:
+        raise AssertionError("❌ There are no open tabs.")
+    if where == "current":
+        return active
+    if where == "first":
+        return pages[0]
+    if where in ("last", "new", "newest"):
+        return pages[-1]
+    if where == "parent":
+        # Playwright records which page opened which. That is the real
+        # relationship — "the tab before this one" is only the same thing until
+        # a third tab appears.
+        parent = active.opener()
+        if parent is None or parent.is_closed():
+            raise AssertionError(
+                "❌ This tab has no parent — nothing opened it. Use "
+                "'switch to tab 0', or name the window by its title.")
+        return parent
+    if where == "child":
+        kids = [p for p in pages
+                if p is not active and not p.is_closed() and p.opener() is active]
+        if not kids:
+            raise AssertionError(
+                f"❌ This tab has not opened any others. Open tabs: {len(pages)}. "
+                f"If the click that opens one has not run yet, wait for it first.")
+        return kids[-1]                      # the most recent child
+    if where == "previous":
+        i = pages.index(active) if active in pages else 0
+        if i == 0:
+            raise AssertionError("❌ This is already the first tab.")
+        return pages[i - 1]
+    raise AssertionError(
+        f"❌ Unknown tab '{where}'. Use one of: {', '.join(TAB_NAMES)}, "
+        f"or a number.")
+
+
+def switch_tab(page, index=None, where: str = ""):
+    """
+    Focus a tab, by 0-based index or by name (parent, child, current, …).
+
+    Both forms land here so that "which tab am I on" has exactly one answer and
+    one place that sets it.
+    """
+    pages = page.context.pages
+    if where:
+        target = _tab_named(page, where)
+        label = where
+    else:
+        index = int(index or 0)
+        if index < 0 or index >= len(pages):
+            raise AssertionError(
+                f"❌ Tab index {index} out of range. "
+                f"Open tabs: {len(pages)}  (valid: 0–{len(pages) - 1})"
+            )
+        target = pages[index]
+        label = f"tab {index}"
+    _TEST_SESSION.active_page = target
     _TEST_SESSION.active_frame = None
     _TEST_SESSION.active_page.bring_to_front()
-    logger.info("🪟 Switched to tab %d — %s", index, _TEST_SESSION.active_page.url)
+    logger.info("🪟 Switched to %s — %s", label,
+                _strip_credentials(_TEST_SESSION.active_page.url))
 
 
 def close_tab(page, index=None):
@@ -1229,7 +1418,8 @@ def close_tab(page, index=None):
         _TEST_SESSION.active_page.bring_to_front()
     logger.info(
         "🗑️  Tab closed. Active tab: %s",
-        _TEST_SESSION.active_page.url if _TEST_SESSION.active_page else "—",
+        _strip_credentials(_TEST_SESSION.active_page.url)
+        if _TEST_SESSION.active_page else "—",
     )
 
 
@@ -1244,7 +1434,8 @@ def close_all_tabs(page):
         _TEST_SESSION.active_page.bring_to_front()
     logger.info(
         "🗑️  Closed all tabs. Active: %s",
-        _TEST_SESSION.active_page.url if _TEST_SESSION.active_page else "—",
+        _strip_credentials(_TEST_SESSION.active_page.url)
+        if _TEST_SESSION.active_page else "—",
     )
 
 
@@ -1255,16 +1446,50 @@ def open_new_tab(page):
     logger.info("🪟 Opened new tab (now active).")
 
 
+def open_in_new_tab(page, url: str):
+    """
+    Open `url` in a new tab and leave that tab focused.
+
+    Navigation goes through open_site, so a site alias, the domain rules and
+    any stored auth behave exactly as they do for a plain `open` — a second
+    copy of that logic would drift the first time an alias was added.
+
+    The new tab records this one as its opener, so `switch to parent tab` gets
+    you back without counting indexes.
+    """
+    parent = _TEST_SESSION.active_page or page
+    # opener() is set by the browser only for tabs the PAGE opens, so a tab made
+    # through the API has none. Opening it from a script in the parent keeps the
+    # relationship real, which is what parent/child switching resolves against.
+    with page.context.expect_page() as info:
+        parent.evaluate("() => window.open('about:blank')")
+    fresh = info.value
+    _TEST_SESSION.active_page = fresh
+    _TEST_SESSION.active_frame = None
+    fresh.bring_to_front()
+    open_site(fresh, url)
+    logger.info("🪟 Opened %s in a new tab (now active).", fresh.url)
+
+
 def list_tabs(page):
-    """Log every open tab with its index, title, and URL."""
+    """Log every open tab with its index, title, URL and parentage."""
     pages = page.context.pages
+    active = _TEST_SESSION.active_page or page
     logger.info("📋 Open tabs (%d):", len(pages))
     for i, p in enumerate(pages):
         try:
             title = p.title()
-        except Exception:
+        except Exception:  # noqa: BLE001 — a closing tab has no title
             title = "—"
-        logger.info("  [%d] %s  —  %s", i, title, p.url)
+        # Which tab opened which is what 'parent'/'child' resolve against, so a
+        # failure to find one is only debuggable if the log shows the tree.
+        try:
+            opener = p.opener()
+            parent = f" ← opened by [{pages.index(opener)}]" if opener in pages else ""
+        except Exception:  # noqa: BLE001
+            parent = ""
+        logger.info("  [%d]%s %s  —  %s%s", i, " ←ACTIVE" if p is active else "",
+                    title, _strip_credentials(p.url), parent)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

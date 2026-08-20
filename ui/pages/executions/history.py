@@ -173,6 +173,13 @@ def _row(run: dict) -> None:
                         f"color:{COLORS['danger']}; font-size:{TYPOGRAPHY['size_xs']}")
                 ui.label(f"{passed}/{summary.get('total', 0)} passed").style(
                     f"color:{COLORS['text_muted']}; font-size:{TYPOGRAPHY['size_xs']}")
+                # The step-by-step view with screenshots. Expanding the row here
+                # still lists the steps; this is where you go to SEE them.
+                ui.button("Open", icon="open_in_new",
+                          on_click=lambda r=run.get("run_id", ""):
+                              ui.navigate.to(f"/reports/{r}")) \
+                    .props("flat dense").tooltip(
+                        "Step-by-step, with the screenshot at each step")
 
         holder = ui.column().classes("w-full gap-0")
 

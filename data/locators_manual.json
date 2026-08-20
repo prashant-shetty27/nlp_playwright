@@ -300,35 +300,6 @@
       }
     }
   },
-  "web": {
-    "web_homepage": {
-      "maybe_later": {
-        "custom_xpath": "//span[contains(@class,'jsx-55162c602a57c0bf')]",
-        "tagName": "span",
-        "innerText": "\u20185.3 Crore+\u2018 Businesses"
-      },
-      "maybe_later_recorded_element": {
-        "custom_xpath": "//span[contains(@class,'jsx-55162c602a57c0bf')]",
-        "tagName": "span",
-        "innerText": "\u20185.3 Crore+\u2018 Businesses"
-      },
-      "search_box": {
-        "custom_xpath": "//figcaption[contains(@class,'color111') and contains(@class,'pt-10')]",
-        "tagName": "figcaption",
-        "innerText": "Movies"
-      },
-      "freelisting_banner_cross_button": {
-        "custom_xpath": "//span[@aria-label='Close Banner']",
-        "tagName": "span",
-        "innerText": ""
-      },
-      "movies_thumbnail": {
-        "custom_xpath": "//span[@aria-label='Close Banner']",
-        "tagName": "span",
-        "innerText": ""
-      }
-    }
-  },
   "jdmart_pdp_mobile": {
     "ask_more_photos_cta": {
       "custom_xpath": "div.photoreqwrap",
@@ -536,6 +507,14 @@
     },
     "mobile_field": {
       "xpath": "//input[@aria-label=\"Enter Mobile Number 1\"]",
+      "dna": {}
+    },
+    "mobile_get_started": {
+      "xpath": "//*[@id=\"listyourbusiness\"]/div/div[1]/div[2]/form/button",
+      "dna": {}
+    },
+    "otp": {
+      "xpath": "//input[@name=\"otp1\"]",
       "dna": {}
     }
   }

@@ -8,5 +8,28 @@
     "created_at": "2026-08-18T21:22:40.685287+00:00",
     "step_count": 3,
     "platform": "website"
+  },
+  "sg manisha m2m nonlogin to login till claim page": {
+    "steps": [
+      "open https://staging2.justdial.com/rne/JDM42UP7BK/JA",
+      "wait 5 seconds",
+      "verify exact text \"Referral Code (JDM42UP7BK) Applied \u2022 You got 15 days Free trial\"",
+      "type \"7715882134\" into mobile_field",
+      "click mobile_get_started",
+      "open new tab",
+      "open http://172.29.86.98:8080/",
+      "type \"7715882134\" into fmobile",
+      "click otp_submit_button",
+      "store text of fetched_otp as fetchedOTP",
+      "switch to tab 0",
+      "enter otp \"fetchedOTP\" into otp",
+      "click business_name",
+      "verify element business_name has text \"zxy md papad\"",
+      "click zxy_md_papad",
+      "verify text \"Claim Your Free Trial\" on page"
+    ],
+    "created_at": "2026-08-20T05:04:27.002969+00:00",
+    "step_count": 16,
+    "platform": "website"
   }
 }

@@ -18,7 +18,9 @@ Default retention is 90 days.
 from __future__ import annotations
 
 import argparse
+import json
 import os
+import shutil
 import sys
 import time
 import zipfile
@@ -75,6 +77,64 @@ def prune(days: int = DEFAULT_DAYS, apply: bool = False) -> dict:
     return report
 
 
+#: Screenshots are kept on a shorter leash than reports, and passing runs on a
+#: much shorter one than failures. Nobody reopens the screenshots of a run that
+#: passed; the failures are the whole reason the frames exist. Since most runs
+#: pass, this is what keeps the footprint flat rather than growing with usage.
+SHOT_DAYS_FAILED = 90
+SHOT_DAYS_PASSED = 7
+
+SCREENSHOT_RUNS_DIR = os.path.join(BASE_DIR, "data", "screenshots", "runs")
+
+
+def _run_failed(run_dir_name: str) -> bool:
+    """
+    Did the run these screenshots belong to fail?
+
+    Read from the run's own report. A directory whose report has been pruned
+    already, or cannot be read, is treated as FAILED — keeping a folder too
+    long is recoverable, deleting the evidence of a failure is not.
+    """
+    if not os.path.isdir(LOGS_DIR):
+        return True
+    for name in os.listdir(LOGS_DIR):
+        if not name.endswith(".json") or run_dir_name not in name:
+            continue
+        try:
+            with open(os.path.join(LOGS_DIR, name), "r", encoding="utf-8") as f:
+                summary = (json.load(f).get("summary") or {})
+            return bool(int(summary.get("failed", 0) or 0))
+        except (OSError, ValueError):
+            return True
+    return True
+
+
+def prune_screenshots(apply: bool = False) -> dict:
+    """Remove run screenshot folders past their window. Never archived."""
+    out = {"folders": 0, "removed": 0, "bytes": 0}
+    if not os.path.isdir(SCREENSHOT_RUNS_DIR):
+        return out
+    now = time.time()
+    for name in sorted(os.listdir(SCREENSHOT_RUNS_DIR)):
+        folder = os.path.join(SCREENSHOT_RUNS_DIR, name)
+        if not os.path.isdir(folder):
+            continue
+        out["folders"] += 1
+        window = SHOT_DAYS_FAILED if _run_failed(name) else SHOT_DAYS_PASSED
+        if os.path.getmtime(folder) >= now - window * 86400:
+            continue
+        size = sum(os.path.getsize(os.path.join(folder, f))
+                   for f in os.listdir(folder)
+                   if os.path.isfile(os.path.join(folder, f)))
+        out["removed"] += 1
+        out["bytes"] += size
+        if apply:
+            # Deleted outright, not archived: a zip of JPEGs saves almost
+            # nothing, and these exist to be looked at soon or not at all.
+            shutil.rmtree(folder, ignore_errors=True)
+    return out
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--days", type=int, default=DEFAULT_DAYS,
@@ -84,15 +144,23 @@ def main() -> int:
     args = ap.parse_args()
 
     r = prune(args.days, args.apply)
+    shots = prune_screenshots(args.apply)
     total = len([f for f in os.listdir(LOGS_DIR) if f.endswith(".json")]) if os.path.isdir(LOGS_DIR) else 0
     print(f"reports on disk : {total}")
     print(f"older than {args.days}d : {r['found']}  (before {r.get('cutoff','')})")
+    print(f"screenshot runs : {shots['folders']}  "
+          f"(failed kept {SHOT_DAYS_FAILED}d, passed {SHOT_DAYS_PASSED}d)")
+    print(f"  past their window : {shots['removed']}  "
+          f"({shots['bytes'] / 1048576:.1f} MB)")
     if not args.apply:
         print("\nnothing changed — rerun with --apply to archive and remove them")
         return 0
     if r["found"]:
         print(f"archived        : {r['archived']} → {r['archive']}")
         print(f"removed         : {r['removed']}")
+    if shots["removed"]:
+        print(f"screenshots     : {shots['removed']} folder(s) deleted, "
+              f"{shots['bytes'] / 1048576:.1f} MB freed")
     return 0
 
 

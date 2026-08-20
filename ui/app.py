@@ -144,6 +144,20 @@ async def reports_page() -> None:
     _not_built("Reports", "ui/pages/reports/index.py")
 
 
+@ui.page("/reports/{run_id}")
+async def report_detail_page(run_id: str) -> None:
+    """
+    One run, step by step, with the screenshot each step saw.
+
+    Registered even though /reports itself is still a placeholder: the list is
+    a convenience, but this page is how a failure gets diagnosed, and History
+    already links straight to it.
+    """
+    _page_shell()
+    from ui.pages.reports.detail import render
+    await render(run_id)
+
+
 @ui.page("/data/variables")
 async def variables_page() -> None:
     _page_shell()

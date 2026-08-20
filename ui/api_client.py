@@ -343,13 +343,20 @@ async def run(project: str, platform: str, *, headless: bool = True,
         device_name: str = "", browser: str = "",
         parameters: dict | None = None,
         secret_parameters: list[str] | None = None,
-        browser_permissions: str = "") -> dict:
+        browser_permissions: str = "",
+        stop_on_failure: bool = True,
+        screenshot_mode: str = "all",
+        screenshot_context: int = 5) -> dict:
     return await _call("POST", "/tests/run", json={
         "project": project, "platform": platform, "headless": headless,
         "device_name": device_name, "browser": browser,
         "parameters": parameters or {},
         "secret_parameters": secret_parameters or [],
         "browser_permissions": browser_permissions,
+        "stop_on_failure": stop_on_failure,
+        # all | key | failure | off — see reporting/step_capture.py
+        "screenshot_mode": screenshot_mode,
+        "screenshot_context": screenshot_context,
     })
 
 
