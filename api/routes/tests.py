@@ -12,7 +12,7 @@ import threading
 import time
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, field_validator
 
 from config.settings import LOGS_DIR
@@ -341,8 +341,36 @@ def _auth_domain_for(flow_path: str) -> str:
     return ""
 
 
+def _start_run_thread(run_id: str, flow_path: str, body: RunRequest, caps: dict) -> None:
+    """
+    Start the run on a worker thread and return immediately to the caller.
+
+    FastAPI background tasks run after the response is prepared, but with the
+    in-process ASGI client the UI waits for the whole request lifecycle. That
+    kept Run Center on-screen until execution finished, so the live "running"
+    page never appeared when the operator clicked Run.
+    """
+
+    thread = threading.Thread(
+        target=_run_flow_sync,
+        args=(run_id, flow_path, body.headless),
+        kwargs={
+            "capabilities": caps,
+            "parameters": body.parameters,
+            "secret_parameters": body.secret_parameters,
+            "environment": getattr(body, "environment", ""),
+            "stop_on_failure": getattr(body, "stop_on_failure", True),
+            "screenshot_mode": getattr(body, "screenshot_mode", "all"),
+            "screenshot_context": getattr(body, "screenshot_context", 5),
+        },
+        name=f"flow-run-{run_id}",
+        daemon=True,
+    )
+    thread.start()
+
+
 @router.post("/run")
-def run_test(body: RunRequest, background_tasks: BackgroundTasks):
+def run_test(body: RunRequest):
     """
     Launch a .flow run.  Returns run_id immediately; result available via
     GET /tests/results/{run_id}.
@@ -423,16 +451,7 @@ def run_test(body: RunRequest, background_tasks: BackgroundTasks):
 
     _remember(run_id, {"status": "running", "result": None})
 
-    def _task():
-        _run_flow_sync(run_id, flow_path, body.headless, capabilities=caps,
-                       parameters=body.parameters,
-                       secret_parameters=body.secret_parameters,
-                       environment=getattr(body, "environment", ""),
-                       stop_on_failure=getattr(body, "stop_on_failure", True),
-                       screenshot_mode=getattr(body, "screenshot_mode", "all"),
-                       screenshot_context=getattr(body, "screenshot_context", 5))
-
-    background_tasks.add_task(_task)
+    _start_run_thread(run_id, flow_path, body, caps)
 
     return {
         "run_id": run_id,

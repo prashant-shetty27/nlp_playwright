@@ -517,5 +517,11 @@
       "xpath": "//input[@name=\"otp1\"]",
       "dna": {}
     }
+  },
+  "core_autosuggest": {
+    "first_autosuggest": {
+      "xpath": "(//*[contains(@class,'search_text')])[1]",
+      "dna": {}
+    }
   }
 }
