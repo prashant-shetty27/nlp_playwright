@@ -123,12 +123,12 @@
         "xpath": "//XCUIElementTypeButton[@name='Not Now']"
       },
       "dont_allow_button": {
-        "_comment": "Contacts sharing dialog \u2014 'Don't Allow' denies contact access without picker",
+        "_comment": "Contacts sharing dialog — 'Don't Allow' denies contact access without picker",
         "accessibility_id": "Don't Allow",
         "xpath": "//XCUIElementTypeButton[@name=\"Don't Allow\"]"
       },
       "deny_button": {
-        "_comment": "Generic deny \u2014 alternate label on some iOS permission dialogs",
+        "_comment": "Generic deny — alternate label on some iOS permission dialogs",
         "accessibility_id": "Deny",
         "xpath": "//XCUIElementTypeButton[@name='Deny']"
       },
@@ -212,7 +212,7 @@
       },
       "don_t_allow": {
         "resource_id": "com.android.permissioncontroller:id/permission_deny_button",
-        "text": "Don\u2019t allow",
+        "text": "Don’t allow",
         "class_name": "android.widget.Button",
         "xpath": "//android.widget.Button[@resource-id='com.android.permissioncontroller:id/permission_deny_button']"
       },
@@ -326,7 +326,7 @@
       "_approved": "operator-approved (Pixel 7 read-only calibration, 2026-08-17)",
       "_source_element": "MobileNumberInput",
       "_evidence": "input[type=tel] maxlength=15 inside form[name=UserQuickInfo]; 372x48; n=1 UNIQUE",
-      "_note": "id #srchInpId and aria-label 'tel' both REJECTED \u2014 n=2, shared with the site search box"
+      "_note": "id #srchInpId and aria-label 'tel' both REJECTED — n=2, shared with the site search box"
     },
     "popup_title": {
       "custom_xpath": "span.logoblotxtb2b",
@@ -340,7 +340,7 @@
       "_approved": "operator-approved (Pixel 7 read-only calibration, 2026-08-17)",
       "_source_element": "PopupTitle",
       "_evidence": "span 372x18 text \"You're almost there\"; n=1 UNIQUE",
-      "_note": "XPath rejected \u2014 apostrophe breaks the literal"
+      "_note": "XPath rejected — apostrophe breaks the literal"
     },
     "popup_submit_button": {
       "custom_xpath": "form[name=\"UserQuickInfo\"] button.continue_btn",
@@ -358,8 +358,8 @@
       "_requires_runtime_validation": true
     },
     "_calibration_notes": {
-      "tnc_checkbox": "CORRECTION: tnc_checkbox WAS present in the login sheet and already checked (input.tnc__checkbox, n=1, aria-label='I agree to Terms and Conditions and Privacy Policy', attribute checked present). It was DELIBERATELY NOT SAVED \u2014 it is not part of the selected testcase TC_AFP_C01/C02/C03 and no flow statement was approved for it. An earlier note described it as 'verified absent', which was wrong: it was absent from the saved locator set, not from the page.",
-      "success_toaster": "REQUIRES_STATE_CHANGING_CALIBRATION \u2014 not present in the DOM (hidden or otherwise) at PDP load, after the CTA click, or at the login-sheet stage. Only the generic empty containers div.b2b_sentient_nudge and div.--sentient-top_ContextNudge match toaster-like markup, and neither is it. Calibrating it requires submitting a valid OTP and creating a real photo request. No guessed locator saved.",
+      "tnc_checkbox": "CORRECTION: tnc_checkbox WAS present in the login sheet and already checked (input.tnc__checkbox, n=1, aria-label='I agree to Terms and Conditions and Privacy Policy', attribute checked present). It was DELIBERATELY NOT SAVED — it is not part of the selected testcase TC_AFP_C01/C02/C03 and no flow statement was approved for it. An earlier note described it as 'verified absent', which was wrong: it was absent from the saved locator set, not from the page.",
+      "success_toaster": "REQUIRES_STATE_CHANGING_CALIBRATION — not present in the DOM (hidden or otherwise) at PDP load, after the CTA click, or at the login-sheet stage. Only the generic empty containers div.b2b_sentient_nudge and div.--sentient-top_ContextNudge match toaster-like markup, and neither is it. Calibrating it requires submitting a valid OTP and creating a real photo request. No guessed locator saved.",
       "resend_otp_link": "NOT CALIBRATED. At the OTP stage the control is a countdown ('A new OTP has been sent.' + 'Retry in 00:59'), not a link. The actionable resend control appears only after the countdown expires and was not observed. TC_AFP_C02 row 91 asserts it, so the flow cannot cover that step until a timed pass captures it."
     },
     "otp_input": {
@@ -376,7 +376,7 @@
       "_expected_match_count": 6,
       "_purpose": "ordered six-digit OTP input collection",
       "_evidence": "div#otpfield.newotpfield > 6x input.pin[type=tel] ids 0-5, each 54x52, visible+enabled; DOM-observed on the OTP stage",
-      "_note": "ids 0-5 are invalid CSS (cannot start with a digit) \u2014 class-based selector used. Requires the enter_otp command; a single fill would be invalid."
+      "_note": "ids 0-5 are invalid CSS (cannot start with a digit) — class-based selector used. Requires the enter_otp command; a single fill would be invalid."
     },
     "otp_submit_button": {
       "custom_xpath": "button.continue_btn",
@@ -390,7 +390,7 @@
       "_approved": true,
       "_source_element": "OtpSubmitButton",
       "_evidence": "button[type=submit].continue_btn text 'Login', 372x48, inside form[name=verify]",
-      "_note": "bare .continue_btn \u2014 at the OTP stage form[name=UserQuickInfo] is unmounted so this resolves uniquely to the Login button. The previously-saved scoped selector form[name=verify] button.continue_btn failed at runtime (step 10).",
+      "_note": "bare .continue_btn — at the OTP stage form[name=UserQuickInfo] is unmounted so this resolves uniquely to the Login button. The previously-saved scoped selector form[name=verify] button.continue_btn failed at runtime (step 10).",
       "_requires_runtime_validation": false,
       "_validation_pending": "scoped selector observed in the OTP-stage DOM dump but not yet counted in an isolated UI-state validation pass"
     },
@@ -406,7 +406,7 @@
       "_approved": false,
       "_requires_runtime_validation": true,
       "_source": "TC_AFP_C03 row 95",
-      "_note": "PROVISIONAL \u2014 NOT DOM-calibrated. Derived solely from the source testcase's exact expected text. Absent from the DOM at PDP load, after the CTA click and at the login-sheet stage. Permanent selector to be captured during the first separately approved state-changing execution."
+      "_note": "PROVISIONAL — NOT DOM-calibrated. Derived solely from the source testcase's exact expected text. Absent from the DOM at PDP load, after the CTA click and at the login-sheet stage. Permanent selector to be captured during the first separately approved state-changing execution."
     },
     "otp_input_container": {
       "custom_xpath": "#otpfield",
@@ -434,7 +434,7 @@
       "_approved": true,
       "_sensitive": true,
       "_evidence": "span.otpsentnine_b2b on the OTP stage echoing the submitted mobile number",
-      "_note": "SENSITIVE \u2014 exists only so screenshots can mask it. Never assert on its text."
+      "_note": "SENSITIVE — exists only so screenshots can mask it. Never assert on its text."
     },
     "product_title": {
       "custom_xpath": "h1",
@@ -484,7 +484,7 @@
       "_approved": true,
       "_source": "operator-supplied",
       "_absence_guard": true,
-      "_evidence": "0 matches \u2014 asserts this element is absent",
+      "_evidence": "0 matches — asserts this element is absent",
       "_note": "Guard only. Use with 'verify element ... is not present'. It has no DNA because there is no element to describe, so ML healing does not apply."
     }
   },
@@ -523,5 +523,35 @@
       "xpath": "(//*[contains(@class,'search_text')])[1]",
       "dna": {}
     }
+  },
+  "ts_nct_job_related_questions": {
+    "consent_button": "//button[normalize-space()='Consent'] | //*[@text='Consent']",
+    "consent_text": "//*[normalize-space()='Consent']",
+    "send_enquiry_button_1st": "(//button[contains(@class,'resultlist--btn-second')][.//span[contains(@class,'transactionbutton-text')][normalize-space()='Send Enquiry']])[1]",
+    "heading_send_enquiry_ps": "//*[self::h1 or self::h2 or self::h3 or self::div][contains(normalize-space(),'Send Enquiry')]",
+    "heading_free_contact_details_ps": "//*[contains(normalize-space(),'free contact details')]",
+    "heading_need_immediate_assistance": "//*[contains(normalize-space(),'Need Immediate Assistance')]",
+    "image_vendor_image": "//img[contains(@class,'vendor') or contains(@alt,'vendor')]",
+    "call_now_free_button1": "(//*[contains(normalize-space(),'Call Now')])[1]",
+    "send_enquiry_back_ps": "//*[contains(@class,'back') or contains(@aria-label,'back') or contains(@aria-label,'Back')][1]",
+    "call_popup_seller_name": "//*[contains(@class,'seller') and contains(@class,'name')]",
+    "seller_call_pop_image": "//*[contains(@class,'seller')]//img",
+    "seller_call_pop_rating": "//*[contains(@class,'rating')]",
+    "seller_call_pop_area": "//*[contains(@class,'area') or contains(@class,'address')]",
+    "seller_call_pop_heading_just_a_call_away": "//*[contains(normalize-space(),'Just a call away')]",
+    "seller_call_pop_get_your_answers_instantly": "//*[contains(normalize-space(),'Get your answers instantly')]",
+    "seller_user_details_form": "//form",
+    "enquiry_default_text": "//div[contains(@class,'bestdeal__hiw--cnt pb-10')]",
+    "enquiry_seller_pop_skip": "//*[self::a or self::button or self::span or self::div][normalize-space()='Maybe Later' or normalize-space()='Skip' or normalize-space()='SKIP' or @aria-label='May be later' or @aria-label='Maybe Later']",
+    "enquiry_form_name": "//input[@id='name' or @name='name' or contains(@placeholder,'Name')]",
+    "enquiry_form_mobile": "//input[@id='mobile' or @name='mobile' or @type='tel' or contains(@placeholder,'Mobile')]",
+    "enquiry_form_no": "//label[normalize-space()='No'] | //*[@id='no']",
+    "enquiry_submit_button": "//button[@type='submit' or contains(normalize-space(),'Submit')]",
+    "otp_1st_field": "//input[@id='0'] | (//input[@maxlength='1'])[1]",
+    "gbp_button_11": "(//button[contains(normalize-space(),'Get Best Price')])[11]",
+    "get_best_price_any_button": "(//button[contains(normalize-space(),'Get Best Price')])[1]",
+    "gbp_submit_now_button": "//button[contains(normalize-space(),'Submit Now')]",
+    "get_best_price_page_no_radio_button": "//label[normalize-space()='No'] | //input[@type='radio' and (@value='No' or @value='no')]",
+    "get_best_price_header_back": "(//header//*[contains(@class,'back')] | //*[contains(@class,'back')] | //*[contains(@aria-label,'ack')])[1]"
   }
 }

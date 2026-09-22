@@ -877,6 +877,55 @@ def scroll_until_text_visible(page, text, max_scrolls=None, scroll_wait=2):
     return False
 
 
+def scroll_until_element_visible(page, target: str, pixels=500, direction="down",
+                                 max_scrolls=None, scroll_wait=1) -> bool:
+    """
+    Scroll by a fixed number of pixels until the named element is inside the
+    viewport, then stop. Raises if it never appears, so the step fails loudly
+    instead of the next click failing with a less useful message.
+
+    "Visible" here means INSIDE THE VIEWPORT, not merely rendered: Playwright's
+    is_visible() is true for an element three screens below the fold, which is
+    exactly the case this command exists to handle.
+    """
+    from locators.manager import get_locator_and_dna
+    if max_scrolls is None:
+        max_scrolls = get_default_scroll_count()
+    xpath, _ = get_locator_and_dna(target)
+    if not xpath:
+        raise Exception(f"Locator '{target}' not found for scroll_until_element_visible")
+    px = int(pixels or 500)
+    dx, dy = {"down": (0, px), "up": (0, -px), "right": (px, 0), "left": (-px, 0)}.get(
+        str(direction or "down").lower(), (0, px))
+    viewport = page.viewport_size or {"width": 1280, "height": 720}
+
+    def _in_viewport() -> bool:
+        loc = page.locator(xpath).first
+        try:
+            if loc.count() == 0 or not loc.is_visible(timeout=300):
+                return False
+            box = loc.bounding_box(timeout=300)
+        except Exception:  # noqa: BLE001 — detached / not yet rendered
+            return False
+        if not box:
+            return False
+        return (0 <= box["y"] < viewport["height"] - 1 and box["y"] + box["height"] > 0
+                and 0 <= box["x"] < viewport["width"] - 1 and box["x"] + box["width"] > 0)
+
+    for i in range(int(max_scrolls) + 1):
+        if _in_viewport():
+            logger.info("📜 '%s' is in view after %d scroll(s) of %dpx %s", target, i, px, direction)
+            return True
+        if i == int(max_scrolls):
+            break
+        page.mouse.wheel(dx, dy)
+        if scroll_wait:
+            page.wait_for_timeout(float(scroll_wait) * 1000)
+    raise Exception(
+        f"'{target}' did not come into view after {max_scrolls} scroll(s) of {px}px {direction} "
+        f"(locator: {xpath}). Increase 'scroll count', change 'scroll by', or check the locator.")
+
+
 #: Locator names whose content is blanked out of every screenshot.
 #: Empty by default — screenshots capture the page as-is. Populate this (e.g. with
 #: "mobile_number_input", "otp_input", "otp_sent_number") when runs use real customer

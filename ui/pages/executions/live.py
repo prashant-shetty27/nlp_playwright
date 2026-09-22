@@ -80,7 +80,9 @@ class LiveView:
         from ui.layout.sidebar import sidebar
         from ui.layout.topbar import topbar
         sidebar(active="/run")
-        topbar(["Execute", "Live"], quick_run_route="/run")
+        topbar(["Execute", "Live"], quick_run_route="/run",
+               platform=self.platform if hasattr(self, "platform") else "",
+               current_flow=self.flow if hasattr(self, "flow") else "")
         with ui.row().classes("w-full items-center gap-3").style("padding:8px 16px 0"):
             _back_to_test_case(self.flow if hasattr(self, "flow") else "",
                                self.platform if hasattr(self, "platform") else "website")

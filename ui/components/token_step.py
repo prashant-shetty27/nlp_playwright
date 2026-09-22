@@ -143,7 +143,14 @@ class TokenStep:
         # of the span they stacked instead, so the caret hung below every
         # element name and the tag above every variable, giving each row a
         # ragged second line of stray marks.
-        holder.style("display:inline-flex; align-items:center; white-space:nowrap")
+        # white-space:normal + min-width:0 on the value (below) is what lets a
+        # very long token — a 300-character Justdial URL — break across lines.
+        # With nowrap the token could not shrink, the row grew past the page,
+        # and the Save / Delete / Run toolbar and every row's edit buttons were
+        # pushed off-screen to the right: the mobilesite test looked like it had
+        # no buttons at all.
+        holder.style("display:inline-flex; align-items:center; white-space:normal;"
+                     " min-width:0; max-width:100%")
         with holder:
             # A variable is marked as one, the way a step group is marked `sg`
             # in the suggestion list. Without it `${otp}` and a quoted literal
@@ -163,7 +170,7 @@ class TokenStep:
                 f"color:{colour}; cursor:pointer; text-decoration:underline;"
                 f"text-decoration-style:{'dashed' if needs_attention else 'solid'};"
                 f"text-underline-offset:3px; padding:0 2px; border-radius:3px;"
-                f"background:{colour}14"
+                f"background:{colour}14; word-break:break-all; min-width:0"
             )
             if other_platform:
                 # Naming the platform it DOES belong to is the difference

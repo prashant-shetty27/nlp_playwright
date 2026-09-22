@@ -31,7 +31,7 @@ TARGET_IS_LOCATOR = {
     "verify_element_exists", "verify_element_not_exists",
     "verify_element_exact", "verify_element_contains",
     "extract_text", "store_text", "extract_attribute", "extract_input", "extract_count",
-    "wait_for_element", "scroll_to", "clear",
+    "wait_for_element", "scroll_to", "scroll_until_element_visible", "clear",
     "verify_element_visible", "verify_element_not_visible", "wait_until_visible",
     "wait_until_text_not", "enter_otp",
     "js_click", "js_scroll_to", "js_type", "js_set_value", "js_focus", "js_submit",
@@ -95,8 +95,15 @@ def _role_for_target(command_type: str) -> str:
     return "text"
 
 
-def _find(haystack: str, needle: str, taken: list[tuple[int, int]]) -> tuple[int, int] | None:
-    """Locate `needle` in `haystack`, skipping regions already claimed."""
+def _find(haystack: str, needle: str, taken: list[tuple[int, int]],
+          whole_number: bool = False) -> tuple[int, int] | None:
+    """
+    Locate `needle` in `haystack`, skipping regions already claimed.
+
+    whole_number: the match must not be part of a longer digit run. Without it
+    "wait 1" claimed the "1" inside "scroll count 15", and the editor drew the
+    count as an editable "1" followed by a stray "5".
+    """
     if not needle:
         return None
     start = 0
@@ -105,7 +112,10 @@ def _find(haystack: str, needle: str, taken: list[tuple[int, int]]) -> tuple[int
         if i < 0:
             return None
         j = i + len(needle)
-        if not any(i < e and s < j for s, e in taken):
+        inside_digits = whole_number and (
+            (i > 0 and haystack[i - 1].isdigit())
+            or (j < len(haystack) and (haystack[j].isdigit() or haystack[j] == ".")))
+        if not inside_digits and not any(i < e and s < j for s, e in taken):
             return i, j
         start = i + 1
 
@@ -162,16 +172,25 @@ def segment(step: str, parsed: dict | None = None) -> list[Segment]:
         # Numbers live in their own fields ("wait 5 seconds" -> wait=5.0), and a
         # float renders as "5.0" while the step says "5", so the digits are found
         # in the text rather than matched against the parsed value verbatim.
+        # Longest numbers first, so "15" is claimed before "1" can steal its
+        # first digit; and each must be a whole number in the text.
+        numbers: list[str] = []
         for field in ("wait", "count", "timeout", "index", "seconds"):
             val = parsed.get(field)
             if val is None or isinstance(val, bool):
                 continue
             if isinstance(val, (int, float)):
-                written = str(int(val)) if float(val).is_integer() else str(val)
-                span = _find(step, written, taken)
-                if span:
-                    marks.append((span[0], span[1], "value", "number", ""))
-                    taken.append(span)
+                numbers.append(str(int(val)) if float(val).is_integer() else str(val))
+        # values[] carries per-command numbers too (scroll-by pixels).
+        vals = parsed.get("values")
+        for v in (vals if isinstance(vals, list) else [vals] if vals else []):
+            if isinstance(v, (int, float)) or (isinstance(v, str) and v.replace(".", "", 1).isdigit()):
+                numbers.append(str(v))
+        for written in sorted(set(numbers), key=len, reverse=True):
+            span = _find(step, written, taken, whole_number=True)
+            if span:
+                marks.append((span[0], span[1], "value", "number", ""))
+                taken.append(span)
 
     if not marks:
         return [Segment(text=step, kind="fixed", start=0, end=len(step))]

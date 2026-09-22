@@ -129,6 +129,11 @@ class TestCasesPage:
             ui.notify(f"Could not open {name}: {e.detail}", type="negative")
             return
         self.selected = name
+        try:
+            from ui.layout.topbar import set_current_flow
+            set_current_flow(name)
+        except Exception:  # noqa: BLE001 - the button is a convenience, never a blocker
+            pass
         # Header comments are dropped, but the two markers that ARE content are
         # kept: a purpose band, and a step switched off. Stripping every "#" line
         # meant both vanished the moment a test case was reopened — the file
@@ -186,10 +191,14 @@ class TestCasesPage:
         sidebar(active=f"/platform/{self.platform}", platforms=self.platforms)
         topbar(["Author", "Test Cases"], platforms=self.platforms,
                platform=self.platform,
-               on_platform_change=lambda p: ui.navigate.to(f"/platform/{p}"))
+               on_platform_change=lambda p: ui.navigate.to(f"/platform/{p}"),
+               current_flow=self.selected or "")
         with ui.row().classes("w-full no-wrap gap-4 p-4"):
             self.left = ui.column().classes("gap-2").style("width:20rem; flex:none")
-            self.right = ui.column().classes("flex-grow gap-2")
+            # min-width:0 — a flex child otherwise refuses to be narrower than
+            # its widest line, so one long step widened the whole editor past
+            # the viewport and hid the right-hand toolbar.
+            self.right = ui.column().classes("flex-grow gap-2").style("min-width:0")
         self.render_list()
         # Installed once per page. Without it the flag below is set on a window
         # that has no handler reading it, which is how this shipped un-armed.
@@ -1386,6 +1395,10 @@ class TestCasesPage:
 async def render(platform: str, flow: str = "") -> None:
     page = TestCasesPage(platform)
     await page.load()
+    # Known before the first paint so the top bar's Run button names THIS test
+    # case rather than whatever ran last.
+    if flow and flow in page.projects:
+        page.selected = flow
     page.render()
     # Reopen whatever the URL names. The editor's state lived only in server
     # memory, so a reload — or a websocket reconnect after the server restarted —

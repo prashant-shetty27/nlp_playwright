@@ -99,9 +99,13 @@ class RunCenter:
 
     def render(self) -> None:
         sidebar(active="/run", platforms=self.platforms)
+        # Run Center IS the run form, so the top-bar button would only ever
+        # repeat some other flow from history; hide it here by naming the open
+        # flow (the form's RUN NOW is the real control).
         topbar(["Execute", "Run Center"], platforms=self.platforms,
                platform=self.platform,
-               on_platform_change=self._set_platform)
+               on_platform_change=self._set_platform,
+               current_flow=self.flow or "")
         with ui.row().classes("w-full items-center gap-3").style("padding:8px 16px 0"):
             _back_to_test_case(self.flow, self.platform)
         with ui.row().classes("w-full no-wrap gap-4 p-4"):

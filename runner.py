@@ -194,6 +194,9 @@ def _execute_step_from_command(cmd, page):
         "scroll_to":                 lambda: svc.scroll_to_element(ep, target),
         "scroll":                    lambda: svc.vertical_scroll(ep, cmd.count or 500),
         "scroll_until_text_visible": lambda: svc.scroll_until_text_visible(ep, text, cmd.count, cmd.wait),
+        "scroll_until_element_visible": lambda: svc.scroll_until_element_visible(
+            ep, target, pixels=first_value, direction=text,
+            max_scrolls=cmd.count, scroll_wait=cmd.wait),
         # ── Screenshot ───────────────────────────────────────────────────────
         "screenshot":                lambda: svc.take_screenshot(ep, target or "capture"),
         # ── Verification — Global ────────────────────────────────────────────

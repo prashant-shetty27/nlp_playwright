@@ -30,7 +30,9 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.routes import (assist, generate, health, locators, nlp, projects, review, sources, stepgroups, testdata, tests, websocket)
+from api.routes import (assist, generate, health, locators, nlp, projects,
+                        review, sources, stepgroups, system, testdata,
+                        tests, websocket)
 
 logger = logging.getLogger(__name__)
 
@@ -76,6 +78,7 @@ app.add_middleware(
 
 # ── Routers ────────────────────────────────────────────────────────────────────
 app.include_router(health.router)
+app.include_router(system.router)
 app.include_router(nlp.router)
 app.include_router(locators.router)
 app.include_router(projects.router)

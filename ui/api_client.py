@@ -373,3 +373,19 @@ async def run_history(limit: int = 50) -> list[dict]:
     """Past runs with their summaries. /tests/results returns bare filenames."""
     r = await _call("GET", "/tests/history", params={"limit": limit})
     return r.get("runs", [])
+
+
+# ── Server ───────────────────────────────────────────────────────────────────
+async def system_info() -> dict:
+    """Where this process serves, and whether a run is in flight."""
+    return await _call("GET", "/system/info")
+
+
+async def restart_server(force: bool = False) -> dict:
+    """
+    Ask the server to replace itself.
+
+    Returns as soon as the restart is SCHEDULED — the response has to arrive
+    while the process can still send it. The caller then polls /health.
+    """
+    return await _call("POST", "/system/restart", json={"force": force})

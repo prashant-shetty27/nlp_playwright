@@ -216,6 +216,38 @@ def parse_step(step: str) -> Command:
         )
 
     # =============================
+    # SCROLL UNTIL ELEMENT VISIBLE
+    # scroll until element <locator> visible, scroll by <px> pixels [vertically|horizontally|up|left],
+    #                                          scroll count <n>, scroll wait <sec>
+    # Scrolls the page by a fixed number of pixels (chosen by the author) until the
+    # named element is inside the viewport. Text-based variant is above; this one
+    # is for elements that have no unique text (a button repeated per listing).
+    # =============================
+    _sue = re.match(r'^scroll\s+until\s+element\s+(\S+)\s+(?:is\s+)?visible\b(.*)$', s, re.I)
+    if _sue:
+        rest = _sue.group(2) or ""
+        px = re.search(r"scroll\s+by\s+(\d+)", rest, re.I)
+        count = re.search(r"scroll\s+count\s*(\d+)", rest, re.I)
+        wait = re.search(r"scroll\s+wait\s*(\d+(?:\.\d+)?)", rest, re.I)
+        direction = "down"
+        if re.search(r"\bhorizontal(?:ly)?\b|\bright\b", rest, re.I):
+            direction = "right"
+        if re.search(r"\bleft\b", rest, re.I):
+            direction = "left"
+        if re.search(r"\bup\b", rest, re.I):
+            direction = "up"
+        return Command(
+            type="scroll_until_element_visible",
+            target=_sue.group(1).strip(),
+            # A LIST, not a string: the runner reads values[0], and on "500"
+            # that is the character "5" — the step scrolled 5px per attempt.
+            values=[str(int(px.group(1)) if px else 500)],   # pixels per scroll
+            text=direction,
+            count=int(count.group(1)) if count else 10,
+            wait=float(wait.group(1)) if wait else 1,
+        )
+
+    # =============================
     # VERIFY IMAGE (from dsl/parser.py)
     # =============================
     if s.lower().startswith("verify image"):

@@ -110,13 +110,14 @@ KEYWORD_MAP = {
 
     "scroll_until_element_visible": {
         "phrases": [
-            "scroll until element visible", "scroll to element visible", 
-            "scroll until element is visible", "find element by scrolling"
+            "scroll until element visible", "scroll to element visible",
+            "scroll until element is visible", "find element by scrolling",
+            "scroll by pixels until element", "auto scroll to element"
         ],
         "action": "scroll_until_element_visible",
-        # Only the TEXT-based variant exists on the web runner — see
-        # scroll_until_text_visible below.
-        "deprecated": True
+        # Author picks the pixel step. Add "horizontally" for a carousel, and
+        # "scroll count N" / "scroll wait S" to bound the search.
+        "template": "scroll until element {locator} visible, scroll by {number} pixels"
     },
 
     "scroll_until_text_visible": {

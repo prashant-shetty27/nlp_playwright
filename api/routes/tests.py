@@ -341,6 +341,32 @@ def _auth_domain_for(flow_path: str) -> str:
     return ""
 
 
+def _declared_platform(flow_path: str) -> str | None:
+    """
+    The platform a flow declares in its "# Platform:" header, or None when the
+    file has no header. Unlike projects._platform_of this never guesses from
+    the file name, so a header-less flow keeps whatever platform was requested.
+    """
+    try:
+        with open(flow_path, "r", encoding="utf-8") as f:
+            for raw in f:
+                line = raw.strip()
+                if not line:
+                    continue
+                if not line.startswith("#"):
+                    return None
+                low = line.lower()
+                if low.startswith("#") and "platform" in low and ":" in low:
+                    from nlp.platforms import normalise
+                    try:
+                        return normalise(low.split(":", 1)[1].strip())
+                    except Exception:  # noqa: BLE001
+                        return None
+    except OSError:
+        return None
+    return None
+
+
 def _start_run_thread(run_id: str, flow_path: str, body: RunRequest, caps: dict) -> None:
     """
     Start the run on a worker thread and return immediately to the caller.
@@ -385,10 +411,27 @@ def run_test(body: RunRequest):
 
     from nlp.platforms import UnknownPlatform, normalise, resolve
 
+    # The flow's own "# Platform:" header is authoritative. A mobilesite flow
+    # was being launched as website whenever the caller omitted the platform
+    # (the request model defaults to "website") or carried a stale value from
+    # another page, and Playwright then opened a desktop context with no device
+    # emulation. The header is what the author declared, so it wins; the
+    # requested value is only used when the file does not declare one.
+    declared = _declared_platform(flow_path)
+    requested = (body.platform or "").strip()
+    platform_source = "request"
     try:
-        platform = resolve(normalise(body.platform))
+        if declared and (not requested or normalise(requested) != declared):
+            if requested:
+                logger.info("Flow '%s' declares platform '%s'; request said '%s' - "
+                            "using the flow's declaration", body.project, declared, requested)
+            platform = resolve(declared)
+            platform_source = "flow header"
+        else:
+            platform = resolve(normalise(requested))
     except UnknownPlatform as e:
         raise HTTPException(status_code=422, detail=str(e)) from e
+    body.platform = platform.name
     if not platform.enabled:
         raise HTTPException(
             status_code=422,
@@ -458,6 +501,7 @@ def run_test(body: RunRequest):
         "status": "running",
         "poll_url": f"/tests/results/{run_id}",
         "platform": platform.name,
+        "platform_source": platform_source,
         "device_name": device or None,
         # Names only — a value echoed back is a value leaked.
         "parameters_set": sorted(body.parameters or {}),

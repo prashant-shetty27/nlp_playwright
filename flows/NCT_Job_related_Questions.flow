@@ -1,0 +1,67 @@
+# Platform: mobilesite
+# Imported from Testsigma: NCT Job-related Questions (run 114314, B2B Touch (8AM), Samsung Galaxy S24)
+# Lines starting with '# UNSUPPORTED' or '# IF' need a manual decision.
+
+open https://www.justdial.com/Mumbai/Multinational-Companies-in-Link-Road-Malad-West/nct-10332493?fl=undefined&ismap=undefined&subpage=&searchCase=&term=multinat&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Multinational%20Companies&trkid=13116826-mumbai
+wait 3 seconds
+call PS_Touch_Consent_Popup
+scroll until element send_enquiry_button_1st visible, scroll by 500 pixels, scroll count 15, scroll wait 1
+click send_enquiry_button_1st
+verify element heading_send_enquiry_ps is visible
+verify text "Get the free contact details in seconds for  Multinational Companies" on page
+verify element heading_free_contact_details_ps is visible
+verify element heading_need_immediate_assistance is visible
+verify element image_vendor_image is visible
+verify element call_now_free_button1 is visible
+click send_enquiry_back_ps
+verify element call_popup_seller_name is visible
+verify element seller_call_pop_image is visible
+verify element seller_call_pop_rating is visible
+verify element seller_call_pop_area is visible
+verify element seller_call_pop_heading_just_a_call_away is visible
+verify element seller_call_pop_get_your_answers_instantly is visible
+verify element seller_user_details_form is visible
+verify element enquiry_default_text is visible
+click enquiry_seller_pop_skip
+wait 1 seconds
+scroll until element send_enquiry_button_1st visible, scroll by 500 pixels, scroll count 15, scroll wait 1
+click send_enquiry_button_1st
+wait 1 seconds
+type "Prashant" into enquiry_form_name
+type "7738176962" into enquiry_form_mobile
+click enquiry_form_no
+js click enquiry_submit_button
+wait until element otp_1st_field is visible
+type "537393" into otp_1st_field
+wait 1 seconds
+verify text "Dear Prashant" on page
+click send_enquiry_back_ps
+open https://www.justdial.com/Mumbai/Corporate-Companies-in-Link-Road-Malad-West/nct-10138533?fl=undefined&ismap=undefined&subpage=&searchCase=&term=corporate%2520com&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Corporate%20Companies&trkid=13702-mumbai
+wait 4 seconds
+scroll down 1000
+verify text "Placement Services" on page
+scroll down 2000
+scroll until text "Get Best Price" visible, scroll count 10, scroll wait 1
+click if visible enquiry_seller_pop_skip
+scroll to gbp_button_11
+click gbp_button_11
+wait 2 seconds
+click get_best_price_any_button
+wait 2 seconds
+click gbp_submit_now_button
+verify text "Please select one option" on page
+click get_best_price_page_no_radio_button
+click gbp_submit_now_button
+verify text "Dear Prashant" on page
+wait 1 seconds
+click get_best_price_header_back
+click if visible enquiry_seller_pop_skip
+open https://www.justdial.com/Mumbai/Multinational-Companies-in-Link-Road-Malad-West/nct-10332493?fl=undefined&ismap=undefined&subpage=&searchCase=&term=multinat&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Multinational%20Companies&trkid=13116826-mumbai
+wait 3 seconds
+scroll until element send_enquiry_button_1st visible, scroll by 500 pixels, scroll count 15, scroll wait 1
+click send_enquiry_button_1st
+wait 3 seconds
+verify element heading_send_enquiry_ps is visible
+verify text "Get the free contact details in seconds for Multinational Companies" on page
+verify element heading_free_contact_details_ps is visible
+verify page does not contain "Need Immediate Assistance"

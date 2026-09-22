@@ -175,15 +175,21 @@ class NlpInput:
         except api.ApiError:
             pass
 
-        low = partial.lower()
-        word = low.split()[-1] if low.split() else low
+        # Complete the token being EDITED, not blindly the last one. A template
+        # such as "scroll until element {locator} visible, scroll by 500 pixels"
+        # or "verify element {locator} is visible" puts the element mid-line, so
+        # "last word" was "pixels" / "visible" and no element ever matched.
+        tokens = partial.split()
+        self._edit_idx = self._slot_index(tokens)
+        word = tokens[self._edit_idx].lower() if self._edit_idx is not None else ""
+        untouched_slot = word == "{locator}"
         for name in self._locators:
-            if word and word in name and len(rows) < 20:
+            if (untouched_slot or (word and word in name)) and len(rows) < 20:
                 rows.append({"insert": name, "kind": "locator",
                              "display": name, "detail": self._labels.get(name, ""),
                              "tag": "", "steps": []})
         for var in self.known_variables:
-            if word and word in var.lower() and len(rows) < 24:
+            if word and not untouched_slot and word in var.lower() and len(rows) < 24:
                 rows.append({"insert": "${" + var + "}", "kind": "variable",
                              "display": "${" + var + "}", "detail": "",
                              "tag": "", "steps": []})
@@ -195,6 +201,67 @@ class NlpInput:
         # whatever happened to match, and the step was silently lost.
         self._active = -1
         self._paint()
+
+    #: Words that belong to the step grammar itself. They can never be the
+    #: element being typed, even when one happens to be a substring of an
+    #: element name ("visible" in "visible_banner"), so they are skipped when
+    #: looking for the token to complete.
+    _GRAMMAR_WORDS: set[str] | None = None
+
+    @classmethod
+    def _grammar_words(cls) -> set[str]:
+        if cls._GRAMMAR_WORDS is None:
+            words = {"a", "an", "the", "to", "into", "in", "on", "of", "as", "is", "not",
+                     "and", "with", "by", "if", "at", "for", "from", "until", "element",
+                     "elements", "visible", "exists", "present", "text", "page", "scroll",
+                     "pixels", "count", "wait", "seconds", "click", "tap", "type", "fill",
+                     "verify", "assert", "open", "store", "wait", "press", "switch", "tab",
+                     "iframe", "js", "exact", "contains", "has", "new", "up", "down",
+                     "left", "right", "horizontally", "vertically", "times", "value",
+                     "attribute", "title", "url", "back", "forward", "refresh", "call"}
+            try:
+                from nlp.keywords import KEYWORD_MAP
+                for entry in KEYWORD_MAP.values():
+                    for w in (entry.get("template") or "").split():
+                        if "{" not in w:
+                            words.add(w.strip(',"').lower())
+            except Exception:  # noqa: BLE001 — the fixed list above still works
+                pass
+            cls._GRAMMAR_WORDS = words
+        return cls._GRAMMAR_WORDS
+
+    def _slot_index(self, tokens: list[str]) -> int | None:
+        """
+        Index of the token the operator is filling in with an element name.
+
+        An untouched "{locator}" slot wins. Otherwise, scanning from the right,
+        the first token that is not grammar, not a quoted/braced value, not a
+        number, and not already a complete element name — that is the partial
+        being typed. Falls back to the last token so a bare "click sen" still
+        completes as before.
+        """
+        if not tokens:
+            return None
+        for i, t in enumerate(tokens):
+            if t == "{locator}":
+                return i
+        grammar = self._grammar_words()
+        names = set(self._locators)
+        for i in range(len(tokens) - 1, -1, -1):
+            t = tokens[i]
+            low = t.strip(",").lower()
+            if not low or "{" in t or '"' in t or "$" in t or low.isdigit() or low in grammar:
+                continue
+            if low in names:
+                continue                      # already a full element name
+            if any(low in n for n in names):
+                return i
+        # Nothing is being typed as an element: a complete line, or the last
+        # token is grammar / already a full name. No element suggestions then.
+        last = tokens[-1].strip(",").lower()
+        if last in grammar or last in names or "{" in last or '"' in last:
+            return None
+        return len(tokens) - 1
 
     def _paint(self) -> None:
         self.panel.clear()
@@ -217,7 +284,13 @@ class NlpInput:
         """
         if kind in ("locator", "variable"):
             parts = (self.input.value or "").split()
-            parts[-1:] = [insert]
+            idx = getattr(self, "_edit_idx", None)
+            if idx is None or idx >= len(parts):
+                idx = len(parts) - 1
+            if parts:
+                parts[idx] = insert
+            else:
+                parts = [insert]
             text = " ".join(parts)
         else:
             text = insert
