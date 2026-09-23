@@ -7,6 +7,7 @@ Global state (RUNTIME_VARIABLES) now lives in nlp.variable_manager.
 """
 import re
 import logging
+import os
 
 from playwright.sync_api import expect
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError, Error as PlaywrightError
@@ -875,6 +876,19 @@ def scroll_until_text_visible(page, text, max_scrolls=None, scroll_wait=2):
         if scroll_wait:
             page.wait_for_timeout(float(scroll_wait) * 1500)
     return False
+
+
+def save_page_source(page, name: str) -> str:
+    """Write the current DOM to data/logs/pagesource_<name>.html (debugging aid)."""
+    import re as _re
+    from config import settings
+    safe = _re.sub(r"[^A-Za-z0-9_.-]+", "_", name or "page").strip("_") or "page"
+    path = os.path.join(settings.LOGS_DIR, f"pagesource_{safe}.html")
+    os.makedirs(settings.LOGS_DIR, exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(page.content())
+    logger.info("💾 Page source saved: %s", path)
+    return path
 
 
 def scroll_until_element_visible(page, target: str, pixels=500, direction="down",

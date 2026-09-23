@@ -108,6 +108,12 @@ KEYWORD_MAP = {
         "template": "scroll down {number}"
     },
 
+    "save_page_source": {
+        "phrases": ["save page source", "save page html", "dump page html", "capture dom"],
+        "action": "save_page_source",
+        "template": "save page source as \"{text}\""
+    },
+
     "scroll_until_element_visible": {
         "phrases": [
             "scroll until element visible", "scroll to element visible",

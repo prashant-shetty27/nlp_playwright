@@ -216,6 +216,13 @@ def parse_step(step: str) -> Command:
         )
 
     # =============================
+    # SAVE PAGE SOURCE  (debugging aid: dumps the live DOM to data/logs/)
+    # =============================
+    _sps = re.match(r'^save\s+page\s+(?:source|html)\s+as\s+"?([^"]+)"?$', s, re.I)
+    if _sps:
+        return Command(type="save_page_source", text=_sps.group(1).strip())
+
+    # =============================
     # SCROLL UNTIL ELEMENT VISIBLE
     # scroll until element <locator> visible, scroll by <px> pixels [vertically|horizontally|up|left],
     #                                          scroll count <n>, scroll wait <sec>

@@ -206,8 +206,16 @@ def _restart_button() -> None:
                 f"font-size:{TYPOGRAPHY['size_sm']}; color:{COLORS['text_muted']}")
             with ui.row().classes("w-full justify-end gap-2"):
                 ui.button("Cancel", on_click=dialog.close).props("flat")
-                ui.button("Restart anyway",
-                          on_click=lambda: (dialog.close(), go(True))) \
+                async def anyway() -> None:
+                    # An async handler, not `lambda: (close(), go(True))`.
+                    # That lambda returns a TUPLE; NiceGUI awaits a returned
+                    # coroutine but not one buried inside a tuple, so go() was
+                    # created and dropped — the dialog closed and nothing
+                    # restarted, which is exactly what a dead button looks like.
+                    dialog.close()
+                    await go(True)
+
+                ui.button("Restart anyway", on_click=anyway) \
                     .props("unelevated color=negative")
         dialog.open()
 
@@ -225,8 +233,11 @@ def _restart_button() -> None:
                 f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['warning']}")
             with ui.row().classes("w-full justify-end gap-2"):
                 ui.button("Cancel", on_click=dialog.close).props("flat")
-                ui.button("Restart", icon="restart_alt",
-                          on_click=lambda: (dialog.close(), go(False))) \
+                async def confirm() -> None:
+                    dialog.close()
+                    await go(False)
+
+                ui.button("Restart", icon="restart_alt", on_click=confirm) \
                     .props("unelevated")
         dialog.open()
 

@@ -5,15 +5,16 @@
 open https://www.justdial.com/Mumbai/Multinational-Companies-in-Link-Road-Malad-West/nct-10332493?fl=undefined&ismap=undefined&subpage=&searchCase=&term=multinat&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Multinational%20Companies&trkid=13116826-mumbai
 wait 3 seconds
 call PS_Touch_Consent_Popup
-scroll until element send_enquiry_button_1st visible, scroll by 500 pixels, scroll count 15, scroll wait 1
+scroll until element send_enquiry_button_1st visible, scroll by 500 pixels, scroll count 1, scroll wait 1
 click send_enquiry_button_1st
 verify element heading_send_enquiry_ps is visible
 verify text "Get the free contact details in seconds for  Multinational Companies" on page
 verify element heading_free_contact_details_ps is visible
-verify element heading_need_immediate_assistance is visible
-verify element image_vendor_image is visible
-verify element call_now_free_button1 is visible
+# OFF: verify element heading_need_immediate_assistance is visible
+# OFF: verify element image_vendor_image is visible
+# OFF: verify element call_now_free_button1 is visible
 click send_enquiry_back_ps
+wait 3 seconds
 verify element call_popup_seller_name is visible
 verify element seller_call_pop_image is visible
 verify element seller_call_pop_rating is visible

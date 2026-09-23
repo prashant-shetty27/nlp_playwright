@@ -29,37 +29,53 @@
     "value": "//img[contains(@class,'vendor') or contains(@alt,'vendor')]"
   },
   "Call Now FREE Button1": {
-    "value": "(//*[contains(normalize-space(),'Call Now')])[1]"
+    "value": "//div[contains(@class,'popup__cnt--wrp')]//button[contains(@class,'popup__cnt--btn')][contains(normalize-space(),'Call Now')]",
+    "verified": true,
+    "note": "from popup__cnt--wrp DOM supplied 2026-09-22"
   },
   "Call popup Seller name": {
-    "value": "//*[contains(@class,'seller') and contains(@class,'name')]"
+    "value": "//div[contains(@class,'popup__cnt--wrp')]//div[contains(@class,'popup__cnt--bnamewrp')]//h3",
+    "verified": true,
+    "note": "from popup__cnt--wrp DOM supplied 2026-09-22"
   },
   "Seller CAll pop Image": {
-    "value": "//*[contains(@class,'seller')]//img"
+    "value": "//div[contains(@class,'popup__cnt--wrp')]//div[contains(@class,'popup__cnt--bnamewrp')]/img",
+    "verified": true,
+    "note": "from popup__cnt--wrp DOM supplied 2026-09-22"
   },
   "Seller CAll pop Rating": {
-    "value": "//*[contains(@class,'rating')]"
+    "value": "//div[contains(@class,'popup__cnt--wrp')]//*[contains(@class,'popup__cnt--bnamewrp-ratings')]",
+    "verified": true,
+    "note": "from popup__cnt--wrp DOM supplied 2026-09-22"
   },
   "Seller CAll pop Area": {
-    "value": "//*[contains(@class,'area') or contains(@class,'address')]"
+    "value": "//div[contains(@class,'popup__cnt--wrp')]//*[contains(@class,'popup__cnt--bnamewrp-area')]",
+    "verified": true,
+    "note": "from popup__cnt--wrp DOM supplied 2026-09-22"
   },
   "Seller CAll pop Heading: Just a call away": {
-    "value": "//*[contains(normalize-space(),'Just a call away')]"
+    "value": "//div[contains(@class,'popup__cnt--wrp')]//div[contains(@class,'popup__cnt--textcnt')]/h2[normalize-space()='Just a call away']",
+    "verified": true,
+    "note": "from popup__cnt--wrp DOM supplied 2026-09-22"
   },
   "Seller CAll pop Get your answers instantly": {
-    "value": "//*[contains(normalize-space(),'Get your answers instantly')]"
+    "value": "//div[contains(@class,'popup__cnt--wrp')]//div[contains(@class,'popup__cnt--textcnt')]/span[normalize-space()='Get your answers instantly']",
+    "verified": true,
+    "note": "from popup__cnt--wrp DOM supplied 2026-09-22"
   },
   "Seller User Details Form": {
-    "value": "//form"
+    "value": "//div[contains(@class,'popup__cnt--wrp')]",
+    "verified": true,
+    "note": "from popup__cnt--wrp DOM supplied 2026-09-22"
   },
   "Enquiry Default Text": {
     "value": "//div[contains(@class,'bestdeal__hiw--cnt pb-10')]",
     "note": "Failing in Testsigma run 114314 - class name has probably changed."
   },
   "Enquiry Seller Pop Skip": {
-    "value": "//*[self::a or self::button or self::span or self::div][normalize-space()='Maybe Later' or normalize-space()='Skip' or normalize-space()='SKIP' or @aria-label='May be later' or @aria-label='Maybe Later']",
+    "value": "//div[contains(@class,'popup__cnt--wrp')]//div[contains(@class,'skip_btn')][normalize-space()='Skip'] | //*[normalize-space()='Maybe Later' or @aria-label='May be later']",
     "verified": true,
-    "note": "mobile site login sheet is dismissed with 'Maybe Later' (2026-09-22)"
+    "note": "from popup__cnt--wrp DOM supplied 2026-09-22"
   },
   "Enquiry Form Name": {
     "value": "//input[@id='name' or @name='name' or contains(@placeholder,'Name')]",

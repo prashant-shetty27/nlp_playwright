@@ -1,0 +1,17 @@
+# Platform: mobilesite
+open https://www.justdial.com/Mumbai/Multinational-Companies-in-Link-Road-Malad-West/nct-10332493?fl=undefined&ismap=undefined&subpage=&searchCase=&term=multinat&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Multinational%20Companies&trkid=13116826-mumbai
+wait 3 seconds
+call PS_Touch_Consent_Popup
+scroll until element send_enquiry_button_1st visible, scroll by 500 pixels, scroll count 15, scroll wait 1
+click send_enquiry_button_1st
+wait 3 seconds
+save page source as "p1_after_send_enquiry"
+take screenshot as p1
+click if visible enquiry_seller_pop_skip
+wait 2 seconds
+save page source as "p2_after_skip"
+take screenshot as p2
+click send_enquiry_back_ps
+wait 2 seconds
+save page source as "p3_after_back"
+take screenshot as p3
