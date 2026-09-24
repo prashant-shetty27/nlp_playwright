@@ -246,6 +246,11 @@ class TokenStep:
                 box = ui.input(value=current, placeholder=ROLE_HINT.get(role, "value")) \
                     .props("outlined dense autofocus") \
                     .style(f"font-family:{TYPOGRAPHY['mono']}; min-width:12rem")
+                # The old value opens SELECTED, so a new one can be typed or
+                # pasted straight over it. Replacing a URL or an xpath used to
+                # mean select-all and delete first, on every edit.
+                if current:
+                    ui.timer(0.05, lambda: box.run_method("select"), once=True)
                 menu = ui.column().classes("gap-0").style(
                     f"position:absolute; z-index:50; background:{COLORS['surface']};"
                     f"border:1px solid {COLORS['border']}; border-radius:6px;"

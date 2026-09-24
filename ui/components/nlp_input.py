@@ -50,6 +50,54 @@ from ui.theme import COLORS, TYPOGRAPHY
 
 _SLOT = re.compile(r"\{(\w+)\}")
 
+# Selects a {slot} in the box so that typing or pasting REPLACES it. Runs in
+# the browser because only the browser knows where the caret is. `%d` is the
+# input's element id; `%s` is a JS expression for the position to search from
+# (0 = the first slot, `el.selectionEnd` = the next one after the caret). When
+# nothing lies after that position the search wraps to the first slot, so Tab
+# cycles through every value the template still needs.
+# Browser-side, on the box itself, so it needs no round trip: a click that
+# lands inside a {slot} selects the whole slot, and focusing a box whose text
+# still holds one selects the first. Typing a value into a placeholder is then
+# never a "delete the braces first" job, however the box was reached.
+_SLOT_ON_CLICK_JS = """(e) => {
+  const el = e.target;
+  if (!el || el.tagName !== 'INPUT') return;
+  const pos = el.selectionStart;
+  if (el.selectionEnd !== pos) return;            // a drag-selection stands
+  const re = /\\{\\w+\\}/g; let m;
+  while ((m = re.exec(el.value))) {
+    if (pos >= m.index && pos <= m.index + m[0].length) {
+      el.setSelectionRange(m.index, m.index + m[0].length); return;
+    }
+  }
+}"""
+_SLOT_ON_FOCUS_JS = """(e) => {
+  const el = e.target;
+  if (!el || el.tagName !== 'INPUT') return;
+  const m = /\\{\\w+\\}/.exec(el.value || '');
+  if (m) setTimeout(() => el.setSelectionRange(m.index, m.index + m[0].length), 0);
+}"""
+
+_SELECT_SLOT_JS = """
+(() => {
+  const h = getHtmlElement(%d);
+  const el = !h ? null : (h.tagName === 'INPUT' ? h : h.querySelector('input'));
+  if (!el) return;
+  const from = %s;
+  const re = /\\{\\w+\\}/g;
+  let m, first = null, next = null;
+  while ((m = re.exec(el.value))) {
+    if (first === null) first = m;
+    if (next === null && m.index >= from) next = m;
+  }
+  const pick = next || first;
+  if (!pick) return;
+  el.focus();
+  el.setSelectionRange(pick.index, pick.index + pick[0].length);
+})()
+"""
+
 
 class NlpInput:
     """An input that proposes complete, parseable steps rather than fragments."""
@@ -57,7 +105,8 @@ class NlpInput:
     def __init__(self, platform: str, on_submit: Callable[[str], None], *,
                  placeholder: str = "Type a step, e.g. 'click ask_more_photos_cta'",
                  initial_value: str = "",
-                 known_variables: list[str] | None = None) -> None:
+                 known_variables: list[str] | None = None,
+                 autofocus: bool = True) -> None:
         self.platform = platform
         self.on_submit = on_submit
         self.known_variables = known_variables or []
@@ -72,7 +121,8 @@ class NlpInput:
         with ui.column().classes("w-full gap-1"):
             self.input = (
                 ui.input(placeholder=placeholder, value=initial_value)
-                .props("outlined dense clearable autocomplete=off")
+                .props("outlined dense clearable autocomplete=off"
+                       + (" autofocus" if autofocus else ""))
                 .classes("w-full")
                 .style(f"font-family:{TYPOGRAPHY['mono']}")
             )
@@ -83,8 +133,14 @@ class NlpInput:
             self.input.on("keydown.enter", self._on_enter)
             self.input.on("keydown.down", lambda _: self._move(1))
             self.input.on("keydown.up", lambda _: self._move(-1))
-            self.input.on("keydown.tab", lambda _: self._accept_active())
+            # Tab accepts the highlighted suggestion; with none highlighted it
+            # jumps to the next {slot} still waiting for a value. `.prevent`
+            # keeps the browser from moving focus off the box either way.
+            self.input.on("keydown.tab.prevent", self._on_tab)
             self.input.on("keydown.escape", lambda _: self._clear())
+            # Placeholder handling that lives in the browser (see the JS above).
+            self.input.on("click", js_handler=_SLOT_ON_CLICK_JS)
+            self.input.on("focus", js_handler=_SLOT_ON_FOCUS_JS)
             self.input.on_value_change(lambda _: self._refresh())
 
             self.hint = ui.label().style(
@@ -127,6 +183,32 @@ class NlpInput:
         else:
             self._submit()
 
+    def _on_tab(self, _=None) -> None:
+        if 0 <= self._active < len(self._rows):
+            self._accept_active()
+        elif _SLOT.search(self.input.value or ""):
+            self._select_slot(after_caret=True)
+
+    def _select_slot(self, after_caret: bool = False) -> None:
+        """
+        Highlight a {slot} so the next keystroke or paste replaces it.
+
+        A template used to land as literal text — `open {url}` — and every value
+        cost a click, a drag to select the braces and a delete before anything
+        could be typed: three gestures per value, on every step. Selecting the
+        slot makes the placeholder disappear the moment the value arrives.
+        """
+        start = "el.selectionEnd" if after_caret else "0"
+        # A short delay lets the new value reach the browser first; selecting
+        # before the box shows the template would select the old text.
+        # The timer is created under the input's own container, NOT under
+        # whatever element is current — accepting a suggestion clears the
+        # suggestion panel first, and a timer parented to a just-deleted row
+        # died with "parent slot has been deleted" before it ever fired.
+        with self.input.parent_slot.parent:
+            ui.timer(0.05, lambda: ui.run_javascript(
+                _SELECT_SLOT_JS % (self.input.id, start)), once=True)
+
     def _accept_active(self, _=None) -> None:
         if 0 <= self._active < len(self._rows):
             row = self._rows[self._active]
@@ -135,6 +217,13 @@ class NlpInput:
     def _submit(self, _=None) -> None:
         text = (self.input.value or "").strip()
         if not text:
+            return
+        if _SLOT.search(text):
+            # A placeholder is not a value. Adding `open {url}` to the test
+            # would only fail at run time, so Enter goes back to the slot.
+            ui.notify(f"Fill in {', '.join(_SLOT.findall(text))} first",
+                      type="warning")
+            self._select_slot()
             return
         self._clear()
         self.on_submit(text)
@@ -153,8 +242,17 @@ class NlpInput:
         # phrased as a hint, never an error.
         try:
             parsed = await api.parse_step(partial)
-            self.hint.set_text(f"✓ parses as {parsed.get('type')}")
-            self.hint.style(f"color:{COLORS['success']}")
+            if _SLOT.search(partial):
+                # `open {url}` parses, but it is not a step yet. Saying
+                # "parses as open" here invited Enter on a placeholder.
+                slots = ", ".join(_SLOT.findall(partial))
+                self.hint.set_text(f"still needs a value for: {slots} — type or "
+                                   f"paste over the highlighted placeholder, "
+                                   f"Tab jumps to the next")
+                self.hint.style(f"color:{COLORS['warning']}")
+            else:
+                self.hint.set_text(f"✓ parses as {parsed.get('type')}")
+                self.hint.style(f"color:{COLORS['success']}")
         except api.ApiError:
             self.hint.set_text("keep typing…")
             self.hint.style(f"color:{COLORS['text_muted']}")
@@ -298,12 +396,17 @@ class NlpInput:
         self._clear()
 
         if _SLOT.search(text):
-            self.hint.set_text("fill the highlighted value, then press Enter")
+            # A locator just went into one slot: move to the slot AFTER it. A
+            # fresh template: start at its first slot.
+            self._select_slot(after_caret=kind in ("locator", "variable"))
+            self.hint.set_text("type or paste the value over the highlighted "
+                               "placeholder — Tab jumps to the next one, Enter adds the step")
             self.hint.style(f"color:{COLORS['warning']}")
             return
         # Only commit something the parser accepts. Auto-submitting a fragment
         # would put an unrunnable line into the test on a single click.
-        ui.timer(0.01, lambda: self._submit_if_valid(text), once=True)
+        with self.input.parent_slot.parent:
+            ui.timer(0.01, lambda: self._submit_if_valid(text), once=True)
 
     async def _submit_if_valid(self, text: str) -> None:
         try:

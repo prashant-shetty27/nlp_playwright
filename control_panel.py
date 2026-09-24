@@ -35,6 +35,26 @@ LOG_DIR.mkdir(parents=True, exist_ok=True)
 
 SERVERS = [
     {
+        # The portal itself — the Test Cases editor, Run Center, Test Data and
+        # reports. It was the one service NOT managed here, so it died with
+        # whatever terminal started it and had to be relaunched by hand, on
+        # whichever port happened to be free. That is why its URL kept moving.
+        #
+        # 8100 is reserved for it deliberately: the recorders already own
+        # 8080/8090/8091 and take them at boot, so anything in that range gets
+        # claimed out from under the portal on the next restart.
+        "id":       "portal",
+        "name":     "Codeless Automation",
+        "icon":     "dashboard",
+        "port":     8100,
+        "color":    "indigo",
+        "cmd":      [PYTHON, "-m", "ui.app", "--port", "8100"],
+        "log":      str(LOG_DIR / "portal.log"),
+        "pid_file": "/tmp/nlp_portal.pid",
+        "url":      "http://localhost:8100",
+        "desc":     "Test cases, Run Center, Test Data, reports",
+    },
+    {
         "id":       "web_recorder",
         "name":     "Web Recorder",
         "icon":     "language",

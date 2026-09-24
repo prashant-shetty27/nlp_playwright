@@ -528,12 +528,12 @@
     "consent_button": "//button[normalize-space()='Consent'] | //*[@text='Consent']",
     "consent_text": "//*[normalize-space()='Consent']",
     "send_enquiry_button_1st": "(//button[contains(@class,'resultlist--btn-second')][.//span[contains(@class,'transactionbutton-text')][normalize-space()='Send Enquiry']])[1]",
-    "heading_send_enquiry_ps": "//*[self::h1 or self::h2 or self::h3 or self::div][contains(normalize-space(),'Send Enquiry')]",
-    "heading_free_contact_details_ps": "//*[contains(normalize-space(),'free contact details')]",
+    "heading_send_enquiry_ps": "//header//h1[normalize-space()='Send Enquiry']",
+    "heading_free_contact_details_ps": "//div[contains(@class,'bestdeal__cnt')]//div[contains(@class,'bestdeal__cnt--heading')][contains(.,'free contact details')]",
     "heading_need_immediate_assistance": "//*[contains(normalize-space(),'Need Immediate Assistance')]",
     "image_vendor_image": "//img[contains(@class,'vendor') or contains(@alt,'vendor')]",
     "call_now_free_button1": "//div[contains(@class,'popup__cnt--wrp')]//button[contains(@class,'popup__cnt--btn')][contains(normalize-space(),'Call Now')]",
-    "send_enquiry_back_ps": "//*[contains(@class,'back') or contains(@aria-label,'back') or contains(@aria-label,'Back')][1]",
+    "send_enquiry_back_ps": "//header//div[contains(@class,'hdrMnuback')]",
     "call_popup_seller_name": "//div[contains(@class,'popup__cnt--wrp')]//div[contains(@class,'popup__cnt--bnamewrp')]//h3",
     "seller_call_pop_image": "//div[contains(@class,'popup__cnt--wrp')]//div[contains(@class,'popup__cnt--bnamewrp')]/img",
     "seller_call_pop_rating": "//div[contains(@class,'popup__cnt--wrp')]//*[contains(@class,'popup__cnt--bnamewrp-ratings')]",
@@ -541,17 +541,48 @@
     "seller_call_pop_heading_just_a_call_away": "//div[contains(@class,'popup__cnt--wrp')]//div[contains(@class,'popup__cnt--textcnt')]/h2[normalize-space()='Just a call away']",
     "seller_call_pop_get_your_answers_instantly": "//div[contains(@class,'popup__cnt--wrp')]//div[contains(@class,'popup__cnt--textcnt')]/span[normalize-space()='Get your answers instantly']",
     "seller_user_details_form": "//div[contains(@class,'popup__cnt--wrp')]",
-    "enquiry_default_text": "//div[contains(@class,'bestdeal__hiw--cnt pb-10')]",
+    "enquiry_default_text": "//div[contains(@class,'bestdeal__hiw--cnt')]",
     "enquiry_seller_pop_skip": "//div[contains(@class,'popup__cnt--wrp')]//div[contains(@class,'skip_btn')][normalize-space()='Skip'] | //*[normalize-space()='Maybe Later' or @aria-label='May be later']",
     "enquiry_form_name": "//input[@id='name' or @name='name' or contains(@placeholder,'Name')]",
-    "enquiry_form_mobile": "//input[@id='mobile' or @name='mobile' or @type='tel' or contains(@placeholder,'Mobile')]",
-    "enquiry_form_no": "//label[normalize-space()='No'] | //*[@id='no']",
-    "enquiry_submit_button": "//button[@type='submit' or contains(normalize-space(),'Submit')]",
-    "otp_1st_field": "//input[@id='0'] | (//input[@maxlength='1'])[1]",
-    "gbp_button_11": "(//button[contains(normalize-space(),'Get Best Price')])[11]",
-    "get_best_price_any_button": "(//button[contains(normalize-space(),'Get Best Price')])[1]",
-    "gbp_submit_now_button": "//button[contains(normalize-space(),'Submit Now')]",
-    "get_best_price_page_no_radio_button": "//label[normalize-space()='No'] | //input[@type='radio' and (@value='No' or @value='no')]",
-    "get_best_price_header_back": "(//header//*[contains(@class,'back')] | //*[contains(@class,'back')] | //*[contains(@aria-label,'ack')])[1]"
+    "enquiry_form_mobile": "//input[@id='mobile' and @type='tel']",
+    "enquiry_form_no": "//div[contains(@class,'bestdeal__cnt')]//div[contains(@class,'bestdeal__cnt--optnwrp')][.//div[contains(@class,'opsntxt')][normalize-space()='no']]",
+    "enquiry_submit_button": "//button[contains(@class,'bestdeal__cnt--submitbtn')]",
+    "otp_1st_field": {
+      "custom_xpath": "(//input[contains(@aria-label,'OTP digit')])[1]"
+    },
+    "gbp_button_11": "(//button[contains(@class,'resultlist--btn-second')][.//span[contains(@class,'transactionbutton-text')][normalize-space()='Get Best Price']])[11]",
+    "get_best_price_any_button": "(//button[contains(@class,'resultlist--btn-second')][.//span[contains(@class,'transactionbutton-text')][normalize-space()='Get Best Price']])[1]",
+    "gbp_submit_now_button": "//div[contains(@class,'category__popup--wrp')]//button[contains(@class,'category__popup--btn')]",
+    "get_best_price_page_no_radio_button": "//div[contains(@class,'category__popup--wrp')]//label[contains(@class,'catpopup__datacnt-child')][normalize-space()='No']",
+    "get_best_price_header_back": "//div[contains(@class,'category__popup--wrp')]//div[contains(@class,'skip_btn')]",
+    "enquiry_form_yes": "//div[contains(@class,'bestdeal__cnt')]//div[contains(@class,'bestdeal__cnt--optnwrp')][.//div[contains(@class,'opsntxt')][normalize-space()='yes']]",
+    "get_best_price_page_yes_radio_button": "//div[contains(@class,'category__popup--wrp')]//label[contains(@class,'catpopup__datacnt-child')][normalize-space()='Yes']",
+    "gbp_sheet_heading": "//div[contains(@class,'category__popup--wrp')]//h2[contains(normalize-space(),'Are you looking for job')]",
+    "otp_fields": {
+      "custom_xpath": "//input[contains(@aria-label,'OTP digit')]"
+    }
+  },
+  "rp_recommended_carousel_mobile": {
+    "rp_heading_h1": {
+      "custom_xpath": "//h1[contains(@class,'result--h1')]"
+    },
+    "rp_carousel_heading": {
+      "custom_xpath": "//div[contains(@class,'carousel_parent_short')][.//span[contains(@class,'carousel_heading')][contains(normalize-space(),'Recommended Products')]]//span[contains(@class,'carousel_heading')]"
+    },
+    "rp_product_1st": {
+      "custom_xpath": "(//div[contains(@class,'carousel_parent_short')][.//span[contains(@class,'carousel_heading')][contains(normalize-space(),'Recommended Products')]]//a[contains(@class,'carousel_view3-parent')])[1]"
+    },
+    "rp_product_names": {
+      "custom_xpath": "//div[contains(@class,'carousel_parent_short')][.//span[contains(@class,'carousel_heading')][contains(normalize-space(),'Recommended Products')]]//a[contains(@class,'carousel_view3-parent')]//div[contains(@class,'carousel_view3-infoDiv')]/span[1]"
+    },
+    "rp_product_1st_price": {
+      "custom_xpath": "(//div[contains(@class,'carousel_parent_short')][.//span[contains(@class,'carousel_heading')][contains(normalize-space(),'Recommended Products')]]//a[contains(@class,'carousel_view3-parent')])[1]//div[contains(@class,'carousel_view3-price')]"
+    },
+    "rp_product_1st_name": {
+      "custom_xpath": "(//div[contains(@class,'carousel_parent_short')][.//span[contains(@class,'carousel_heading')][contains(normalize-space(),'Recommended Products')]]//a[contains(@class,'carousel_view3-parent')])[1]//div[contains(@class,'carousel_view3-infoDiv')]/span[1]"
+    },
+    "rp_product_1st_company": {
+      "custom_xpath": "(//div[contains(@class,'carousel_parent_short')][.//span[contains(@class,'carousel_heading')][contains(normalize-space(),'Recommended Products')]]//a[contains(@class,'carousel_view3-parent')])[1]//span[contains(@class,'carousel_view3-cname')]//span[contains(@class,'carousel_text_wrap')]"
+    }
   }
 }

@@ -609,8 +609,10 @@ class TestCasesPage:
             ui.label("Add a step").style(
                 f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']};"
                 f"margin-top:8px")
+            # No autofocus here: this box sits at the foot of the editor, and
+            # focusing it on open would scroll a long test case to the bottom.
             box = NlpInput(self.platform, self.add_step,
-                           known_variables=self._variables())
+                           known_variables=self._variables(), autofocus=False)
             await box.load()
 
     async def _compose_row(self) -> None:

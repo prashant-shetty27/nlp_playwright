@@ -75,6 +75,7 @@ class LiveView:
         self.started = time.time()
         self.done = False
         self.seen = 0
+        self.shots_seen = 0
 
     def render(self) -> None:
         from ui.layout.sidebar import sidebar
@@ -162,6 +163,13 @@ class LiveView:
                     + (f"  -> {entry.get('error','')}" if entry.get("error") else ""))
             self.seen = len(log)
             self._render_steps(log)
+        # Screenshots are promoted late in `failure` mode (a frame is only
+        # known to be wanted once a later step fails), so the count of entries
+        # holding one, not the entry count, decides whether the tab redraws.
+        with_shot = [e for e in log if e.get("screenshot")]
+        if len(with_shot) != self.shots_seen:
+            self.shots_seen = len(with_shot)
+            self._render_shots(log)
 
         total = res.get("total") or len(log)
         passed, failed = res.get("passed", 0), res.get("failed", 0)
@@ -176,6 +184,42 @@ class LiveView:
                 status_chip("failed" if failed else "passed")
             self.log.push(f"finished: {passed} passed, {failed} failed")
             self._render_footer(res)
+
+    def _render_shots(self, log: list[dict]) -> None:
+        """
+        The Screenshots tab: one frame per step that has one, newest at the
+        bottom, each labelled with its step so a picture can be matched to the
+        line that produced it. The report page shows the same frames afterwards;
+        here they arrive while the run is still going.
+        """
+        self.shots.clear()
+        with self.shots:
+            shown = 0
+            for i, entry in enumerate(log, 1):
+                rel = entry.get("screenshot")
+                if not rel:
+                    continue
+                shown += 1
+                st = entry.get("status", "")
+                colour = COLORS["danger"] if st == "failed" else COLORS["text"]
+                with ui.column().classes("w-full gap-1").style(
+                        f"padding:6px 0; border-bottom:1px solid {COLORS['border']}"):
+                    ui.label(f"{i}  {entry.get('step', '')}").style(
+                        f"font-family:{TYPOGRAPHY['mono']};"
+                        f"font-size:{TYPOGRAPHY['size_xs']}; color:{colour};"
+                        f"word-break:break-all")
+                    # Served by the /screenshots mount (path relative to
+                    # data/screenshots), the same way the report page shows it.
+                    src = f"/screenshots/{rel.lstrip('/')}"
+                    ui.image(src).style(
+                        f"width:100%; border:1px solid {COLORS['border']};"
+                        f"border-radius:6px").on(
+                        "click", lambda s=src: ui.navigate.to(s, new_tab=True)) \
+                        .classes("cursor-pointer").tooltip("Open full size")
+            if not shown:
+                ui.label("No screenshots yet — this run's screenshot mode "
+                         "keeps none, or only the failure.").style(
+                    f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}")
 
     def _render_steps(self, log: list[dict]) -> None:
         self.steps_area.clear()

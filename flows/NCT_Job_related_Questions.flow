@@ -5,10 +5,10 @@
 open https://www.justdial.com/Mumbai/Multinational-Companies-in-Link-Road-Malad-West/nct-10332493?fl=undefined&ismap=undefined&subpage=&searchCase=&term=multinat&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Multinational%20Companies&trkid=13116826-mumbai
 wait 3 seconds
 call PS_Touch_Consent_Popup
-scroll until element send_enquiry_button_1st visible, scroll by 500 pixels, scroll count 1, scroll wait 1
+scroll until element send_enquiry_button_1st visible, scroll by 500 pixels, scroll count 15, scroll wait 1
 click send_enquiry_button_1st
 verify element heading_send_enquiry_ps is visible
-verify text "Get the free contact details in seconds for  Multinational Companies" on page
+verify text "Get the free contact details in seconds for Multinational Companies" on page
 verify element heading_free_contact_details_ps is visible
 # OFF: verify element heading_need_immediate_assistance is visible
 # OFF: verify element image_vendor_image is visible
@@ -28,12 +28,12 @@ wait 1 seconds
 scroll until element send_enquiry_button_1st visible, scroll by 500 pixels, scroll count 15, scroll wait 1
 click send_enquiry_button_1st
 wait 1 seconds
-type "Prashant" into enquiry_form_name
+# OFF (mobile Send Enquiry form has no Name field): type "Prashant" into enquiry_form_name
 type "7738176962" into enquiry_form_mobile
 click enquiry_form_no
 js click enquiry_submit_button
 wait until element otp_1st_field is visible
-type "537393" into otp_1st_field
+enter otp "537393" into otp_fields
 wait 1 seconds
 verify text "Dear Prashant" on page
 click send_enquiry_back_ps
@@ -45,17 +45,18 @@ scroll down 2000
 scroll until text "Get Best Price" visible, scroll count 10, scroll wait 1
 click if visible enquiry_seller_pop_skip
 scroll to gbp_button_11
-click gbp_button_11
+js click gbp_button_11
 wait 2 seconds
-click get_best_price_any_button
+js click get_best_price_any_button
 wait 2 seconds
-click gbp_submit_now_button
-verify text "Please select one option" on page
+verify element gbp_sheet_heading is visible
+# OFF (mobile: submit stays disabled until an option is chosen, no message): click gbp_submit_now_button
+# OFF (mobile has no validation text; the button is disabled instead): verify text "Please select one option" on page
 click get_best_price_page_no_radio_button
 click gbp_submit_now_button
 verify text "Dear Prashant" on page
 wait 1 seconds
-click get_best_price_header_back
+click if visible get_best_price_header_back
 click if visible enquiry_seller_pop_skip
 open https://www.justdial.com/Mumbai/Multinational-Companies-in-Link-Road-Malad-West/nct-10332493?fl=undefined&ismap=undefined&subpage=&searchCase=&term=multinat&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Multinational%20Companies&trkid=13116826-mumbai
 wait 3 seconds

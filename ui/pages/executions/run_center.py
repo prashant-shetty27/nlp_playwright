@@ -258,11 +258,15 @@ class RunCenter:
         except api.ApiError:
             self.provided = {}
 
-        names: list[str] = []
-        for line in data.get("steps", []):
-            for v in _VAR.findall(line):
-                if v not in names:
-                    names.append(v)
+        # Only what the flow needs from OUTSIDE: every ${var} referenced minus
+        # the ones an earlier step of the same flow produces (`store … as x`,
+        # `api get … as x`, `store json … as x`). Listing every reference asked
+        # the operator for values the run itself was about to compute, and
+        # then refused to start until they were typed.
+        from ai_flow_builder.emitter import run_parameters
+        names: list[str] = run_parameters([
+            ln for ln in data.get("steps", [])
+            if not ln.strip().startswith("#")])
 
         with self.inputs_area:
             if not names:

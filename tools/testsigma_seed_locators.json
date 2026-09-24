@@ -14,13 +14,19 @@
     "note": "from mobile DOM 2026-09-22: button.resultlist--btn-second > span.resultlist__transactionbutton-text"
   },
   "Send Enquiry Back PS": {
-    "value": "//*[contains(@class,'back') or contains(@aria-label,'back') or contains(@aria-label,'Back')][1]"
+    "value": "//header//div[contains(@class,'hdrMnuback')]",
+    "verified": true,
+    "note": "from captured mobile Send Enquiry DOM 2026-09-24"
   },
   "Heading: Send Enquiry PS": {
-    "value": "//*[self::h1 or self::h2 or self::h3 or self::div][contains(normalize-space(),'Send Enquiry')]"
+    "value": "//header//h1[normalize-space()='Send Enquiry']",
+    "verified": true,
+    "note": "from captured mobile Send Enquiry DOM 2026-09-24"
   },
   "Heading: free contact details ps": {
-    "value": "//*[contains(normalize-space(),'free contact details')]"
+    "value": "//div[contains(@class,'bestdeal__cnt')]//div[contains(@class,'bestdeal__cnt--heading')][contains(.,'free contact details')]",
+    "verified": true,
+    "note": "from captured mobile Send Enquiry DOM 2026-09-24"
   },
   "Heading: Need Immediate Assistance?": {
     "value": "//*[contains(normalize-space(),'Need Immediate Assistance')]"
@@ -69,8 +75,9 @@
     "note": "from popup__cnt--wrp DOM supplied 2026-09-22"
   },
   "Enquiry Default Text": {
-    "value": "//div[contains(@class,'bestdeal__hiw--cnt pb-10')]",
-    "note": "Failing in Testsigma run 114314 - class name has probably changed."
+    "value": "//div[contains(@class,'bestdeal__hiw--cnt')]",
+    "verified": true,
+    "note": "from captured mobile Send Enquiry DOM 2026-09-24"
   },
   "Enquiry Seller Pop Skip": {
     "value": "//div[contains(@class,'popup__cnt--wrp')]//div[contains(@class,'skip_btn')][normalize-space()='Skip'] | //*[normalize-space()='Maybe Later' or @aria-label='May be later']",
@@ -82,17 +89,24 @@
     "note": "Testsigma locator //input[@id=\"name\"] failed in run 114314; broadened."
   },
   "Enquiry Form Mobile": {
-    "value": "//input[@id='mobile' or @name='mobile' or @type='tel' or contains(@placeholder,'Mobile')]"
+    "value": "//input[@id='mobile' and @type='tel']",
+    "verified": true,
+    "note": "from captured mobile Send Enquiry DOM 2026-09-24"
   },
   "Enquiry Form NO": {
-    "value": "//label[normalize-space()='No'] | //*[@id='no']"
+    "value": "//div[contains(@class,'bestdeal__cnt')]//div[contains(@class,'bestdeal__cnt--optnwrp')][.//div[contains(@class,'opsntxt')][normalize-space()='no']]",
+    "verified": true,
+    "note": "from captured mobile Send Enquiry DOM 2026-09-24"
   },
   "Enquiry Submit Button": {
-    "value": "//button[@type='submit' or contains(normalize-space(),'Submit')]"
+    "value": "//button[contains(@class,'bestdeal__cnt--submitbtn')]",
+    "verified": true,
+    "note": "from captured mobile Send Enquiry DOM 2026-09-24"
   },
   "OTP 1st Field": {
     "value": "//input[@id='0'] | (//input[@maxlength='1'])[1]",
-    "note": "Testsigma locator //input[@id='0'] failed in run 114314; broadened."
+    "verified": true,
+    "note": "verified 2026-09-24 (typing passed with this)"
   },
   "GBP Button 11": {
     "value": "(//button[contains(normalize-space(),'Get Best Price')])[11]",
@@ -111,18 +125,19 @@
     "note": "verified on live mobile site 2026-09-22"
   },
   "GBP Submit Now Button": {
-    "value": "//button[contains(normalize-space(),'Submit Now')]",
-    "note": "verified on live mobile site 2026-09-22",
-    "verified": true
+    "value": "//div[contains(@class,'category__popup--wrp')]//button[contains(@class,'category__popup--btn')]",
+    "verified": true,
+    "note": "from captured mobile GBP sheet DOM 2026-09-24"
   },
   "Get Best Price Page No Radio Button": {
-    "value": "//label[normalize-space()='No'] | //input[@type='radio' and (@value='No' or @value='no')]",
-    "note": "Original absolute XPath //div[@id='shell']/div[2]/div[1]/... is brittle and failed in run 114314; replaced."
+    "value": "//div[contains(@class,'category__popup--wrp')]//label[contains(@class,'catpopup__datacnt-child')][normalize-space()='No']",
+    "verified": true,
+    "note": "from captured mobile GBP sheet DOM 2026-09-24"
   },
   "Get Best Price Header Back": {
-    "value": "(//header//*[contains(@class,'back')] | //*[contains(@class,'back')] | //*[contains(@aria-label,'ack')])[1]",
+    "value": "//div[contains(@class,'category__popup--wrp')]//div[contains(@class,'skip_btn')]",
     "verified": true,
-    "note": "verified on live mobile site 2026-09-22"
+    "note": "from captured mobile GBP sheet DOM 2026-09-24"
   },
   "Get Best Price Skip": {
     "value": "//*[self::a or self::button or self::span or self::div][normalize-space()='Maybe Later' or normalize-space()='Skip' or normalize-space()='SKIP' or @aria-label='May be later' or @aria-label='Maybe Later']",
