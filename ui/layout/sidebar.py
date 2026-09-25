@@ -37,6 +37,24 @@ NAV = [
 ]
 
 
+def _go(route: str) -> None:
+    """
+    Follow a sidebar link, keeping the platform the person is working in.
+
+    "/platform/website…" routes are templates: the browser swaps in the
+    platform remembered by the topbar (localStorage 'nlp_platform'), so
+    clicking Test Cases from History lands on Mobile Site when that is what
+    was open, not on Website.
+    """
+    if route.startswith("/platform/website"):
+        import json
+        ui.run_javascript(
+            "(function(){var p='website';try{p=localStorage.getItem('nlp_platform')||p}catch(e){}"
+            f"window.location.href={json.dumps(route)}.replace('/platform/website','/platform/'+p);}})()")
+        return
+    ui.navigate.to(route)
+
+
 def sidebar(active: str = "", platforms: list[dict] | None = None) -> None:
     with ui.left_drawer(value=True, fixed=True).props("bordered width=232") \
             .style(f"background:{COLORS['surface_alt']}"):
@@ -58,7 +76,7 @@ def sidebar(active: str = "", platforms: list[dict] | None = None) -> None:
                 with ui.row().classes("w-full items-center gap-2 cursor-pointer") \
                         .style(f"padding:6px 8px; border-radius:6px;"
                                f"background:{COLORS['primary'] + '14' if on else 'transparent'}") \
-                        .on("click", lambda r=route: ui.navigate.to(r)):
+                        .on("click", lambda r=route: _go(r)):
                     ui.icon(icon).style(
                         f"color:{COLORS['primary'] if on else COLORS['text_muted']}")
                     ui.label(label).style(
@@ -73,8 +91,12 @@ def sidebar(active: str = "", platforms: list[dict] | None = None) -> None:
                     f"color:{COLORS['text_muted']}; font-weight:{TYPOGRAPHY['weight_bold']}")
                 for p in platforms:
                     enabled = p.get("enabled", True)
-                    with ui.row().classes("w-full items-center gap-2") \
-                            .style("padding:4px 8px"):
+                    row = ui.row().classes("w-full items-center gap-2" + (" cursor-pointer" if enabled else "")) \
+                        .style("padding:4px 8px")
+                    if enabled:
+                        row.on("click", lambda n=p["name"]: ui.navigate.to(f"/platform/{n}"))
+                        row.tooltip(f"Switch to {p.get('label', p['name'])}")
+                    with row:
                         ui.label("●").style(
                             f"color:{platform_color(p['name']) if enabled else '#CBD5E1'};"
                             f"font-size:0.7rem")

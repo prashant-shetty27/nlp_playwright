@@ -256,6 +256,14 @@ def validate_flow(
     # Globals declared in data/common/variables.json are always in scope.
     common = _read_json(os.path.join(BASE_DIR, "data", "common", "variables.json"))
     defined.update((common.get("global") or {}).keys())
+    #: Names Test Data supplies — a step that stores into one of them shadows
+    #: the saved value for the rest of the run, which is rarely what was meant.
+    stored_names: set[str] = set((common.get("global") or {}).keys())
+    for env_vals in (common.get("env") or {}).values():
+        if isinstance(env_vals, dict):
+            stored_names.update(env_vals.keys())
+    #: Names an earlier step of THIS flow produced, with the line that did it.
+    produced_here: dict[str, int] = {}
 
     try:
         with open(path, "r", encoding="utf-8") as f:
@@ -368,10 +376,27 @@ def validate_flow(
 
         # ── Record variables this step defines ────────────────────────────────
         vname = getattr(cmd, "variable_name", None)
-        if isinstance(vname, str) and vname:
-            defined.add(vname)
         if cmd.type == "create_variable" and isinstance(target, str):
-            defined.add(target)
+            vname = target
+        if isinstance(vname, str) and vname:
+            # Same name, second value. Runtime memory simply overwrites, so a
+            # later `verify stored x` silently checks the newer value — and a
+            # store into a Test Data name replaces the saved value for the
+            # rest of the run. Both are legal; neither should be a surprise.
+            if vname in produced_here:
+                report.add("warning", "W009", path, line_no, step,
+                           f"'{vname}' is stored again — line {produced_here[vname]} "
+                           f"already stores into it; that value is overwritten from here on.",
+                           f"Use a different name (e.g. {vname}2) if both values are "
+                           f"needed later.")
+            elif vname in stored_names:
+                report.add("warning", "W010", path, line_no, step,
+                           f"'{vname}' is a saved Test Data value — storing into it "
+                           f"replaces that value for the rest of this run.",
+                           "Pick a name that is not in Test Data unless overriding "
+                           "it here is intended.")
+            produced_here.setdefault(vname, line_no)
+            defined.add(vname)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

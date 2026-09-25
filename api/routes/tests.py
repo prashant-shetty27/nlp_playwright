@@ -197,6 +197,32 @@ def _run_flow_sync(run_id: str, flow_path: str, headless: bool,
     passed = failed = skipped_count = 0
     from reporting.step_capture import StepCapture
 
+    # Every step the run WILL execute, published before the first one starts,
+    # so the live page can draw the whole list and tick rows as they finish
+    # instead of showing "waiting for the first step" for the whole run.
+    try:
+        with open(flow_path, "r", encoding="utf-8") as _f:
+            planned = [{"line": n, "step": ln.strip()}
+                       for n, ln in enumerate(_f.readlines(), 1)
+                       if ln.strip() and not ln.strip().startswith("#")]
+    except Exception:  # noqa: BLE001
+        planned = []
+
+    def _publish(current: dict | None = None) -> None:
+        """Progress snapshot for GET /tests/results/{run_id} while running."""
+        snap = list(log)
+        if current is not None:
+            snap.append({**current, "status": "running"})
+        with _runs_lock:
+            info = _runs.get(run_id)
+            if info is not None and info.get("status") == "running":
+                info["progress"] = {"planned": planned, "log": snap,
+                                    "total": len(planned),
+                                    "passed": passed, "failed": failed,
+                                    "skipped": skipped_count}
+
+    _publish()
+
     shots = StepCapture(run_id, mode=screenshot_mode, context=screenshot_context)
 
     try:
@@ -212,6 +238,7 @@ def _run_flow_sync(run_id: str, flow_path: str, headless: bool,
 
             entry: dict = {"line": line_num, "step": step}
             started = time.perf_counter()
+            _publish(entry)
 
             try:
                 # Same interpreter the CLI uses, so a step behaves identically
@@ -255,9 +282,11 @@ def _run_flow_sync(run_id: str, flow_path: str, headless: bool,
                         report.add_result(skipped, "skipped",
                                           reason="not run — an earlier step failed")
                         skipped_count += 1
+                    _publish()
                     break
 
             log.append(entry)
+            _publish()
 
     except Exception as e:
         log.append({"line": 0, "step": "ENGINE", "status": "failed", "error": str(e)})
@@ -642,7 +671,7 @@ def get_result(run_id: str):
 
     if info:
         if info["status"] == "running":
-            return {"run_id": run_id, "status": "running"}
+            return {"run_id": run_id, "status": "running", **(info.get("progress") or {})}
         return info["result"]
 
     # Fall back to persisted report file

@@ -1,0 +1,159 @@
+{
+  "source_id": "src_9278d68d54ab",
+  "filename": "draft.json",
+  "kind": "prompt",
+  "size_bytes": 30779,
+  "sha256": "9a729c68a97f85c7e9625aa9ff415da2ec22ddb3d9fff7e4fdcd38498ac0f89a",
+  "uploaded_at": "2026-09-25T06:18:28Z",
+  "uploaded_by": "",
+  "extra": {
+    "prompt": "https://jdjira.justdial.com/browse/GJDT-22686\n\nAnswers from the tester:\n- Q: Environment? A: Ask For Price is on devx only (not live yet). For Ask For Price cases open ${devx} first (HTTP auth), then the devx search URL; carousel-order cases run on www.justdial.com live URLs. Platform: touch / mobile site.\n- Q: Does Ask For Price need mobile/OTP? A: Yes. Mobile is ${test_mobile} (9324751210). OTP: api get \"http://192.168.131.12/communication/api/v1/get_events?mobileEmail=${test_mobile}&vertical=OTP\" as otpResp, then store json otpResp path data.response.0.sms.text as otpText, then store regex \"(\\d{4,8})\" from otpText as otp.\n- Q: How to verify lead generation? A: After submitting Ask For Price, call http://192.168.35.197:8111/lead_gen.php?city=${city}&date=${today}&mobile=${test_mobile}&msg=1&dev=1 where city = the searched city from the page URL (lowercase), today = current date as YYYY-MM-DD (get today as d, format date \"${d}\" as \"YYYY-MM-DD\" into today), dev=1 for devx/staging and dev=0 for www live. The response must contain the mobile, the searched category and: page name rsltpge, position recommended-products, lead type get_best_price, bd 1.\n- Q: Click tracking? A: Use start capturing network requests before clicking. On Ask For Price click, a request containing li=gbp_afp_b2b_plisting_carousel must be sent. A request containing submit__gbp_afp_b2b_plisting_carousel must NOT be sent before the lead is submitted and MUST be sent after successful lead generation.\n- Q: Ordering among outside cities (GJDT-22703)? A: Not specified \u2014 do not assert a specific order among outside cities, only the DS > search-city > price hierarchy.\nUse store lowercase of \"${city}\" as cityLower and pass ${cityLower} to lead_gen.php.",
+    "provider": "anthropic",
+    "model": "claude-sonnet-5",
+    "testcases": 17,
+    "values_found": {
+      "live_url_steel_merchants": "www.justdial.com",
+      "live_url_bulk_sms_services": "https://docs.google.com/spreadsheets/d/1GUMrybfChJ12NrnqFquwvOVqH5R4GLUPOp5PpGYh-9I/edit?gid=577544212#gid=577544212",
+      "mobile": "9324751210",
+      "otp": "22686"
+    },
+    "inputs_needed": [
+      {
+        "name": "product_category_url",
+        "kind": "url",
+        "why": "Exact devx repro URL for GJDT-22699 'Price on Request' defect on a product category (Fabrication Contractors, Dehradun)"
+      },
+      {
+        "name": "cng_service_url",
+        "kind": "url",
+        "why": "Exact devx repro URL for GJDT-22699 'Price on Request' defect on a service category (CNG Cylinder Testing Services, Delhi)"
+      },
+      {
+        "name": "bulk_sms_link_road_url",
+        "kind": "url",
+        "why": "Exact devx repro URL for GJDT-22700 CTA defect (Bulk SMS Services in Link Road Malad West) \u2014 not the same nct URL as the saved url_bulk_sms_services variable"
+      }
+    ],
+    "assumptions": [
+      "'Carousel-order cases run on www.justdial.com live URLs' is read to include the heading, search-city-preference, macro-priority, DS-type-priority and price-priority testcases (all generic, non-defect-specific ordering checks); defect-specific regression testcases (22699, 22700, 22701) keep their original devx/exact-repro URLs since those defects were reproduced on devx.",
+      "Selected ${live_url_steel_merchants} as the representative live product-category URL and ${live_url_bulk_sms_services} as the representative live service-category URL for the generic heading/ordering testcases, since the tester's answer specified the environment class but not a specific URL per testcase.",
+      "GJDT-22702's fix regression is verified on devx (${url_bulk_sms_services}) since that is where the defect was originally reproduced; live was already reported as correct in the ticket comment.",
+      "test_mobile (${test_mobile} = 9324751210) is used everywhere a mobile number is required for Ask For Price/OTP flows, replacing the previously placeholder ${mobile} variable.",
+      "lead_gen.php is called with dev=1 for all Ask-For-Price testcases because Ask For Price only exists on devx per the tester's environment answer; no dev=0/live lead-gen verification is needed."
+    ],
+    "unclear": [],
+    "jira": [
+      {
+        "key": "GJDT-22686",
+        "summary": "Recommended Products For You - logic update - B2B NCT Results Page",
+        "type": "Story",
+        "status": "Ready for Live",
+        "url": "https://jdjira.justdial.com/browse/GJDT-22686",
+        "subtasks": [
+          {
+            "key": "GJDT-22687",
+            "kind": "testing",
+            "status": "No Need of Security Testing",
+            "summary": "Security Testing"
+          },
+          {
+            "key": "GJDT-22679",
+            "kind": "design",
+            "status": "Closed",
+            "summary": "Design Requirement"
+          },
+          {
+            "key": "GJDT-22688",
+            "kind": "fe",
+            "status": "Closed",
+            "summary": "FE: Recommended Products For You - logic update - B2B NCT Results Page"
+          },
+          {
+            "key": "GJDT-22695",
+            "kind": "api",
+            "status": "Closed",
+            "summary": "API Changes RPFY:"
+          },
+          {
+            "key": "GJDT-22697",
+            "kind": "testing",
+            "status": "Closed",
+            "summary": "Product UAT: Recommended Products For You - logic update - B2B NCT Results Page"
+          },
+          {
+            "key": "GJDT-22698",
+            "kind": "design",
+            "status": "Closed",
+            "summary": "Design Testing: Recommended Products For You - logic update - B2B NCT Results Page"
+          }
+        ],
+        "linked": [
+          {
+            "key": "GJDT-22699",
+            "type": "Defect",
+            "status": "Closed",
+            "summary": "\"Price on Request\" - extra text seen - \"Recommended Products For You\" section"
+          },
+          {
+            "key": "GJDT-22700",
+            "type": "Defect",
+            "status": "Closed",
+            "summary": "Send Enquiry is seen on recommended Product for you Section's CTA > instead of Call Now "
+          },
+          {
+            "key": "GJDT-22701",
+            "type": "Defect",
+            "status": "Closed",
+            "summary": "Magic name is passes incorrect for ask for price from recommended product "
+          },
+          {
+            "key": "GJDT-22702",
+            "type": "Defect",
+            "status": "Closed",
+            "summary": "For Service Category > Logic is not Proper "
+          },
+          {
+            "key": "GJDT-22703",
+            "type": "Concern",
+            "status": "Closed",
+            "summary": "Concern regarding Listing on recommended Product for You"
+          }
+        ],
+        "comments": 6,
+        "attachments": [
+          "jdmart_nct_carousel_impression_gaps_2026-09-22.xlsx"
+        ]
+      },
+      {
+        "key": "GJDT-22703",
+        "summary": "Concern regarding Listing on recommended Product for You",
+        "type": "Concern",
+        "status": "Closed",
+        "url": "https://jdjira.justdial.com/browse/GJDT-22703",
+        "subtasks": [],
+        "linked": [
+          {
+            "key": "GJDT-22686",
+            "type": "Story",
+            "status": "Ready for Live",
+            "summary": "Recommended Products For You - logic update - B2B NCT Results Page"
+          }
+        ],
+        "comments": 2,
+        "attachments": []
+      }
+    ],
+    "questions": [
+      {
+        "question": "Which live URL(s) reliably exhibit all DS x price subgroup combinations (With DS/Without DS x With Price/Without Price x all three DS types) needed to fully validate the macro and sub-priority ordering testcases?",
+        "why": "TC_RP_MACRO_PRIORITY_ORDER, TC_RP_DS_TYPE_PRIORITY_*, and TC_RP_PRICE_PRIORITY_* assume ${live_url_steel_merchants} exposes every subgroup; if it doesn't, those assertions may pass trivially or fail for the wrong reason",
+        "example": "https://www.justdial.com/Mumbai/Steel-Merchants/nct-10456865 exposes all 8 groups; otherwise use <alternate live NCT URL>"
+      },
+      {
+        "question": "Is there a live (www.justdial.com) equivalent NCT URL for a service category that reproduces GJDT-22702's original search-city bug, so the fix can also be confirmed on live in addition to devx?",
+        "why": "TC_DEFECT_22702 currently only verifies the devx fix; ticket comment says live was already correct, but a live regression check would close the loop for the touch platform",
+        "example": "https://www.justdial.com/Mumbai/Bulk-SMS-Services/nct-10970459"
+      }
+    ]
+  }
+}

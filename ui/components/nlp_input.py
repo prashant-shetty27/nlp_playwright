@@ -106,7 +106,8 @@ class NlpInput:
                  placeholder: str = "Type a step, e.g. 'click ask_more_photos_cta'",
                  initial_value: str = "",
                  known_variables: list[str] | None = None,
-                 autofocus: bool = True) -> None:
+                 autofocus: bool = True,
+                 clearable: bool = True) -> None:
         self.platform = platform
         self.on_submit = on_submit
         self.known_variables = known_variables or []
@@ -121,7 +122,8 @@ class NlpInput:
         with ui.column().classes("w-full gap-1"):
             self.input = (
                 ui.input(placeholder=placeholder, value=initial_value)
-                .props("outlined dense clearable autocomplete=off"
+                .props("outlined dense autocomplete=off"
+                       + (" clearable" if clearable else "")
                        + (" autofocus" if autofocus else ""))
                 .classes("w-full")
                 .style(f"font-family:{TYPOGRAPHY['mono']}")

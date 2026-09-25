@@ -177,6 +177,26 @@ def segment_step(body: SegmentRequest):
     }
 
 
+class SegmentBatchRequest(BaseModel):
+    steps: list[str]
+
+
+@router.post("/segment-batch")
+def segment_steps(body: SegmentBatchRequest):
+    """
+    /segment for a whole test case in one round trip.
+
+    The editor drew a 170-step case with 170 sequential requests, one per
+    row, and the page sat blank for seconds while they queued. Parsing is
+    pure and cheap; the network hops were the cost.
+    """
+    seen: dict[str, dict] = {}
+    for st in body.steps:
+        if st not in seen:
+            seen[st] = segment_step(SegmentRequest(step=st))
+    return {"segments": seen}
+
+
 class VariablesRequest(BaseModel):
     steps: list[str]
     environment: str = ""

@@ -123,7 +123,9 @@ def _load_run_config() -> dict:
 # ── NLP flow ──────────────────────────────────────────────────────────────────
 # Command types whose `target` is a variable name to look up or create, not a value.
 _VARIABLE_NAME_TARGETS = {"verify_var_contains", "verify_var_not_equals",
-                          "create_variable", "extract_json"}
+                          "create_variable", "extract_json",
+                          "verify_recommended_order_api", "extract_regex",
+                          "verify_var_compare"}
 
 
 def _execute_step_from_command(cmd, page):
@@ -224,6 +226,8 @@ def _execute_step_from_command(cmd, page):
                                          ep, text, cmd.variable_name, after=target),
         # ── Extract — Page info ──────────────────────────────────────────────
         "extract_url":               lambda: svc.extract_page_url(ep, cmd.variable_name),
+        "extract_regex":             lambda: svc.extract_regex(ep, cmd.text, cmd.target, cmd.variable_name),
+        "transform_text":            lambda: svc.transform_text((cmd.values or ["lowercase"])[0], cmd.text, cmd.variable_name),
         "extract_title":             lambda: svc.extract_page_title(ep, cmd.variable_name),
         # ── Extract — Element data ───────────────────────────────────────────
         "extract_text":              lambda: svc.extract_element_text(ep, target, cmd.variable_name),
@@ -245,6 +249,14 @@ def _execute_step_from_command(cmd, page):
         "api_get":                   lambda: svc.api_get(text, cmd.variable_name),
         "api_post":                  lambda: svc.api_post(text, target, cmd.variable_name),
         "extract_json":              lambda: svc.extract_json_path(target, text, cmd.variable_name),
+        "net_capture_start":             lambda: svc.start_network_capture(ep),
+        "net_verify":                    lambda: svc.verify_network_request(text, expected=(first_value != "not")),
+        "net_store":                     lambda: svc.store_network_request(text, cmd.variable_name),
+        "verify_recommended_order_api":  lambda: svc.verify_recommended_order_api(target, text, ep),
+        "verify_recommended_order_page": lambda: svc.verify_recommended_order_page(ep, text),
+        "verify_recommended_prefer_city": lambda: svc.verify_recommended_prefer_city(ep, text),
+        "store_recommended_position":    lambda: svc.store_recommended_position(ep, text, cmd.variable_name),
+        "verify_var_compare":            lambda: svc.verify_stored_variable_compare(target, text, first_value),
         # ── Excel / CSV ───────────────────────────────────────────────────────
         "read_excel_cell":           lambda: svc.read_excel_cell(text, int(target), first_value, cmd.variable_name),
         "read_excel_row":            lambda: svc.read_excel_row(text, int(target), cmd.variable_name),

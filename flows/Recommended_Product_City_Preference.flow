@@ -1,0 +1,58 @@
+# Platform: mobilesite
+# Params : rp_api_base_live live_url_steel_merchants_indore live_url_steel_merchants_mumbai
+# GJDT-22686 — city preference. The SAME category is searched in two cities.
+# In each search the carousel must follow the priority hierarchy with the search
+# city read from the URL; then the vendor that leads search A is looked up in
+# search B and must rank lower there (or not appear) — its advantage was its
+# city, not the product. Nothing about position or city is written into the steps:
+# swap the two URLs for any other category / pair of cities and it still holds.
+
+# --- search A: ${live_url_steel_merchants_indore} ---
+open ${live_url_steel_merchants_indore}
+wait 3 seconds
+verify element rp_carousel_heading is visible
+verify element rp_product_1st is visible
+store regex "justdial\.com/([^/]+)/" from page url as city1
+store regex "justdial\.com/[^/]+/([^/?]+)/nct-" from page url as query1
+store regex "nct-(\d+)" from page url as ncatid1
+api get "${rp_api_base_live}&city=${city1}&ncatid=${ncatid1}&query=${query1}" as apiResp1
+store text of rp_product_1st_name as uiName1
+store json apiResp1 path results.data.0.display_name1 as apiName1
+verify stored uiName1 contains "${apiName1}"
+# the hierarchy and, specifically, search-city-before-other-cities within each DS group
+verify recommended products order in apiResp1
+verify recommended products carousel order on page
+verify recommended products prefer search city on page
+store text of rp_product_1st_company as vendor1
+store attribute href of rp_product_1st as link1
+store regex "/jdmart/([^/]+)/" from link1 as vendorCity1
+
+# --- search B: ${live_url_steel_merchants_mumbai} ---
+open ${live_url_steel_merchants_mumbai}
+wait 3 seconds
+verify element rp_carousel_heading is visible
+verify element rp_product_1st is visible
+store regex "justdial\.com/([^/]+)/" from page url as city2
+store regex "justdial\.com/[^/]+/([^/?]+)/nct-" from page url as query2
+store regex "nct-(\d+)" from page url as ncatid2
+api get "${rp_api_base_live}&city=${city2}&ncatid=${ncatid2}&query=${query2}" as apiResp2
+store text of rp_product_1st_name as uiName2
+store json apiResp2 path results.data.0.display_name1 as apiName2
+verify stored uiName2 contains "${apiName2}"
+# the hierarchy and, specifically, search-city-before-other-cities within each DS group
+verify recommended products order in apiResp2
+verify recommended products carousel order on page
+verify recommended products prefer search city on page
+store text of rp_product_1st_company as vendor2
+store attribute href of rp_product_1st as link2
+store regex "/jdmart/([^/]+)/" from link2 as vendorCity2
+
+# --- cross-check: search A's leading vendor in search B ---
+# Leading vendor of A must be from A's city (else A's carousel has no in-city
+# product and the preference is not exercised — the prefer-city step logs that).
+verify stored vendorCity1 contains "${city1}"
+# In B, that vendor is an outside-city seller: it must not lead B.
+store position of recommended product "${vendor1}" on page as posInB
+verify stored posInB is not "1"
+# And symmetrically: B's leading vendor must not lead A when it is from B's city.
+# (posInB is 0 when the vendor is not shown in B at all — also acceptable.)

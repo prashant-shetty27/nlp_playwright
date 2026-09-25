@@ -108,6 +108,73 @@ KEYWORD_MAP = {
         "template": "scroll down {number}"
     },
 
+    "net_capture_start": {
+        "phrases": ["start capturing network requests", "capture network", "record requests"],
+        "action": "net_capture_start",
+        "help": "start recording every request the page makes (URL + POST body); needed before any tracker/lead assertion",
+        "template": "start capturing network requests"
+    },
+    "net_verify": {
+        "phrases": ["verify network request containing", "tracker was sent", "request was sent"],
+        "action": "net_verify",
+        "help": "asserts a captured request contains the text (waits up to 10 s); use 'was not sent' for the negative — do NOT use store network request for absence, it fails when nothing matches",
+        "template": "verify network request containing \"{text}\" was sent"
+    },
+    "net_store": {
+        "phrases": ["store network request containing", "store request url"],
+        "action": "net_store",
+        "help": "full URL (+ body) of the first matching captured request, for verify stored … contains; FAILS if none matched",
+        "template": "store network request containing \"{text}\" as {variable}"
+    },
+
+    "transform_text": {
+        "phrases": ["store lowercase of", "lowercase", "uppercase", "to lower case", "trim"],
+        "action": "transform_text",
+        "help": "lowercase / uppercase / trimmed copy of a value into a new variable",
+        "template": "store lowercase of \"{text}\" as {variable}"
+    },
+
+    "extract_regex": {
+        "phrases": ["store regex", "extract with regex", "regex from url", "part of url"],
+        "action": "extract_regex",
+        "help": "first capture group of the pattern applied to the page URL or a stored variable",
+        "template": "store regex \"{text}\" from page url as {variable}"
+    },
+
+    "verify_recommended_prefer_city": {
+        "phrases": ["verify recommended products prefer search city", "city preference carousel"],
+        "action": "verify_recommended_prefer_city",
+        "help": "within each DS group, every card from the search city must precede cards from other cities; passes with a note when no in-city card exists",
+        "template": "verify recommended products prefer search city on page"
+    },
+    "store_recommended_position": {
+        "phrases": ["store position of recommended product", "carousel position of"],
+        "action": "store_recommended_position",
+        "help": "1-based position of the first carousel card whose product name or company contains the text; 0 when not shown",
+        "template": "store position of recommended product \"{text}\" on page as {variable}"
+    },
+    "verify_var_compare": {
+        "phrases": ["verify stored is greater than", "verify stored is less than", "compare numbers"],
+        "action": "verify_var_compare",
+        "help": "numeric comparison: greater than / less than / at least / at most a number or ${variable}",
+        "template": "verify stored {variable} is greater than {number}"
+    },
+
+    "verify_recommended_order_api": {
+        "phrases": ["verify recommended products order", "recommended products priority",
+                    "carousel priority api"],
+        "action": "verify_recommended_order_api",
+        "help": "checks the API list follows GJDT-22686 priority: Digital-Showroom > search city (from bd_params.city / page URL) > priced; a lower group may appear only after higher groups are exhausted",
+        "template": "verify recommended products order in {variable}"
+    },
+    "verify_recommended_order_page": {
+        "phrases": ["verify recommended products carousel order", "carousel order on page",
+                    "recommended products page priority"],
+        "action": "verify_recommended_order_page",
+        "help": "same priority check on the rendered carousel cards (DS from the 360 badge, city from the card link, price from the price block); search city read from the page URL",
+        "template": "verify recommended products carousel order on page"
+    },
+
     "save_page_source": {
         "phrases": ["save page source", "save page html", "dump page html", "capture dom"],
         "action": "save_page_source",

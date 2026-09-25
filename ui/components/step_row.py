@@ -68,7 +68,13 @@ def step_row(index: int, nlp_text: str, *, action: str = "", target: str = "",
              disabled: bool = False,
              on_toggle_enabled: Callable[[int], None] | None = None,
              on_add: Callable[[int, str], None] | None = None,
-             on_drop: Callable[[int, int], None] | None = None) -> ui.element:
+             on_drop: Callable[[int, int], None] | None = None,
+             token_queue: list | None = None) -> ui.element:
+    """
+    ``token_queue``: when given, the step's token renderer is appended to it
+    instead of being scheduled on its own timer, so the caller can draw a long
+    test case in a few batches rather than one websocket update per row.
+    """
     editing = {"on": False}
 
     row = ui.row().classes("w-full items-center gap-2 px-2 py-1 no-wrap").style(
@@ -144,10 +150,13 @@ def step_row(index: int, nlp_text: str, *, action: str = "", target: str = "",
                                     variables=variables or [],
                                     known_values=known_values or set())
 
-                    async def _draw() -> None:
-                        await tok.render()
+                    if token_queue is not None:
+                        token_queue.append(tok)
+                    else:
+                        async def _draw() -> None:
+                            await tok.render()
 
-                    ui.timer(0.01, _draw, once=True)
+                        ui.timer(0.01, _draw, once=True)
                 else:
                     ui.label(nlp_text).style(
                         f"font-family:{TYPOGRAPHY['mono']}; font-size:{TYPOGRAPHY['size_sm']};"
@@ -180,18 +189,35 @@ def step_row(index: int, nlp_text: str, *, action: str = "", target: str = "",
                 def commit(text: str) -> None:
                     on_edit(index, (text or "").strip())
 
-                editor = NlpInput(platform or "website", commit,
-                                  initial_value=nlp_text,
-                                  placeholder="Edit this step")
+                def cancel(_=None) -> None:
+                    """Put the step back exactly as it was. Changes nothing."""
+                    if not editing["on"]:
+                        return
+                    editing["on"] = False
+                    text_holder.clear()
+                    label.set_visibility(True)
+
+                # No "clear" X on this box: with the step text loaded, that X
+                # emptied it in one click and left a blank box with no way
+                # back — it read as "my step got deleted".
+                with ui.row().classes("w-full items-start no-wrap gap-1"):
+                    editor = NlpInput(platform or "website", commit,
+                                      initial_value=nlp_text,
+                                      placeholder="Edit this step",
+                                      clearable=False)
+                    with ui.row().classes("no-wrap gap-0").style("margin-top:2px"):
+                        ui.button(icon="check", on_click=lambda: editor._submit()) \
+                            .props("flat dense size=sm color=positive") \
+                            .tooltip("Save this step (Enter)")
+                        ui.button(icon="close", on_click=cancel) \
+                            .props("flat dense size=sm") \
+                            .tooltip("Cancel — keep the step as it was (Esc)")
 
                 async def _load() -> None:
                     await editor.load()
 
                 ui.timer(0.01, _load, once=True)
-                editor.input.on("keydown.escape",
-                                lambda _: (text_holder.clear(),
-                                           label.set_visibility(True),
-                                           editing.__setitem__("on", False)))
+                editor.input.on("keydown.escape", cancel)
 
         # Insert either side of this step. Stacked the same way as the reorder
         # arrows, so the upper button reads as "above" and the lower as "below"

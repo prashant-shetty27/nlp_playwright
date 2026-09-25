@@ -76,6 +76,13 @@ class LiveView:
         self.done = False
         self.seen = 0
         self.shots_seen = 0
+        #: Steps that have a frame, in order, and which one the viewer shows.
+        self.frames: list[tuple[int, dict]] = []
+        self.frame_at = -1
+        #: True while the viewer follows the newest frame as the run goes;
+        #: any manual navigation switches it off so the picture stays put.
+        self.follow = True
+        self.log_cache: list[dict] = []
 
     def render(self) -> None:
         from ui.layout.sidebar import sidebar
@@ -117,6 +124,7 @@ class LiveView:
                     with ui.tabs().classes("w-full") as tabs:
                         t_log = ui.tab("Log", icon="terminal")
                         t_shot = ui.tab("Screenshots", icon="image")
+                    self.tabs, self.t_shot = tabs, t_shot
                     with ui.tab_panels(tabs, value=t_log).classes("w-full"):
                         with ui.tab_panel(t_log):
                             self.log = log_viewer()
@@ -155,29 +163,39 @@ class LiveView:
             return
 
         log = res.get("log") or []
-        if len(log) > self.seen:
-            for entry in log[self.seen:]:
+        planned = res.get("planned") or getattr(self, "planned", [])
+        if planned and not getattr(self, "planned", None):
+            self.planned = planned
+        finished = [e for e in log if e.get("status") != "running"]
+        running = next((e for e in log if e.get("status") == "running"), None)
+        state_key = (len(finished), running.get("line") if running else None)
+        if len(finished) > self.seen:
+            for entry in finished[self.seen:]:
                 self.log.push(
                     f"[{entry.get('status','?'):>6}] line {entry.get('line','?')}: "
                     f"{entry.get('step','')}"
                     + (f"  -> {entry.get('error','')}" if entry.get("error") else ""))
-            self.seen = len(log)
-            self._render_steps(log)
+            self.seen = len(finished)
+        if state_key != getattr(self, "_state_key", None) or (planned and not getattr(self, "_drawn", False)):
+            self._state_key = state_key
+            self._drawn = True
+            self._render_steps(log, planned)
         # Screenshots are promoted late in `failure` mode (a frame is only
         # known to be wanted once a later step fails), so the count of entries
         # holding one, not the entry count, decides whether the tab redraws.
-        with_shot = [e for e in log if e.get("screenshot")]
+        with_shot = [e for e in finished if e.get("screenshot")]
         if len(with_shot) != self.shots_seen:
             self.shots_seen = len(with_shot)
-            self._render_shots(log)
+            self._render_shots(finished)
 
-        total = res.get("total") or len(log)
+        total = res.get("total") or len(planned) or len(log)
         passed, failed = res.get("passed", 0), res.get("failed", 0)
+        skipped = res.get("skipped", 0)
         if total:
-            self.bar.set_value((passed + failed) / total)
-            self.counter.set_text(f"{passed + failed} / {total}")
+            self.bar.set_value((passed + failed + skipped) / total)
+            self.counter.set_text(f"{passed + failed + skipped} / {total}")
 
-        if "passed" in res and not self.done:
+        if res.get("status") != "running" and "passed" in res and not self.done:
             self.done = True
             self.chip_holder.clear()
             with self.chip_holder:
@@ -187,50 +205,111 @@ class LiveView:
 
     def _render_shots(self, log: list[dict]) -> None:
         """
-        The Screenshots tab: one frame per step that has one, newest at the
-        bottom, each labelled with its step so a picture can be matched to the
-        line that produced it. The report page shows the same frames afterwards;
-        here they arrive while the run is still going.
+        The Screenshots tab as a viewer: ONE frame at a time, with ◀ ▶ to move
+        between steps and the step's own text above the picture. Clicking a
+        step in the list on the left jumps the viewer to that step's frame. A
+        list of every frame stacked end to end had to be scrolled to find the
+        one step you cared about, and looked like nothing at all until the
+        run had produced a few.
         """
+        self.frames = [(e.get("line", i), e) for i, e in enumerate(log, 1) if e.get("screenshot")]
+        if not self.frames:
+            self.frame_at = -1
+        elif self.follow or self.frame_at >= len(self.frames) or self.frame_at < 0:
+            self.frame_at = len(self.frames) - 1
+        self._draw_frame()
+
+    def _show_frame(self, at: int, *, switch_tab: bool = False) -> None:
+        if not self.frames:
+            return
+        self.frame_at = max(0, min(at, len(self.frames) - 1))
+        # Moving by hand means "stay here"; the newest frame no longer steals it.
+        self.follow = self.frame_at == len(self.frames) - 1 and not self.done
+        self._draw_frame()
+        if switch_tab:
+            self.tabs.set_value(self.t_shot)
+
+    def _show_step(self, line_index: int) -> None:
+        """Jump the viewer to the frame of the step at flow line `line_index`."""
+        for at, (i, _e) in enumerate(self.frames):
+            if i == line_index:
+                self._show_frame(at, switch_tab=True)
+                return
+        ui.notify("No screenshot for that step (its mode kept none, or it has "
+                  "not run yet)", type="info")
+
+    def _draw_frame(self) -> None:
         self.shots.clear()
         with self.shots:
-            shown = 0
-            for i, entry in enumerate(log, 1):
-                rel = entry.get("screenshot")
-                if not rel:
-                    continue
-                shown += 1
-                st = entry.get("status", "")
-                colour = COLORS["danger"] if st == "failed" else COLORS["text"]
-                with ui.column().classes("w-full gap-1").style(
-                        f"padding:6px 0; border-bottom:1px solid {COLORS['border']}"):
-                    ui.label(f"{i}  {entry.get('step', '')}").style(
-                        f"font-family:{TYPOGRAPHY['mono']};"
-                        f"font-size:{TYPOGRAPHY['size_xs']}; color:{colour};"
-                        f"word-break:break-all")
-                    # Served by the /screenshots mount (path relative to
-                    # data/screenshots), the same way the report page shows it.
-                    src = f"/screenshots/{rel.lstrip('/')}"
-                    ui.image(src).style(
-                        f"width:100%; border:1px solid {COLORS['border']};"
-                        f"border-radius:6px").on(
-                        "click", lambda s=src: ui.navigate.to(s, new_tab=True)) \
-                        .classes("cursor-pointer").tooltip("Open full size")
-            if not shown:
-                ui.label("No screenshots yet — this run's screenshot mode "
-                         "keeps none, or only the failure.").style(
+            if not self.frames:
+                ui.label("No screenshots yet — frames appear here as steps run; "
+                         "click a step on the left to jump to its frame.").style(
                     f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}")
+                return
+            i, entry = self.frames[self.frame_at]
+            st = entry.get("status", "")
+            colour = COLORS["danger"] if st == "failed" else COLORS["text"]
+            with ui.row().classes("w-full items-center no-wrap gap-1"):
+                ui.button(icon="chevron_left",
+                          on_click=lambda: self._show_frame(self.frame_at - 1)) \
+                    .props("flat dense round").tooltip("Previous step") \
+                    .set_enabled(self.frame_at > 0)
+                ui.label(f"Line {i}  ·  frame {self.frame_at + 1} of {len(self.frames)}") \
+                    .style(f"font-size:{TYPOGRAPHY['size_xs']};"
+                           f"color:{COLORS['text_muted']}; white-space:nowrap")
+                ui.space()
+                ui.button(icon="chevron_right",
+                          on_click=lambda: self._show_frame(self.frame_at + 1)) \
+                    .props("flat dense round").tooltip("Next step") \
+                    .set_enabled(self.frame_at < len(self.frames) - 1)
+                ui.button(icon="last_page",
+                          on_click=lambda: self._show_frame(len(self.frames) - 1)) \
+                    .props("flat dense round").tooltip("Latest frame") \
+                    .set_enabled(self.frame_at < len(self.frames) - 1)
+            ui.label(f"{'✅' if st == 'passed' else '❌' if st == 'failed' else '⏳'} "
+                     f"{entry.get('step', '')}").style(
+                f"font-family:{TYPOGRAPHY['mono']}; font-size:{TYPOGRAPHY['size_xs']};"
+                f"color:{colour}; word-break:break-all")
+            if entry.get("error"):
+                ui.label(entry["error"]).style(
+                    f"font-family:{TYPOGRAPHY['mono']}; font-size:{TYPOGRAPHY['size_xs']};"
+                    f"color:{COLORS['danger']}; white-space:pre-wrap")
+            # Served by the /screenshots mount (path relative to data/screenshots),
+            # the same way the report page shows it.
+            src = f"/screenshots/{entry['screenshot'].lstrip('/')}"
+            ui.image(src).style(
+                f"width:100%; border:1px solid {COLORS['border']}; border-radius:6px") \
+                .on("click", lambda s=src: ui.navigate.to(s, new_tab=True)) \
+                .classes("cursor-pointer").tooltip("Open full size in a new tab")
 
-    def _render_steps(self, log: list[dict]) -> None:
+    def _render_steps(self, log: list[dict], planned: list[dict] | None = None) -> None:
+        """
+        One row per step the run will execute, ticked as the run goes:
+        pending → running → passed / failed / skipped. Before this the list
+        only held finished steps, so a 170-step run showed nothing at all
+        until its first step completed and gave no sense of where it was.
+        """
+        by_line = {e.get("line"): e for e in log}
+        rows = [dict(p, **by_line.get(p.get("line"), {})) for p in planned] if planned else list(log)
         self.steps_area.clear()
         with self.steps_area:
-            for i, entry in enumerate(log, 1):
+            for i, entry in enumerate(rows, 1):
                 st = entry.get("status", "pending")
-                colour = COLORS["success"] if st == "passed" else (
-                    COLORS["danger"] if st == "failed" else COLORS["text_muted"])
-                icon = {"passed": "✅", "failed": "❌"}.get(st, "⏳")
-                with ui.column().classes("w-full gap-0").style(
-                        f"border-bottom:1px solid {COLORS['border']}"):
+                colour = {"passed": COLORS["success"], "failed": COLORS["danger"],
+                          "running": COLORS["primary"]}.get(st, COLORS["text_muted"])
+                icon = {"passed": "✅", "failed": "❌", "running": "🔄",
+                        "skipped": "⏭"}.get(st, "⏳")
+                has_frame = bool(entry.get("screenshot"))
+                row_el = ui.column().classes(
+                    "w-full gap-0" + (" cursor-pointer" if has_frame else "")) \
+                    .style(f"border-bottom:1px solid {COLORS['border']};"
+                           + (f"background:{COLORS['primary']}12;" if st == "running" else "")) \
+                    .on("click", lambda _, n=entry.get("line", i): self._show_step(n))
+                if st == "running":
+                    row_el.props("id=live-running-row")
+                if has_frame:
+                    row_el.tooltip("Click to see this step's screenshot")
+                with row_el:
                     with ui.row().classes("w-full items-center gap-2") \
                             .style("padding:5px 8px"):
                         ui.label(icon)

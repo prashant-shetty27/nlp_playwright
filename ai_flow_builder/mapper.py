@@ -116,6 +116,9 @@ class Mapper:
 
     # ── main entry ───────────────────────────────────────────────────────────
     def map_step(self, manual: str, source_ref: str) -> StepMapping:
+        native = self._native(manual, source_ref)
+        if native is not None:
+            return native
         for kind, rx in _RULES:
             mo = rx.match(manual)
             if mo:
@@ -125,6 +128,46 @@ class Mapper:
                            status=NEEDS_CLARIFICATION)
 
     # ── per-rule handlers ────────────────────────────────────────────────────
+    def _native(self, manual: str, ref: str) -> StepMapping | None:
+        """
+        A step already written in the framework's own grammar passes through.
+
+        The drafter now writes that grammar directly (it is shown the live
+        vocabulary), so most steps arrive executable. Translating them through
+        the legacy manual shapes would only lose information — and flag every
+        `api get` / `store json` / `store regex` as "could not be parsed".
+        A `# comment` line is kept as-is too: it is how a generated flow
+        explains itself to whoever debugs it.
+        """
+        text = (manual or "").strip()
+        if not text:
+            return None
+        if text.startswith("#"):
+            return StepMapping(ref, manual, "explanatory comment", "comment", text, SUPPORTED)
+        try:
+            from nlp.fields import TARGET_IS_LOCATOR
+            from nlp.parser import parse_step
+
+            probe = re.sub(r"\$\{[^}]+\}", "VAR", text)
+            cmd = parse_step(probe)
+        except Exception:  # noqa: BLE001 — not native grammar; try the legacy shapes
+            return None
+        ctype = getattr(cmd, "type", "") or ""
+        if ctype and not self.cat.supports(ctype):
+            return None                       # let the legacy rules give an honest verdict
+        statement, vs = self._bind(text)
+        loc, reused = "", False
+        if ctype in TARGET_IS_LOCATOR and getattr(cmd, "target", None):
+            name = str(cmd.target).strip()
+            loc = to_locator_name(name)
+            reused = self.cat.has_locator(loc)
+            self.required_locators.setdefault(loc, name)
+            if loc != name:
+                statement = statement.replace(name, loc, 1)
+        m = StepMapping(ref, manual, f"native step ({ctype})", ctype, statement,
+                        SUPPORTED, loc, reused, vs)
+        return self._check(m)
+
     def _r_navigate(self, mo, manual, ref):
         target, vs = self._bind(mo.group("target"))
         return StepMapping(ref, manual, "Load the page under test", "open",

@@ -1,0 +1,777 @@
+{
+  "draft": {
+    "assumptions": [
+      "Assumed the devx Carpet Wholesalers URL (flagged by the tester as 'FOR ASK FOR PRICE - DEVX URL') replaces Steel Merchants in TC_DEFECT_22701 and TC_ASK_FOR_PRICE_LEAD_SUBMIT_FLOW because it is the no-price product where the Ask For Price CTA reliably appears.",
+      "Assumed 'Ask For Price only on Touch, not on Apps' is satisfied simply by testing on the mobilesite/devx platform; app-platform exclusion itself is out of scope for this automation suite and is not separately tested.",
+      "Assumed the live Tyre Manufacturers URL (from the original sheet) is representative of the 'no price -> Ask For Price CTA' scenario on live for TC_RP_ASK_FOR_PRICE_CTA_SHOWN_FOR_NO_PRICE_LIVE.",
+      "Assumed one representative URL (Cargo Box Manufacturers) is sufficient to prove the 'no recommended section' behaviour among the 4 URLs listed in that sheet row.",
+      "Assumed 'verify recommended products carousel order on page' internally reads the 360\u00b0/Video badge per card, so it can stand in for a missing dedicated only-video/360-badge locator in TC_RP_ONLY_VIDEO_PRIORITY_OVER_NO_DS and TC_RP_360_BADGE_ON_TOP_10."
+    ],
+    "candidate_urls": [
+      "https://devx.justdial.com/Mumbai/Carpet-Wholesalers-in-Indira-Nagar-Vikhroli-East/nct-10081039?fl=undefined&ismap=undefined&subpage=&searchCase=&term=carpet%2520&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Carpet%20Wholesalers&trkid=192699-mumbai",
+      "https://www.justdial.com/Bhopal/Machine-Tool-Dealers/nct-10306762?trkid=26527-remotecity-fcat&term=machine%20tool%20dealer",
+      "https://www.justdial.com/Chennai/Arduino-Board-Wholesalers/nct-11957516?fl=undefined&ismap=undefined&subpage=&searchCase=&term=Arduino%2520board%2520whoelsalers%2520&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Arduino%20Board%20Wholesalers&trkid=4030859-chennai",
+      "https://www.justdial.com/Chennai/Bat-Distributors-MRF/nct-12076726?fl=undefined&ismap=undefined&subpage=&searchCase=&term=Bat%2520distributors%2520-%2520mrf&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Bat%20Distributors-MRF&trkid=8467821-chennai",
+      "https://www.justdial.com/Hyderabad/Screw-Importers/nct-10424250?fl=undefined&ismap=undefined&subpage=&searchCase=&term=screw%2520impo&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Screw%20Importers&trkid=12479278-hyderabad",
+      "https://www.justdial.com/Jaipur/Tile-Wholesalers/nct-10482503?fl=undefined&ismap=undefined&subpage=&searchCase=&term=tile%2520whole&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Tile%20Wholesalers&trkid=27632-remotecity",
+      "https://www.justdial.com/Jaipur/Transporters/nct-10495191?fl=undefined&ismap=undefined&subpage=&searchCase=&term=Transporters%2520&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Transporters&trkid=310-remotecity",
+      "https://www.justdial.com/Leh-Ladakh/Umbrella-Distributors/nct-10506673?fl=undefined&ismap=undefined&subpage=&searchCase=&term=umbrella%2520distri&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Umbrella%20Distributors&trkid=27703-remotecity",
+      "https://www.justdial.com/Mumbai/Brick-Wholesalers/nct-10057470?fl=undefined&ismap=undefined&subpage=&searchCase=&term=brick%2520whol&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Brick%20Wholesalers&trkid=192616-mumbai",
+      "https://www.justdial.com/Mumbai/Bulk-SMS-Services-in-Paras-Nagar-Kandivali-West/nct-10970459?fl=undefined&ismap=undefined&subpage=&searchCase=&term=bulk%2520sms%2520&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Bulk%20SMS%20Services&trkid=6333-mumbai",
+      "https://www.justdial.com/Mumbai/Bulk-SMS-Services/nct-10970459?fl=undefined&ismap=undefined&subpage=&searchCase=&term=bulk%2520sms&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Bulk%20SMS%20Services&trkid=6333-mumbai",
+      "https://www.justdial.com/Mumbai/Cargo-Box-Manufacturers-in-Indira-Nagar-Vikhroli-East/nct-12171901?fl=undefined&ismap=undefined&subpage=&searchCase=&term=cargo%20box&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Cargo%20Box%20Manufacturers&trkid=4477584-mumbai&isLogin=1",
+      "https://www.justdial.com/Mumbai/Carpet-Wholesalers-in-Indira-Nagar-Vikhroli-East/nct-10081039?fl=undefined&ismap=undefined&subpage=&searchCase=&term=carpet%2520&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Carpet%20Wholesalers&trkid=192699-mumbai",
+      "https://www.justdial.com/Mumbai/Carpet-Wholesalers-in-Indira-Nagar-Vikhroli-East/nct-10081039?fl=undefined&ismap=undefined&subpage=&searchCase=&term=carpet%2520&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Carpet%20Wholesalers&trkid=192699-mumbai\\",
+      "https://www.justdial.com/Mumbai/Crane-Services-in-Paras-Nagar-Kandivali-West/nct-10146337?fl=undefined&ismap=undefined&subpage=&searchCase=&term=crane%2520services&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Crane%20Services&trkid=361586-mumbai",
+      "https://www.justdial.com/Mumbai/Curtian-Distributors-DDecor-in-Link-Road-Malad-West/nct-11785749?fl=undefined&ismap=undefined&subpage=&searchCase=&term=curtiain%2520dis&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Curtian%20Distributors-DDecor&trkid=7961575-mumbai",
+      "https://www.justdial.com/Mumbai/Hercules-Bicycle-Wholesalers/nct-10045474?fl=undefined&ismap=undefined&subpage=&searchCase=&term=hercules%2520bicycle%2520wholesalers%2520&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Hercules-Bicycle%20Wholesalers&trkid=926575-mumbai",
+      "https://www.justdial.com/Mumbai/Hotel-Equipment-Manufacturers-in-Link-Road-Malad-West/nct-10254380?fl=undefined&ismap=undefined&subpage=&searchCase=&term=hotel%2520equi&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Hotel%20Equipment%20Manufacturers&trkid=11624518-mumbai",
+      "https://www.justdial.com/Mumbai/Jeans-Wholesalers-Pepe-Jeans/nct-11282399?fl=undefined&ismap=undefined&subpage=&searchCase=&term=pepe%2520jeans%2520wholesale&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Jeans%20Wholesalers-Pepe%20Jeans&trkid=224353-mumbai",
+      "https://www.justdial.com/Mumbai/Transporters-in-Paras-Nagar-Kandivali-West/nct-10495191?fl=undefined&ismap=undefined&subpage=&searchCase=&term=transpoir&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Transporters&trkid=6135-mumbai",
+      "https://www.justdial.com/Mumbai/Tyre-Manufacturers--in--Kala-Vidyalaya-Road-Malad-West/nct-10505514?stype=category_list&term=Tyre-Manufacturers&srcterm=Tyre-Manufacturers&rnd1=0.3052979325970284&rnd2=0.4180381198482128&rnd3=0.4898481054844277",
+      "https://www.justdial.com/Mumbai/Wire-Wholesalers/nct-10541446?fl=undefined&ismap=&subpage=&searchCase=&term=wire%20whol&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Wire%20Wholesalers&trkid=207036-hyderabad"
+    ],
+    "group_suggestions": [],
+    "inputs_needed": [],
+    "jira": [
+      {
+        "attachments": [
+          "jdmart_nct_carousel_impression_gaps_2026-09-22.xlsx"
+        ],
+        "comments": 6,
+        "key": "GJDT-22686",
+        "linked": [
+          {
+            "key": "GJDT-22699",
+            "status": "Closed",
+            "summary": "\"Price on Request\" - extra text seen - \"Recommended Products For You\" section",
+            "type": "Defect"
+          },
+          {
+            "key": "GJDT-22700",
+            "status": "Closed",
+            "summary": "Send Enquiry is seen on recommended Product for you Section's CTA > instead of Call Now ",
+            "type": "Defect"
+          },
+          {
+            "key": "GJDT-22701",
+            "status": "Closed",
+            "summary": "Magic name is passes incorrect for ask for price from recommended product ",
+            "type": "Defect"
+          },
+          {
+            "key": "GJDT-22702",
+            "status": "Closed",
+            "summary": "For Service Category > Logic is not Proper ",
+            "type": "Defect"
+          },
+          {
+            "key": "GJDT-22703",
+            "status": "Closed",
+            "summary": "Concern regarding Listing on recommended Product for You",
+            "type": "Concern"
+          }
+        ],
+        "status": "Ready for Live",
+        "subtasks": [
+          {
+            "key": "GJDT-22687",
+            "kind": "testing",
+            "status": "No Need of Security Testing",
+            "summary": "Security Testing"
+          },
+          {
+            "key": "GJDT-22679",
+            "kind": "design",
+            "status": "Closed",
+            "summary": "Design Requirement"
+          },
+          {
+            "key": "GJDT-22688",
+            "kind": "fe",
+            "status": "Closed",
+            "summary": "FE: Recommended Products For You - logic update - B2B NCT Results Page"
+          },
+          {
+            "key": "GJDT-22695",
+            "kind": "api",
+            "status": "Closed",
+            "summary": "API Changes RPFY:"
+          },
+          {
+            "key": "GJDT-22697",
+            "kind": "testing",
+            "status": "Closed",
+            "summary": "Product UAT: Recommended Products For You - logic update - B2B NCT Results Page"
+          },
+          {
+            "key": "GJDT-22698",
+            "kind": "design",
+            "status": "Closed",
+            "summary": "Design Testing: Recommended Products For You - logic update - B2B NCT Results Page"
+          }
+        ],
+        "summary": "Recommended Products For You - logic update - B2B NCT Results Page",
+        "type": "Story",
+        "url": "https://jdjira.justdial.com/browse/GJDT-22686"
+      }
+    ],
+    "keep": [
+      "TC_RP_HEADING_PRODUCT",
+      "TC_RP_HEADING_SERVICE",
+      "TC_RP_SEARCH_CITY_PREFERENCE",
+      "TC_RP_MACRO_PRIORITY_ORDER",
+      "TC_RP_DS_TYPE_PRIORITY_WITH_PRICE",
+      "TC_RP_DS_TYPE_PRIORITY_WITHOUT_PRICE",
+      "TC_RP_PRICE_PRIORITY_DS_WITHIN_CITY",
+      "TC_RP_PRICE_PRIORITY_DS_OUTSIDE_CITY",
+      "TC_RP_PRICE_PRIORITY_NODS_WITHIN_CITY",
+      "TC_RP_PRICE_PRIORITY_NODS_OUTSIDE_CITY",
+      "TC_DEFECT_22699_NO_PRICE_ON_REQUEST_PRODUCT",
+      "TC_DEFECT_22699_NO_PRICE_ON_REQUEST_SERVICE",
+      "TC_DEFECT_22700_SERVICE_CTA_IS_CALL_NOW",
+      "TC_DEFECT_22702_SEARCH_CITY_PRIORITY_SERVICE_CATEGORY",
+      "TC_CONCERN_22703_OUTSIDE_CITY_ORDER_CONSISTENCY"
+    ],
+    "kept_ids": [
+      "TC_CONCERN_22703_OUTSIDE_CITY_ORDER_CONSISTENCY",
+      "TC_DEFECT_22699_NO_PRICE_ON_REQUEST_PRODUCT",
+      "TC_DEFECT_22699_NO_PRICE_ON_REQUEST_SERVICE",
+      "TC_DEFECT_22700_SERVICE_CTA_IS_CALL_NOW",
+      "TC_DEFECT_22702_SEARCH_CITY_PRIORITY_SERVICE_CATEGORY",
+      "TC_RP_DS_TYPE_PRIORITY_WITHOUT_PRICE",
+      "TC_RP_DS_TYPE_PRIORITY_WITH_PRICE",
+      "TC_RP_HEADING_PRODUCT",
+      "TC_RP_HEADING_SERVICE",
+      "TC_RP_MACRO_PRIORITY_ORDER",
+      "TC_RP_PRICE_PRIORITY_DS_OUTSIDE_CITY",
+      "TC_RP_PRICE_PRIORITY_DS_WITHIN_CITY",
+      "TC_RP_PRICE_PRIORITY_NODS_OUTSIDE_CITY",
+      "TC_RP_PRICE_PRIORITY_NODS_WITHIN_CITY",
+      "TC_RP_SEARCH_CITY_PREFERENCE"
+    ],
+    "model": "claude-sonnet-5",
+    "provider": "anthropic",
+    "questions": [
+      {
+        "example": "rp_product_1st_ds_badge",
+        "question": "Is there (or should we record) a dedicated locator for the 360\u00b0/Video DS-type badge on each recommended-carousel card, to directly count how many of the first 10 cards show the 360\u00b0 tag?",
+        "why": "TC_RP_360_BADGE_ON_TOP_10 currently infers 360\u00b0 presence indirectly via 'verify recommended products carousel order on page' instead of asserting the badge directly"
+      },
+      {
+        "example": "rp_product_1st_cta",
+        "question": "Does the recommended-products carousel card use its own dedicated CTA locator, or does it reuse the main-listing show_number_cta / send_enquiry_button_1st elements?",
+        "why": "TC_DEFECT_22700 and TC_RP_CTA_IS_CALL_NOW_NOT_VIEW_DETAILS assert on show_number_cta/send_enquiry_button_1st, which may belong to the main listing rather than the carousel card specifically"
+      },
+      {
+        "example": "yes, use carpet wholesalers for all ask-for-price cases going forward",
+        "question": "Should the devx Carpet Wholesalers URL now be the standard URL for ALL Ask-For-Price testcases (replacing Steel Merchants), or only for the specific no-price scenario?",
+        "why": "Determines whether TC_DEFECT_22701 and TC_ASK_FOR_PRICE_LEAD_SUBMIT_FLOW should permanently use url_carpet_wholesalers going forward"
+      }
+    ],
+    "sheet_problems": [],
+    "sheets": [
+      "===== SHEET: google-sheet 1LojmBPZ5U_QSEJaEsi3Oi_nhlk9FlWZpxRxRUzqJWk0 gid 0.csv (14 rows) =====",
+      "===== SHEET: google-sheet 1GUMrybfChJ12NrnqFquwvOVqH5R4GLUPOp5PpGYh-9I gid 577544212.csv (14 rows) ====="
+    ],
+    "testcases": [
+      {
+        "classification": "Positive",
+        "covers": [
+          "GJDT-22686 AC11"
+        ],
+        "expected": "rp_heading_h1 shows exact text 'Recommended Products For You' on a live product-category NCT page",
+        "preconditions": [],
+        "priority": "High",
+        "steps": [
+          "# Setup: open a live product-category NCT page (carousel-order cases run on live per tester)",
+          "open ${live_url_steel_merchants}",
+          "wait for result page load",
+          "# Assertion: verify carousel heading text for product category",
+          "scroll until text \"Recommended Products For You\" visible",
+          "verify element rp_heading_h1 has text \"Recommended Products For You\""
+        ],
+        "testcase_id": "TC_RP_HEADING_PRODUCT",
+        "title": "Recommended Products heading shows 'Recommended Products For You' for a product category NCT page (live)"
+      },
+      {
+        "classification": "Positive",
+        "covers": [
+          "GJDT-22686 AC12"
+        ],
+        "expected": "rp_heading_h1 shows exact text 'Recommended Services For You' on a live service-category NCT page",
+        "preconditions": [],
+        "priority": "High",
+        "steps": [
+          "# Setup: open a live service-category NCT page (carousel-order cases run on live per tester)",
+          "open ${live_url_bulk_sms_services}",
+          "wait for result page load",
+          "# Assertion: verify carousel heading text for service category",
+          "scroll until text \"Recommended Services For You\" visible",
+          "verify element rp_heading_h1 has text \"Recommended Services For You\""
+        ],
+        "testcase_id": "TC_RP_HEADING_SERVICE",
+        "title": "Recommended Products heading shows 'Recommended Services For You' for a service category NCT page (live)"
+      },
+      {
+        "classification": "Positive",
+        "covers": [
+          "GJDT-22686 AC1",
+          "GJDT-22686 AC2"
+        ],
+        "expected": "Search-city products appear ahead of outside-city products in the carousel",
+        "preconditions": [],
+        "priority": "High",
+        "steps": [
+          "# Setup: open a live product-category NCT page",
+          "open ${live_url_steel_merchants}",
+          "wait for result page load",
+          "scroll until text \"Recommended Products For You\" visible",
+          "# Assertion: search city products are preferred in the carousel",
+          "verify recommended products prefer search city on page"
+        ],
+        "testcase_id": "TC_RP_SEARCH_CITY_PREFERENCE",
+        "title": "Recommended products carousel prefers the search city over other cities (live)"
+      },
+      {
+        "classification": "Positive",
+        "covers": [
+          "GJDT-22686 AC1",
+          "GJDT-22686 AC2",
+          "GJDT-22686 AC3",
+          "GJDT-22686 AC4",
+          "GJDT-22686 AC8"
+        ],
+        "expected": "Carousel groups appear in exactly this macro order: With DS+Within City, With DS+Outside City, Without DS+Within City, Without DS+Outside City",
+        "preconditions": [],
+        "priority": "Critical",
+        "steps": [
+          "# Setup: open a live product-category NCT page",
+          "open ${live_url_steel_merchants}",
+          "wait for result page load",
+          "scroll until text \"Recommended Products For You\" visible",
+          "# Define the expected macro group order per the updated hierarchy (DS status takes priority over location)",
+          "create variable expected_group_order with value \"WITH_DS_WITHIN_CITY,WITH_DS_OUTSIDE_CITY,WITHOUT_DS_WITHIN_CITY,WITHOUT_DS_OUTSIDE_CITY\"",
+          "# Assertion: verify actual carousel order matches expected macro order",
+          "verify recommended products order in ${expected_group_order}"
+        ],
+        "testcase_id": "TC_RP_MACRO_PRIORITY_ORDER",
+        "title": "Overall macro priority order is With DS+Within City > With DS+Outside City > Without DS+Within City > Without DS+Outside City (live)"
+      },
+      {
+        "classification": "Positive",
+        "covers": [
+          "GJDT-22686 AC5"
+        ],
+        "expected": "Within the With-DS + With-Price subgroup, products are ordered 360+Video, then Only 360, then Only Video",
+        "preconditions": [],
+        "priority": "High",
+        "steps": [
+          "# Setup: open a live product-category NCT page",
+          "open ${live_url_steel_merchants}",
+          "wait for result page load",
+          "scroll until text \"Recommended Products For You\" visible",
+          "# Define expected DS-type order for the With-Price subgroup",
+          "create variable expected_ds_type_order_with_price with value \"360_VIDEO,ONLY_360,ONLY_VIDEO\"",
+          "# Assertion: verify DS-type ordering within With Price candidates",
+          "verify recommended products order in ${expected_ds_type_order_with_price}"
+        ],
+        "testcase_id": "TC_RP_DS_TYPE_PRIORITY_WITH_PRICE",
+        "title": "Within a With-DS + With-Price subgroup, DS type order is 360+Video > Only 360 > Only Video (live)"
+      },
+      {
+        "classification": "Positive",
+        "covers": [
+          "GJDT-22686 AC5",
+          "GJDT-22686 AC9"
+        ],
+        "expected": "Within the With-DS + Without-Price subgroup, products are ordered 360+Video, then Only 360, then Only Video",
+        "preconditions": [],
+        "priority": "High",
+        "steps": [
+          "# Setup: open a live product-category NCT page",
+          "open ${live_url_steel_merchants}",
+          "wait for result page load",
+          "scroll until text \"Recommended Products For You\" visible",
+          "# Define expected DS-type order for the Without-Price subgroup",
+          "create variable expected_ds_type_order_without_price with value \"360_VIDEO,ONLY_360,ONLY_VIDEO\"",
+          "# Assertion: verify DS-type ordering within Without Price candidates",
+          "verify recommended products order in ${expected_ds_type_order_without_price}"
+        ],
+        "testcase_id": "TC_RP_DS_TYPE_PRIORITY_WITHOUT_PRICE",
+        "title": "Within a With-DS + Without-Price subgroup, DS type order is 360+Video > Only 360 > Only Video (live)"
+      },
+      {
+        "classification": "Positive",
+        "covers": [
+          "GJDT-22686 AC6"
+        ],
+        "expected": "With-Price candidates precede Without-Price candidates within the With-DS + Within-city subgroup",
+        "preconditions": [],
+        "priority": "High",
+        "steps": [
+          "# Setup: open a live product-category NCT page",
+          "open ${live_url_steel_merchants}",
+          "wait for result page load",
+          "scroll until text \"Recommended Products For You\" visible",
+          "# Define expected price order for With DS + Within city group",
+          "create variable expected_price_order_ds_within with value \"WITH_PRICE,WITHOUT_PRICE\"",
+          "# Assertion: verify price-based ordering inside this subgroup",
+          "verify recommended products order in ${expected_price_order_ds_within}"
+        ],
+        "testcase_id": "TC_RP_PRICE_PRIORITY_DS_WITHIN_CITY",
+        "title": "With Price is prioritised over Without Price within With-DS + Within-Search-City group (live)"
+      },
+      {
+        "classification": "Positive",
+        "covers": [
+          "GJDT-22686 AC6"
+        ],
+        "expected": "With-Price candidates precede Without-Price candidates within the With-DS + Outside-city subgroup",
+        "preconditions": [],
+        "priority": "High",
+        "steps": [
+          "# Setup: open a live product-category NCT page",
+          "open ${live_url_steel_merchants}",
+          "wait for result page load",
+          "scroll until text \"Recommended Products For You\" visible",
+          "# Define expected price order for With DS + Outside city group",
+          "create variable expected_price_order_ds_outside with value \"WITH_PRICE,WITHOUT_PRICE\"",
+          "# Assertion: verify price-based ordering inside this subgroup",
+          "verify recommended products order in ${expected_price_order_ds_outside}"
+        ],
+        "testcase_id": "TC_RP_PRICE_PRIORITY_DS_OUTSIDE_CITY",
+        "title": "With Price is prioritised over Without Price within With-DS + Outside-Search-City group (live)"
+      },
+      {
+        "classification": "Positive",
+        "covers": [
+          "GJDT-22686 AC6"
+        ],
+        "expected": "With-Price candidates precede Without-Price candidates within the Without-DS + Within-city subgroup",
+        "preconditions": [],
+        "priority": "Medium",
+        "steps": [
+          "# Setup: open a live product-category NCT page",
+          "open ${live_url_steel_merchants}",
+          "wait for result page load",
+          "scroll until text \"Recommended Products For You\" visible",
+          "# Define expected price order for Without DS + Within city group",
+          "create variable expected_price_order_nods_within with value \"WITH_PRICE,WITHOUT_PRICE\"",
+          "# Assertion: verify price-based ordering inside this subgroup",
+          "verify recommended products order in ${expected_price_order_nods_within}"
+        ],
+        "testcase_id": "TC_RP_PRICE_PRIORITY_NODS_WITHIN_CITY",
+        "title": "With Price is prioritised over Without Price within Without-DS + Within-Search-City group (live)"
+      },
+      {
+        "classification": "Positive",
+        "covers": [
+          "GJDT-22686 AC6"
+        ],
+        "expected": "With-Price candidates precede Without-Price candidates within the Without-DS + Outside-city subgroup",
+        "preconditions": [],
+        "priority": "Medium",
+        "steps": [
+          "# Setup: open a live product-category NCT page",
+          "open ${live_url_steel_merchants}",
+          "wait for result page load",
+          "scroll until text \"Recommended Products For You\" visible",
+          "# Define expected price order for Without DS + Outside city group",
+          "create variable expected_price_order_nods_outside with value \"WITH_PRICE,WITHOUT_PRICE\"",
+          "# Assertion: verify price-based ordering inside this subgroup",
+          "verify recommended products order in ${expected_price_order_nods_outside}"
+        ],
+        "testcase_id": "TC_RP_PRICE_PRIORITY_NODS_OUTSIDE_CITY",
+        "title": "With Price is prioritised over Without Price within Without-DS + Outside-Search-City group (lowest priority group, live)"
+      },
+      {
+        "classification": "Positive",
+        "covers": [
+          "GJDT-22699"
+        ],
+        "expected": "The text 'Price on Request' does not appear anywhere in the Recommended Products For You carousel.",
+        "preconditions": [],
+        "priority": "High",
+        "steps": [
+          "# Setup: open the exact defect repro URL",
+          "open ${product_category_url}",
+          "wait for result page load",
+          "scroll until text \"Recommended Products For You\" visible",
+          "# Assertion: forbidden extra text is absent",
+          "verify page does not contain \"Price on Request\""
+        ],
+        "testcase_id": "TC_DEFECT_22699_NO_PRICE_ON_REQUEST_PRODUCT",
+        "title": "Regression: 'Price on Request' extra text is not shown in Recommended Products carousel (Fabrication Contractors)"
+      },
+      {
+        "classification": "Positive",
+        "covers": [
+          "GJDT-22699"
+        ],
+        "expected": "The text 'Price on Request' does not appear anywhere in the Recommended Services For You carousel.",
+        "preconditions": [],
+        "priority": "High",
+        "steps": [
+          "# Setup: open the exact defect repro URL",
+          "open ${cng_service_url}",
+          "wait for result page load",
+          "scroll until text \"Recommended Services For You\" visible",
+          "# Assertion: forbidden extra text is absent",
+          "verify page does not contain \"Price on Request\""
+        ],
+        "testcase_id": "TC_DEFECT_22699_NO_PRICE_ON_REQUEST_SERVICE",
+        "title": "Regression: 'Price on Request' extra text is not shown in Recommended Services carousel (CNG Cylinder Testing Services)"
+      },
+      {
+        "classification": "Positive",
+        "covers": [
+          "GJDT-22700"
+        ],
+        "expected": "The recommended carousel card CTA for a service category is 'Call Now' (show_number_cta), and the Send Enquiry CTA is not displayed.",
+        "preconditions": [],
+        "priority": "High",
+        "steps": [
+          "# Setup: open the exact defect repro URL for a service category",
+          "open ${bulk_sms_link_road_url}",
+          "wait for result page load",
+          "scroll until text \"Recommended Services For You\" visible",
+          "# Assertion: Call Now CTA is visible and Send Enquiry CTA is not shown on the carousel card",
+          "verify element show_number_cta is visible",
+          "verify element send_enquiry_button_1st is not visible"
+        ],
+        "testcase_id": "TC_DEFECT_22700_SERVICE_CTA_IS_CALL_NOW",
+        "title": "Regression: Recommended Products/Services carousel CTA shows Call Now (not Send Enquiry) for a service category"
+      },
+      {
+        "classification": "Positive",
+        "covers": [
+          "GJDT-22701",
+          "GJDT-22686"
+        ],
+        "expected": "the click-tracking li fires and the captured data-magic attribute equals wap2_rfq_askforprice_rsltpge, not the old wap2_bdcall_result value",
+        "preconditions": [],
+        "priority": "Critical",
+        "steps": [
+          "# Setup: authenticate on devx and open the devx no-price product-category NCT page explicitly designated for Ask For Price testing",
+          "open ${devx}",
+          "open ${url_carpet_wholesalers}",
+          "wait for result page load",
+          "scroll until element get_best_price_any_button visible, scroll by 300 pixels",
+          "# Action: start capturing network requests and capture the magic name attribute before triggering the lead",
+          "start capturing network requests",
+          "store attribute data-magic of get_best_price_any_button as magic_name_attr",
+          "click get_best_price_any_button",
+          "# Assertion: open-sheet click-tracking li fires on click",
+          "verify network request containing \"gbp_afp_b2b_plisting_carousel\" was sent",
+          "# Assertion: magic name matches the expected Touch value, not the old incorrect wap2_bdcall_result",
+          "verify stored magic_name_attr contains \"wap2_rfq_askforprice_rsltpge\""
+        ],
+        "testcase_id": "TC_DEFECT_22701_MAGIC_NAME_ASK_FOR_PRICE",
+        "title": "Regression: Ask For Price CTA on recommended carousel carries the correct magic name (wap2_rfq_askforprice_rsltpge) on Touch - devx, no-price category (Carpet Wholesalers)"
+      },
+      {
+        "classification": "Positive",
+        "covers": [
+          "GJDT-22702"
+        ],
+        "expected": "Search city (Mumbai) products are shown ahead of outside-city products on devx",
+        "preconditions": [],
+        "priority": "High",
+        "steps": [
+          "# Setup: open the exact defect repro URL for the affected service category on devx (bug was devx-only per ticket comment)",
+          "open ${url_bulk_sms_services}",
+          "wait for result page load",
+          "scroll until text \"Recommended Services For You\" visible",
+          "# Assertion: search city (Mumbai) products are preferred over other cities' products",
+          "verify recommended products prefer search city on page"
+        ],
+        "testcase_id": "TC_DEFECT_22702_SEARCH_CITY_PRIORITY_SERVICE_CATEGORY",
+        "title": "Regression: Search city is prioritised in Recommended Services carousel for a service category (Bulk SMS Services, Mumbai, devx)"
+      },
+      {
+        "classification": "Positive",
+        "covers": [
+          "GJDT-22703",
+          "existing: Recommended_Product_City_Preference"
+        ],
+        "expected": "Search-city products rank ahead of outside-city products, and DS/price hierarchy holds overall; the test does not assert any specific order among Delhi/Chittorgarh/Indore/etc. outside-city entries.",
+        "preconditions": [
+          "Tester/PM confirmed on GJDT-22703: there is no defined ordering among cities other than the search city",
+          "Carousel-order cases run on www.justdial.com live URLs"
+        ],
+        "priority": "Medium",
+        "steps": [
+          "# Setup: open the live Steel Merchants search results page (carousel-order cases run on live)",
+          "open ${live_url_steel_merchants_mumbai}",
+          "wait for result page load",
+          "scroll until text \"Recommended Products For You\" visible",
+          "# Assertion: search-city products are preferred ahead of any outside-city products",
+          "verify recommended products prefer search city on page",
+          "# Assertion: the overall DS > price hierarchy is respected across the carousel; no assertion is made on the relative order among different outside cities (per GJDT-22703 clarification)",
+          "verify recommended products carousel order on page"
+        ],
+        "testcase_id": "TC_CONCERN_22703_OUTSIDE_CITY_ORDER_CONSISTENCY",
+        "title": "Concern regression: no specific order is enforced among outside-search-city products; only DS > search-city > price hierarchy holds (Steel Merchants, live)"
+      },
+      {
+        "classification": "Positive",
+        "covers": [
+          "GJDT-22686",
+          "GJDT-22688"
+        ],
+        "expected": "click-tracking li fires pre-submit, OTP lead completes with success_toaster shown, submit li fires only after success, and lead_gen.php confirms mobile/category/page/position/lead-type/bd params",
+        "preconditions": [],
+        "priority": "Critical",
+        "steps": [
+          "# Setup: authenticate on devx and open the devx no-price product-category NCT page explicitly designated for Ask For Price testing",
+          "open ${devx}",
+          "open ${url_carpet_wholesalers}",
+          "wait for result page load",
+          "scroll until element get_best_price_any_button visible, scroll by 300 pixels",
+          "# Action: start capturing network requests before triggering Ask For Price so the click-tracking li can be asserted",
+          "start capturing network requests",
+          "click get_best_price_any_button",
+          "# Assertion: the open-sheet click-tracking li fires on click",
+          "verify network request containing \"gbp_afp_b2b_plisting_carousel\" was sent",
+          "wait until element gbp_sheet_heading is visible",
+          "verify element gbp_sheet_heading is visible",
+          "# Assertion: the submit li must NOT have fired yet, before the lead is actually submitted",
+          "store network request containing \"submit__gbp_afp_b2b_plisting_carousel\" as submitLiBefore",
+          "verify stored submitLiBefore is not \"submit__gbp_afp_b2b_plisting_carousel\"",
+          "# Action: enter mobile number and request OTP for the Ask For Price lead",
+          "type \"${mobile}\" into mobile_number_input",
+          "click gbp_submit_now_button",
+          "wait until element otp_1st_field is visible",
+          "# Action: fetch the OTP from the communication events API and enter it",
+          "api get \"http://192.168.131.12/communication/api/v1/get_events?mobileEmail=${mobile}&vertical=OTP\" as otpResp",
+          "store json otpResp path data.response.0.sms.text as otpText",
+          "store regex \"(\\d{4,8})\" from otpText as otp",
+          "enter otp \"${otp}\" into otp_fields",
+          "# Assertion: lead submission succeeds",
+          "verify element success_toaster is visible",
+          "# Assertion: the submit click-tracking li fires only AFTER successful lead generation",
+          "verify network request containing \"submit__gbp_afp_b2b_plisting_carousel\" was sent",
+          "# Setup: derive city, category and today's date needed by the lead-gen verification API",
+          "store regex \"justdial\\.com/([^/]+)/\" from page url as city",
+          "store regex \"justdial\\.com/[^/]+/([^/?]+)/nct-\" from page url as category",
+          "store lowercase of \"${city}\" as cityLower",
+          "get today as d",
+          "format date \"${d}\" as \"YYYY-MM-DD\" into today",
+          "# Assertion: lead_gen.php confirms the lead was generated with the correct params (dev=1 for devx/staging)",
+          "api get \"http://192.168.35.197:8111/lead_gen.php?city=${cityLower}&date=${today}&mobile=${mobile}&msg=1&dev=1\" as leadGenResp",
+          "verify stored leadGenResp contains \"${mobile}\"",
+          "verify stored leadGenResp contains \"${category}\"",
+          "verify stored leadGenResp contains \"rsltpge\"",
+          "verify stored leadGenResp contains \"recommended-products\"",
+          "verify stored leadGenResp contains \"get_best_price\"",
+          "verify stored leadGenResp contains \"bd\""
+        ],
+        "testcase_id": "TC_ASK_FOR_PRICE_LEAD_SUBMIT_FLOW",
+        "title": "Ask For Price CTA on recommended carousel (devx, no-price category - Carpet Wholesalers) submits a lead via mobile+OTP, verified by click-tracking li's and lead_gen.php API"
+      },
+      {
+        "classification": "Positive",
+        "covers": [
+          "GJDT-22686",
+          "sheet: ASk for Price for Cases where there is no Price > Only incase of Touch module > For Apps it wont be seen"
+        ],
+        "expected": "the Ask For Price CTA (get_best_price_any_button) is visible on the recommended-products carousel for the no-price product on Touch/mobilesite",
+        "preconditions": [],
+        "priority": "High",
+        "steps": [
+          "# Setup: open the live no-price product category NCT page where Ask For Price CTA replaces price (Touch only, per GJDT-22686 lead-param spec)",
+          "open ${live_url_tyre_manufacturers}",
+          "wait for result page load",
+          "scroll until text \"Recommended Products For You\" visible",
+          "# Assertion: Ask For Price CTA is visible on the recommended-products carousel card that has no price",
+          "scroll until element get_best_price_any_button visible, scroll by 300 pixels",
+          "verify element get_best_price_any_button is visible"
+        ],
+        "testcase_id": "TC_RP_ASK_FOR_PRICE_CTA_SHOWN_FOR_NO_PRICE_LIVE",
+        "title": "Ask For Price CTA is shown on the recommended-products carousel for a no-price product (Touch/mobilesite), live"
+      },
+      {
+        "classification": "Positive",
+        "covers": [
+          "GJDT-22686",
+          "sheet: No Changes in CTA of Recommended Products it will be CALL NOW",
+          "sheet: Call now CTA will be seen in every CTA on recommended Product for you Section > View details which was seen earlier is now has been changed to Call Now"
+        ],
+        "expected": "the carousel card CTA shows 'Call Now' and the page contains no 'View Details' label",
+        "preconditions": [],
+        "priority": "Medium",
+        "steps": [
+          "# Setup: open a live product-category NCT page with a search-city, no-DS, with-price product in the carousel",
+          "open ${live_url_hercules_bicycle_wholesalers}",
+          "wait for result page load",
+          "scroll until text \"Recommended Products For You\" visible",
+          "# Assertion: Call Now CTA is visible and the old 'View Details' label is absent",
+          "verify element show_number_cta is visible",
+          "verify page does not contain \"View Details\""
+        ],
+        "testcase_id": "TC_RP_CTA_IS_CALL_NOW_NOT_VIEW_DETAILS",
+        "title": "Recommended-products carousel CTA reads 'Call Now', legacy 'View Details' label is not shown"
+      },
+      {
+        "classification": "Positive",
+        "covers": [
+          "GJDT-22686 AC5",
+          "sheet: 360 Tags on Recommended product for you section on 10 Products"
+        ],
+        "expected": "the carousel renders at least 10 recommended products and the DS-based carousel order check (reading each card's 360\u00b0 badge) passes",
+        "preconditions": [],
+        "priority": "Medium",
+        "steps": [
+          "# Setup: open the live product-category NCT page known to carry 10+ 360\u00b0-tagged recommended products",
+          "open ${live_url_tile_wholesalers}",
+          "wait for result page load",
+          "scroll until text \"Recommended Products For You\" visible",
+          "# Assertion: at least 10 recommended products are rendered in the carousel",
+          "store count of rp_product_names as productCount",
+          "verify stored productCount is at least 10",
+          "# Assertion: DS-based ordering (which reads the 360\u00b0 badge on each card) is respected across the carousel, confirming the badges are present and correctly classified",
+          "verify recommended products carousel order on page",
+          "verify element rp_product_1st is visible"
+        ],
+        "testcase_id": "TC_RP_360_BADGE_ON_TOP_10",
+        "title": "Recommended Products For You carousel shows at least 10 products with 360\u00b0 tags (Tile Wholesalers, Jaipur)"
+      },
+      {
+        "classification": "Positive",
+        "covers": [
+          "GJDT-22686 Digital Showroom Priority",
+          "sheet: In case where there will be no 360 images but AI video is present then those Products will be prioritised on Recommended Product for you Section"
+        ],
+        "expected": "both the API list and the rendered carousel rank the only-video (no 360\u00b0) DS candidate ahead of any Without-DS candidate, per the DS-type sub-priority",
+        "preconditions": [],
+        "priority": "High",
+        "steps": [
+          "# Setup: open the live service-category NCT page known to have an only-video (no 360\u00b0) DS product",
+          "open ${live_url_bulk_sms_services}",
+          "wait for result page load",
+          "scroll until text \"Recommended Services For You\" visible",
+          "# Setup: derive API params from the page URL and fetch the recommendation list",
+          "store regex \"justdial\\.com/([^/]+)/\" from page url as city1",
+          "store regex \"justdial\\.com/[^/]+/([^/?]+)/nct-\" from page url as query1",
+          "store regex \"nct-(\\d+)\" from page url as ncatid1",
+          "api get \"${rp_api_base_live}&city=${city1}&ncatid=${ncatid1}&query=${query1}\" as apiResp1",
+          "# Assertion: API list follows the DS > city > price > DS-type hierarchy, so an only-video candidate still outranks Without-DS candidates",
+          "verify recommended products order in apiResp1",
+          "# Assertion: rendered carousel matches the same hierarchy",
+          "verify recommended products carousel order on page"
+        ],
+        "testcase_id": "TC_RP_ONLY_VIDEO_PRIORITY_OVER_NO_DS",
+        "title": "Only-Video DS candidates (no 360\u00b0) are still prioritised over Without-DS candidates in the recommended carousel (Bulk SMS Services, Mumbai)"
+      },
+      {
+        "classification": "Positive",
+        "covers": [
+          "GJDT-22686",
+          "sheet: Service Category"
+        ],
+        "expected": "for all three service categories, the recommended carousel follows the DS > city > price hierarchy and prefers the search city, confirming the updated logic holds uniformly for services",
+        "preconditions": [],
+        "priority": "High",
+        "steps": [
+          "# Setup: open first service-category NCT page (Crane Services)",
+          "open ${live_url_crane_services}",
+          "wait for result page load",
+          "scroll until text \"Recommended Services For You\" visible",
+          "# Assertion: carousel order and search-city preference hold for this service category",
+          "verify recommended products carousel order on page",
+          "verify recommended products prefer search city on page",
+          "# Setup: open second service-category NCT page (Bulk SMS Services, Paras Nagar)",
+          "open ${live_url_bulk_sms_paras_nagar}",
+          "wait for result page load",
+          "scroll until text \"Recommended Services For You\" visible",
+          "# Assertion: carousel order and search-city preference hold for this service category",
+          "verify recommended products carousel order on page",
+          "verify recommended products prefer search city on page",
+          "# Setup: open third service-category NCT page (Transporters, Paras Nagar)",
+          "open ${live_url_transporters_paras_nagar}",
+          "wait for result page load",
+          "scroll until text \"Recommended Services For You\" visible",
+          "# Assertion: carousel order and search-city preference hold for this service category",
+          "verify recommended products carousel order on page",
+          "verify recommended products prefer search city on page"
+        ],
+        "testcase_id": "TC_RP_SERVICE_CATEGORY_ORDER_MULTI_URL",
+        "title": "Recommended Services carousel follows DS > search-city > price hierarchy across multiple service categories (Crane Services, Bulk SMS Services, Transporters - Paras Nagar, Mumbai)"
+      },
+      {
+        "classification": "Negative",
+        "covers": [
+          "GJDT-22686",
+          "sheet: NO recommended product for You Section Case"
+        ],
+        "expected": "the Recommended Products/Services For You section does not appear on the page, matching existing live behaviour",
+        "preconditions": [],
+        "priority": "Medium",
+        "steps": [
+          "# Setup: open a live NCT page for a category known to have no eligible recommendation candidates (same as live behaviour)",
+          "open ${live_url_cargo_box_manufacturers}",
+          "wait for result page load",
+          "wait 3 seconds",
+          "# Assertion: the recommended-products carousel heading is not rendered",
+          "verify element rp_carousel_heading is not visible"
+        ],
+        "testcase_id": "TC_RP_NO_SECTION_FOR_INELIGIBLE_CATEGORY",
+        "title": "Recommended Products/Services section is absent for a category with no qualifying recommendation candidates (Cargo Box Manufacturers, Mumbai)"
+      },
+      {
+        "classification": "Positive",
+        "covers": [
+          "GJDT-22686",
+          "sheet: With Price & Without For Search City - DS / Other City DS / Within City Non DS with Price"
+        ],
+        "expected": "both the API list and rendered carousel for Carpet Wholesalers follow the DS > search-city > price hierarchy despite the mixed candidate pool",
+        "preconditions": [],
+        "priority": "High",
+        "steps": [
+          "# Setup: open the live Carpet Wholesalers NCT page carrying a mix of DS/non-DS, in-city/out-of-city and priced/unpriced candidates",
+          "open ${live_url_carpet_wholesalers}",
+          "wait for result page load",
+          "scroll until text \"Recommended Products For You\" visible",
+          "# Setup: derive API params from the page URL and fetch the recommendation list",
+          "store regex \"justdial\\.com/([^/]+)/\" from page url as city1",
+          "store regex \"justdial\\.com/[^/]+/([^/?]+)/nct-\" from page url as query1",
+          "store regex \"nct-(\\d+)\" from page url as ncatid1",
+          "api get \"${rp_api_base_live}&city=${city1}&ncatid=${ncatid1}&query=${query1}\" as apiResp1",
+          "# Assertion: API order and carousel order follow the DS > city > price hierarchy across this mixed data set",
+          "verify recommended products order in apiResp1",
+          "verify recommended products carousel order on page",
+          "verify recommended products prefer search city on page"
+        ],
+        "testcase_id": "TC_RP_MIXED_PRICE_CITY_CARPET_WHOLESALERS",
+        "title": "Mixed With/Without-Price, search-city + other-city DS + within-city non-DS with-price candidates follow the updated hierarchy (Carpet Wholesalers)"
+      }
+    ],
+    "unclear": [],
+    "usage": {
+      "input_tokens": 32059,
+      "output_tokens": 21628
+    },
+    "values_found": {
+      "bulk_sms_link_road_url": "https://www.justdial.com/Leh-Ladakh/Umbrella-Distributors/nct-10506673?fl=undefined&ismap=undefined&subpage=&searchCase=&term=umbrella%2520distri&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Umbrella%20Distributors&trkid=27703-remotecity",
+      "cng_service_url": "https://www.justdial.com/Mumbai/Carpet-Wholesalers-in-Indira-Nagar-Vikhroli-East/nct-10081039?fl=undefined&ismap=undefined&subpage=&searchCase=&term=carpet%2520&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Carpet%20Wholesalers&trkid=192699-mumbai\\",
+      "live_url_bulk_sms_paras_nagar": "https://www.justdial.com/Mumbai/Cargo-Box-Manufacturers-in-Indira-Nagar-Vikhroli-East/nct-12171901?fl=undefined&ismap=undefined&subpage=&searchCase=&term=cargo%20box&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Cargo%20Box%20Manufacturers&trkid=4477584-mumbai&isLogin=1",
+      "live_url_bulk_sms_services": "https://www.justdial.com/Mumbai/Wire-Wholesalers/nct-10541446?fl=undefined&ismap=&subpage=&searchCase=&term=wire%20whol&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Wire%20Wholesalers&trkid=207036-hyderabad",
+      "live_url_cargo_box_manufacturers": "https://www.justdial.com/Mumbai/Curtian-Distributors-DDecor-in-Link-Road-Malad-West/nct-11785749?fl=undefined&ismap=undefined&subpage=&searchCase=&term=curtiain%2520dis&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Curtian%20Distributors-DDecor&trkid=7961575-mumbai",
+      "live_url_carpet_wholesalers": "https://www.justdial.com/Bhopal/Machine-Tool-Dealers/nct-10306762?trkid=26527-remotecity-fcat&term=machine%20tool%20dealer",
+      "live_url_crane_services": "https://www.justdial.com/Mumbai/Crane-Services-in-Paras-Nagar-Kandivali-West/nct-10146337?fl=undefined&ismap=undefined&subpage=&searchCase=&term=crane%2520services&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Crane%20Services&trkid=361586-mumbai",
+      "live_url_hercules_bicycle_wholesalers": "https://www.justdial.com/Mumbai/Hotel-Equipment-Manufacturers-in-Link-Road-Malad-West/nct-10254380?fl=undefined&ismap=undefined&subpage=&searchCase=&term=hotel%2520equi&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Hotel%20Equipment%20Manufacturers&trkid=11624518-mumbai",
+      "live_url_steel_merchants": "https://devx.justdial.com/Mumbai/Carpet-Wholesalers-in-Indira-Nagar-Vikhroli-East/nct-10081039?fl=undefined&ismap=undefined&subpage=&searchCase=&term=carpet%2520&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Carpet%20Wholesalers&trkid=192699-mumbai",
+      "live_url_steel_merchants_mumbai": "https://www.justdial.com/Jaipur/Transporters/nct-10495191?fl=undefined&ismap=undefined&subpage=&searchCase=&term=Transporters%2520&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Transporters&trkid=310-remotecity",
+      "live_url_tile_wholesalers": "https://www.justdial.com/Hyderabad/Screw-Importers/nct-10424250?fl=undefined&ismap=undefined&subpage=&searchCase=&term=screw%2520impo&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Screw%20Importers&trkid=12479278-hyderabad",
+      "live_url_transporters_paras_nagar": "https://www.justdial.com/Chennai/Bat-Distributors-MRF/nct-12076726?fl=undefined&ismap=undefined&subpage=&searchCase=&term=Bat%2520distributors%2520-%2520mrf&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Bat%20Distributors-MRF&trkid=8467821-chennai",
+      "live_url_tyre_manufacturers": "https://www.justdial.com/Mumbai/Jeans-Wholesalers-Pepe-Jeans/nct-11282399?fl=undefined&ismap=undefined&subpage=&searchCase=&term=pepe%2520jeans%2520wholesale&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Jeans%20Wholesalers-Pepe%20Jeans&trkid=224353-mumbai",
+      "otp": "22686",
+      "product_category_url": "https://www.justdial.com/Mumbai/Brick-Wholesalers/nct-10057470?fl=undefined&ismap=undefined&subpage=&searchCase=&term=brick%2520whol&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Brick%20Wholesalers&trkid=192616-mumbai",
+      "rp_api_base_live": "http://192.168.35.197:8111/lead_gen.php?city=Mumbai&date=2026-09-24&sid=6ab52e150e0033ae077f8311&dev=1&msg=1&umsg=1",
+      "url_bulk_sms_services": "https://www.justdial.com/Chennai/Arduino-Board-Wholesalers/nct-11957516?fl=undefined&ismap=undefined&subpage=&searchCase=&term=Arduino%2520board%2520whoelsalers%2520&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Arduino%20Board%20Wholesalers&trkid=4030859-chennai",
+      "url_carpet_wholesalers": "https://www.justdial.com/Mumbai/Hercules-Bicycle-Wholesalers/nct-10045474?fl=undefined&ismap=undefined&subpage=&searchCase=&term=hercules%2520bicycle%2520wholesalers%2520&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Hercules-Bicycle%20Wholesalers&trkid=926575-mumbai"
+    }
+  },
+  "prompt": "https://jdjira.justdial.com/browse/GJDT-22686\n\nCASES URLS https://docs.google.com/spreadsheets/d/1LojmBPZ5U_QSEJaEsi3Oi_nhlk9FlWZpxRxRUzqJWk0/edit?gid=0#gid=0\nFOR AKS FOR PRICE - DEVX URL - https://devx.justdial.com/Mumbai/Carpet-Wholesalers-in-Indira-Nagar-Vikhroli-East/nct-10081039?fl=undefined&ismap=undefined&subpage=&searchCase=&term=carpet%2520&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Carpet%20Wholesalers&trkid=192699-mumbai"
+}

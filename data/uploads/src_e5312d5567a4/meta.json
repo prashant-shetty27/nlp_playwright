@@ -1,0 +1,151 @@
+{
+  "source_id": "src_e5312d5567a4",
+  "filename": "draft.json",
+  "kind": "prompt",
+  "size_bytes": 52254,
+  "sha256": "a6e5d122485dfb492d74637569b0874ddf846dcd131b25a3aee4582b4fb7c2a9",
+  "uploaded_at": "2026-09-25T07:26:50Z",
+  "uploaded_by": "",
+  "extra": {
+    "prompt": "https://jdjira.justdial.com/browse/GJDT-22686\n\nCASES URLS https://docs.google.com/spreadsheets/d/1LojmBPZ5U_QSEJaEsi3Oi_nhlk9FlWZpxRxRUzqJWk0/edit?gid=0#gid=0\nFOR AKS FOR PRICE - DEVX URL - https://devx.justdial.com/Mumbai/Carpet-Wholesalers-in-Indira-Nagar-Vikhroli-East/nct-10081039?fl=undefined&ismap=undefined&subpage=&searchCase=&term=carpet%2520&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Carpet%20Wholesalers&trkid=192699-mumbai\n\nAnswers from the tester:\n- Q: Is there (or should we record) a dedicated locator for the 360\u00b0/Video DS-type badge on each recommended-carousel card, to directly count how many of the first 10 cards show the 360\u00b0 tag?\n  A: <div class=\"carouselview__img3dwrp\"><span class=\"carouselview__img3dicn\"></span></div> FOR 360 IMAGE AND FOR AI VIDEO THERE IS NO IDENTIFIER ON RESULT PAGE\n- Q: Does the recommended-products carousel card use its own dedicated CTA locator, or does it reuse the main-listing show_number_cta / send_enquiry_button_1st elements?\n  A: CALL NOW - <div class=\"carousel_view3-button carousel_view3-call-button font12\"><img src=\"https://akam.cdn.jdmagicbox.com/images/icontent/newwap/newprot_w/dtal_phnewhite.svg\" alt=\"\" height=\"12\" width=\"12\">Call Now </div> , ASK FOR PRICE - <div class=\"carousel_view3-price\"><span class=\"carousel_view3-askPrice font13\">Ask for Price</span></div>\n- Q: Should the devx Carpet Wholesalers URL now be the standard URL for ALL Ask-For-Price testcases (replacing Steel Merchants), or only for the specific no-price scenario?\n  A: YES TILL ITS LIVE USE THIS FOR ASK FOR PRICE ONLY https://devx.justdial.com/Mumbai/Carpet-Wholesalers-in-Indira-Nagar-Vikhroli-East/nct-10081039?fl=undefined&ismap=undefined&subpage=&searchCase=&term=carpet%2520&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Carpet%20Wholesalers&trkid=192699-mumbai",
+    "provider": "anthropic",
+    "model": "claude-sonnet-5",
+    "testcases": 24,
+    "values_found": {
+      "live_url_steel_merchants": "https://devx.justdial.com/Mumbai/Carpet-Wholesalers-in-Indira-Nagar-Vikhroli-East/nct-10081039?fl=undefined&ismap=undefined&subpage=&searchCase=&term=carpet%2520&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Carpet%20Wholesalers&trkid=192699-mumbai",
+      "live_url_bulk_sms_services": "https://akam.cdn.jdmagicbox.com/images/icontent/newwap/newprot_w/dtal_phnewhite.svg",
+      "product_category_url": "https://devx.justdial.com/Mumbai/Carpet-Wholesalers-in-Indira-Nagar-Vikhroli-East/nct-10081039?fl=undefined&ismap=undefined&subpage=&searchCase=&term=carpet%2520&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Carpet%20Wholesalers&trkid=192699-mumbai",
+      "cng_service_url": "https://www.justdial.com/Mumbai/Wire-Wholesalers/nct-10541446?fl=undefined&ismap=&subpage=&searchCase=&term=wire%20whol&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Wire%20Wholesalers&trkid=207036-hyderabad",
+      "bulk_sms_link_road_url": "https://www.justdial.com/Mumbai/Brick-Wholesalers/nct-10057470?fl=undefined&ismap=undefined&subpage=&searchCase=&term=brick%2520whol&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Brick%20Wholesalers&trkid=192616-mumbai",
+      "url_carpet_wholesalers": "https://www.justdial.com/Mumbai/Carpet-Wholesalers-in-Indira-Nagar-Vikhroli-East/nct-10081039?fl=undefined&ismap=undefined&subpage=&searchCase=&term=carpet%2520&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Carpet%20Wholesalers&trkid=192699-mumbai\\",
+      "url_bulk_sms_services": "https://www.justdial.com/Leh-Ladakh/Umbrella-Distributors/nct-10506673?fl=undefined&ismap=undefined&subpage=&searchCase=&term=umbrella%2520distri&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Umbrella%20Distributors&trkid=27703-remotecity",
+      "live_url_steel_merchants_mumbai": "https://www.justdial.com/Mumbai/Hercules-Bicycle-Wholesalers/nct-10045474?fl=undefined&ismap=undefined&subpage=&searchCase=&term=hercules%2520bicycle%2520wholesalers%2520&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Hercules-Bicycle%20Wholesalers&trkid=926575-mumbai",
+      "otp": "22686",
+      "live_url_hercules_bicycle_wholesalers": "https://www.justdial.com/Chennai/Arduino-Board-Wholesalers/nct-11957516?fl=undefined&ismap=undefined&subpage=&searchCase=&term=Arduino%2520board%2520whoelsalers%2520&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Arduino%20Board%20Wholesalers&trkid=4030859-chennai",
+      "live_url_tile_wholesalers": "https://www.justdial.com/Jaipur/Transporters/nct-10495191?fl=undefined&ismap=undefined&subpage=&searchCase=&term=Transporters%2520&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Transporters&trkid=310-remotecity",
+      "rp_api_base_live": "http://192.168.35.197:8111/lead_gen.php?city=Mumbai&date=2026-09-24&sid=6ab52e150e0033ae077f8311&dev=1&msg=1&umsg=1",
+      "live_url_crane_services": "https://www.justdial.com/Mumbai/Jeans-Wholesalers-Pepe-Jeans/nct-11282399?fl=undefined&ismap=undefined&subpage=&searchCase=&term=pepe%2520jeans%2520wholesale&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Jeans%20Wholesalers-Pepe%20Jeans&trkid=224353-mumbai",
+      "live_url_bulk_sms_paras_nagar": "https://www.justdial.com/Mumbai/Hotel-Equipment-Manufacturers-in-Link-Road-Malad-West/nct-10254380?fl=undefined&ismap=undefined&subpage=&searchCase=&term=hotel%2520equi&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Hotel%20Equipment%20Manufacturers&trkid=11624518-mumbai",
+      "live_url_transporters_paras_nagar": "https://www.justdial.com/Hyderabad/Screw-Importers/nct-10424250?fl=undefined&ismap=undefined&subpage=&searchCase=&term=screw%2520impo&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Screw%20Importers&trkid=12479278-hyderabad",
+      "live_url_cargo_box_manufacturers": "https://www.justdial.com/Mumbai/Crane-Services-in-Paras-Nagar-Kandivali-West/nct-10146337?fl=undefined&ismap=undefined&subpage=&searchCase=&term=crane%2520services&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Crane%20Services&trkid=361586-mumbai",
+      "live_url_carpet_wholesalers": "https://www.justdial.com/Mumbai/Cargo-Box-Manufacturers-in-Indira-Nagar-Vikhroli-East/nct-12171901?fl=undefined&ismap=undefined&subpage=&searchCase=&term=cargo%20box&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Cargo%20Box%20Manufacturers&trkid=4477584-mumbai&isLogin=1"
+    },
+    "inputs_needed": [],
+    "assumptions": [
+      "Three new element locators are not yet recorded on the platform and must be added before these testcases can run: rp_carousel_360_badge \u2192 CSS 'div.carouselview__img3dwrp > span.carouselview__img3dicn' (360\u00b0 badge icon on a carousel card); rp_carousel_call_now_cta \u2192 CSS 'div.carousel_view3-button.carousel_view3-call-button' (carousel card's own Call Now CTA); rp_carousel_ask_for_price_cta \u2192 CSS 'div.carousel_view3-price span.carousel_view3-askPrice' (carousel card's own Ask for Price CTA).",
+      "No DOM identifier exists for the AI-video-only DS badge, so 'Only Video' classification on the carousel can only be verified indirectly via the API/order-check steps (verify recommended products order / carousel order), not via a direct element count.",
+      "Per tester confirmation, the devx Carpet Wholesalers URL (${url_carpet_wholesalers}) is used for ALL Ask-For-Price testcases only until the feature goes live on production; once live, these should be re-pointed to a live no-price URL.",
+      "TC_DEFECT_22700 and TC_RP_CTA_IS_CALL_NOW_NOT_VIEW_DETAILS were updated to assert on the carousel's own CTA element (rp_carousel_call_now_cta) rather than the main-listing show_number_cta, since the tester confirmed the carousel uses its own dedicated CTA markup."
+    ],
+    "unclear": [],
+    "jira": [
+      {
+        "key": "GJDT-22686",
+        "summary": "Recommended Products For You - logic update - B2B NCT Results Page",
+        "type": "Story",
+        "status": "Ready for Live",
+        "url": "https://jdjira.justdial.com/browse/GJDT-22686",
+        "subtasks": [
+          {
+            "key": "GJDT-22687",
+            "kind": "testing",
+            "status": "No Need of Security Testing",
+            "summary": "Security Testing"
+          },
+          {
+            "key": "GJDT-22679",
+            "kind": "design",
+            "status": "Closed",
+            "summary": "Design Requirement"
+          },
+          {
+            "key": "GJDT-22688",
+            "kind": "fe",
+            "status": "Closed",
+            "summary": "FE: Recommended Products For You - logic update - B2B NCT Results Page"
+          },
+          {
+            "key": "GJDT-22695",
+            "kind": "api",
+            "status": "Closed",
+            "summary": "API Changes RPFY:"
+          },
+          {
+            "key": "GJDT-22697",
+            "kind": "testing",
+            "status": "Closed",
+            "summary": "Product UAT: Recommended Products For You - logic update - B2B NCT Results Page"
+          },
+          {
+            "key": "GJDT-22698",
+            "kind": "design",
+            "status": "Closed",
+            "summary": "Design Testing: Recommended Products For You - logic update - B2B NCT Results Page"
+          }
+        ],
+        "linked": [
+          {
+            "key": "GJDT-22699",
+            "type": "Defect",
+            "status": "Closed",
+            "summary": "\"Price on Request\" - extra text seen - \"Recommended Products For You\" section"
+          },
+          {
+            "key": "GJDT-22700",
+            "type": "Defect",
+            "status": "Closed",
+            "summary": "Send Enquiry is seen on recommended Product for you Section's CTA > instead of Call Now "
+          },
+          {
+            "key": "GJDT-22701",
+            "type": "Defect",
+            "status": "Closed",
+            "summary": "Magic name is passes incorrect for ask for price from recommended product "
+          },
+          {
+            "key": "GJDT-22702",
+            "type": "Defect",
+            "status": "Closed",
+            "summary": "For Service Category > Logic is not Proper "
+          },
+          {
+            "key": "GJDT-22703",
+            "type": "Concern",
+            "status": "Closed",
+            "summary": "Concern regarding Listing on recommended Product for You"
+          }
+        ],
+        "comments": 6,
+        "attachments": [
+          "jdmart_nct_carousel_impression_gaps_2026-09-22.xlsx"
+        ]
+      }
+    ],
+    "questions": [],
+    "candidate_urls": [
+      "https://akam.cdn.jdmagicbox.com/images/icontent/newwap/newprot_w/dtal_phnewhite.svg",
+      "https://devx.justdial.com/Mumbai/Carpet-Wholesalers-in-Indira-Nagar-Vikhroli-East/nct-10081039?fl=undefined&ismap=undefined&subpage=&searchCase=&term=carpet%2520&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Carpet%20Wholesalers&trkid=192699-mumbai",
+      "https://www.justdial.com/Bhopal/Machine-Tool-Dealers/nct-10306762?trkid=26527-remotecity-fcat&term=machine%20tool%20dealer",
+      "https://www.justdial.com/Chennai/Arduino-Board-Wholesalers/nct-11957516?fl=undefined&ismap=undefined&subpage=&searchCase=&term=Arduino%2520board%2520whoelsalers%2520&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Arduino%20Board%20Wholesalers&trkid=4030859-chennai",
+      "https://www.justdial.com/Chennai/Bat-Distributors-MRF/nct-12076726?fl=undefined&ismap=undefined&subpage=&searchCase=&term=Bat%2520distributors%2520-%2520mrf&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Bat%20Distributors-MRF&trkid=8467821-chennai",
+      "https://www.justdial.com/Hyderabad/Screw-Importers/nct-10424250?fl=undefined&ismap=undefined&subpage=&searchCase=&term=screw%2520impo&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Screw%20Importers&trkid=12479278-hyderabad",
+      "https://www.justdial.com/Jaipur/Tile-Wholesalers/nct-10482503?fl=undefined&ismap=undefined&subpage=&searchCase=&term=tile%2520whole&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Tile%20Wholesalers&trkid=27632-remotecity",
+      "https://www.justdial.com/Jaipur/Transporters/nct-10495191?fl=undefined&ismap=undefined&subpage=&searchCase=&term=Transporters%2520&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Transporters&trkid=310-remotecity",
+      "https://www.justdial.com/Leh-Ladakh/Umbrella-Distributors/nct-10506673?fl=undefined&ismap=undefined&subpage=&searchCase=&term=umbrella%2520distri&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Umbrella%20Distributors&trkid=27703-remotecity",
+      "https://www.justdial.com/Mumbai/Brick-Wholesalers/nct-10057470?fl=undefined&ismap=undefined&subpage=&searchCase=&term=brick%2520whol&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Brick%20Wholesalers&trkid=192616-mumbai",
+      "https://www.justdial.com/Mumbai/Bulk-SMS-Services-in-Paras-Nagar-Kandivali-West/nct-10970459?fl=undefined&ismap=undefined&subpage=&searchCase=&term=bulk%2520sms%2520&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Bulk%20SMS%20Services&trkid=6333-mumbai",
+      "https://www.justdial.com/Mumbai/Bulk-SMS-Services/nct-10970459?fl=undefined&ismap=undefined&subpage=&searchCase=&term=bulk%2520sms&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Bulk%20SMS%20Services&trkid=6333-mumbai",
+      "https://www.justdial.com/Mumbai/Cargo-Box-Manufacturers-in-Indira-Nagar-Vikhroli-East/nct-12171901?fl=undefined&ismap=undefined&subpage=&searchCase=&term=cargo%20box&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Cargo%20Box%20Manufacturers&trkid=4477584-mumbai&isLogin=1",
+      "https://www.justdial.com/Mumbai/Carpet-Wholesalers-in-Indira-Nagar-Vikhroli-East/nct-10081039?fl=undefined&ismap=undefined&subpage=&searchCase=&term=carpet%2520&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Carpet%20Wholesalers&trkid=192699-mumbai",
+      "https://www.justdial.com/Mumbai/Carpet-Wholesalers-in-Indira-Nagar-Vikhroli-East/nct-10081039?fl=undefined&ismap=undefined&subpage=&searchCase=&term=carpet%2520&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Carpet%20Wholesalers&trkid=192699-mumbai\\",
+      "https://www.justdial.com/Mumbai/Crane-Services-in-Paras-Nagar-Kandivali-West/nct-10146337?fl=undefined&ismap=undefined&subpage=&searchCase=&term=crane%2520services&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Crane%20Services&trkid=361586-mumbai",
+      "https://www.justdial.com/Mumbai/Curtian-Distributors-DDecor-in-Link-Road-Malad-West/nct-11785749?fl=undefined&ismap=undefined&subpage=&searchCase=&term=curtiain%2520dis&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Curtian%20Distributors-DDecor&trkid=7961575-mumbai",
+      "https://www.justdial.com/Mumbai/Hercules-Bicycle-Wholesalers/nct-10045474?fl=undefined&ismap=undefined&subpage=&searchCase=&term=hercules%2520bicycle%2520wholesalers%2520&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Hercules-Bicycle%20Wholesalers&trkid=926575-mumbai",
+      "https://www.justdial.com/Mumbai/Hotel-Equipment-Manufacturers-in-Link-Road-Malad-West/nct-10254380?fl=undefined&ismap=undefined&subpage=&searchCase=&term=hotel%2520equi&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Hotel%20Equipment%20Manufacturers&trkid=11624518-mumbai",
+      "https://www.justdial.com/Mumbai/Jeans-Wholesalers-Pepe-Jeans/nct-11282399?fl=undefined&ismap=undefined&subpage=&searchCase=&term=pepe%2520jeans%2520wholesale&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Jeans%20Wholesalers-Pepe%20Jeans&trkid=224353-mumbai",
+      "https://www.justdial.com/Mumbai/Transporters-in-Paras-Nagar-Kandivali-West/nct-10495191?fl=undefined&ismap=undefined&subpage=&searchCase=&term=transpoir&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Transporters&trkid=6135-mumbai",
+      "https://www.justdial.com/Mumbai/Tyre-Manufacturers--in--Kala-Vidyalaya-Road-Malad-West/nct-10505514?stype=category_list&term=Tyre-Manufacturers&srcterm=Tyre-Manufacturers&rnd1=0.3052979325970284&rnd2=0.4180381198482128&rnd3=0.4898481054844277",
+      "https://www.justdial.com/Mumbai/Wire-Wholesalers/nct-10541446?fl=undefined&ismap=&subpage=&searchCase=&term=wire%20whol&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Wire%20Wholesalers&trkid=207036-hyderabad"
+    ]
+  }
+}

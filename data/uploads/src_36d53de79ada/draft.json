@@ -1,0 +1,472 @@
+{
+  "draft": {
+    "assumptions": [
+      "'verify recommended products order in ${variable}' is assumed to accept a comma-separated list of ordered group/type labels and compare it against the framework's internal representation of the actual carousel ordering; exact label vocabulary (WITH_DS_WITHIN_CITY, 360_VIDEO, WITH_PRICE, etc.) is inferred from the ticket's own hierarchy naming and may need alignment with the automation framework's real label set.",
+      "'verify recommended products carousel order on page' is assumed to perform a holistic validation of the full DS+city+price+DS-type hierarchy without needing an explicit expected-order variable.",
+      "'verify recommended products prefer search city on page' is assumed to validate that search-city-origin products rank ahead of other-city products within the same DS/price bucket.",
+      "Ask For Price lead submission flow may prompt for mobile number / OTP verification before the GBP sheet can be submitted; this was not detailed in the ticket, so the flow assumes it can complete without extra verification, or that the user is already authenticated.",
+      "Product category test URL (Dehradun/Fabrication-Contractors) and service category test URL (Delhi/CNG-Cylinder-Testing-Services) from GJDT-22698/22699 are used as the primary happy-path pages; Bulk SMS Services and Steel Merchants URLs are used specifically for their respective defect/concern regressions."
+    ],
+    "group_suggestions": [],
+    "inputs_needed": [],
+    "jira": [
+      {
+        "attachments": [
+          "jdmart_nct_carousel_impression_gaps_2026-09-22.xlsx"
+        ],
+        "comments": 6,
+        "key": "GJDT-22686",
+        "linked": [
+          {
+            "key": "GJDT-22699",
+            "status": "Closed",
+            "summary": "\"Price on Request\" - extra text seen - \"Recommended Products For You\" section",
+            "type": "Defect"
+          },
+          {
+            "key": "GJDT-22700",
+            "status": "Closed",
+            "summary": "Send Enquiry is seen on recommended Product for you Section's CTA > instead of Call Now ",
+            "type": "Defect"
+          },
+          {
+            "key": "GJDT-22701",
+            "status": "Closed",
+            "summary": "Magic name is passes incorrect for ask for price from recommended product ",
+            "type": "Defect"
+          },
+          {
+            "key": "GJDT-22702",
+            "status": "Closed",
+            "summary": "For Service Category > Logic is not Proper ",
+            "type": "Defect"
+          },
+          {
+            "key": "GJDT-22703",
+            "status": "Closed",
+            "summary": "Concern regarding Listing on recommended Product for You",
+            "type": "Concern"
+          }
+        ],
+        "status": "Ready for Live",
+        "subtasks": [
+          {
+            "key": "GJDT-22687",
+            "kind": "testing",
+            "status": "No Need of Security Testing",
+            "summary": "Security Testing"
+          },
+          {
+            "key": "GJDT-22679",
+            "kind": "design",
+            "status": "Closed",
+            "summary": "Design Requirement"
+          },
+          {
+            "key": "GJDT-22688",
+            "kind": "fe",
+            "status": "Closed",
+            "summary": "FE: Recommended Products For You - logic update - B2B NCT Results Page"
+          },
+          {
+            "key": "GJDT-22695",
+            "kind": "api",
+            "status": "Closed",
+            "summary": "API Changes RPFY:"
+          },
+          {
+            "key": "GJDT-22697",
+            "kind": "testing",
+            "status": "Closed",
+            "summary": "Product UAT: Recommended Products For You - logic update - B2B NCT Results Page"
+          },
+          {
+            "key": "GJDT-22698",
+            "kind": "design",
+            "status": "Closed",
+            "summary": "Design Testing: Recommended Products For You - logic update - B2B NCT Results Page"
+          }
+        ],
+        "summary": "Recommended Products For You - logic update - B2B NCT Results Page",
+        "type": "Story",
+        "url": "https://jdjira.justdial.com/browse/GJDT-22686"
+      }
+    ],
+    "model": "claude-sonnet-5",
+    "provider": "anthropic",
+    "testcases": [
+      {
+        "classification": "Positive",
+        "covers": [
+          "GJDT-22686 AC12"
+        ],
+        "expected": "Carousel heading reads exactly 'Recommended Products For You' on a product category page.",
+        "preconditions": [
+          "Product category NCT page is reachable"
+        ],
+        "priority": "High",
+        "steps": [
+          "# Setup: open a product-category NCT page",
+          "open ${product_category_url}",
+          "wait for result page load",
+          "# Assertion: verify carousel heading text for product category",
+          "scroll until text \"Recommended Products For You\" visible",
+          "verify element rp_heading_h1 has text \"Recommended Products For You\""
+        ],
+        "testcase_id": "TC_RP_HEADING_PRODUCT",
+        "title": "Recommended Products heading shows 'Recommended Products For You' for a product category NCT page"
+      },
+      {
+        "classification": "Positive",
+        "covers": [
+          "GJDT-22686 AC11"
+        ],
+        "expected": "Carousel heading reads exactly 'Recommended Services For You' on a service category page.",
+        "preconditions": [
+          "Service category NCT page is reachable"
+        ],
+        "priority": "High",
+        "steps": [
+          "# Setup: open a service-category NCT page",
+          "open ${cng_service_url}",
+          "wait for result page load",
+          "# Assertion: verify carousel heading text for service category",
+          "scroll until text \"Recommended Services For You\" visible",
+          "verify element rp_heading_h1 has text \"Recommended Services For You\""
+        ],
+        "testcase_id": "TC_RP_HEADING_SERVICE",
+        "title": "Recommended Products heading shows 'Recommended Services For You' for a service category NCT page"
+      },
+      {
+        "classification": "Positive",
+        "covers": [
+          "GJDT-22686 AC1"
+        ],
+        "expected": "Products from the searched city are shown ahead of products from other cities in the recommended carousel.",
+        "preconditions": [],
+        "priority": "Critical",
+        "steps": [
+          "# Setup: open a product-category NCT page",
+          "open ${product_category_url}",
+          "wait for result page load",
+          "scroll until text \"Recommended Products For You\" visible",
+          "# Assertion: search city products are preferred in the carousel",
+          "verify recommended products prefer search city on page"
+        ],
+        "testcase_id": "TC_RP_SEARCH_CITY_PREFERENCE",
+        "title": "Recommended products carousel prefers the search city over other cities"
+      },
+      {
+        "classification": "Positive",
+        "covers": [
+          "GJDT-22686 AC1",
+          "GJDT-22686 AC2",
+          "GJDT-22686 AC3",
+          "GJDT-22686 AC4",
+          "GJDT-22686 AC8"
+        ],
+        "expected": "Carousel order follows With-DS groups (Within then Outside city) fully before any Without-DS group appears; a lower-priority group never appears while a higher one still has candidates.",
+        "preconditions": [],
+        "priority": "Critical",
+        "steps": [
+          "# Setup: open a product-category NCT page",
+          "open ${product_category_url}",
+          "wait for result page load",
+          "scroll until text \"Recommended Products For You\" visible",
+          "# Define the expected macro group order per the updated hierarchy (DS status takes priority over location)",
+          "create variable expected_group_order with value \"WITH_DS_WITHIN_CITY,WITH_DS_OUTSIDE_CITY,WITHOUT_DS_WITHIN_CITY,WITHOUT_DS_OUTSIDE_CITY\"",
+          "# Assertion: verify actual carousel order matches expected macro order",
+          "verify recommended products order in ${expected_group_order}"
+        ],
+        "testcase_id": "TC_RP_MACRO_PRIORITY_ORDER",
+        "title": "Overall macro priority order is With DS+Within City > With DS+Outside City > Without DS+Within City > Without DS+Outside City"
+      },
+      {
+        "classification": "Positive",
+        "covers": [
+          "GJDT-22686 AC5"
+        ],
+        "expected": "Within the With-DS + With-Price subgroup, products with 360\u00b0+Video rank before Only-360\u00b0, which rank before Only-Video.",
+        "preconditions": [],
+        "priority": "High",
+        "steps": [
+          "# Setup: open a product-category NCT page",
+          "open ${product_category_url}",
+          "wait for result page load",
+          "scroll until text \"Recommended Products For You\" visible",
+          "# Define expected DS-type order for the With-Price subgroup",
+          "create variable expected_ds_type_order_with_price with value \"360_VIDEO,ONLY_360,ONLY_VIDEO\"",
+          "# Assertion: verify DS-type ordering within With Price candidates",
+          "verify recommended products order in ${expected_ds_type_order_with_price}"
+        ],
+        "testcase_id": "TC_RP_DS_TYPE_PRIORITY_WITH_PRICE",
+        "title": "Within a With-DS + With-Price subgroup, DS type order is 360+Video > Only 360 > Only Video"
+      },
+      {
+        "classification": "Positive",
+        "covers": [
+          "GJDT-22686 AC5"
+        ],
+        "expected": "Within the With-DS + Without-Price subgroup, products with 360\u00b0+Video rank before Only-360\u00b0, which rank before Only-Video, independently of the With-Price subgroup.",
+        "preconditions": [],
+        "priority": "High",
+        "steps": [
+          "# Setup: open a product-category NCT page",
+          "open ${product_category_url}",
+          "wait for result page load",
+          "scroll until text \"Recommended Products For You\" visible",
+          "# Define expected DS-type order for the Without-Price subgroup",
+          "create variable expected_ds_type_order_without_price with value \"360_VIDEO,ONLY_360,ONLY_VIDEO\"",
+          "# Assertion: verify DS-type ordering within Without Price candidates",
+          "verify recommended products order in ${expected_ds_type_order_without_price}"
+        ],
+        "testcase_id": "TC_RP_DS_TYPE_PRIORITY_WITHOUT_PRICE",
+        "title": "Within a With-DS + Without-Price subgroup, DS type order is 360+Video > Only 360 > Only Video"
+      },
+      {
+        "classification": "Positive",
+        "covers": [
+          "GJDT-22686 AC6",
+          "GJDT-22686 AC9"
+        ],
+        "expected": "Within the With-DS + Within-city group, With-Price candidates are fully exhausted before Without-Price candidates appear.",
+        "preconditions": [],
+        "priority": "High",
+        "steps": [
+          "# Setup: open a product-category NCT page",
+          "open ${product_category_url}",
+          "wait for result page load",
+          "scroll until text \"Recommended Products For You\" visible",
+          "# Define expected price order for With DS + Within city group",
+          "create variable expected_price_order_ds_within with value \"WITH_PRICE,WITHOUT_PRICE\"",
+          "# Assertion: verify price-based ordering inside this subgroup",
+          "verify recommended products order in ${expected_price_order_ds_within}"
+        ],
+        "testcase_id": "TC_RP_PRICE_PRIORITY_DS_WITHIN_CITY",
+        "title": "With Price is prioritised over Without Price within With-DS + Within-Search-City group"
+      },
+      {
+        "classification": "Positive",
+        "covers": [
+          "GJDT-22686 AC6",
+          "GJDT-22686 AC9"
+        ],
+        "expected": "Within the With-DS + Outside-city group, With-Price candidates are fully exhausted before Without-Price candidates appear.",
+        "preconditions": [],
+        "priority": "High",
+        "steps": [
+          "# Setup: open a product-category NCT page",
+          "open ${product_category_url}",
+          "wait for result page load",
+          "scroll until text \"Recommended Products For You\" visible",
+          "# Define expected price order for With DS + Outside city group",
+          "create variable expected_price_order_ds_outside with value \"WITH_PRICE,WITHOUT_PRICE\"",
+          "# Assertion: verify price-based ordering inside this subgroup",
+          "verify recommended products order in ${expected_price_order_ds_outside}"
+        ],
+        "testcase_id": "TC_RP_PRICE_PRIORITY_DS_OUTSIDE_CITY",
+        "title": "With Price is prioritised over Without Price within With-DS + Outside-Search-City group"
+      },
+      {
+        "classification": "Positive",
+        "covers": [
+          "GJDT-22686 AC6",
+          "GJDT-22686 AC9"
+        ],
+        "expected": "Within the Without-DS + Within-city group, With-Price candidates are fully exhausted before Without-Price candidates appear.",
+        "preconditions": [],
+        "priority": "Medium",
+        "steps": [
+          "# Setup: open a product-category NCT page",
+          "open ${product_category_url}",
+          "wait for result page load",
+          "scroll until text \"Recommended Products For You\" visible",
+          "# Define expected price order for Without DS + Within city group",
+          "create variable expected_price_order_nods_within with value \"WITH_PRICE,WITHOUT_PRICE\"",
+          "# Assertion: verify price-based ordering inside this subgroup",
+          "verify recommended products order in ${expected_price_order_nods_within}"
+        ],
+        "testcase_id": "TC_RP_PRICE_PRIORITY_NODS_WITHIN_CITY",
+        "title": "With Price is prioritised over Without Price within Without-DS + Within-Search-City group"
+      },
+      {
+        "classification": "Positive",
+        "covers": [
+          "GJDT-22686 AC6",
+          "GJDT-22686 AC9"
+        ],
+        "expected": "Within the Without-DS + Outside-city group (lowest priority overall), With-Price candidates are fully exhausted before Without-Price candidates appear.",
+        "preconditions": [],
+        "priority": "Medium",
+        "steps": [
+          "# Setup: open a product-category NCT page",
+          "open ${product_category_url}",
+          "wait for result page load",
+          "scroll until text \"Recommended Products For You\" visible",
+          "# Define expected price order for Without DS + Outside city group",
+          "create variable expected_price_order_nods_outside with value \"WITH_PRICE,WITHOUT_PRICE\"",
+          "# Assertion: verify price-based ordering inside this subgroup",
+          "verify recommended products order in ${expected_price_order_nods_outside}"
+        ],
+        "testcase_id": "TC_RP_PRICE_PRIORITY_NODS_OUTSIDE_CITY",
+        "title": "With Price is prioritised over Without Price within Without-DS + Outside-Search-City group (lowest priority group)"
+      },
+      {
+        "classification": "Positive",
+        "covers": [
+          "GJDT-22699"
+        ],
+        "expected": "The text 'Price on Request' does not appear anywhere in the Recommended Products For You carousel.",
+        "preconditions": [],
+        "priority": "High",
+        "steps": [
+          "# Setup: open the exact defect repro URL",
+          "open ${product_category_url}",
+          "wait for result page load",
+          "scroll until text \"Recommended Products For You\" visible",
+          "# Assertion: forbidden extra text is absent",
+          "verify page does not contain \"Price on Request\""
+        ],
+        "testcase_id": "TC_DEFECT_22699_NO_PRICE_ON_REQUEST_PRODUCT",
+        "title": "Regression: 'Price on Request' extra text is not shown in Recommended Products carousel (Fabrication Contractors)"
+      },
+      {
+        "classification": "Positive",
+        "covers": [
+          "GJDT-22699"
+        ],
+        "expected": "The text 'Price on Request' does not appear anywhere in the Recommended Services For You carousel.",
+        "preconditions": [],
+        "priority": "High",
+        "steps": [
+          "# Setup: open the exact defect repro URL",
+          "open ${cng_service_url}",
+          "wait for result page load",
+          "scroll until text \"Recommended Services For You\" visible",
+          "# Assertion: forbidden extra text is absent",
+          "verify page does not contain \"Price on Request\""
+        ],
+        "testcase_id": "TC_DEFECT_22699_NO_PRICE_ON_REQUEST_SERVICE",
+        "title": "Regression: 'Price on Request' extra text is not shown in Recommended Services carousel (CNG Cylinder Testing Services)"
+      },
+      {
+        "classification": "Positive",
+        "covers": [
+          "GJDT-22700"
+        ],
+        "expected": "The recommended carousel card CTA for a service category is 'Call Now' (show_number_cta), and the Send Enquiry CTA is not displayed.",
+        "preconditions": [],
+        "priority": "High",
+        "steps": [
+          "# Setup: open the exact defect repro URL for a service category",
+          "open ${bulk_sms_link_road_url}",
+          "wait for result page load",
+          "scroll until text \"Recommended Services For You\" visible",
+          "# Assertion: Call Now CTA is visible and Send Enquiry CTA is not shown on the carousel card",
+          "verify element show_number_cta is visible",
+          "verify element send_enquiry_button_1st is not visible"
+        ],
+        "testcase_id": "TC_DEFECT_22700_SERVICE_CTA_IS_CALL_NOW",
+        "title": "Regression: Recommended Products/Services carousel CTA shows Call Now (not Send Enquiry) for a service category"
+      },
+      {
+        "classification": "Positive",
+        "covers": [
+          "GJDT-22701"
+        ],
+        "expected": "The Ask For Price CTA's magic name attribute equals wap2_rfq_askforprice_rsltpge, not the previously observed wap2_bdcall_result.",
+        "preconditions": [],
+        "priority": "Critical",
+        "steps": [
+          "# Setup: open a product-category NCT page",
+          "open ${product_category_url}",
+          "wait for result page load",
+          "scroll until element get_best_price_any_button visible, scroll by 300 pixels",
+          "# Capture the magic name attribute before triggering the lead",
+          "store attribute data-magic of get_best_price_any_button as magic_name_attr",
+          "# Assertion: magic name matches the expected Touch value, not the old incorrect one",
+          "verify stored magic_name_attr contains \"${expected_magic_name_touch}\""
+        ],
+        "testcase_id": "TC_DEFECT_22701_MAGIC_NAME_ASK_FOR_PRICE",
+        "title": "Regression: Ask For Price CTA on recommended carousel carries the correct magic name (wap2_rfq_askforprice_rsltpge) on Touch"
+      },
+      {
+        "classification": "Positive",
+        "covers": [
+          "GJDT-22702"
+        ],
+        "expected": "For the Bulk SMS Services service category searched from Mumbai, Mumbai (search city) products are prioritised over Delhi/Noida/Guwahati products in the carousel.",
+        "preconditions": [],
+        "priority": "Critical",
+        "steps": [
+          "# Setup: open the exact defect repro URL for the affected service category",
+          "open ${bulk_sms_search_city_url}",
+          "wait for result page load",
+          "scroll until text \"Recommended Services For You\" visible",
+          "# Assertion: search city (Mumbai) products are preferred over other cities' products",
+          "verify recommended products prefer search city on page"
+        ],
+        "testcase_id": "TC_DEFECT_22702_SEARCH_CITY_PRIORITY_SERVICE_CATEGORY",
+        "title": "Regression: Search city is prioritised in Recommended Services carousel for a service category (Bulk SMS Services, Mumbai)"
+      },
+      {
+        "classification": "Positive",
+        "covers": [
+          "GJDT-22703"
+        ],
+        "expected": "Products from cities outside the search city (e.g. Indore, Bangalore) are ordered per the same DS/price/DS-type hierarchy rules as within-city products, not arbitrarily.",
+        "preconditions": [],
+        "priority": "Medium",
+        "steps": [
+          "# Setup: open the URL referenced in the concern ticket",
+          "open ${steel_merchants_url}",
+          "wait for result page load",
+          "scroll until text \"Recommended Products For You\" visible",
+          "# Assertion: full carousel ordering (DS, city, price, DS-type) is consistent and rule-based",
+          "verify recommended products carousel order on page"
+        ],
+        "testcase_id": "TC_CONCERN_22703_OUTSIDE_CITY_ORDER_CONSISTENCY",
+        "title": "Concern regression: ordering among outside-search-city products follows the defined priority hierarchy consistently (Steel Merchants, Mumbai)"
+      },
+      {
+        "classification": "Positive",
+        "covers": [
+          "GJDT-22686",
+          "GJDT-22688"
+        ],
+        "expected": "Clicking Ask For Price on the recommended-products carousel opens the GBP sheet, and submitting it shows a success toaster confirming the lead was recorded.",
+        "preconditions": [
+          "User has a valid mobile number/OTP available if verification is prompted"
+        ],
+        "priority": "High",
+        "steps": [
+          "# Setup: open a product-category NCT page",
+          "open ${product_category_url}",
+          "wait for result page load",
+          "scroll until element get_best_price_any_button visible, scroll by 300 pixels",
+          "# Action: trigger Ask For Price lead from recommended-products carousel",
+          "click get_best_price_any_button",
+          "wait until element gbp_sheet_heading is visible",
+          "verify element gbp_sheet_heading is visible",
+          "click gbp_submit_now_button",
+          "# Assertion: lead submission succeeds",
+          "verify element success_toaster is visible"
+        ],
+        "testcase_id": "TC_ASK_FOR_PRICE_LEAD_SUBMIT_FLOW",
+        "title": "Ask For Price CTA on recommended carousel opens the GBP sheet and submits a lead successfully"
+      }
+    ],
+    "unclear": [
+      "AC10 ('the existing logic for determining whether an individual product/service qualifies should remain unchanged') is not independently testable via UI steps since it concerns backend eligibility logic already covered by API sub-task GJDT-22695; no dedicated testcase was written for it beyond the ordering testcases which implicitly exercise the same qualified candidate set.",
+      "GJDT-22703 is a 'Concern' ticket asking for clarification on ordering of non-search cities, not a confirmed defect with an expected fix; the written testcase asserts general hierarchy consistency but the exact expected ordering among multiple outside cities (e.g., Indore vs Bangalore vs Delhi vs Chittorgarh) was never specified by the reporter or resolved in comments."
+    ],
+    "usage": {
+      "input_tokens": 12015,
+      "output_tokens": 14772
+    },
+    "values_found": {
+      "product_category_url": "https://docs.google.com/spreadsheets/d/1GUMrybfChJ12NrnqFquwvOVqH5R4GLUPOp5PpGYh-9I/edit?gid=577544212#gid=577544212"
+    }
+  },
+  "prompt": "https://jdjira.justdial.com/browse/GJDT-22686"
+}

@@ -9,6 +9,7 @@ before generating anything from it.
 """
 from __future__ import annotations
 
+import json
 import os
 import sys
 
@@ -28,6 +29,17 @@ router = APIRouter(prefix="/sources", tags=["sources"])
 #: Overridable like every other limit — a team with larger workbooks should
 #: not have to edit source to raise it.
 MAX_UPLOAD_BYTES = int(os.getenv("MAX_UPLOAD_BYTES", str(25 * 1024 * 1024)))
+
+
+def _draft_cases(draft: dict) -> list[dict]:
+    """The drafted testcases with their steps — what the reviewer reads."""
+    return [{"id": tc.get("testcase_id", ""), "title": tc.get("title", ""),
+             "classification": tc.get("classification", ""),
+             "priority": tc.get("priority", ""),
+             "covers": tc.get("covers") or [], "expected": tc.get("expected", ""),
+             "preconditions": tc.get("preconditions") or [],
+             "steps": tc.get("steps") or []}
+            for tc in (draft or {}).get("testcases") or []]
 
 
 def _ingest(rec) -> dict:
@@ -84,8 +96,15 @@ async def upload_source(file: UploadFile = File(...), uploaded_by: str = ""):
     return {**rec.to_dict(), "stored_in": default_store.name, **ingested}
 
 
+class PromptAttachment(BaseModel):
+    name: str
+    text: str
+
+
 class PromptRequest(BaseModel):
     prompt: str
+    #: Spreadsheets the tester attached, already read into text by the UI.
+    attachments: list[PromptAttachment] = []
     platform: str                    # required — see nlp/platforms.py
     max_testcases: int = 10
     provider: str = ""               # blank = LLM_PROVIDER, else this adapter
@@ -96,6 +115,8 @@ class PromptRequest(BaseModel):
     #: testcases twice, and silently re-drafting meant the same prompt produced
     #: "${test_url}" one day and "${page_url}" the next, under the same id.
     redraft: bool = False
+    #: Name of a saved test case the drafted steps will be appended to.
+    extend_flow: str = ""
 
 
 @router.post("/prompt", status_code=201)
@@ -123,8 +144,8 @@ def draft_from_prompt(body: PromptRequest):
         )
     if len(text) > 20000:
         raise HTTPException(status_code=413, detail="Prompt is too long (20,000 char limit).")
-    if not 1 <= body.max_testcases <= 25:
-        raise HTTPException(status_code=422, detail="max_testcases must be between 1 and 25.")
+    if not 1 <= body.max_testcases <= 60:
+        raise HTTPException(status_code=422, detail="max_testcases must be between 1 and 60.")
 
     try:
         platform = normalise(body.platform)
@@ -136,14 +157,22 @@ def draft_from_prompt(body: PromptRequest):
     from ai_flow_builder.storage import prompt_source_id
 
     if not body.redraft:
-        cached_id = prompt_source_id(text, platform, body.max_testcases)
+        cache_text = text + "".join(f"\n[att {a.name}:{len(a.text)}]" for a in body.attachments) \
+            + (f"\n[extend {body.extend_flow}]" if body.extend_flow else "")
+        cached_id = prompt_source_id(cache_text, platform, body.max_testcases)
         try:
             rec = default_store.get(cached_id)
         except SourceNotFound:
             rec = None
         if rec is not None:
+            try:
+                with open(rec.path, "r", encoding="utf-8") as f:
+                    cached_draft = (json.load(f) or {}).get("draft") or {}
+            except Exception:  # noqa: BLE001
+                cached_draft = {}
             return {
                 **rec.to_dict(),
+                "draft_testcases": _draft_cases(cached_draft),
                 "stored_in": default_store.name,
                 "platform": platform,
                 "cached": True,
@@ -151,14 +180,38 @@ def draft_from_prompt(body: PromptRequest):
                 "inputs_needed": rec.extra.get("inputs_needed", []),
                 "assumptions": rec.extra.get("assumptions", []),
                 "unclear": rec.extra.get("unclear", []),
+                "jira": rec.extra.get("jira", []),
+                "questions": rec.extra.get("questions", []),
                 **_ingest(rec),
             }
+
+    # An earlier draft for the SAME ticket is the starting point: the model is
+    # asked only for what the new prompt adds or changes, and the reviewed
+    # cases are kept by id. Without this a second draft re-produced the whole
+    # set (and overran the output budget doing it).
+    previous = None
+    try:
+        from ai_flow_builder.jira_source import find_keys
+        keys = set(find_keys(text))
+        if keys and not body.extend_flow:      # extending a case: the case is the baseline
+            for rec in default_store.list():
+                if rec.kind != "prompt" or not (set(k.get("key") for k in rec.extra.get("jira", [])) & keys):
+                    continue
+                with open(rec.path, "r", encoding="utf-8") as f:
+                    previous = (json.load(f) or {}).get("draft")
+                break                                   # list() is newest first
+    except Exception:  # noqa: BLE001 — no previous draft is fine
+        previous = None
 
     try:
         draft = draft_testcases(text, platform=platform,
                                 max_testcases=body.max_testcases,
                                 provider=body.provider or None,
-                                model=body.model or None)
+                                model=body.model or None, previous=previous,
+                                attachments=[a.model_dump() for a in body.attachments],
+                                extend_flow=body.extend_flow or None)
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=f"Test case to extend not found: {e}") from e
     except ProviderNotConfigured as e:
         raise HTTPException(status_code=503, detail=str(e)) from e
     except ProviderUnavailable as e:
@@ -169,6 +222,10 @@ def draft_from_prompt(body: PromptRequest):
         raise HTTPException(status_code=422, detail=str(e)) from e
     except ProviderError as e:
         raise HTTPException(status_code=502, detail=str(e)) from e
+    except RuntimeError as e:
+        # A Jira ticket that could not be read (no token, wrong key…). Said
+        # plainly rather than drafting from the one sentence around the link.
+        raise HTTPException(status_code=424, detail=str(e)) from e
 
     rec = default_store.put_prompt(draft, text, uploaded_by=body.uploaded_by,
                                    platform=platform, max_testcases=body.max_testcases)
@@ -182,6 +239,12 @@ def draft_from_prompt(body: PromptRequest):
         "inputs_needed": draft.get("inputs_needed", []),
         "assumptions": draft.get("assumptions", []),
         "unclear": draft.get("unclear", []),
+        "jira": draft.get("jira", []),
+        "questions": draft.get("questions", []),
+        "kept_ids": draft.get("kept_ids", []),
+        "draft_testcases": _draft_cases(draft),
+        "sheets": draft.get("sheets", []),
+        "candidate_urls": draft.get("candidate_urls", []),
         **_ingest(rec),
     }
 

@@ -249,6 +249,13 @@ def topbar(breadcrumb: list[str], *, platforms: list[dict] | None = None,
            platform: str = "", on_platform_change: Callable[[str], None] | None = None,
            quick_run_route: str = "/run", current_flow: str = "") -> None:
     selectable = [p for p in (platforms or []) if p.get("enabled", True)]
+    # The chosen platform is remembered in the browser so that Test Cases /
+    # Elements in the sidebar reopen THAT platform after a detour through
+    # History, Run Center or Test Data — they used to hard-link to Website.
+    if platform:
+        import json as _json
+        ui.run_javascript(
+            f"try{{localStorage.setItem('nlp_platform', {_json.dumps(platform)})}}catch(e){{}}")
     with ui.header(fixed=True).props("bordered").style(
             f"background:{COLORS['surface']}; color:{COLORS['text']}"):
         with ui.row().classes("w-full items-center gap-3 px-3 py-1"):

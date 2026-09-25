@@ -18,6 +18,10 @@ Passing a key in code would defeat all three, so this never does.
 """
 from __future__ import annotations
 
+import logging
+
+_log = logging.getLogger(__name__)
+
 import os
 
 from pydantic import ValidationError
@@ -79,6 +83,14 @@ class AnthropicProvider:
         try:
             return self._parse(system=system, user=user, schema=schema)
         except ValidationError as e:
+            # What exactly did not fit, in the log — the operator sees a one-line
+            # error, whoever fixes the schema needs the field names.
+            try:
+                _log.warning("Structured output rejected: %s",
+                             "; ".join(f"{'.'.join(str(x) for x in err.get('loc', ()))}: "
+                                       f"{err.get('msg')}" for err in e.errors()[:6]))
+            except Exception:  # noqa: BLE001
+                pass
             # Structured output normally guarantees well-formed JSON, but a
             # malformed body does get through (seen in the wild: a trailing
             # comma). That surfaced as a pydantic traceback and an HTTP 500.
@@ -113,11 +125,22 @@ class AnthropicProvider:
             raise ProviderUnavailable(
                 f"Could not reach Anthropic: {str(e)[:160]}"
             ) from e
+        except (ValueError, TypeError) as e:
+            # SDK-side refusals (argument checks) — say what it said.
+            raise ProviderError(f"Drafting could not start: {str(e)[:200]}") from e
 
     def _parse(self, *, system: str, user: str, schema) -> Completion:
         res = self._client().messages.parse(
             model=self.model,
-            max_tokens=16000,
+            # 16k was cut off by a full ticket draft (17 cases × ~8 steps plus
+            # thinking, which shares this budget). 64k is what current models
+            # allow and the honest ceiling for "as many cases as the spec needs".
+            max_tokens=64000,
+            # An explicit timeout: without one the SDK refuses a non-streaming
+            # call that could run over ten minutes ("Streaming is required…")
+            # and the draft never even left the building. A full ticket draft
+            # takes 3–6 minutes; 30 minutes is the ceiling, not the expectation.
+            timeout=1800.0,
             # Drafting testcases is multi-step reasoning: read the request, split
             # scenarios, pick locators, decide what stays a variable.
             thinking={"type": "adaptive"},

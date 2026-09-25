@@ -165,6 +165,20 @@ async def variables_page() -> None:
     await render()
 
 
+@ui.page("/platform/{platform}/draft")
+async def draft_page(platform: str, extend: str = "") -> None:
+    """From prompt / from a Jira ticket, as a full page (it did not fit a dialog)."""
+    _page_shell()
+    from nlp.platforms import UnknownPlatform, normalise
+    try:
+        canonical = normalise(platform)
+    except UnknownPlatform:
+        ui.navigate.to("/platform/website/draft")
+        return
+    from ui.pages.platform.draft_page import render
+    await render(canonical, extend)
+
+
 @ui.page("/platform/{platform}/elements")
 async def elements_page(platform: str, edit: str = "") -> None:
     _page_shell()

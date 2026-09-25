@@ -147,7 +147,10 @@ class SourceStore(Protocol):
                    "values_found": draft.get("values_found", {}),
                    "inputs_needed": draft.get("inputs_needed", []),
                    "assumptions": draft.get("assumptions", []),
-                   "unclear": draft.get("unclear", [])},
+                   "unclear": draft.get("unclear", []),
+                   "jira": draft.get("jira", []),
+                   "questions": draft.get("questions", []),
+                   "candidate_urls": draft.get("candidate_urls", [])},
         )
         with open(os.path.join(d, "meta.json"), "w", encoding="utf-8") as f:
             json.dump(rec.to_dict(), f, indent=2)
@@ -229,7 +232,10 @@ class LocalSourceStore:
                    "values_found": draft.get("values_found", {}),
                    "inputs_needed": draft.get("inputs_needed", []),
                    "assumptions": draft.get("assumptions", []),
-                   "unclear": draft.get("unclear", [])},
+                   "unclear": draft.get("unclear", []),
+                   "jira": draft.get("jira", []),
+                   "questions": draft.get("questions", []),
+                   "candidate_urls": draft.get("candidate_urls", [])},
         )
         with open(os.path.join(d, "meta.json"), "w", encoding="utf-8") as f:
             json.dump(rec.to_dict(), f, indent=2)
@@ -327,7 +333,10 @@ class MirroredSourceStore:
                    "values_found": draft.get("values_found", {}),
                    "inputs_needed": draft.get("inputs_needed", []),
                    "assumptions": draft.get("assumptions", []),
-                   "unclear": draft.get("unclear", [])},
+                   "unclear": draft.get("unclear", []),
+                   "jira": draft.get("jira", []),
+                   "questions": draft.get("questions", []),
+                   "candidate_urls": draft.get("candidate_urls", [])},
         )
         with open(os.path.join(d, "meta.json"), "w", encoding="utf-8") as f:
             json.dump(rec.to_dict(), f, indent=2)

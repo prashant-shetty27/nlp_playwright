@@ -25,6 +25,9 @@ class ValueBody(BaseModel):
     scope: str = "global"
     environment: str = ""
     force: bool = False
+    #: True when changing the value of a name the caller knows exists: the name
+    #: is then not reported as a clash, only a value some OTHER name already has.
+    updating: bool = False
 
 
 @router.get("")
@@ -61,7 +64,8 @@ def put_value(body: ValueBody):
         raise HTTPException(status_code=422, detail="scope must be 'global' or 'environment'.")
     from locators.validation import as_dicts, check_variable
 
-    conflicts = check_variable(body.name, environment=body.environment)
+    conflicts = check_variable(body.name, environment=body.environment,
+                               value=body.value, updating=body.updating)
     blocking = [c for c in conflicts if c.severity == "blocking"]
     if blocking and not body.force:
         raise HTTPException(

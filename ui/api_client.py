@@ -91,9 +91,33 @@ async def parse_step(step: str) -> dict:
     return await _call("POST", "/nlp/parse", json={"step": step})
 
 
+#: Segmentation is a pure function of the step text, so a result is kept for
+#: the life of the process; the editor re-renders the same rows many times.
+_SEGMENT_CACHE: dict[str, dict] = {}
+
+
 async def segment_step(step: str) -> dict:
     """Split a step into fixed words and separately-editable values."""
-    return await _call("POST", "/nlp/segment", json={"step": step})
+    hit = _SEGMENT_CACHE.get(step)
+    if hit is not None:
+        return hit
+    res = await _call("POST", "/nlp/segment", json={"step": step})
+    if len(_SEGMENT_CACHE) > 5000:
+        _SEGMENT_CACHE.clear()
+    _SEGMENT_CACHE[step] = res
+    return res
+
+
+async def prefetch_segments(steps: list[str]) -> None:
+    """Segment a whole test case in one request, warming segment_step's cache."""
+    todo = sorted({st for st in steps if st and st not in _SEGMENT_CACHE})
+    if not todo:
+        return
+    try:
+        res = await _call("POST", "/nlp/segment-batch", json={"steps": todo})
+    except ApiError:
+        return
+    _SEGMENT_CACHE.update(res.get("segments") or {})
 
 
 async def step_variables(steps: list[str], environment: str = "") -> dict:
@@ -193,11 +217,14 @@ async def testdata_suggest(partial: str, environment: str = "",
 
 
 async def set_testdata(name: str, value: str, scope: str = "global",
-                       environment: str = "", force: bool = False) -> dict:
-    """Save a value. force=True overwrites a name the store already has."""
+                       environment: str = "", force: bool = False,
+                       updating: bool = False) -> dict:
+    """Save a value. force=True overwrites a name the store already has;
+    updating=True says the name is known to exist and only its value changes."""
     return await _call("PUT", "/testdata", json={"name": name, "value": value,
                                                  "scope": scope,
                                                  "environment": environment,
+                                                 "updating": updating,
                                                  "force": force})
 
 
@@ -225,12 +252,16 @@ async def upload_source(filename: str, data: bytes, uploaded_by: str = "") -> di
                  params={"uploaded_by": uploaded_by})
 
 
-async def draft_from_prompt(prompt: str, platform: str, max_testcases: int = 10,
-                      provider: str = "", model: str = "") -> dict:
+async def draft_from_prompt(prompt: str, platform: str, max_testcases: int = 50,
+                      provider: str = "", model: str = "", redraft: bool = False,
+                      attachments: list[dict] | None = None,
+                      extend_flow: str = "") -> dict:
     return await _call("POST", "/sources/prompt",
                  json={"prompt": prompt, "platform": platform,
                        "max_testcases": max_testcases,
-                       "provider": provider, "model": model})
+                       "provider": provider, "model": model, "redraft": redraft,
+                       "attachments": attachments or [],
+                       "extend_flow": extend_flow or ""})
 
 
 async def list_sources() -> list[dict]:

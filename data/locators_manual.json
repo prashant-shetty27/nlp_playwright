@@ -567,22 +567,49 @@
       "custom_xpath": "//h1[contains(@class,'result--h1')]"
     },
     "rp_carousel_heading": {
-      "custom_xpath": "//div[contains(@class,'carousel_parent_short')][.//span[contains(@class,'carousel_heading')][contains(normalize-space(),'Recommended Products')]]//span[contains(@class,'carousel_heading')]"
+      "custom_xpath": "//div[contains(@class,'carousel_parent_short')][.//span[contains(@class,'carousel_heading')][contains(normalize-space(),'Recommended ') and contains(normalize-space(),'For You')]]//span[contains(@class,'carousel_heading')]"
     },
     "rp_product_1st": {
-      "custom_xpath": "(//div[contains(@class,'carousel_parent_short')][.//span[contains(@class,'carousel_heading')][contains(normalize-space(),'Recommended Products')]]//a[contains(@class,'carousel_view3-parent')])[1]"
+      "custom_xpath": "(//div[contains(@class,'carousel_parent_short')][.//span[contains(@class,'carousel_heading')][contains(normalize-space(),'Recommended ') and contains(normalize-space(),'For You')]]//a[contains(@class,'carousel_view3-parent')])[1]"
     },
     "rp_product_names": {
-      "custom_xpath": "//div[contains(@class,'carousel_parent_short')][.//span[contains(@class,'carousel_heading')][contains(normalize-space(),'Recommended Products')]]//a[contains(@class,'carousel_view3-parent')]//div[contains(@class,'carousel_view3-infoDiv')]/span[1]"
+      "custom_xpath": "//div[contains(@class,'carousel_parent_short')][.//span[contains(@class,'carousel_heading')][contains(normalize-space(),'Recommended ') and contains(normalize-space(),'For You')]]//a[contains(@class,'carousel_view3-parent')]//div[contains(@class,'carousel_view3-infoDiv')]/span[1]"
     },
     "rp_product_1st_price": {
-      "custom_xpath": "(//div[contains(@class,'carousel_parent_short')][.//span[contains(@class,'carousel_heading')][contains(normalize-space(),'Recommended Products')]]//a[contains(@class,'carousel_view3-parent')])[1]//div[contains(@class,'carousel_view3-price')]"
+      "custom_xpath": "(//div[contains(@class,'carousel_parent_short')][.//span[contains(@class,'carousel_heading')][contains(normalize-space(),'Recommended ') and contains(normalize-space(),'For You')]]//a[contains(@class,'carousel_view3-parent')])[1]//div[contains(@class,'carousel_view3-price')]"
     },
     "rp_product_1st_name": {
-      "custom_xpath": "(//div[contains(@class,'carousel_parent_short')][.//span[contains(@class,'carousel_heading')][contains(normalize-space(),'Recommended Products')]]//a[contains(@class,'carousel_view3-parent')])[1]//div[contains(@class,'carousel_view3-infoDiv')]/span[1]"
+      "custom_xpath": "(//div[contains(@class,'carousel_parent_short')][.//span[contains(@class,'carousel_heading')][contains(normalize-space(),'Recommended ') and contains(normalize-space(),'For You')]]//a[contains(@class,'carousel_view3-parent')])[1]//div[contains(@class,'carousel_view3-infoDiv')]/span[1]"
     },
     "rp_product_1st_company": {
-      "custom_xpath": "(//div[contains(@class,'carousel_parent_short')][.//span[contains(@class,'carousel_heading')][contains(normalize-space(),'Recommended Products')]]//a[contains(@class,'carousel_view3-parent')])[1]//span[contains(@class,'carousel_view3-cname')]//span[contains(@class,'carousel_text_wrap')]"
+      "custom_xpath": "(//div[contains(@class,'carousel_parent_short')][.//span[contains(@class,'carousel_heading')][contains(normalize-space(),'Recommended ') and contains(normalize-space(),'For You')]]//a[contains(@class,'carousel_view3-parent')])[1]//span[contains(@class,'carousel_view3-cname')]//span[contains(@class,'carousel_text_wrap')]"
+    },
+    "rp_carousel_cards": {
+      "custom_xpath": "//div[contains(@class,'carousel_parent_short')][.//span[contains(@class,'carousel_heading')][contains(normalize-space(),'Recommended ') and contains(normalize-space(),'For You')]]//a[contains(@class,'carousel_view3-parent')]"
+    },
+    "rp_carousel_call_now_cta": {
+      "custom_xpath": "(//div[contains(@class,'carousel_parent_short')][.//span[contains(@class,'carousel_heading')][contains(normalize-space(),'Recommended ') and contains(normalize-space(),'For You')]]//*[contains(@class,'carousel_view3-call-button')])[1]"
+    },
+    "rp_carousel_call_now_ctas": {
+      "custom_xpath": "//div[contains(@class,'carousel_parent_short')][.//span[contains(@class,'carousel_heading')][contains(normalize-space(),'Recommended ') and contains(normalize-space(),'For You')]]//*[contains(@class,'carousel_view3-call-button')]"
+    },
+    "rp_carousel_ask_for_price_cta": {
+      "custom_xpath": "(//div[contains(@class,'carousel_parent_short')][.//span[contains(@class,'carousel_heading')][contains(normalize-space(),'Recommended ') and contains(normalize-space(),'For You')]]//*[contains(@class,'carousel_view3-askPrice')])[1]"
+    },
+    "rp_carousel_360_badge": {
+      "custom_xpath": "//div[contains(@class,'carousel_parent_short')][.//span[contains(@class,'carousel_heading')][contains(normalize-space(),'Recommended ') and contains(normalize-space(),'For You')]]//*[contains(@class,'carouselview__img3dwrp') or contains(@class,'carouselview__img3dicn')]"
+    },
+    "rp_carousel_view_details": {
+      "custom_xpath": "//div[contains(@class,'carousel_parent_short')][.//span[contains(@class,'carousel_heading')][contains(normalize-space(),'Recommended ') and contains(normalize-space(),'For You')]]//*[contains(normalize-space(),'View Details')]"
+    },
+    "rp_carousel_price_on_request": {
+      "custom_xpath": "//div[contains(@class,'carousel_parent_short')][.//span[contains(@class,'carousel_heading')][contains(normalize-space(),'Recommended ') and contains(normalize-space(),'For You')]]//*[contains(normalize-space(),'Price on Request')]"
+    },
+    "login_prompt_skip": {
+      "custom_xpath": "//*[self::a or self::button or self::span or self::div][contains(normalize-space(),\"looking for something else\")]"
+    },
+    "rp_carousel_ask_for_price_ctas": {
+      "custom_xpath": "//div[contains(@class,'carousel_parent_short')][.//span[contains(@class,'carousel_heading')][contains(normalize-space(),'Recommended ') and contains(normalize-space(),'For You')]]//*[contains(@class,'carousel_view3-askPrice')]"
     }
   }
 }

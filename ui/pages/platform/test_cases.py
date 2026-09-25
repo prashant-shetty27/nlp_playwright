@@ -22,6 +22,7 @@ Two deliberate divergences from the spec:
 """
 from __future__ import annotations
 
+import asyncio
 import json
 from urllib.parse import quote
 
@@ -42,6 +43,9 @@ class TestCasesPage:
         self.projects: list[str] = []
         self.selected: str | None = None
         self.steps: list[str] = []
+        #: Test cases ticked in the list for a bulk delete. Empty = normal list.
+        self.picked: set[str] = set()
+        self.pick_mode = False
         self.step_meta: dict[int, dict] = {}     # 1-based -> generation metadata
         self.filter = ""
         #: Elements this platform's runner can resolve — what decides whether a
@@ -193,6 +197,10 @@ class TestCasesPage:
                platform=self.platform,
                on_platform_change=lambda p: ui.navigate.to(f"/platform/{p}"),
                current_flow=self.selected or "")
+        # Dialogs are parented here, outside the panes that get cleared and
+        # redrawn; a dialog created inside the review panel vanished the
+        # moment the editor re-rendered under it.
+        self.dialog_host = ui.element("div")
         with ui.row().classes("w-full no-wrap gap-4 p-4"):
             self.left = ui.column().classes("gap-2").style("width:20rem; flex:none")
             # min-width:0 — a flex child otherwise refuses to be narrower than
@@ -374,8 +382,12 @@ class TestCasesPage:
                                        value=self.filter,
                                        on_change=lambda e: self._filter(e.value)) \
                     .props("outlined dense clearable").classes("flex-grow")
+                ui.button(icon="checklist", on_click=self._toggle_pick) \
+                    .props("flat dense" + (" color=primary" if self.pick_mode else "")) \
+                    .tooltip("Select several test cases to delete")
                 ui.button(icon="chevron_left", on_click=self._toggle_list) \
                     .props("flat dense").tooltip("Hide the list")
+            self.pick_bar = ui.row().classes("w-full items-center gap-2 no-wrap")
             self.list_box = ui.column().classes("w-full gap-0").style(
                 f"border:1px solid {COLORS['border']}; border-radius:6px;"
                 f"max-height:32rem; overflow-y:auto")
@@ -398,15 +410,97 @@ class TestCasesPage:
                     f"font-size:{TYPOGRAPHY['size_sm']}")
             for name in shown:
                 on = name == self.selected
-                with ui.row().classes("w-full items-center cursor-pointer") \
-                        .style(f"padding:7px 10px;"
-                               f"border-bottom:1px solid {COLORS['border']};"
-                               f"background:"
-                               f"{COLORS['primary'] + '12' if on else 'transparent'}") \
-                        .on("click", lambda n=name: self.open_project_guarded(n)):
+                row = ui.row().classes("w-full items-center no-wrap cursor-pointer") \
+                    .style(f"padding:7px 10px;"
+                           f"border-bottom:1px solid {COLORS['border']};"
+                           f"background:"
+                           f"{COLORS['primary'] + '12' if on else 'transparent'}")
+                with row:
+                    if self.pick_mode:
+                        ui.checkbox(value=name in self.picked,
+                                    on_change=lambda e, n=name: self._pick(n, e.value)) \
+                            .props("dense")
                     ui.label(name).style(
                         f"font-size:{TYPOGRAPHY['size_sm']};"
                         f"font-family:{TYPOGRAPHY['mono']}")
+                if self.pick_mode:
+                    row.on("click", lambda n=name: self._pick(n, n not in self.picked))
+                else:
+                    row.on("click", lambda n=name: self.open_project_guarded(n))
+        self._render_pick_bar(shown)
+
+    # ── bulk delete ─────────────────────────────────────────────────────────
+    def _toggle_pick(self) -> None:
+        self.pick_mode = not self.pick_mode
+        if not self.pick_mode:
+            self.picked.clear()
+        self.render_list()
+
+    def _pick(self, name: str, on: bool) -> None:
+        (self.picked.add if on else self.picked.discard)(name)
+        self.render_rows()
+
+    def _render_pick_bar(self, shown: list[str]) -> None:
+        bar = getattr(self, "pick_bar", None)
+        if bar is None:
+            return
+        bar.clear()
+        if not self.pick_mode:
+            return
+        with bar:
+            ui.checkbox("All shown", value=bool(shown) and all(n in self.picked for n in shown),
+                        on_change=lambda e: (self.picked.update(shown) if e.value
+                                             else self.picked.difference_update(shown),
+                                             self.render_rows())).props("dense")
+            ui.space()
+            ui.button(f"Delete {len(self.picked)}", icon="delete_outline",
+                      on_click=self._bulk_delete_dialog) \
+                .props("unelevated dense color=negative").set_enabled(bool(self.picked))
+
+    def _bulk_delete_dialog(self) -> None:
+        victims = sorted(self.picked)
+        if not victims:
+            return
+        dialog = ui.dialog().props("persistent")
+        with dialog, ui.card().style("width:34rem; max-height:80vh; overflow-y:auto"):
+            ui.label(f"Delete {len(victims)} test case(s)?").style(
+                f"font-size:{TYPOGRAPHY['size_lg']}; font-weight:{TYPOGRAPHY['weight_bold']}")
+            for v in victims:
+                ui.label(v).style(f"font-family:{TYPOGRAPHY['mono']}; font-size:{TYPOGRAPHY['size_sm']}")
+            ui.label("Elements, test data and step groups are NOT affected. "
+                     "This cannot be undone.").style(
+                f"font-size:{TYPOGRAPHY['size_sm']}; color:{COLORS['text_muted']}")
+
+            async def do_delete() -> None:
+                gone, failed = [], []
+                for v in victims:
+                    try:
+                        await api.delete_project(v)
+                        gone.append(v)
+                    except api.ApiError as e:
+                        failed.append(f"{v}: {e.detail}")
+                dialog.close()
+                if gone:
+                    ui.notify(f"Deleted {len(gone)} test case(s)", type="positive")
+                for f in failed:
+                    ui.notify(f, type="warning")
+                if self.selected in gone:
+                    ui.run_javascript(
+                        f"localStorage.removeItem({json.dumps(self._remember_key)})")
+                    self.selected = None
+                    self.steps = []
+                    self.step_meta = {}
+                    self.right.clear()
+                self.picked.clear()
+                self.pick_mode = False
+                await self.load()
+                self.render_list()
+
+            with ui.row().classes("w-full justify-end gap-2"):
+                ui.button("Cancel", on_click=dialog.close).props("flat")
+                ui.button(f"Delete {len(victims)}", on_click=do_delete) \
+                    .props("unelevated color=negative")
+        dialog.open()
 
     def _filter(self, value: str) -> None:
         self.filter = (value or "").lower()
@@ -471,6 +565,8 @@ class TestCasesPage:
             self._vars = await api.step_variables(self.steps)
         except api.ApiError:
             self._vars = {"defined": {}, "stored": [], "unresolved": []}
+        # One request for every row's segmentation instead of one per row.
+        await api.prefetch_segments([st for st in self.steps if not st.startswith("#")])
         self.right.clear()
         with self.right:
             with ui.row().classes("w-full items-center gap-2"):
@@ -503,6 +599,12 @@ class TestCasesPage:
                         "Check this test for hardcoded values, fixed waits, "
                         "missing checks and repeated blocks")
                 ui.button("Save", icon="save", on_click=self.save).props("unelevated dense")
+                ui.button("Extend with AI", icon="auto_awesome",
+                          on_click=lambda: ui.navigate.to(
+                              f"/platform/{self.platform}/draft?extend={quote(self.selected or '', safe='')}")) \
+                    .props("flat dense").tooltip(
+                        "Describe what to add (a ticket link or a sentence) — the drafted "
+                        "steps are appended after the last step of this test case")
                 ui.button(icon="delete_outline", on_click=self.delete_dialog) \
                     .props("flat dense color=negative").tooltip("Delete this test case")
                 ui.button("Run", icon="play_arrow", on_click=self.run) \
@@ -521,43 +623,22 @@ class TestCasesPage:
                         .style(f"font-size:{TYPOGRAPHY['size_sm']}")
 
             # ── selection toolbar ────────────────────────────────────────
-            with ui.row().classes("w-full items-center gap-2").style(
-                    f"padding:4px 2px"):
-                ui.checkbox("Select", value=self.select_mode,
-                            on_change=lambda e: self._set_select_mode(bool(e.value))) \
-                    .props("dense")
-                if self.select_mode:
-                    ui.checkbox("All", value=len(self.selection) == len(self.steps)
-                                and bool(self.steps),
-                                on_change=lambda e: self._select_all(bool(e.value))) \
-                        .props("dense")
-                    rng = ui.input(placeholder="20-30").props("outlined dense") \
-                        .style("width:7rem")
-                    ui.button("Select range", on_click=lambda: self._select_range(rng.value)) \
-                        .props("flat dense")
-                    ui.label(f"{len(self.selection)} selected").style(
-                        f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}")
-                    if self.selection:
-                        ui.button("Club with a purpose", icon="segment",
-                                  on_click=self.club_dialog) \
-                            .props("flat dense").style(f"color:{COLORS['primary']}") \
-                            .tooltip("Explain what these steps do — annotation, "
-                                     "not a reusable group")
-                        ui.button("Save as step group", icon="bookmark_add",
-                                  on_click=self.save_group_dialog) \
-                            .props("flat dense").style(f"color:{COLORS['primary']}")
-                        ui.button("Switch off", icon="toggle_off",
-                                  on_click=lambda: self._bulk_enabled(False)) \
-                            .props("flat dense")
-                        ui.button("Switch on", icon="toggle_on",
-                                  on_click=lambda: self._bulk_enabled(True)) \
-                            .props("flat dense")
-                        ui.button("Delete", icon="delete_outline",
-                                  on_click=self._bulk_delete) \
-                            .props("flat dense color=negative")
+            # Drawn by its own method so a single tick on a row can refresh
+            # just this bar (count + action buttons) without redrawing rows.
+            self.sel_bar = ui.row().classes("w-full items-center gap-2").style("padding:4px 2px")
+            self._render_selection_toolbar()
 
+            # Review findings sit ABOVE the step list: below it they were under
+            # the scroll region and looked like nothing had happened.
+            self.review_panel = ui.column().classes("w-full gap-1").style(
+                "max-height:16rem; overflow-y:auto")
+
+            # Only the step list scrolls. The name, Save / Run buttons and the
+            # Select row stay put, so at step 100 "Select" is still one click
+            # away instead of a scroll to the top of the page.
             with ui.column().classes("w-full gap-0").style(
-                    f"border:1px solid {COLORS['border']}; border-radius:6px"):
+                    f"border:1px solid {COLORS['border']}; border-radius:6px;"
+                    f"max-height:calc(100vh - 17rem); overflow-y:auto"):
                 # A purpose band applies to every step below it until the
                 # next band. A hidden step is skipped, never renumbered, so what
                 # a reader sees always matches the file.
@@ -567,6 +648,7 @@ class TestCasesPage:
                 # `${otp}` read as unset at step 9 and settled at step 11.
                 stored = set(self._vars.get("stored", []))
                 made: dict = self._vars.get("defined", {}) or {}
+                token_queue: list = []
                 for i, text in enumerate(self.steps, 1):
                     known_here = stored | {n for n, at in made.items() if at < i}
                     if self.compose_at == i - 1:
@@ -600,11 +682,21 @@ class TestCasesPage:
                              on_drop=self.move_step_to,
                              on_add=self._open_composer,
                              on_edit=self.edit_step, on_delete=self.delete_step,
-                             on_move=self.move_step)
+                             on_move=self.move_step,
+                             token_queue=token_queue)
                 if self.compose_at == len(self.steps):
                     await self._compose_row()
 
-            self.review_panel = ui.column().classes("w-full gap-1")
+            # The rows are on screen now; fill in their tokens in batches so
+            # the first screenful is readable while the rest is still drawing.
+            for k in range(0, len(token_queue), 25):
+                for tok in token_queue[k:k + 25]:
+                    try:
+                        await tok.render()
+                    except Exception:  # noqa: BLE001 — one bad row must not blank the rest
+                        pass
+                await asyncio.sleep(0.02)
+
 
             ui.label("Add a step").style(
                 f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']};"
@@ -641,6 +733,11 @@ class TestCasesPage:
                            lambda text, at=where: self.insert_step(at, text),
                            placeholder="Type the step to insert here",
                            known_variables=self._variables())
+            # Esc closes the composer, the same as Done. First press clears the
+            # suggestion list (the box's own handler); on an empty box it closes.
+            box.input.on("keydown.escape",
+                         lambda _: self._close_composer()
+                         if not (box.input.value or "").strip() else None)
             await box.load()
 
     def _open_composer(self, index: int, where: str) -> None:
@@ -832,28 +929,35 @@ class TestCasesPage:
             if f.get("kind") == "no_assertion":
                 f["_box"] = ui.column().classes("w-full gap-1")
 
-    def _add_from_finding(self, f: dict) -> None:
-        """Put the finding's proposed step into the test, where it says."""
+    async def _add_from_finding(self, f: dict) -> None:
+        """Put the finding's proposed step into the test, where it says, and save."""
         at = int(f.get("add_at") or 0)
         pos = self._insert_at(at - 1 if at else len(self.steps),
                               f.get("add_step", ""))
         if pos < 0:
             return
-        ui.notify(f"Added as step {pos + 1} — Save to keep it", type="positive")
-        ui.timer(0.01, self._rerun_review, once=True)
+        await self._save_after_review(f"Added as step {pos + 1}")
 
-    def _remove_from_finding(self, f: dict) -> None:
-        """Take out the step this finding says should not be there."""
+    async def _remove_from_finding(self, f: dict) -> None:
+        """Take out the step this finding says should not be there, and save."""
         idx = int(f.get("step_index") or 0)
         if not 0 < idx <= len(self.steps):
             return
         gone = self.steps.pop(idx - 1)
         self.step_meta = {}
         self.selection.clear()
-        self.dirty = True
-        ui.notify(f"Removed step {idx}: {gone.strip()[:60]} — Save to keep it",
-                  type="positive")
-        ui.timer(0.01, self._rerun_review, once=True)
+        await self._save_after_review(f"Removed step {idx}: {gone.strip()[:60]}")
+
+    async def _save_after_review(self, what: str) -> None:
+        """Review edits are saved as they are applied; the review then re-runs."""
+        try:
+            await api.save_project(self.selected, self.steps, self.platform)
+            self.dirty = False
+            ui.notify(f"{what} — saved", type="positive")
+        except api.ApiError as e:
+            self.dirty = True
+            ui.notify(f"{what}, but saving failed: {e.detail}", type="negative")
+        await self._rerun_review()
 
     def _add_element_for(self, f: dict) -> None:
         """Open the save-element form for the name this step could not resolve."""
@@ -975,25 +1079,37 @@ class TestCasesPage:
         ui.notify(f"Added as step {pos + 1} — Save to keep it", type="positive")
         ui.timer(0.01, self._rerun_review, once=True)
 
-    def _apply_fix(self, f: dict) -> None:
+    async def _apply_fix(self, f: dict) -> None:
+        """
+        Apply a review fix AND save it. "Updated — Save to keep it" was read as
+        done; the next navigation then threw the change away.
+        """
         idx = f.get("step_index", 0)
-        if not idx or not f.get("fix"):
+        if not idx or not f.get("fix") or idx > len(self.steps):
             return
+        before = self.steps[idx - 1]
         self.steps[idx - 1] = f["fix"]
-        ui.notify(f"Step {idx} updated — Save to keep it", type="positive")
-        ui.timer(0.01, self._rerun_review, once=True)
+        try:
+            await api.save_project(self.selected, self.steps, self.platform)
+            self.dirty = False
+            ui.notify(f"Step {idx} updated and saved", type="positive")
+        except api.ApiError as e:
+            self.steps[idx - 1] = before
+            ui.notify(f"Could not save the change: {e.detail}", type="negative")
+            return
+        await self._rerun_review()
 
     async def _rerun_review(self) -> None:
         await self.render_editor()
         await self.review()
 
-    def _group_from_finding(self, f: dict) -> None:
+    async def _group_from_finding(self, f: dict) -> None:
         block = f.get("extra") or []
         start = f.get("step_index", 1)
         self.select_mode = True
         self.selection = set(range(start, start + len(block)))
-        ui.timer(0.01, self.render_editor, once=True)
-        ui.timer(0.35, self.save_group_dialog, once=True)
+        await self.render_editor()
+        self.save_group_dialog(replace_in_flow=True)
 
     # ── purpose bands ───────────────────────────────────────────────────────
     def _purpose_band(self, index: int, purpose: str, collapsed: bool) -> None:
@@ -1142,8 +1258,49 @@ class TestCasesPage:
             self.selection.clear()
         ui.timer(0.01, self.render_editor, once=True)
 
+    def _render_selection_toolbar(self) -> None:
+        bar = getattr(self, "sel_bar", None)
+        if bar is None:
+            return
+        bar.clear()
+        with bar:
+            ui.checkbox("Select", value=self.select_mode,
+                        on_change=lambda e: self._set_select_mode(bool(e.value))) \
+                .props("dense")
+            if not self.select_mode:
+                return
+            ui.checkbox("All", value=len(self.selection) == len(self.steps)
+                        and bool(self.steps),
+                        on_change=lambda e: self._select_all(bool(e.value))) \
+                .props("dense")
+            rng = ui.input(placeholder="20-30").props("outlined dense") \
+                .style("width:7rem")
+            ui.button("Select range", on_click=lambda: self._select_range(rng.value)) \
+                .props("flat dense")
+            ui.label(f"{len(self.selection)} selected").style(
+                f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}")
+            if self.selection:
+                ui.button("Club with a purpose", icon="segment",
+                          on_click=self.club_dialog) \
+                    .props("flat dense").style(f"color:{COLORS['primary']}") \
+                    .tooltip("Explain what these steps do — annotation, "
+                             "not a reusable group")
+                ui.button("Save as step group", icon="bookmark_add",
+                          on_click=self.save_group_dialog) \
+                    .props("flat dense").style(f"color:{COLORS['primary']}")
+                ui.button("Switch off", icon="toggle_off",
+                          on_click=lambda: self._bulk_enabled(False)) \
+                    .props("flat dense")
+                ui.button("Switch on", icon="toggle_on",
+                          on_click=lambda: self._bulk_enabled(True)) \
+                    .props("flat dense")
+                ui.button("Delete", icon="delete_outline",
+                          on_click=self._bulk_delete) \
+                    .props("flat dense color=negative")
+
     def _toggle_selected(self, index: int, on: bool) -> None:
         self.selection.add(index) if on else self.selection.discard(index)
+        self._render_selection_toolbar()
 
     def _select_all(self, on: bool) -> None:
         self.selection = set(range(1, len(self.steps) + 1)) if on else set()
@@ -1195,18 +1352,26 @@ class TestCasesPage:
         ui.notify(f"Removed {n} step(s)", type="positive")
         ui.timer(0.01, self.render_editor, once=True)
 
-    def save_group_dialog(self) -> None:
+    def save_group_dialog(self, replace_in_flow: bool = False) -> None:
         """
         Save the ticked steps as a reusable group.
 
         The steps are stored under one name and offered while typing as
         `call <name>` with an (sg) tag, so a sequence you repeat — open the site,
-        wait, dismiss the login popup — is written once.
+        wait, dismiss the login popup — is written once. With
+        ``replace_in_flow`` the ticked steps are swapped for `call <name>` in
+        THIS test case and it is saved — what the review's "make a step group"
+        promises.
         """
         chosen = [self.steps[i - 1] for i in sorted(self.selection)]
         chosen = [c.strip()[len(self.DISABLED):] if c.strip().startswith(self.DISABLED)
                   else c for c in chosen]
-        dialog = ui.dialog().props("persistent")
+        if not chosen:
+            ui.notify("Tick the steps first", type="warning")
+            return
+        host = getattr(self, "dialog_host", None)
+        with (host if host is not None else ui.element("div")):
+            dialog = ui.dialog().props("persistent")
         with dialog, ui.card().style("width:34rem"):
             ui.label("Save as step group").style(
                 f"font-size:{TYPOGRAPHY['size_lg']};"
@@ -1259,6 +1424,9 @@ class TestCasesPage:
                         f"font-size:{TYPOGRAPHY['size_xs']}; padding:3px 8px")
             note = ui.label().style(
                 f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['warning']}")
+            swap = ui.checkbox(f"Replace these {len(chosen)} step(s) in this test case "
+                               f"with 'call <name>' and save", value=replace_in_flow) \
+                .props("dense")
 
             async def do_save(overwrite: bool = False) -> None:
                 if not check_name():
@@ -1277,10 +1445,28 @@ class TestCasesPage:
                     note.set_text(str(e.detail)[:200])
                     return
                 dialog.close()
-                ui.notify(f"Saved step group — type 'call "
-                          f"{(name.value or '').strip()}' to reuse it",
-                          type="positive")
+                gname = (name.value or "").strip()
+                if swap.value and self.selection:
+                    idxs = sorted(self.selection)
+                    first = idxs[0]
+                    for i in reversed(idxs):
+                        del self.steps[i - 1]
+                    self.steps.insert(first - 1, f"call {gname}")
+                    self.step_meta = {}
+                    try:
+                        await api.save_project(self.selected, self.steps, self.platform)
+                        self.dirty = False
+                        ui.notify(f"Saved step group and replaced {len(idxs)} step(s) "
+                                  f"with 'call {gname}'", type="positive")
+                    except api.ApiError as e:
+                        self.dirty = True
+                        ui.notify(f"Group saved, but this test case could not be "
+                                  f"saved: {e.detail}", type="warning")
+                else:
+                    ui.notify(f"Saved step group — type 'call {gname}' to reuse it",
+                              type="positive")
                 self.selection.clear()
+                self.select_mode = False
                 await self.render_editor()
 
             with ui.row().classes("w-full justify-end gap-2"):

@@ -6,6 +6,7 @@ Extracted from actions.py with updated imports pointing to the new modules.
 Global state (RUNTIME_VARIABLES) now lives in nlp.variable_manager.
 """
 import re
+import time
 import logging
 import os
 
@@ -471,6 +472,53 @@ def extract_page_url(page, variable_name):
     logger.info(f"💾 EXTRACTED URL: '{url}' -> Stored as '${variable_name}'")
 
 
+def extract_regex(page, pattern: str, source: str, variable_name: str) -> None:
+    """
+    `store regex "<pattern>" from <var> as <new_var>`
+    `store regex "<pattern>" from page url as <new_var>`
+
+    The first capture group (or the whole match, when the pattern has none)
+    of `pattern` applied to the source text. This is how a step reads the
+    city, the category id or the search term out of the URL it opened, so an
+    API call can be built for THAT search instead of carrying values a person
+    typed in — `store regex "nct-(\\d+)" from page url as ncatid`.
+    """
+    if source.strip().lower() in ("page url", "url"):
+        text = _strip_credentials(page.url)
+        origin = "page url"
+    else:
+        if source not in RUNTIME_VARIABLES:
+            raise Exception(f"❌ Variable '${{{source}}}' is not stored in memory.")
+        text = str(RUNTIME_VARIABLES[source])
+        origin = f"${{{source}}}"
+    pat = resolve_variables(pattern)
+    try:
+        m = re.search(pat, text)
+    except re.error as e:
+        raise Exception(f"❌ Bad regex {pat!r}: {e}") from e
+    if not m:
+        raise Exception(f"❌ Regex {pat!r} matched nothing in {origin}: '{text[:160]}'")
+    value = m.group(1) if m.groups() else m.group(0)
+    RUNTIME_VARIABLES[variable_name] = value
+    logger.info("💾 REGEX %r on %s -> ${%s} = %r", pat, origin, variable_name, value)
+
+
+def transform_text(mode: str, source: str, variable_name: str) -> None:
+    """
+    `store lowercase of "<text or ${var}>" as <var>`   (also uppercase, trimmed)
+    A value read from the page or a URL is often needed in another case for
+    an API call — lead_gen wants the city in lowercase while the URL has it
+    capitalised. Plain text and ${references} are both accepted.
+    """
+    text = resolve_variables(source)
+    if source.strip() in RUNTIME_VARIABLES and not source.strip().startswith("${"):
+        text = str(RUNTIME_VARIABLES[source.strip()])
+    out = {"lowercase": text.lower(), "uppercase": text.upper(),
+           "trimmed": text.strip()}[mode]
+    RUNTIME_VARIABLES[variable_name] = out
+    logger.info("💾 %s of %r -> ${%s} = %r", mode, text[:60], variable_name, out[:60])
+
+
 def extract_page_title(page, variable_name):
     title = page.title()
     RUNTIME_VARIABLES[variable_name] = str(title)
@@ -875,7 +923,9 @@ def scroll_until_text_visible(page, text, max_scrolls=None, scroll_wait=2):
         scrolls += 1
         if scroll_wait:
             page.wait_for_timeout(float(scroll_wait) * 1500)
-    return False
+    # Scrolling to the limit without ever seeing the text used to "pass" — the
+    # step then only cost time and hid the fact that the text was not there.
+    raise Exception(f"❌ Text '{target_text}' not visible after {max_scrolls} scroll(s).")
 
 
 def save_page_source(page, name: str) -> str:
@@ -2339,6 +2389,326 @@ def enter_otp(page, otp_value, locator_name):
         box.click()
         box.fill(digit)
     logger.info("✅ OTP entered across %d inputs.", count)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# RECOMMENDED PRODUCTS — priority logic (GJDT-22686)
+# ─────────────────────────────────────────────────────────────────────────────
+#: The ticket's hierarchy, highest priority first. Bucket = (has DS, in search
+#: city, has price). 360°-vs-video ordering inside a DS bucket is not checked:
+#: neither the API nor the card exposes whether a product has a video.
+_RP_BUCKETS = [
+    (True, True, True), (True, True, False), (True, False, True), (True, False, False),
+    (False, True, True), (False, True, False), (False, False, True), (False, False, False),
+]
+#: Cities the backend treats as ONE search city (DC logic): a Thane vendor is
+#: "in city" for a Mumbai search. Keys and members are lower-case.
+_RP_CITY_GROUPS = {
+    "mumbai": {"mumbai", "navi mumbai", "thane", "vasai", "vasai virar", "palghar",
+               "mira bhayandar", "kalyan", "dombivli", "bhiwandi"},
+}
+
+#: DS flags the last verified API response reported, keyed by product name.
+#: The results page shows a badge for 360° but NOT for AI video, so a page
+#: check that trusted the badge alone called a video product "no DS" and
+#: failed a correct order. The API knows; the page check borrows from it.
+_RP_API_DS: dict[str, bool] = {}
+
+
+def _rp_same_city(item_city: str, want: str) -> bool:
+    a = (item_city or "").strip().lower()
+    w = (want or "").strip().lower()
+    if a == w:
+        return True
+    for _hub, members in _RP_CITY_GROUPS.items():
+        if w in members and a in members:
+            return True
+    return False
+
+
+def _rp_has_video(x: dict) -> bool:
+    """Any item-level field that names a video and is non-empty."""
+    for k, v in x.items():
+        if "video" in str(k).lower() and v not in (None, "", 0, "0", False, [], {}):
+            return True
+    return False
+
+
+_RP_LABEL = {
+    (True, True, True): "DS, in city, priced",   (True, True, False): "DS, in city, no price",
+    (True, False, True): "DS, outside, priced",  (True, False, False): "DS, outside, no price",
+    (False, True, True): "no DS, in city, priced", (False, True, False): "no DS, in city, no price",
+    (False, False, True): "no DS, outside, priced", (False, False, False): "no DS, outside, no price",
+}
+
+
+def _rp_check_order(items: list[dict], city: str, source: str) -> None:
+    """
+    Assert `items` (each {name, city, ds, price}) never step UP in priority.
+
+    Higher-priority buckets must be exhausted before a lower one appears, so
+    the bucket index must be non-decreasing along the carousel. One violation
+    is enough to fail; the whole table is logged so the reason is visible.
+    """
+    if not items:
+        raise Exception(f"❌ No recommended products found in {source}.")
+    want = city.strip().lower()
+    rows = []
+    for i, it in enumerate(items, 1):
+        key = (bool(it["ds"]), _rp_same_city(it["city"], want), bool(it["price"]))
+        rows.append((i, _RP_BUCKETS.index(key) + 1, _RP_LABEL[key], it["name"], it["city"] or "?"))
+    logger.info("📊 Recommended products (%s) vs search city '%s':\n%s", source, city,
+                "\n".join(f"   {i:>2}. P{p} [{lbl}]  {n[:50]}  ({c})" for i, p, lbl, n, c in rows))
+    for prev, cur in zip(rows, rows[1:]):
+        if cur[1] < prev[1]:
+            raise Exception(
+                f"❌ Priority order broken in {source}: #{cur[0]} '{cur[3][:50]}' is "
+                f"P{cur[1]} [{cur[2]}] but comes after #{prev[0]} '{prev[3][:50]}' "
+                f"which is P{prev[1]} [{prev[2]}]. A higher-priority group must be "
+                f"exhausted before a lower one is shown (GJDT-22686).")
+    logger.info("✅ %s: %d products follow the priority hierarchy.", source, len(rows))
+
+
+def _rp_search_city(page, explicit: str = "", api_obj=None) -> str:
+    """
+    The city the user searched in — never hard-coded into the step.
+
+    Taken, in order, from: the step's own `for city "…"` (only when written),
+    the API response's `results.bd_params.city` (the city the backend served
+    the search for), and the page URL (`justdial.com/<City>/…`). A test that
+    opens a Pune URL is therefore judged against Pune without anyone editing
+    the step.
+    """
+    if explicit and explicit.strip():
+        return resolve_variables(explicit.strip())
+    if isinstance(api_obj, dict):
+        bd = (api_obj.get("results") or {}).get("bd_params") if isinstance(api_obj.get("results"), dict) else None
+        if isinstance(bd, dict) and bd.get("city"):
+            return str(bd["city"]).strip()
+    try:
+        from urllib.parse import unquote, urlparse
+
+        from execution.action_service import _TEST_SESSION
+        live = (_TEST_SESSION.active_page or page) if page is not None else None
+        path = urlparse(live.url).path if live is not None else ""
+        first = next((seg for seg in path.split("/") if seg), "")
+        if first and not first.lower().startswith(("jdmart", "nct-", "cat-")):
+            return unquote(first).replace("-", " ").strip()
+    except Exception:  # noqa: BLE001
+        pass
+    raise Exception("❌ Could not work out the search city — the API response has no "
+                    "bd_params.city and the page URL has no /<City>/ segment. Add "
+                    "`for city \"<City>\"` to the step.")
+
+
+def verify_recommended_order_api(variable_name: str, city: str = "", page=None) -> None:
+    """
+    `verify recommended products order in <var>` [`for city "<city>"`]
+    <var> holds the get_product_by_ncatid JSON (from `api get … as <var>`).
+    The city is read from the response / page unless written in the step.
+    """
+    obj = RUNTIME_VARIABLES.get(variable_name)
+    if obj is None:
+        raise Exception(f"❌ Variable '${{{variable_name}}}' is not stored in memory.")
+    city = _rp_search_city(page, city, obj)
+    data = obj
+    for key in ("results", "data"):
+        if isinstance(data, dict) and key in data:
+            data = data[key]
+    if not isinstance(data, list):
+        raise Exception(f"❌ '${{{variable_name}}}' does not hold results.data as a list.")
+    items = []
+    for x in data:
+        ev = x.get("event_data") if isinstance(x, dict) else None
+        ci = (ev or {}).get("contract_info") if isinstance(ev, dict) else None
+        item_city = ((ci or {}).get("city") or (ci or {}).get("data_city") or "")
+        if not item_city:
+            m = re.search(r"/jdmart/([^/]+)/", str(x.get("url", "")))
+            item_city = m.group(1).replace("-", " ") if m else ""
+        ds = bool(x.get("image3d")) or bool(x.get("thumb_3d_image")) or _rp_has_video(x)
+        items.append({
+            "name": str(x.get("display_name1", "")),
+            "city": item_city,
+            "ds": ds,
+            "price": bool(str(x.get("price", "")).strip()),
+        })
+    _RP_API_DS.clear()
+    _RP_API_DS.update({it["name"].strip().lower(): it["ds"] for it in items if it["name"]})
+    _rp_check_order(items, city, f"API ${{{variable_name}}}")
+
+
+def verify_recommended_order_page(page, city: str = "") -> None:
+    """
+    `verify recommended products carousel order on page` [`for city "<city>"`]
+    Reads the cards as rendered: city from the card link, DS from the 360°
+    badge (or from the API for AI-video products, which carry no badge on
+    the results page), price from the price block.
+    The search city comes from the page URL unless written in the step.
+    """
+    city = _rp_search_city(page, city)
+    # Same reader as the city-preference check; DS for AI-video products is
+    # borrowed from the last verified API response (the page has no badge).
+    items = _rp_cards(page)
+    _rp_check_order(items or [], city, "the page carousel")
+
+
+def _rp_cards(page) -> list[dict]:
+    """The rendered 'Recommended … For You' cards, in carousel order."""
+    cards = _rp_cards_raw(page)
+    for c in cards:
+        api_ds = _RP_API_DS.get((c.get("name") or "").strip().lower())
+        if api_ds and not c.get("ds"):
+            c["ds"] = True   # AI-video DS: known to the API, no badge on the page
+    return cards
+
+
+def _rp_cards_raw(page) -> list[dict]:
+    return page.evaluate("""() => {
+      const car = [...document.querySelectorAll('.carousel_parent_short')]
+        .find(c => /Recommended (Products|Services) For You/i.test(c.textContent || ''));
+      if (!car) return [];
+      return [...car.querySelectorAll('a.carousel_view3-parent')].map(a => {
+        const m = (a.getAttribute('href') || '').match(/\\/jdmart\\/([^\\/]+)\\//);
+        const info = a.querySelector('.carousel_view3-infoDiv');
+        const spans = info ? [...info.querySelectorAll('span.carousel_text_wrap')] : [];
+        const price = (a.querySelector('.carousel_view3-price') || {}).textContent || '';
+        return { name: spans[0] ? spans[0].textContent.trim() : '',
+                 company: spans[1] ? spans[1].textContent.trim() : '',
+                 city: m ? m[1].replace(/-/g, ' ') : '',
+                 ds: !!a.querySelector('.carouselview__img3dicn, .carouselview__img3dwrp'),
+                 price: /\\d/.test(price) };
+      });
+    }""") or []
+
+
+def store_recommended_position(page, needle: str, variable_name: str) -> None:
+    """
+    `store position of recommended product "<name or company>" on page as <var>`
+    1-based position of the first card whose product name OR company contains
+    the text; 0 when it is not in the carousel at all (so a later comparison
+    can still run — "not shown" is a legitimate outcome in another city).
+    """
+    want = resolve_variables(needle).strip().lower()
+    cards = _rp_cards(page)
+    pos = next((i for i, c in enumerate(cards, 1)
+                if want in c["name"].lower() or want in c["company"].lower()), 0)
+    RUNTIME_VARIABLES[variable_name] = str(pos)
+    logger.info("💾 '%s' is at position %s of %d recommended cards -> ${%s}",
+                needle, pos or "none", len(cards), variable_name)
+
+
+def verify_recommended_prefer_city(page, city: str = "") -> None:
+    """
+    `verify recommended products prefer search city on page` [`for city "…"`]
+    Within each Digital-Showroom group, every card from the search city must
+    come before every card from elsewhere. The city is read from the page URL.
+    Passes vacuously (with a log line) when no card is from the search city —
+    that result simply does not exercise the rule.
+    """
+    want = _rp_search_city(page, city).lower()
+    cards = _rp_cards(page)
+    if not cards:
+        raise Exception("❌ No recommended products found on the page.")
+    in_city = [i for i, c in enumerate(cards, 1) if _rp_same_city(c["city"], want)]
+    if not in_city:
+        logger.info("ℹ️  No recommended product is from '%s' — city preference not exercised here.", want)
+        return
+    for ds in (True, False):
+        seen_outside = None
+        for i, c in enumerate(cards, 1):
+            if c["ds"] != ds:
+                continue
+            if not _rp_same_city(c["city"], want):
+                seen_outside = seen_outside or (i, c)
+            elif seen_outside:
+                raise Exception(
+                    f"❌ City preference broken: #{i} '{c['name'][:45]}' ({c['city']}, the "
+                    f"search city) comes after #{seen_outside[0]} "
+                    f"'{seen_outside[1]['name'][:45]}' ({seen_outside[1]['city']}) in the "
+                    f"same {'DS' if ds else 'non-DS'} group (GJDT-22686).")
+    logger.info("✅ City preference holds for '%s': in-city cards at positions %s of %d.",
+                want, in_city, len(cards))
+
+
+def verify_stored_variable_compare(variable_name: str, op: str, other: str) -> None:
+    """`verify stored <a> is greater than <b>` / `is less than` / `is at least` / `is at most`."""
+    if variable_name not in RUNTIME_VARIABLES:
+        raise Exception(f"❌ Variable '{variable_name}' is not stored in memory.")
+    try:
+        a = float(str(RUNTIME_VARIABLES[variable_name]).strip())
+        b = float(str(resolve_variables(other)).strip())
+    except ValueError as e:
+        raise Exception(f"❌ Both sides must be numbers: ${{{variable_name}}}="
+                        f"{RUNTIME_VARIABLES[variable_name]!r}, other={other!r}") from e
+    ok = {"greater than": a > b, "less than": a < b, "at least": a >= b, "at most": a <= b}[op]
+    if not ok:
+        raise Exception(f"❌ Expected ${{{variable_name}}} ({a:g}) to be {op} {b:g}.")
+    logger.info("✅ ${%s} (%g) is %s %g.", variable_name, a, op, b)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# NETWORK CAPTURE — what the page sent, for click trackers and lead calls
+# ─────────────────────────────────────────────────────────────────────────────
+#: Requests seen since `start capturing network requests`: (url, method, post body).
+_NET_LOG: list[tuple[str, str, str]] = []
+_NET_PAGES: set = set()
+
+
+def _net_record(req) -> None:
+    try:
+        body = req.post_data or ""
+    except Exception:  # noqa: BLE001
+        body = ""
+    _NET_LOG.append((req.url, req.method, body[:4000]))
+
+
+def start_network_capture(page) -> None:
+    """`start capturing network requests` — from here on, every request the
+    ACTIVE page makes is remembered (URL, method, body). A tracker such as
+    `li=gbp_afp_b2b_plisting_carousel` is only ever visible here."""
+    _NET_LOG.clear()
+    target = _TEST_SESSION.active_page or page
+    if id(target) not in _NET_PAGES:
+        target.on("request", _net_record)
+        _NET_PAGES.add(id(target))
+    logger.info("🕸️ Network capture started")
+
+
+def _net_matches(needle: str) -> list[tuple[str, str, str]]:
+    want = resolve_variables(needle)
+    return [r for r in _NET_LOG if want in r[0] or want in r[2]]
+
+
+def verify_network_request(needle: str, expected: bool = True, wait_s: float = 10) -> None:
+    """`verify network request containing "<text>" was sent` / `was not sent`
+    (checks URL and POST body of every captured request; waits up to 10 s for
+    an asynchronous tracker to fire before deciding)."""
+    deadline = time.time() + (wait_s if expected else 0)
+    hits = _net_matches(needle)
+    while expected and not hits and time.time() < deadline:
+        time.sleep(0.5)
+        hits = _net_matches(needle)
+    if expected and not hits:
+        sample = "\n".join(f"   {m} {u[:140]}" for u, m, _ in _NET_LOG[-8:]) or "   (none captured)"
+        raise Exception(f"❌ No network request containing '{resolve_variables(needle)}' was sent "
+                        f"since capture started ({len(_NET_LOG)} captured). Last requests:\n{sample}")
+    if not expected and hits:
+        raise Exception(f"❌ {len(hits)} network request(s) containing "
+                        f"'{resolve_variables(needle)}' were sent, e.g. {hits[0][0][:160]}")
+    logger.info("✅ Network request containing '%s': %s (%d match).",
+                resolve_variables(needle), "sent" if expected else "not sent", len(hits))
+
+
+def store_network_request(needle: str, variable_name: str) -> None:
+    """`store network request containing "<text>" as <var>` — the full URL of
+    the first matching request, so its parameters can be asserted with
+    `verify stored <var> contains "…"`."""
+    hits = _net_matches(needle)
+    if not hits:
+        raise Exception(f"❌ No network request containing '{resolve_variables(needle)}' captured.")
+    url, method, body = hits[0]
+    RUNTIME_VARIABLES[variable_name] = url + (("  BODY:" + body) if body else "")
+    logger.info("💾 Network request -> ${%s} = %s %s", variable_name, method, url[:200])
 
 
 def verify_stored_variable_not_equals(variable_name, unexpected_text, ignore_case=False):

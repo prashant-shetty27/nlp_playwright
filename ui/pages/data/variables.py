@@ -302,7 +302,8 @@ class TestDataPage:
                     res = await api.set_testdata(
                         (n.value or "").strip(), v.value or "",
                         scope=scope.value or "global",
-                        environment=envsel.value or "", force=force)
+                        environment=envsel.value or "", force=force,
+                        updating=editing)
                 except api.ApiError as e:
                     detail = e.detail
                     # A name clash comes back as 409 with a structured body. It
@@ -324,13 +325,23 @@ class TestDataPage:
                                 ui.label(f"• {c.get('message','')}").style(
                                     f"font-size:{TYPOGRAPHY['size_xs']};"
                                     f"color:{COLORS['text_muted']}")
+                            kinds = {c.get("kind") for c in detail.get("conflicts", [])}
                             with ui.row().classes("gap-2"):
-                                ui.button("Replace it",
-                                          on_click=lambda: save(True)) \
-                                    .props("flat dense color=negative")
-                                ui.button("Keep both — rename this one",
-                                          on_click=lambda: n.run_method("focus")) \
-                                    .props("flat dense")
+                                if "duplicate_value" in kinds and "duplicate_name" not in kinds:
+                                    # Same value, different name: the fix is
+                                    # usually to reference the existing name.
+                                    ui.button("Save anyway — two names, one value",
+                                              on_click=lambda: save(True)) \
+                                        .props("flat dense color=negative")
+                                    ui.button("Cancel", on_click=dialog.close) \
+                                        .props("flat dense")
+                                else:
+                                    ui.button("Replace it",
+                                              on_click=lambda: save(True)) \
+                                        .props("flat dense color=negative")
+                                    ui.button("Keep both — rename this one",
+                                              on_click=lambda: n.run_method("focus")) \
+                                        .props("flat dense")
                         return
                     note.set_text(str(detail)[:200])
                     return

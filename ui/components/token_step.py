@@ -31,6 +31,8 @@ follows the same convention as everything else.
 """
 from __future__ import annotations
 
+import json
+
 import asyncio
 import re
 from typing import Callable
@@ -186,6 +188,15 @@ class TokenStep:
                 hint = (f"Nothing sets {value} yet. You will be asked for it in "
                         f"Run Center each time, or save it once under Test Data "
                         f"and every run picks it up.")
+            elif role == "locator":
+                # The selector IS the thing you want to see when you hover an
+                # element. It used to be reachable only via Elements → group →
+                # name — three screens away from the step that uses it.
+                sel = self.locator_details.get(value, {}).get("selector", "")
+                grp = self.locator_details.get(value, {}).get("group", "")
+                hint = (f"{grp} → {value}:  {sel}   (click to point this step "
+                        f"at another element; ▾ menu copies the selector)" if sel else
+                        f"Click to change — {ROLE_HINT.get(role, 'a value')}")
             else:
                 hint = f"Click to change — {ROLE_HINT.get(role, 'a value')}"
             chip.tooltip(hint)
@@ -200,26 +211,57 @@ class TokenStep:
             if role == "locator" and not unfilled and not missing_element:
                 name = (seg.get("text") or "").strip()
                 details = self.locator_details.get(name, {})
-                with ui.menu().props("auto-close") as menu:
-                    ui.menu_item("Point this step at another element",
-                                 lambda: self._edit(holder, seg))
-                    ui.menu_item(
-                        f"Create a new locator from '{name}'",
-                        lambda n=name, s=seg,
-                        g=details.get("group", ""),
-                        x=details.get("selector", ""):
-                        self._create_locator_from(n, s, g, x),
-                    )
-                    ui.separator()
-                    ui.menu_item(f"Edit '{name}' — selector or name",
-                                 lambda n=name: self._open_in_elements(n))
-                    ui.menu_item(f"Rename '{name}' everywhere",
-                                 lambda n=name: self._open_in_elements(n))
                 caret = ui.button(icon="expand_more").props("flat dense size=xs") \
                     .style("min-width:1rem; padding:0")
                 caret.tooltip("More things you can do with this element")
-                with caret:
-                    menu
+                built: dict = {}
+
+                def _build_menu(caret=caret, name=name, details=details,
+                                holder=holder, seg=seg, built=built) -> None:
+                    # Built on first click, not at render time: a 170-step case
+                    # has a menu of seven items behind every element token, and
+                    # drawing all of them up front was most of the page weight.
+                    if built.get("menu") is not None:
+                        built["menu"].open()
+                        return
+                    with caret:
+                        with ui.menu().props("auto-close") as menu:
+                            sel = details.get("selector", "")
+                            if sel:
+                                def copy_selector(v=sel) -> None:
+                                    ui.run_javascript(
+                                        f"navigator.clipboard.writeText({json.dumps(v)})")
+                                    ui.notify("Selector copied", type="positive")
+
+                                with ui.menu_item("", on_click=copy_selector):
+                                    with ui.column().classes("gap-0"):
+                                        ui.label(f"Selector ({details.get('group', '')}) — click to copy") \
+                                            .style(f"font-size:{TYPOGRAPHY['size_xs']};"
+                                                   f"color:{COLORS['text_muted']}")
+                                        ui.label(sel).style(
+                                            f"font-family:{TYPOGRAPHY['mono']};"
+                                            f"font-size:{TYPOGRAPHY['size_xs']};"
+                                            f"max-width:32rem; white-space:normal;"
+                                            f"word-break:break-all")
+                                ui.separator()
+                            ui.menu_item("Point this step at another element",
+                                         lambda: self._edit(holder, seg))
+                            ui.menu_item(
+                                f"Create a new locator from '{name}'",
+                                lambda n=name, s=seg,
+                                g=details.get("group", ""),
+                                x=details.get("selector", ""):
+                                self._create_locator_from(n, s, g, x),
+                            )
+                            ui.separator()
+                            ui.menu_item(f"Edit '{name}' — selector or name",
+                                         lambda n=name: self._open_in_elements(n))
+                            ui.menu_item(f"Rename '{name}' everywhere",
+                                         lambda n=name: self._open_in_elements(n))
+                    built["menu"] = menu
+                    menu.open()
+
+                caret.on("click", _build_menu)
 
     def _edit(self, holder, seg: dict) -> None:
         """Swap this token for an input; everything else on the line stays as it is."""
@@ -231,14 +273,14 @@ class TokenStep:
         #: straight into a step is the one thing the add-element form cannot
         #: work out for itself, and it is sitting right here.
         was = current
-        # A ${placeholder} is something still to be filled, not text to edit. It
-        # was being loaded into the box verbatim, so typing a value left the "${"
-        # behind — "${search_term}" became "${baldev engineering}" and the run
-        # failed on a variable that was never defined. Treat it like an empty
-        # slot: click it, it clears, you type the value.
-        if current.startswith("${") and current.endswith("}"):
-            self._placeholder_name = current[2:-1]
-            current = ""
+        # A ${reference} stays in the box, SELECTED, like any other value: a
+        # keystroke replaces it wholesale (so "${search_term}" can never become
+        # "${baldev engineering}"), while an arrow key drops the selection and
+        # lets the name be edited. It used to be cleared on open, which made
+        # "point this at ${other_url}" a retype from scratch and hid what the
+        # step was using.
+        ref_name = current[2:-1] if current.startswith("${") and current.endswith("}") else ""
+        self._placeholder_name = ref_name
 
         with holder:
             col = ui.column().classes("gap-0").style("display:inline-block")
@@ -251,10 +293,55 @@ class TokenStep:
                 # mean select-all and delete first, on every edit.
                 if current:
                     ui.timer(0.05, lambda: box.run_method("select"), once=True)
+                # For a ${reference}: what it currently resolves to, and a way
+                # to change THAT value — which is usually what "edit the URL"
+                # means, since the URL lives in Test Data, not in the step.
+                value_panel = ui.column().classes("gap-0").style(
+                    f"position:absolute; z-index:51; background:{COLORS['surface']};"
+                    f"border:1px solid {COLORS['border']}; border-radius:6px;"
+                    f"min-width:16rem; max-width:40rem; margin-top:-2px; display:none")
                 menu = ui.column().classes("gap-0").style(
                     f"position:absolute; z-index:50; background:{COLORS['surface']};"
                     f"border:1px solid {COLORS['border']}; border-radius:6px;"
                     f"max-height:12rem; overflow-y:auto; min-width:16rem; display:none")
+
+            async def show_reference_value() -> None:
+                if not ref_name:
+                    return
+                try:
+                    info = (await api.testdata("")).get("values", {}).get(ref_name)
+                except api.ApiError:
+                    info = None
+                if not info:
+                    return
+                secret = info.get("is_secret")
+                shown = info.get("display", "") if secret else info.get("value", "")
+                with value_panel:
+                    with ui.row().classes("items-center gap-2 no-wrap px-2 py-1"):
+                        ui.label(f"${{{ref_name}}} =").style(
+                            f"font-size:{TYPOGRAPHY['size_xs']};"
+                            f"color:{COLORS['text_muted']}; white-space:nowrap")
+                        ui.label(shown or "(empty)").style(
+                            f"font-family:{TYPOGRAPHY['mono']};"
+                            f"font-size:{TYPOGRAPHY['size_xs']}; overflow:hidden;"
+                            f"text-overflow:ellipsis; white-space:nowrap;"
+                            f"max-width:26rem").tooltip(shown)
+                        if not secret:
+                            # Clicking here blurs the box; marking the edit as
+                            # handled keeps the blur from tearing the dialog down.
+                            ui.button("Edit value", icon="edit",
+                                      on_click=lambda: (
+                                          done.__setitem__("handled", True),
+                                          self._edit_reference_value(
+                                              ref_name, info, start, end))) \
+                                .props("flat dense size=xs no-caps") \
+                                .tooltip("Change what this reference resolves to "
+                                         "(saved under Test Data; the step stays as it is)")
+                value_panel.style("display:block")
+                # The pick-list sits below this panel, not on top of it.
+                menu.style("margin-top:2.2rem")
+
+            ui.timer(0.01, show_reference_value, once=True)
 
             async def commit(_=None) -> None:
                 value = (box.value or "").strip()
@@ -270,6 +357,17 @@ class TokenStep:
                     # Typed a reference deliberately — leave it as a reference.
                     self._apply(start, end, value)
                     return
+                if role in ("url", "text", "number"):
+                    # A literal that Test Data already holds under a name is
+                    # the same value written twice: offer the reference, so the
+                    # step follows the stored value when it changes.
+                    holder_name = await self._stored_name_for(value)
+                    if holder_name:
+                        self._offer_reference(holder_name, value,
+                                              lambda: self._apply(start, end, value),
+                                              lambda: self._apply(start, end,
+                                                                  "${" + holder_name + "}"))
+                        return
                 if role == "locator" and value not in self.locators:
                     # The step is passed in so the namer knows what the element
                     # is FOR — "click" and "type into" want different names for
@@ -294,6 +392,11 @@ class TokenStep:
                 if role == "locator":
                     pool = [(n, n, self.locators.get(n, "")) for n in sorted(self.locators)
                             if typed in n.lower()][:12]
+                    # The selector under each name: choosing between
+                    # product_1st and product_1st_name is a question about
+                    # WHAT they match, and the name alone does not say.
+                    pool = [(i, n, (self.locator_details.get(n, {}).get("selector")
+                                    or note)) for i, n, note in pool]
                 elif role == "variable":
                     pool = [(v, v, "runtime variable") for v in self.variables
                             if typed in v.lower()][:12]
@@ -333,7 +436,9 @@ class TokenStep:
                                 f"font-size:{TYPOGRAPHY['size_sm']}")
                             ui.label(note).classes("ml-auto").style(
                                 f"font-size:{TYPOGRAPHY['size_xs']};"
-                                f"color:{COLORS['text_muted']}")
+                                f"color:{COLORS['text_muted']}; max-width:28rem;"
+                                f"overflow:hidden; text-overflow:ellipsis;"
+                                f"white-space:nowrap").tooltip(note)
 
             #: Set by anything that has already decided what this token becomes,
             #: so a later cancel cannot undo it or redraw over it.
@@ -374,6 +479,123 @@ class TokenStep:
             box.on("keydown.escape", cancel)
             box.on("blur", blur)
             ui.timer(0.01, suggest, once=True)
+
+    async def _stored_name_for(self, literal: str) -> str:
+        """The Test Data name whose value equals `literal`, or ""."""
+        try:
+            values = (await api.testdata("")).get("values", {}) or {}
+        except api.ApiError:
+            return ""
+        for n, entry in values.items():
+            if entry.get("is_secret"):
+                continue
+            if str(entry.get("value", "")).strip() == literal.strip():
+                return n
+        return ""
+
+    def _offer_reference(self, name: str, literal: str,
+                         keep_literal: Callable[[], None],
+                         use_reference: Callable[[], None]) -> None:
+        """Same value as a stored name: ask which the step should carry."""
+        dialog = ui.dialog()
+        with dialog, ui.card().style("width:34rem"):
+            ui.label(f"This value is already saved as ${{{name}}}").style(
+                f"font-size:{TYPOGRAPHY['size_lg']};"
+                f"font-weight:{TYPOGRAPHY['weight_bold']}")
+            ui.label(literal).style(
+                f"font-family:{TYPOGRAPHY['mono']}; font-size:{TYPOGRAPHY['size_xs']};"
+                f"color:{COLORS['text_muted']}; word-break:break-all")
+            ui.label("Using the reference means this step follows the stored "
+                     "value when it changes; a literal copy stays behind.").style(
+                f"font-size:{TYPOGRAPHY['size_sm']}; color:{COLORS['text_muted']}")
+            with ui.row().classes("w-full justify-end gap-2"):
+                ui.button("Keep the literal",
+                          on_click=lambda: (dialog.close(), keep_literal())).props("flat")
+                ui.button(f"Use ${{{name}}}", icon="check",
+                          on_click=lambda: (dialog.close(), use_reference())) \
+                    .props("unelevated")
+        dialog.open()
+
+    def _edit_reference_value(self, name: str, info: dict,
+                              start: int = -1, end: int = -1) -> None:
+        """
+        Change the VALUE a ${reference} resolves to, from the step that uses it.
+
+        The step is not touched: it keeps referencing the name, and every other
+        step using the same name sees the new value too — the same as editing
+        it on the Test Data screen, without leaving the test case.
+        """
+        dialog = ui.dialog()
+        with dialog, ui.card().style("width:36rem"):
+            ui.label(f"Change the value of ${{{name}}}").style(
+                f"font-size:{TYPOGRAPHY['size_lg']};"
+                f"font-weight:{TYPOGRAPHY['weight_bold']}")
+            scope = info.get("scope", "global")
+            env = info.get("environment", "")
+            ui.label(f"Scope: {scope}" + (f" ({env})" if env else "")
+                     + " — every step that uses this reference gets the new value.") \
+                .style(f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}")
+            box = ui.input("Value", value=info.get("value", "")) \
+                .props("outlined dense autofocus").classes("w-full") \
+                .style(f"font-family:{TYPOGRAPHY['mono']}")
+            ui.timer(0.05, lambda: box.run_method("select"), once=True)
+
+            async def cancel_dialog(_=None) -> None:
+                dialog.close()
+                await self.render()
+
+            conflict = ui.column().classes("w-full gap-1")
+
+            async def save(force: bool = False) -> None:
+                new_value = (box.value or "").strip()
+                if not new_value:
+                    ui.notify("The value cannot be empty", type="warning")
+                    return
+                try:
+                    await api.set_testdata(name, new_value, scope=scope,
+                                           environment=env, updating=True, force=force)
+                except api.ApiError as e:
+                    detail = e.detail
+                    if e.status == 409 and isinstance(detail, dict) and not force:
+                        # The value already exists under another name. The
+                        # best fix is to point THIS step at that name — offered
+                        # right here, since the step is what is being edited.
+                        conflict.clear()
+                        with conflict:
+                            ui.label(detail.get("message", "Already stored.")).style(
+                                f"font-size:{TYPOGRAPHY['size_sm']};"
+                                f"color:{COLORS['danger']};"
+                                f"font-weight:{TYPOGRAPHY['weight_medium']}")
+                            if detail.get("why"):
+                                ui.label(detail["why"]).style(
+                                    f"font-size:{TYPOGRAPHY['size_xs']};"
+                                    f"color:{COLORS['text_muted']}")
+                            other = next((c.get("existing_name") for c in
+                                          detail.get("conflicts", [])
+                                          if c.get("kind") == "duplicate_value"), "")
+                            with ui.row().classes("gap-2"):
+                                if other and start >= 0:
+                                    def use_other(o=other) -> None:
+                                        dialog.close()
+                                        self._apply(start, end, "${" + o + "}")
+                                    ui.button(f"Use ${{{other}}} in this step instead",
+                                              on_click=use_other) \
+                                        .props("flat dense color=primary")
+                                ui.button("Save anyway — two names, one value",
+                                          on_click=lambda: save(True)) \
+                                    .props("flat dense color=negative")
+                        return
+                    ui.notify(f"Could not save: {detail}", type="negative")
+                    return
+                ui.notify(f"${{{name}}} updated", type="positive")
+                dialog.close()
+                await self.render()
+
+            box.on("keydown.enter", lambda _: save())
+            with ui.row().classes("w-full justify-end gap-2"):
+                ui.button("Cancel", on_click=cancel_dialog).props("flat")
+                ui.button("Save", icon="check", on_click=lambda: save()).props("unelevated")
+        dialog.open()
 
     def _open_in_elements(self, name: str) -> None:
         """

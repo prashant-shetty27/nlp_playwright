@@ -18,6 +18,8 @@ navigation the spec describes is unchanged.
 """
 from __future__ import annotations
 
+import asyncio
+
 from typing import Callable
 
 from nicegui import ui
@@ -31,7 +33,11 @@ def new_test_case_dialog(platform: str, on_created: Callable) -> None:
                    "inputs": {}, "unclear": [], "assumptions": []}
 
     dialog = ui.dialog().props("persistent")
-    with dialog, ui.card().style("width:56rem; max-width:95vw"):
+    # The card scrolls: a drafted ticket lists 15–20 cases, and the "Save as"
+    # box and the Generate button below the list were pushed off the bottom
+    # of a fixed-height dialog — there was no way to finish.
+    with dialog, ui.card().style("width:64rem; max-width:95vw; max-height:92vh;"
+                                 " overflow-y:auto"):
         ui.label("New Test Case").style(
             f"font-size:{TYPOGRAPHY['size_lg']}; font-weight:{TYPOGRAPHY['weight_bold']}")
         with ui.tabs().classes("w-full") as tabs:
@@ -78,47 +84,33 @@ def new_test_case_dialog(platform: str, on_created: Callable) -> None:
                     .props('accept=".xlsx"').classes("w-full")
 
             # ── prompt ──────────────────────────────────────────────────────
+            # Drafting from a ticket is a page's worth of reading (questions,
+            # assumptions, twenty cases with steps), so it lives on its own
+            # page; this tab is the door to it.
             with ui.tab_panel(t_prompt):
-                ui.label("Describe what to test. Include any URL, number or code "
-                         "you want used — anything you leave out will be asked for, "
-                         "never invented.").style(
+                ui.label("Paste a Jira link or describe what to test; the ticket is read in "
+                         "full and turned into end-to-end positive and negative cases, with "
+                         "questions for you where the ticket is silent.").style(
                     f"font-size:{TYPOGRAPHY['size_sm']}; color:{COLORS['text_muted']}")
-                prompt = ui.textarea(
-                    placeholder="Test that a signed-out user tapping Ask More Photos "
-                                "on https://... sees the mobile number popup…") \
-                    .props("outlined dense rows=6").classes("w-full")
-                with ui.row().classes("items-center gap-3"):
-                    count = ui.number("Max testcases", value=5, min=1, max=25) \
-                        .props("outlined dense").style("width:9rem")
-                    spinner = ui.spinner(size="sm")
-                    spinner.set_visibility(False)
-                prompt_area = ui.column().classes("w-full gap-2")
-
-                async def draft() -> None:
-                    text = (prompt.value or "").strip()
-                    spinner.set_visibility(True)
-                    try:
-                        res = await api.draft_from_prompt(
-                            text, platform, int(count.value or 5))
-                    except api.ApiError as err:
-                        ui.notify(err.detail, type="negative")
-                        return
-                    finally:
-                        spinner.set_visibility(False)
-                    state["source_id"] = res["source_id"]
-                    state["testcases"] = res.get("testcases", [])
-                    state["unclear"] = res.get("unclear", [])
-                    state["assumptions"] = res.get("assumptions", [])
-                    ui.notify(f"{len(state['testcases'])} testcases drafted by "
-                              f"{res['extra'].get('model','the model')}", type="positive")
-                    _render_picker(prompt_area, show_notes=True)
-
-                ui.button("Draft testcases", icon="auto_awesome", on_click=draft) \
+                ui.button("Open the drafter", icon="auto_awesome",
+                          on_click=lambda: (dialog.close(),
+                                            ui.navigate.to(f"/platform/{platform}/draft"))) \
                     .props("unelevated").style(f"background:{COLORS['accent']}")
 
         def _render_picker(container, show_notes: bool = False) -> None:
             container.clear()
             with container:
+                # What was actually read from Jira — so "drafted from the ticket"
+                # is a checkable claim, not a hope.
+                for j in (state.get("jira") or []) if show_notes else []:
+                    with ui.row().classes("items-center gap-2 w-full").style(
+                            f"background:{COLORS['success']}14; border-radius:6px; padding:6px 10px"):
+                        ui.icon("task_alt").style(f"color:{COLORS['success']}")
+                        ui.label(f"Read {j.get('key')} ({j.get('type')}, {j.get('status')}): "
+                                 f"{j.get('summary','')[:70]} — {len(j.get('subtasks', []))} "
+                                 f"sub-task(s), {len(j.get('linked', []))} linked defect(s)/"
+                                 f"concern(s), {j.get('comments', 0)} comment(s)").style(
+                            f"font-size:{TYPOGRAPHY['size_xs']}")
                 if show_notes and state["assumptions"]:
                     with ui.expansion(f"{len(state['assumptions'])} assumption(s) made",
                                       icon="lightbulb").classes("w-full"):
@@ -138,37 +130,40 @@ def new_test_case_dialog(platform: str, on_created: Callable) -> None:
                 boxes: dict[str, ui.checkbox] = {}
                 with ui.column().classes("w-full gap-0").style(
                         f"border:1px solid {COLORS['border']}; border-radius:6px;"
-                        f"max-height:14rem; overflow-y:auto"):
+                        f"max-height:22rem; overflow-y:auto"):
                     for tc in state["testcases"]:
-                        with ui.row().classes("w-full items-center gap-2") \
-                                .style(f"padding:4px 8px;"
+                        with ui.row().classes("w-full items-start no-wrap gap-2") \
+                                .style(f"padding:5px 8px;"
                                        f"border-bottom:1px solid {COLORS['border']}"):
-                            boxes[tc["id"]] = ui.checkbox().props("dense")
-                            ui.label(tc["id"]).style(
-                                f"font-family:{TYPOGRAPHY['mono']};"
-                                f"font-size:{TYPOGRAPHY['size_xs']}; width:9rem")
-                            ui.label(tc.get("title", "")[:80]).style(
-                                f"font-size:{TYPOGRAPHY['size_xs']};"
-                                f"color:{COLORS['text_muted']}")
-                            ui.label(f"{tc.get('steps', 0)} steps").classes("ml-auto") \
-                                .style(f"font-size:{TYPOGRAPHY['size_xs']};"
-                                       f"color:{COLORS['text_muted']}")
+                            boxes[tc["id"]] = ui.checkbox(value=True).props("dense")
+                            kind = (tc.get("classification") or "")[:1].upper()
+                            ui.label(kind if kind in ("P", "N") else "·").style(
+                                f"font-size:{TYPOGRAPHY['size_xs']}; font-weight:700;"
+                                f"color:{COLORS['success'] if kind == 'P' else COLORS['warning']};"
+                                f"width:1rem; flex:none; margin-top:2px").tooltip(
+                                "Positive" if kind == "P" else "Negative" if kind == "N" else "")
+                            with ui.column().classes("gap-0").style("min-width:0; flex:1 1 auto"):
+                                ui.label(tc["id"]).style(
+                                    f"font-family:{TYPOGRAPHY['mono']};"
+                                    f"font-size:{TYPOGRAPHY['size_xs']}; font-weight:600;"
+                                    f"overflow:hidden; text-overflow:ellipsis; white-space:nowrap")
+                                ui.label(tc.get("title", "")).style(
+                                    f"font-size:{TYPOGRAPHY['size_xs']};"
+                                    f"color:{COLORS['text_muted']}; white-space:normal")
+                            ui.label(f"{tc.get('steps', 0)} steps").style(
+                                f"font-size:{TYPOGRAPHY['size_xs']}; flex:none;"
+                                f"color:{COLORS['text_muted']}; margin-top:2px")
 
-                flow_name = ui.input("Save as", placeholder="ask_more_photos") \
+                # Each drafted testcase becomes its OWN test case in the list
+                # (that is what a testcase is); the alternative merges the
+                # picked ones into a single flow, for people who want one file.
+                one_each = ui.switch("One test case per drafted case (recommended)", value=True)
+                flow_name = ui.input("Save as (only when merging into one)",
+                                     placeholder="ask_more_photos") \
                     .props("outlined dense").classes("w-full")
+                flow_name.bind_visibility_from(one_each, "value", backward=lambda v: not v)
 
-                async def do_generate() -> None:
-                    chosen = [k for k, b in boxes.items() if b.value]
-                    if not chosen:
-                        ui.notify("Pick at least one testcase", type="warning")
-                        return
-                    name = (flow_name.value or "").strip() or chosen[0].lower()
-                    try:
-                        g = await api.generate(state["source_id"], chosen, platform,
-                                               flow_name=name, persist=False)
-                    except api.ApiError as err:
-                        ui.notify(f"Generation failed: {err.detail}", type="negative")
-                        return
+                def _to_steps(g: dict) -> tuple[list[str], dict]:
                     steps, meta, n = [], {}, 0
                     for s in g["steps"]:
                         if not s.get("emits"):
@@ -179,13 +174,112 @@ def new_test_case_dialog(platform: str, on_created: Callable) -> None:
                                    "locator": s.get("locator", ""),
                                    "status": s.get("status", ""),
                                    "note": s.get("note", "")}
-                    summary = ", ".join(f"{k}={v}" for k, v in g["summary"].items())
-                    ui.notify(f"{len(steps)} steps generated — {summary}",
-                              type="positive")
-                    dialog.close()
-                    await on_created(name, steps, meta)
+                    return steps, meta
 
-                ui.button("Generate steps", icon="bolt", on_click=do_generate) \
+                async def do_generate() -> None:
+                    chosen = [k for k, b in boxes.items() if b.value]
+                    if not chosen:
+                        ui.notify("Pick at least one testcase", type="warning")
+                        return
+                    gen_btn.set_enabled(False)
+                    try:
+                        if one_each.value:
+                            saved, all_steps, first = [], [], None
+                            for tc_id in chosen:
+                                name = tc_id.lower()
+                                try:
+                                    g = await api.generate(state["source_id"], [tc_id], platform,
+                                                           flow_name=name, persist=False)
+                                    steps, meta = _to_steps(g)
+                                    if not steps:
+                                        continue
+                                    await api.save_project(name, steps, platform)
+                                    saved.append(name); all_steps += steps
+                                    first = first or (name, steps, meta)
+                                except api.ApiError as err:
+                                    ui.notify(f"{tc_id}: {err.detail}", type="warning")
+                            if not saved:
+                                ui.notify("Nothing could be generated", type="negative")
+                                return
+                            ui.notify(f"Saved {len(saved)} test case(s): "
+                                      f"{', '.join(saved[:4])}{'…' if len(saved) > 4 else ''}",
+                                      type="positive", timeout=8000)
+                            dialog.close()
+                            await _collect_inputs(all_steps)
+                            await on_created(first[0], first[1], first[2])
+                            return
+                        name = (flow_name.value or "").strip() or chosen[0].lower()
+                        g = await api.generate(state["source_id"], chosen, platform,
+                                               flow_name=name, persist=False)
+                        steps, meta = _to_steps(g)
+                        summary = ", ".join(f"{k}={v}" for k, v in g["summary"].items())
+                        ui.notify(f"{len(steps)} steps generated — {summary}", type="positive")
+                        dialog.close()
+                        # The values the generated steps need are asked for NOW,
+                        # once, with what the prompt/ticket supplied already typed
+                        # in — not one by one at run time.
+                        await _collect_inputs(steps)
+                        await on_created(name, steps, meta)
+                    except api.ApiError as err:
+                        ui.notify(f"Generation failed: {err.detail}", type="negative")
+                    finally:
+                        gen_btn.set_enabled(True)
+
+                async def _collect_inputs(steps: list[str]) -> None:
+                    try:
+                        from ai_flow_builder.emitter import run_parameters
+                        needed = run_parameters([st for st in steps if not st.startswith("#")])
+                    except Exception:  # noqa: BLE001
+                        needed = []
+                    if not needed:
+                        return
+                    try:
+                        have = (await api.testdata("")).get("values", {}) or {}
+                    except api.ApiError:
+                        have = {}
+                    found = state.get("values_found") or {}
+                    why = {i.get("name"): i.get("why", "") for i in (state.get("inputs_needed") or [])
+                           if isinstance(i, dict)}
+                    done = asyncio.Event()
+                    with ui.dialog().props("persistent") as ask, ui.card().style("width:44rem"):
+                        ui.label("Values these steps need").style(
+                            f"font-size:{TYPOGRAPHY['size_lg']};"
+                            f"font-weight:{TYPOGRAPHY['weight_bold']}")
+                        ui.label("Taken from the prompt / ticket where it stated them; "
+                                 "saved under Test Data so every run and every case "
+                                 "picks them up. Leave one blank to be asked at run time.") \
+                            .style(f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}")
+                        fields: dict[str, ui.input] = {}
+                        for n in needed:
+                            existing = have.get(n, {})
+                            prefill = found.get(n, "") or (existing.get("value", "") if existing.get("defined") and not existing.get("is_secret") else "")
+                            hint = why.get(n) or ("already in Test Data" if existing.get("defined") else "")
+                            fields[n] = ui.input(n, value=prefill, placeholder=hint) \
+                                .props("outlined dense").classes("w-full") \
+                                .style(f"font-family:{TYPOGRAPHY['mono']}")
+
+                        async def save_all() -> None:
+                            saved = 0
+                            for n, box in fields.items():
+                                v = (box.value or "").strip()
+                                if not v or (have.get(n, {}).get("value") == v):
+                                    continue
+                                try:
+                                    await api.set_testdata(n, v, updating=n in have, force=True)
+                                    saved += 1
+                                except api.ApiError as e:
+                                    ui.notify(f"{n}: {e.detail}", type="warning")
+                            if saved:
+                                ui.notify(f"Saved {saved} value(s) under Test Data", type="positive")
+                            ask.close(); done.set()
+
+                        with ui.row().classes("w-full justify-end gap-2"):
+                            ui.button("Skip for now", on_click=lambda: (ask.close(), done.set())).props("flat")
+                            ui.button("Save values", icon="check", on_click=save_all).props("unelevated")
+                    ask.open()
+                    await done.wait()
+
+                gen_btn = ui.button("Generate & save test cases", icon="bolt", on_click=do_generate) \
                     .props("unelevated").style(f"background:{COLORS['primary']}")
 
         with ui.row().classes("w-full justify-end"):

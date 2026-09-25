@@ -55,6 +55,92 @@ MAX_PER_RUN = int(os.getenv("STEP_SHOT_MAX", "400"))
 _CHECKS = re.compile(r"^\s*(verify|assert|store|extract|wait until)\b", re.I)
 
 
+# ── Element highlight ────────────────────────────────────────────────────────
+_HL_JS = """
+([sel, label, failed, limit]) => {
+  const isXPath = /^[(\/.]/.test(sel);
+  let nodes = [];
+  try {
+    if (isXPath) {
+      const r = document.evaluate(sel, document, null,
+                                  XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+      for (let i = 0; i < r.snapshotLength && i < limit; i++) nodes.push(r.snapshotItem(i));
+    } else {
+      nodes = Array.from(document.querySelectorAll(sel)).slice(0, limit);
+    }
+  } catch (e) { nodes = []; }
+  nodes = nodes.filter(n => n && n.nodeType === 1);
+  const colour = failed ? '#DC2626' : '#F59E0B';
+  const badge = document.createElement('div');
+  badge.className = '__ca_hl_badge';
+  badge.textContent = (nodes.length ? '' : 'NOT FOUND: ') + label
+                      + (nodes.length > 1 ? '  (' + nodes.length + ' matches)' : '');
+  badge.style.cssText = 'position:fixed;top:6px;left:6px;z-index:2147483647;'
+    + 'background:' + (nodes.length ? colour : '#DC2626') + ';color:#fff;'
+    + 'font:600 12px/1.3 -apple-system,Segoe UI,Roboto,sans-serif;'
+    + 'padding:3px 8px;border-radius:4px;box-shadow:0 1px 4px rgba(0,0,0,.35);'
+    + 'max-width:90vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'
+    + 'pointer-events:none';
+  document.documentElement.appendChild(badge);
+  nodes.forEach(n => {
+    n.setAttribute('data-ca-hl', '1');
+    n.__caOutline = n.style.outline; n.__caOffset = n.style.outlineOffset;
+    n.style.outline = '3px solid ' + colour;
+    n.style.outlineOffset = '1px';
+  });
+  return nodes.length;
+}
+"""
+_UNHL_JS = """
+() => {
+  document.querySelectorAll('.__ca_hl_badge').forEach(b => b.remove());
+  document.querySelectorAll('[data-ca-hl]').forEach(n => {
+    n.style.outline = n.__caOutline || ''; n.style.outlineOffset = n.__caOffset || '';
+    n.removeAttribute('data-ca-hl');
+  });
+}
+"""
+
+
+def _step_locator(step: str) -> tuple[str, str]:
+    """(locator name, resolved selector) for the element `step` acts on, or ("", "")."""
+    try:
+        from nlp.fields import TARGET_IS_LOCATOR
+        from nlp.parser import parse_step
+
+        cmd = parse_step(step)
+        if cmd.type not in TARGET_IS_LOCATOR:
+            return "", ""
+        name = str(getattr(cmd, "target", "") or "").strip()
+        if not name:
+            return "", ""
+        from execution.action_service import _resolve_to_selector
+
+        return name, str(_resolve_to_selector(name) or "")
+    except Exception:  # noqa: BLE001 — a picture must never fail a step
+        return "", ""
+
+
+def _highlight(page, step: str, failed: bool) -> bool:
+    """Outline the step's element(s) and drop a badge. True when anything was added."""
+    name, selector = _step_locator(step)
+    if not name or not selector:
+        return False
+    try:
+        page.evaluate(_HL_JS, [selector, name, bool(failed), 25])
+        return True
+    except Exception as e:  # noqa: BLE001
+        logger.debug("Highlight skipped for '%s': %s", name, e)
+        return False
+
+
+def _unhighlight(page) -> None:
+    try:
+        page.evaluate(_UNHL_JS)
+    except Exception:  # noqa: BLE001
+        pass
+
+
 class StepCapture:
     """
     Screenshots for one run, taken and kept according to `mode`.
@@ -108,7 +194,8 @@ class StepCapture:
                 return
             if self.mode == "key" and not failed and not self._is_key(page, step):
                 return
-            path = self._shoot(page, entry.get("line", self.kept_count + 1))
+            path = self._shoot(page, entry.get("line", self.kept_count + 1), step=step,
+                               failed=entry.get("status") == "failed")
             if path:
                 self._keep(entry, report_row, path)
         except Exception as e:  # noqa: BLE001 — never fail a step over a picture
@@ -137,7 +224,8 @@ class StepCapture:
         the pages its predecessors were looking at are gone. So every step is
         photographed and all but the last few are thrown away.
         """
-        path = self._shoot(page, entry.get("line", self.kept_count + 1))
+        path = self._shoot(page, entry.get("line", self.kept_count + 1), step=step,
+                               failed=entry.get("status") == "failed")
         if not path:
             return
         # Anything falling out of the window is now certainly not wanted.
@@ -164,7 +252,7 @@ class StepCapture:
         return False
 
     # ── files ───────────────────────────────────────────────────────────────
-    def _shoot(self, page, index: int) -> str:
+    def _shoot(self, page, index: int, step: str = "", failed: bool = False) -> str:
         # `failure` mode is bounded by its ring buffer (context + 1 frames), so
         # the cap does not apply to it — applying it would silence exactly the
         # frames it exists to keep.
@@ -185,7 +273,16 @@ class StepCapture:
             target = _TEST_SESSION.active_page or page
         except Exception:  # noqa: BLE001
             pass
-        target.screenshot(path=path, type="jpeg", quality=JPEG_QUALITY)
+        # The element the step acted on is outlined in the frame, with its name
+        # on a badge, so nobody has to work out from a bare screenshot WHICH
+        # button was clicked or WHICH text was verified. Removed again right
+        # after the frame, so the page is untouched for the next step.
+        marked = _highlight(target, step, failed)
+        try:
+            target.screenshot(path=path, type="jpeg", quality=JPEG_QUALITY)
+        finally:
+            if marked:
+                _unhighlight(target)
         # Relative to data/screenshots. The report stores this, so a run stays
         # readable if the data directory is moved or copied to another machine,
         # and the UI can serve it from one static mount without path juggling.

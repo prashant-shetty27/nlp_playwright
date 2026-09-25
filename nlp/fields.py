@@ -40,7 +40,9 @@ TARGET_IS_LOCATOR = {
 
 #: Command types whose `target` is a variable name, not a locator.
 TARGET_IS_VARIABLE = {"create_variable", "verify_var_contains", "verify_var_not_equals",
-                      "fetch_otp", "math", "extract_json"}
+                      "fetch_otp", "math", "extract_json",
+                      "verify_recommended_order_api", "extract_regex",
+                      "verify_var_compare"}
 
 #: Command types that read a file path from `text`.
 TEXT_IS_FILE = {"read_excel_cell", "read_excel_row", "read_csv_cell"}

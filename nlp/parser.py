@@ -556,6 +556,18 @@ def parse_step(step: str) -> Command:
 
     # =============================
     # STORE PAGE URL / TITLE
+    # store lowercase of "<text|${var}>" as <var>   |  uppercase | trimmed
+    m = re.match(r'^store\s+(lowercase|uppercase|trimmed)\s+of\s+"?([^"]+?)"?\s+as\s+(\S+)$', s, re.I)
+    if m:
+        return Command(type="transform_text", text=m.group(2).strip(), values=[m.group(1).lower()],
+                       variable_name=m.group(3))
+
+    # store regex "<pattern>" from <var|page url> as <var>
+    m = re.match(r'^store\s+regex\s+"(.*?)"\s+from\s+(page\s+url|url|\S+)\s+as\s+(\S+)$', s, re.I)
+    if m:
+        return Command(type="extract_regex", text=m.group(1), target=m.group(2).strip(),
+                       variable_name=m.group(3))
+
     # store page url as <var>  |  store page title as <var>
     # =============================
     m = re.match(r'^store\s+page\s+url\s+as\s+(\S+)$', s, re.I)
@@ -808,6 +820,37 @@ def parse_step(step: str) -> Command:
         return Command(type="api_post",
                        text=m.group(1), target=m.group(2),
                        variable_name=m.group(3))
+
+    # network capture
+    if re.match(r'^start\s+capturing\s+network\s+requests?$', s, re.I):
+        return Command(type="net_capture_start")
+    m = re.match(r'^verify\s+network\s+request\s+containing\s+"(.*?)"\s+was\s+(not\s+)?sent$', s, re.I)
+    if m:
+        return Command(type="net_verify", text=m.group(1), values=["not" if m.group(2) else "sent"])
+    m = re.match(r'^store\s+network\s+request\s+containing\s+"(.*?)"\s+as\s+(\S+)$', s, re.I)
+    if m:
+        return Command(type="net_store", text=m.group(1), variable_name=m.group(2))
+
+    # verify recommended products order in <var> for city "<city>"      (API JSON)
+    # verify recommended products carousel order on page for city "<city>"  (rendered)
+    # The `for city "…"` clause is optional: left out, the search city is
+    # taken from the API response / the page URL of the search that was opened.
+    m = re.match(r'^verify\s+recommended\s+products\s+order\s+in\s+(\S+)(?:\s+for\s+city\s+"(.*?)")?$', s, re.I)
+    if m:
+        return Command(type="verify_recommended_order_api", target=m.group(1), text=m.group(2) or "")
+    m = re.match(r'^verify\s+recommended\s+products\s+prefer\s+search\s+city\s+on\s+page(?:\s+for\s+city\s+"(.*?)")?$', s, re.I)
+    if m:
+        return Command(type="verify_recommended_prefer_city", text=m.group(1) or "")
+    m = re.match(r'^store\s+position\s+of\s+recommended\s+product\s+"(.*?)"\s+on\s+page\s+as\s+(\S+)$', s, re.I)
+    if m:
+        return Command(type="store_recommended_position", text=m.group(1), variable_name=m.group(2))
+    m = re.match(r'^verify\s+(?:stored\s+)?(?:variable\s+)?(\S+)\s+is\s+(greater\s+than|less\s+than|at\s+least|at\s+most)\s+"?([^"]+?)"?$', s, re.I)
+    if m:
+        return Command(type="verify_var_compare", target=m.group(1),
+                       text=re.sub(r"\s+", " ", m.group(2).lower()), values=[m.group(3).strip()])
+    m = re.match(r'^verify\s+recommended\s+products\s+carousel\s+order\s+on\s+page(?:\s+for\s+city\s+"(.*?)")?$', s, re.I)
+    if m:
+        return Command(type="verify_recommended_order_page", text=m.group(1) or "")
 
     m = re.match(r'^store\s+json\s+(\S+)\s+path\s+(\S+)\s+as\s+(\S+)$', s, re.I)
     if m:

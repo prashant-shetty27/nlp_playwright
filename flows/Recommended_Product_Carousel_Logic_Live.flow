@@ -1,91 +1,133 @@
 # Platform: mobilesite
 # Params : rp_api_base_live live_url_school_bag_manufacturers live_url_pani_puri_making_machine live_url_steel_merchants live_url_carpet_wholesalers live_url_bulk_sms_services
-# GJDT-22686 — 'Recommended Products For You' carousel on mobile search results
-# must show the products the get_product_by_ncatid API returns for the city
-# (the API itself may return other-city sellers; the UI must match the API).
+# GJDT-22686 — 'Recommended Products For You' carousel on the B2B NCT results page.
+# For each search URL: the city, ncatid and search term are read from the URL
+# that was opened, the get_product_by_ncatid API is called for THAT search, the
+# first card must match the API, and both API and page must follow the priority
+# hierarchy (DS > search city > price, each exhausted before the next).
 # LIVE (www.justdial.com) clone of the devx case — no HTTP auth needed.
 
-# --- school bag manufacturers (ncatid 10422200) ---
+# --- school bag manufacturers ---
 open ${live_url_school_bag_manufacturers}
 wait 3 seconds
 verify element rp_heading_h1 is visible
 verify element rp_carousel_heading is visible
+verify text "Recommended Products For You" on page
 verify element rp_product_1st is visible
 verify element rp_product_1st_price is visible
 store count of rp_product_names as productCount1
 verify stored productCount1 is not "0"
-api get "${rp_api_base_live}&ncatid=10422200&query=School-Bag-Manufacturers-in-Indira-Nagar-Vikhroli-East" as apiResp1
+# the search this page is for, read from its own URL
+store regex "justdial\.com/([^/]+)/" from page url as city1
+store regex "justdial\.com/[^/]+/([^/?]+)/nct-" from page url as query1
+store regex "nct-(\d+)" from page url as ncatid1
+api get "${rp_api_base_live}&city=${city1}&ncatid=${ncatid1}&query=${query1}" as apiResp1
 store json apiResp1 path results.data.0.display_name1 as apiName1
 store json apiResp1 path results.data.0.company_name as apiCompany1
 store text of rp_product_1st_name as uiName1
 verify stored uiName1 contains "${apiName1}"
 store text of rp_product_1st_company as uiCompany1
 verify stored uiCompany1 contains "${apiCompany1}"
+# GJDT-22686 priority: DS > search city > price, exhausted in that order
+verify recommended products order in apiResp1
+verify recommended products carousel order on page
 
-# --- pani puri making machine (ncatid 11280803) ---
+# --- pani puri making machine ---
 open ${live_url_pani_puri_making_machine}
 wait 3 seconds
 verify element rp_heading_h1 is visible
 verify element rp_carousel_heading is visible
+verify text "Recommended Products For You" on page
 verify element rp_product_1st is visible
 verify element rp_product_1st_price is visible
 store count of rp_product_names as productCount2
 verify stored productCount2 is not "0"
-api get "${rp_api_base_live}&ncatid=11280803&query=Pani-Puri-Making-Machine-Manufacturers" as apiResp2
+# the search this page is for, read from its own URL
+store regex "justdial\.com/([^/]+)/" from page url as city2
+store regex "justdial\.com/[^/]+/([^/?]+)/nct-" from page url as query2
+store regex "nct-(\d+)" from page url as ncatid2
+api get "${rp_api_base_live}&city=${city2}&ncatid=${ncatid2}&query=${query2}" as apiResp2
 store json apiResp2 path results.data.0.display_name1 as apiName2
 store json apiResp2 path results.data.0.company_name as apiCompany2
 store text of rp_product_1st_name as uiName2
 verify stored uiName2 contains "${apiName2}"
 store text of rp_product_1st_company as uiCompany2
 verify stored uiCompany2 contains "${apiCompany2}"
+# GJDT-22686 priority: DS > search city > price, exhausted in that order
+verify recommended products order in apiResp2
+verify recommended products carousel order on page
 
-# --- steel merchants (ncatid 10456865) ---
+# --- steel merchants ---
 open ${live_url_steel_merchants}
 wait 3 seconds
 verify element rp_heading_h1 is visible
 verify element rp_carousel_heading is visible
+verify text "Recommended Products For You" on page
 verify element rp_product_1st is visible
 verify element rp_product_1st_price is visible
 store count of rp_product_names as productCount3
 verify stored productCount3 is not "0"
-api get "${rp_api_base_live}&ncatid=10456865&query=Steel-Merchants" as apiResp3
+# the search this page is for, read from its own URL
+store regex "justdial\.com/([^/]+)/" from page url as city3
+store regex "justdial\.com/[^/]+/([^/?]+)/nct-" from page url as query3
+store regex "nct-(\d+)" from page url as ncatid3
+api get "${rp_api_base_live}&city=${city3}&ncatid=${ncatid3}&query=${query3}" as apiResp3
 store json apiResp3 path results.data.0.display_name1 as apiName3
 store json apiResp3 path results.data.0.company_name as apiCompany3
 store text of rp_product_1st_name as uiName3
 verify stored uiName3 contains "${apiName3}"
 store text of rp_product_1st_company as uiCompany3
 verify stored uiCompany3 contains "${apiCompany3}"
+# GJDT-22686 priority: DS > search city > price, exhausted in that order
+verify recommended products order in apiResp3
+verify recommended products carousel order on page
 
-# --- carpet wholesalers (ncatid 10081039) ---
+# --- carpet wholesalers ---
 open ${live_url_carpet_wholesalers}
 wait 3 seconds
 verify element rp_heading_h1 is visible
 verify element rp_carousel_heading is visible
+verify text "Recommended Products For You" on page
 verify element rp_product_1st is visible
 verify element rp_product_1st_price is visible
 store count of rp_product_names as productCount4
 verify stored productCount4 is not "0"
-api get "${rp_api_base_live}&ncatid=10081039&query=Carpet-Wholesalers-in-Indira-Nagar-Vikhroli-East" as apiResp4
+# the search this page is for, read from its own URL
+store regex "justdial\.com/([^/]+)/" from page url as city4
+store regex "justdial\.com/[^/]+/([^/?]+)/nct-" from page url as query4
+store regex "nct-(\d+)" from page url as ncatid4
+api get "${rp_api_base_live}&city=${city4}&ncatid=${ncatid4}&query=${query4}" as apiResp4
 store json apiResp4 path results.data.0.display_name1 as apiName4
 store json apiResp4 path results.data.0.company_name as apiCompany4
 store text of rp_product_1st_name as uiName4
 verify stored uiName4 contains "${apiName4}"
 store text of rp_product_1st_company as uiCompany4
 verify stored uiCompany4 contains "${apiCompany4}"
+# GJDT-22686 priority: DS > search city > price, exhausted in that order
+verify recommended products order in apiResp4
+verify recommended products carousel order on page
 
-# --- bulk sms services (ncatid 10970459) ---
+# --- bulk sms services ---
 open ${live_url_bulk_sms_services}
 wait 3 seconds
 verify element rp_heading_h1 is visible
 verify element rp_carousel_heading is visible
+verify text "Recommended Products For You" on page
 verify element rp_product_1st is visible
 verify element rp_product_1st_price is visible
 store count of rp_product_names as productCount5
 verify stored productCount5 is not "0"
-api get "${rp_api_base_live}&ncatid=10970459&query=Bulk-SMS-Services" as apiResp5
+# the search this page is for, read from its own URL
+store regex "justdial\.com/([^/]+)/" from page url as city5
+store regex "justdial\.com/[^/]+/([^/?]+)/nct-" from page url as query5
+store regex "nct-(\d+)" from page url as ncatid5
+api get "${rp_api_base_live}&city=${city5}&ncatid=${ncatid5}&query=${query5}" as apiResp5
 store json apiResp5 path results.data.0.display_name1 as apiName5
 store json apiResp5 path results.data.0.company_name as apiCompany5
 store text of rp_product_1st_name as uiName5
 verify stored uiName5 contains "${apiName5}"
 store text of rp_product_1st_company as uiCompany5
 verify stored uiCompany5 contains "${apiCompany5}"
+# GJDT-22686 priority: DS > search city > price, exhausted in that order
+verify recommended products order in apiResp5
+verify recommended products carousel order on page

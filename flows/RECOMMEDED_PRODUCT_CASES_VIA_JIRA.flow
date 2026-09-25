@@ -1,0 +1,253 @@
+# Platform: mobilesite
+# Params : live_url_steel_merchants live_url_bulk_sms_services product_category_url cng_service_url bulk_sms_link_road_url devx url_carpet_wholesalers url_bulk_sms_services live_url_steel_merchants_mumbai mobile live_url_hercules_bicycle_wholesalers live_url_tile_wholesalers rp_api_base_live live_url_crane_services live_url_bulk_sms_paras_nagar live_url_transporters_paras_nagar live_url_cargo_box_manufacturers live_url_carpet_wholesalers
+
+# Setup: open a live product-category NCT page (carousel-order cases run on live per tester)
+open ${live_url_steel_merchants}
+wait for result page load
+# Assertion: verify carousel heading text for product category
+scroll until text "Recommended Products For You" visible
+verify element rp_heading_h1 has text "Recommended Products For You"
+# Setup: open a live service-category NCT page (carousel-order cases run on live per tester)
+open ${live_url_bulk_sms_services}
+wait for result page load
+# Assertion: verify carousel heading text for service category
+scroll until text "Recommended Services For You" visible
+verify element rp_heading_h1 has text "Recommended Services For You"
+# Setup: open a live product-category NCT page
+open ${live_url_steel_merchants}
+wait for result page load
+scroll until text "Recommended Products For You" visible
+# Assertion: search city products are preferred in the carousel
+verify recommended products prefer search city on page
+# Setup: open a live product-category NCT page
+open ${live_url_steel_merchants}
+wait for result page load
+scroll until text "Recommended Products For You" visible
+# Define the expected macro group order per the updated hierarchy (DS status takes priority over location)
+create variable expected_group_order with value "WITH_DS_WITHIN_CITY,WITH_DS_OUTSIDE_CITY,WITHOUT_DS_WITHIN_CITY,WITHOUT_DS_OUTSIDE_CITY"
+# Assertion: verify actual carousel order matches expected macro order
+verify recommended products order in ${expected_group_order}
+# Setup: open a live product-category NCT page
+open ${live_url_steel_merchants}
+wait for result page load
+scroll until text "Recommended Products For You" visible
+# Define expected DS-type order for the With-Price subgroup
+create variable expected_ds_type_order_with_price with value "360_VIDEO,ONLY_360,ONLY_VIDEO"
+# Assertion: verify DS-type ordering within With Price candidates
+verify recommended products order in ${expected_ds_type_order_with_price}
+# Setup: open a live product-category NCT page
+open ${live_url_steel_merchants}
+wait for result page load
+scroll until text "Recommended Products For You" visible
+# Define expected DS-type order for the Without-Price subgroup
+create variable expected_ds_type_order_without_price with value "360_VIDEO,ONLY_360,ONLY_VIDEO"
+# Assertion: verify DS-type ordering within Without Price candidates
+verify recommended products order in ${expected_ds_type_order_without_price}
+# Setup: open a live product-category NCT page
+open ${live_url_steel_merchants}
+wait for result page load
+scroll until text "Recommended Products For You" visible
+# Define expected price order for With DS + Within city group
+create variable expected_price_order_ds_within with value "WITH_PRICE,WITHOUT_PRICE"
+# Assertion: verify price-based ordering inside this subgroup
+verify recommended products order in ${expected_price_order_ds_within}
+# Setup: open a live product-category NCT page
+open ${live_url_steel_merchants}
+wait for result page load
+scroll until text "Recommended Products For You" visible
+# Define expected price order for With DS + Outside city group
+create variable expected_price_order_ds_outside with value "WITH_PRICE,WITHOUT_PRICE"
+# Assertion: verify price-based ordering inside this subgroup
+verify recommended products order in ${expected_price_order_ds_outside}
+# Setup: open a live product-category NCT page
+open ${live_url_steel_merchants}
+wait for result page load
+scroll until text "Recommended Products For You" visible
+# Define expected price order for Without DS + Within city group
+create variable expected_price_order_nods_within with value "WITH_PRICE,WITHOUT_PRICE"
+# Assertion: verify price-based ordering inside this subgroup
+verify recommended products order in ${expected_price_order_nods_within}
+# Setup: open a live product-category NCT page
+open ${live_url_steel_merchants}
+wait for result page load
+scroll until text "Recommended Products For You" visible
+# Define expected price order for Without DS + Outside city group
+create variable expected_price_order_nods_outside with value "WITH_PRICE,WITHOUT_PRICE"
+# Assertion: verify price-based ordering inside this subgroup
+verify recommended products order in ${expected_price_order_nods_outside}
+# Setup: open the exact defect repro URL
+open ${product_category_url}
+wait for result page load
+scroll until text "Recommended Products For You" visible
+# Assertion: forbidden extra text is absent
+verify page does not contain "Price on Request"
+# Setup: open the exact defect repro URL
+open ${cng_service_url}
+wait for result page load
+scroll until text "Recommended Services For You" visible
+# Assertion: forbidden extra text is absent
+verify page does not contain "Price on Request"
+# Setup: open the exact defect repro URL for a service category
+open ${bulk_sms_link_road_url}
+wait for result page load
+scroll until text "Recommended Services For You" visible
+# Action: scroll to the carousel card's own CTA (not the main-listing show_number_cta)
+scroll until element rp_carousel_call_now_cta visible, scroll by 300 pixels
+# Assertion: the carousel card's dedicated Call Now CTA is visible and labelled correctly
+verify element rp_carousel_call_now_cta is visible
+verify element rp_carousel_call_now_cta contains "Call Now"
+# Assertion: the main-listing Send Enquiry CTA is not shown on the carousel card
+verify element send_enquiry_button_1st is not visible
+# Setup: authenticate on devx and open the devx Carpet Wholesalers page (designated Ask-For-Price URL until the feature is live)
+open ${devx}
+open ${url_carpet_wholesalers}
+wait for result page load
+scroll until element rp_carousel_ask_for_price_cta visible, scroll by 300 pixels
+# Action: start capturing network requests and capture the magic name attribute of the carousel's own Ask for Price element before triggering the lead
+start capturing network requests
+store attribute data-magic of rp_carousel_ask_for_price_cta as magic_name_attr
+click rp_carousel_ask_for_price_cta
+# Assertion: open-sheet click-tracking li fires on click
+verify network request containing "gbp_afp_b2b_plisting_carousel" was sent
+# Assertion: magic name matches the expected Touch value, not the old incorrect wap2_bdcall_result
+verify stored magic_name_attr contains "wap2_rfq_askforprice_rsltpge"
+# Setup: open the exact defect repro URL for the affected service category on devx (bug was devx-only per ticket comment)
+open ${url_bulk_sms_services}
+wait for result page load
+scroll until text "Recommended Services For You" visible
+# Assertion: search city (Mumbai) products are preferred over other cities' products
+verify recommended products prefer search city on page
+# Setup: open the live Steel Merchants search results page (carousel-order cases run on live)
+open ${live_url_steel_merchants_mumbai}
+wait for result page load
+scroll until text "Recommended Products For You" visible
+# Assertion: search-city products are preferred ahead of any outside-city products
+verify recommended products prefer search city on page
+# Assertion: the overall DS > price hierarchy is respected across the carousel; no assertion is made on the relative order among different outside cities (per GJDT-22703 clarification)
+verify recommended products carousel order on page
+# Setup: authenticate on devx and open the devx Carpet Wholesalers page (designated Ask-For-Price URL until the feature is live)
+open ${devx}
+open ${url_carpet_wholesalers}
+wait for result page load
+scroll until element rp_carousel_ask_for_price_cta visible, scroll by 300 pixels
+# Action: start capturing network requests before triggering Ask For Price so the click-tracking li can be asserted
+start capturing network requests
+click rp_carousel_ask_for_price_cta
+# Assertion: the open-sheet click-tracking li fires on click
+verify network request containing "gbp_afp_b2b_plisting_carousel" was sent
+wait until element gbp_sheet_heading is visible
+verify element gbp_sheet_heading is visible
+# Assertion: the submit li must NOT have fired yet, before the lead is actually submitted
+store network request containing "submit__gbp_afp_b2b_plisting_carousel" as submitLiBefore
+verify stored submitLiBefore is not "submit__gbp_afp_b2b_plisting_carousel"
+# Action: enter mobile number and request OTP for the Ask For Price lead
+type "${mobile}" into mobile_number_input
+click gbp_submit_now_button
+wait until element otp_1st_field is visible
+# Action: fetch the OTP from the communication events API and enter it
+api get "http://192.168.131.12/communication/api/v1/get_events?mobileEmail=${mobile}&vertical=OTP" as otpResp
+store json otpResp path data.response.0.sms.text as otpText
+store regex "(\d{4,8})" from otpText as otp
+enter otp "${otp}" into otp_fields
+# Assertion: lead submission succeeds
+verify element success_toaster is visible
+# Assertion: the submit click-tracking li fires only AFTER successful lead generation
+verify network request containing "submit__gbp_afp_b2b_plisting_carousel" was sent
+# Setup: derive city, category and today's date needed by the lead-gen verification API
+store regex "justdial\.com/([^/]+)/" from page url as city
+store regex "justdial\.com/[^/]+/([^/?]+)/nct-" from page url as category
+store lowercase of "${city}" as cityLower
+get today as d
+format date "${d}" as "YYYY-MM-DD" into today
+# Assertion: lead_gen.php confirms the lead was generated with the correct params (dev=1 for devx/staging)
+api get "http://192.168.35.197:8111/lead_gen.php?city=${cityLower}&date=${today}&mobile=${mobile}&msg=1&dev=1" as leadGenResp
+verify stored leadGenResp contains "${mobile}"
+verify stored leadGenResp contains "${category}"
+verify stored leadGenResp contains "rsltpge"
+verify stored leadGenResp contains "recommended-products"
+verify stored leadGenResp contains "get_best_price"
+verify stored leadGenResp contains "bd"
+# Setup: open the devx Carpet Wholesalers page, the URL explicitly designated for Ask-For-Price testing until the feature is live (Touch only, per GJDT-22686 lead-param spec)
+open ${devx}
+open ${url_carpet_wholesalers}
+wait for result page load
+scroll until text "Recommended Products For You" visible
+# Assertion: the carousel's own Ask for Price element is visible on a recommended card that has no price
+scroll until element rp_carousel_ask_for_price_cta visible, scroll by 300 pixels
+verify element rp_carousel_ask_for_price_cta is visible
+verify element rp_carousel_ask_for_price_cta contains "Ask for Price"
+# Setup: open a live product-category NCT page with a search-city, no-DS, with-price product in the carousel
+open ${live_url_hercules_bicycle_wholesalers}
+wait for result page load
+scroll until text "Recommended Products For You" visible
+# Assertion: the carousel card's own Call Now CTA is visible and correctly labelled; the old 'View Details' label is absent
+scroll until element rp_carousel_call_now_cta visible, scroll by 300 pixels
+verify element rp_carousel_call_now_cta is visible
+verify element rp_carousel_call_now_cta contains "Call Now"
+verify page does not contain "View Details"
+# Setup: open the live product-category NCT page known to carry 10+ recommended products, some 360°-tagged
+open ${live_url_tile_wholesalers}
+wait for result page load
+scroll until text "Recommended Products For You" visible
+# Assertion: at least 10 recommended products are rendered in the carousel
+store count of rp_product_names as productCount
+verify stored productCount is at least 10
+# Assertion: the dedicated 360-degree badge icon (div.carouselview__img3dwrp > span.carouselview__img3dicn) is directly countable on the carousel cards
+store count of rp_carousel_360_badge as badgeCount
+verify stored badgeCount is greater than 0
+# Assertion: DS-based ordering (360 badge + inferred video/no-DS via API) is respected across the carousel
+verify recommended products carousel order on page
+verify element rp_product_1st is visible
+# Setup: open the live service-category NCT page known to have an only-video (no 360°) DS product
+open ${live_url_bulk_sms_services}
+wait for result page load
+scroll until text "Recommended Services For You" visible
+# Setup: derive API params from the page URL and fetch the recommendation list
+store regex "justdial\.com/([^/]+)/" from page url as city1
+store regex "justdial\.com/[^/]+/([^/?]+)/nct-" from page url as query1
+store regex "nct-(\d+)" from page url as ncatid1
+api get "${rp_api_base_live}&city=${city1}&ncatid=${ncatid1}&query=${query1}" as apiResp1
+# Assertion: API list follows the DS > city > price > DS-type hierarchy, so an only-video candidate still outranks Without-DS candidates
+verify recommended products order in apiResp1
+# Assertion: rendered carousel matches the same hierarchy
+verify recommended products carousel order on page
+# Setup: open first service-category NCT page (Crane Services)
+open ${live_url_crane_services}
+wait for result page load
+scroll until text "Recommended Services For You" visible
+# Assertion: carousel order and search-city preference hold for this service category
+verify recommended products carousel order on page
+verify recommended products prefer search city on page
+# Setup: open second service-category NCT page (Bulk SMS Services, Paras Nagar)
+open ${live_url_bulk_sms_paras_nagar}
+wait for result page load
+scroll until text "Recommended Services For You" visible
+# Assertion: carousel order and search-city preference hold for this service category
+verify recommended products carousel order on page
+verify recommended products prefer search city on page
+# Setup: open third service-category NCT page (Transporters, Paras Nagar)
+open ${live_url_transporters_paras_nagar}
+wait for result page load
+scroll until text "Recommended Services For You" visible
+# Assertion: carousel order and search-city preference hold for this service category
+verify recommended products carousel order on page
+verify recommended products prefer search city on page
+# Setup: open a live NCT page for a category known to have no eligible recommendation candidates (same as live behaviour)
+open ${live_url_cargo_box_manufacturers}
+wait for result page load
+wait 3 seconds
+# Assertion: the recommended-products carousel heading is not rendered
+verify element rp_carousel_heading is not visible
+# Setup: open the live Carpet Wholesalers NCT page carrying a mix of DS/non-DS, in-city/out-of-city and priced/unpriced candidates
+open ${live_url_carpet_wholesalers}
+wait for result page load
+scroll until text "Recommended Products For You" visible
+# Setup: derive API params from the page URL and fetch the recommendation list
+store regex "justdial\.com/([^/]+)/" from page url as city1
+store regex "justdial\.com/[^/]+/([^/?]+)/nct-" from page url as query1
+store regex "nct-(\d+)" from page url as ncatid1
+api get "${rp_api_base_live}&city=${city1}&ncatid=${ncatid1}&query=${query1}" as apiResp1
+# Assertion: API order and carousel order follow the DS > city > price hierarchy across this mixed data set
+verify recommended products order in apiResp1
+verify recommended products carousel order on page
+verify recommended products prefer search city on page

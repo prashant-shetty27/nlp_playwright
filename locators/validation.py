@@ -191,13 +191,21 @@ def _selector_of(record) -> str:
     return ""
 
 
-def check_variable(name: str, *, environment: str = "") -> list[Conflict]:
+def check_variable(name: str, *, environment: str = "", value: str | None = None,
+                   updating: bool = False) -> list[Conflict]:
     """
-    Whether a test-data name is already taken, or nearly.
+    Whether a test-data name is already taken, or nearly — and, when `value`
+    is given, whether that VALUE is already stored under another name.
 
     The same reasoning as elements: a second ${test_mobile} under a slightly
     different name means two values that drift apart, and steps that look alike
-    but read different data.
+    but read different data. The same URL saved twice under two names is the
+    same problem from the other side: change one and the other silently keeps
+    the old page.
+
+    `updating=True` means the caller is deliberately changing the value of a
+    name it already knows exists (the Change-value dialog), so the name itself
+    is not reported as a clash — only a value that belongs to some OTHER name.
     """
     out: list[Conflict] = []
     try:
@@ -205,6 +213,33 @@ def check_variable(name: str, *, environment: str = "") -> list[Conflict]:
 
         current = get_all(environment)
     except Exception:  # noqa: BLE001
+        return out
+
+    # ── the same VALUE already stored under another name ─────────────────────
+    incoming = (value or "").strip()
+    if incoming:
+        for other, entry in current.items():
+            if other == name or entry.get("is_secret"):
+                continue
+            if str(entry.get("value", "")).strip() == incoming:
+                out.append(Conflict(
+                    kind="duplicate_value", severity="blocking",
+                    message=f"This exact value is already stored as ${{{other}}} "
+                            f"({entry.get('scope', 'global')}).",
+                    why="Two names for one value drift apart: the day the URL "
+                        "or number changes, whoever edits one of them will not "
+                        "know the other exists, and half the tests keep using "
+                        "the old value.",
+                    existing_name=other, existing_selector=entry.get("display", ""),
+                    options=[{"action": "reuse", "label": f"Use ${{{other}}} instead",
+                              "best": True, "note": "Same value, already named."},
+                             {"action": "save_anyway", "label": "Save it under this name too",
+                              "best": False,
+                              "note": "Only if the two names are meant to move "
+                                      "independently later."}]))
+                break
+
+    if name in current and updating:
         return out
 
     if name in current:

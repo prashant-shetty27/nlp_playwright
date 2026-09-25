@@ -4,6 +4,7 @@ Browser lifecycle management — extracted from actions.py.
 Uses TestSession to hold state instead of module-level globals.
 """
 import os
+import re
 import json
 import logging
 from datetime import datetime
@@ -100,6 +101,49 @@ def _suggest_devices(device_name: str, devices) -> str:
     if near:
         return f" Closest available: {', '.join(near)}."
     return f" {len(names)} devices are available in this Playwright build."
+
+
+_UNKNOWN_PERMISSION = re.compile(r"Unknown permission:\s*([\w-]+)")
+
+
+def _new_context_for_engine(browser, engine: str, ctx_kwargs: dict):
+    """
+    Open the context and its first page, dropping permissions this engine does not know.
+
+    The "allow all browser popups" list is Chromium's. WebKit (every iPhone /
+    iPad device) and Firefox accept only a subset, and Playwright refuses the
+    whole context over one unknown name — so picking "iPhone 14" failed before
+    the first step with "Unknown permission: camera". Each unknown permission
+    is removed and the context retried; what the engine cannot grant it simply
+    auto-dismisses, which is the same outcome the test wanted.
+    """
+    kwargs = dict(ctx_kwargs)
+    dropped: list[str] = []
+    # WebKit reports the unknown name when the first PAGE opens, not when the
+    # context does, so both are attempted together and both retried.
+    for _ in range(len(kwargs.get("permissions") or []) + 1):
+        ctx = None
+        try:
+            ctx = browser.new_context(**kwargs)
+            page = ctx.new_page()
+            if dropped:
+                logger.warning("⚠️  %s does not support permission(s) %s — not granted "
+                               "for this run (prompts for them are auto-dismissed).",
+                               engine, ", ".join(dropped))
+            return ctx, page
+        except Exception as e:  # noqa: BLE001 — only the permission error is retried
+            m = _UNKNOWN_PERMISSION.search(str(e))
+            if not m or m.group(1) not in (kwargs.get("permissions") or []):
+                raise
+            if ctx is not None:
+                try:
+                    ctx.close()
+                except Exception:  # noqa: BLE001
+                    pass
+            dropped.append(m.group(1))
+            kwargs["permissions"] = [p for p in kwargs["permissions"] if p != m.group(1)]
+    ctx = browser.new_context(**kwargs)
+    return ctx, ctx.new_page()
 
 
 def build_context_options(capabilities: dict | None, devices) -> dict:
@@ -348,9 +392,8 @@ def open_browser(session: TestSession | None = None, record_video: bool = False,
         ctx_kwargs["record_video_size"] = {"width": w, "height": h}
         logger.info("🎥 Video recording ON — raw dir: %s", raw_dir)
 
-    context = browser.new_context(**ctx_kwargs)
+    context, page = _new_context_for_engine(browser, engine, ctx_kwargs)
     context.set_default_timeout(use.get("actionTimeout", settings.ACTION_TIMEOUT_MS))
-    page = context.new_page()
 
     if session is not None:
         session.playwright_instance = playwright_instance
