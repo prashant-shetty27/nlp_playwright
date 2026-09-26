@@ -65,11 +65,25 @@ def _quick_run(route: str, current_flow: str = "", current_platform: str = "") -
             .props("dense unelevated").style(f"background:{COLORS['primary']}")
         button.tooltip(f"Run {current_flow} on {current_platform or 'its platform'} — opens Run Center")
         # Let the page retarget the button when the author opens another test case.
-        _RUN_BUTTONS[ui.context.client.id] = (button, holder)
+        cid = ui.context.client.id
+        _RUN_BUTTONS[cid] = (button, holder)
+        try:        # forget it when the page goes away (it grew on every page load)
+            ui.context.client.on_disconnect(lambda: _RUN_BUTTONS.pop(cid, None))
+        except Exception:  # noqa: BLE001
+            pass
         return
 
     async def launch() -> None:
         """One handler, deciding on state — not two handlers racing."""
+        if state.get("busy"):
+            return                  # double-click: one run, not two
+        state["busy"] = True
+        try:
+            await _launch()
+        finally:
+            state["busy"] = False
+
+    async def _launch() -> None:
         flow = state.get("flow")
         if not flow:
             ui.navigate.to(route)       # nothing to repeat yet
@@ -324,7 +338,13 @@ def topbar(breadcrumb: list[str], *, platforms: list[dict] | None = None,
             _quick_run(quick_run_route, current_flow=current_flow,
                        current_platform=platform)
             _plan_alert()
-            _restart_button()
+            try:
+                from ui.auth import can as _can
+                _admin = _can("admin")
+            except Exception:  # noqa: BLE001
+                _admin = False
+            if _admin:          # restarting stops everyone's runs — admins only
+                _restart_button()
             ui.button(icon="settings", on_click=lambda: ui.navigate.to("/settings")) \
                 .props("flat dense").tooltip("Settings")
             _user_menu()
@@ -362,6 +382,7 @@ def _password_dialog() -> None:
     dialog = ui.dialog().props("persistent")
     with dialog, ui.card().style("width:26rem"):
         ui.label("Change password").style(f"font-weight:{TYPOGRAPHY['weight_bold']}")
+        cur = ui.input("Current password", password=True).props("outlined dense").classes("w-full")
         new = ui.input("New password", password=True, password_toggle_button=True) \
             .props("outlined dense").classes("w-full")
         again = ui.input("Repeat it", password=True).props("outlined dense").classes("w-full")
@@ -372,7 +393,8 @@ def _password_dialog() -> None:
                 msg.set_text("The two passwords differ.")
                 return
             try:
-                await api.update_user(u["username"], password=new.value or "")
+                await api.update_user(u["username"], password=new.value or "",
+                                      current_password=cur.value or "")
             except api.ApiError as e:
                 msg.set_text(e.detail)
                 return

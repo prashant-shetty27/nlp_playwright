@@ -13,7 +13,9 @@ async def render(next_path: str = "/") -> None:
         first = await api.setup_needed()
     except api.ApiError:
         first = False
-    target = next_path if (next_path or "").startswith("/") and not next_path.startswith("/login") else "/"
+    # "//host" is a protocol-relative URL — it would send the browser to another site.
+    target = next_path if ((next_path or "").startswith("/") and not next_path.startswith("//")
+                           and not next_path.startswith("/login")) else "/"
 
     with ui.column().classes("absolute-center items-center gap-3").style("width:24rem"):
         ui.label("Codeless Automation").style(

@@ -167,7 +167,7 @@ def plan_run_report(run_id: str, format: str = "html", regenerate: bool = False)
         raise HTTPException(status_code=404, detail=f"No plan run '{run_id}'.") from e
     if rec.get("status") in ("queued", "running"):
         raise HTTPException(status_code=409, detail="The run is still going — the report is made when it finishes.")
-    files = plan_report.generate(rec) if regenerate else plan_report.ensure(rec)
+    files = plan_report.generate(rec) if regenerate else plan_report.ensure(rec, need_pdf=(format == "pdf"))
     if format == "pdf":
         if not files.get("pdf"):
             raise HTTPException(status_code=500, detail=files.get("error") or "PDF could not be created.")

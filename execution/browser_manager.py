@@ -392,8 +392,18 @@ def open_browser(session: TestSession | None = None, record_video: bool = False,
         ctx_kwargs["record_video_size"] = {"width": w, "height": h}
         logger.info("🎥 Video recording ON — raw dir: %s", raw_dir)
 
-    context, page = _new_context_for_engine(browser, engine, ctx_kwargs)
-    context.set_default_timeout(use.get("actionTimeout", settings.ACTION_TIMEOUT_MS))
+    try:
+        context, page = _new_context_for_engine(browser, engine, ctx_kwargs)
+        context.set_default_timeout(use.get("actionTimeout", settings.ACTION_TIMEOUT_MS))
+    except Exception:
+        # Nothing has been handed to the session yet, so nobody else would ever
+        # close these — a Chrome window and driver would be left running.
+        for closer in (browser.close, playwright_instance.stop):
+            try:
+                closer()
+            except Exception:  # noqa: BLE001
+                pass
+        raise
 
     if session is not None:
         session.playwright_instance = playwright_instance
@@ -418,12 +428,17 @@ def close_browser(page, test_name: str = "test_run", session: TestSession | None
 
     try:
         if session is not None:
-            if session.context:
-                session.context.close()
-            if session.browser:
-                session.browser.close()
-            if session.playwright_instance:
-                session.playwright_instance.stop()
+            # Each in its own try: one failing close used to skip the rest and
+            # leave the browser / driver process running.
+            for label, closer in (("context", session.context and session.context.close),
+                                  ("browser", session.browser and session.browser.close),
+                                  ("driver", session.playwright_instance and session.playwright_instance.stop)):
+                if not closer:
+                    continue
+                try:
+                    closer()
+                except Exception as e:  # noqa: BLE001
+                    logger.warning("Browser close issue (%s): %s", label, e)
             session.active_page = None
             session.active_frame = None
         # Legacy path — close directly via the page's context/browser if no session

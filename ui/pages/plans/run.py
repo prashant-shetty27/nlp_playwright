@@ -181,10 +181,23 @@ class PlanRunPage:
 
     # ── actions ─────────────────────────────────────────────────────────────
     async def stop(self, now: bool) -> None:
-        await api.stop_plan_run(self.run_id, now=now)
-        ui.notify("Stopping at the next step — the rest is marked not run" if now
-                  else "Stopping after the current test case", type="info")
-        await self.refresh(force=True)
+        from ui.pages.plans.common import confirm
+
+        async def go() -> None:
+            try:
+                await api.stop_plan_run(self.run_id, now=now)
+            except api.ApiError as e:
+                ui.notify(f"Could not stop: {e.detail}", type="negative")
+                return
+            ui.notify("Stopping at the next step — the rest is marked not run" if now
+                      else "Stopping after the current test case", type="info")
+            await self.refresh(force=True)
+
+        confirm("Stop this plan run?",
+                ("The current step finishes, then every remaining step and test case is marked "
+                 "not run. The report is still saved.") if now else
+                ("The test case that is running finishes; the remaining test cases are marked "
+                 "not run."), go, button="Stop now" if now else "Stop after this test case")
 
     async def close_orphan(self) -> None:
         try:
@@ -361,7 +374,7 @@ class PlanRunPage:
 
     def _summary(self) -> None:
         r = self.rec
-        items = r.get("items") or []
+        items = [i for i in (r.get("items") or []) if not i.get("out_of_scope")]
         h = r.get("health") or {}
         n = len(items)
         passed = sum(1 for i in items if i.get("status") == "passed")

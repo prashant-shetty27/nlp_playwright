@@ -69,8 +69,9 @@ def new_test_case_dialog(platform: str, on_created: Callable) -> None:
 
                 async def handle_upload(e) -> None:
                     try:
-                        data = e.content.read()
-                        res = await api.upload_source(e.name, data)
+                        # NiceGUI 3.x: e.file (async read) replaced e.name / e.content.
+                        data = await e.file.read()
+                        res = await api.upload_source(e.file.name, data)
                     except api.ApiError as err:
                         ui.notify(f"Upload rejected: {err.detail}", type="negative")
                         return

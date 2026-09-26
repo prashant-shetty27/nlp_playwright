@@ -148,11 +148,19 @@ class LiveView:
             self.footer = ui.row().classes("w-full")
 
         self.log.push(f"run {self.run_id} started")
-        ui.timer(self.POLL_S, self.poll)
+        self.missing = 0
+        self.timer = ui.timer(self.POLL_S, self.poll)
 
     async def poll(self) -> None:
-        if not self.done:
-            self.elapsed.set_text(f"{int(time.time() - self.started)}s")
+        if self.done:
+            # Finished: stop polling instead of re-fetching the whole result
+            # every second for as long as the tab stays open.
+            try:
+                self.timer.cancel()
+            except Exception:  # noqa: BLE001
+                pass
+            return
+        self.elapsed.set_text(f"{int(time.time() - self.started)}s")
         try:
             res = await api.run_result(self.run_id)
         except api.ApiError as e:
@@ -160,7 +168,18 @@ class LiveView:
             # registered yet. Anything else is worth showing.
             if e.status != 404:
                 self.log.push(f"poll failed: {e.detail}")
+                return
+            self.missing += 1
+            if self.missing == 15:
+                # 15 s and the run is still unknown: the server restarted before
+                # it saved a report. Say so, rather than a counter climbing forever.
+                self.done = True
+                self.log.push("This run is no longer known to the server (it was probably "
+                              "restarted before the run saved its report).")
+                ui.notify("This run is no longer known to the server — it was probably restarted "
+                          "mid-run. See History for saved runs.", type="warning", timeout=12000)
             return
+        self.missing = 0
 
         log = res.get("log") or []
         planned = res.get("planned") or getattr(self, "planned", [])

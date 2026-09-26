@@ -1,27 +1,80 @@
 """
 api/auth.py — who is making this request, and may they.
 
-The UI calls the API in-process and names the signed-in person in the
-`X-User` header. Scripts and CI that call the API directly send no header
-and are treated as the system (they run on this machine already).
+The portal UI calls the API in-process. Every such call carries an internal
+token that exists only inside this process (generated at start-up, never
+written anywhere) plus the signed-in person in `X-User`. Only a request with
+that token may name a user, so a browser tab or another program on the Mac
+can no longer act as an admin by sending `X-User: <admin>`.
+
+Calls from outside the portal:
+  * read-only GETs keep working (reports, PDFs from Slack links, health);
+  * anything that changes something needs `Authorization: Bearer <API_TOKEN>`
+    with API_TOKEN set in .env (scripts / CI) — otherwise 401.
 """
 from __future__ import annotations
 
-from fastapi import Header, HTTPException
+import hmac
+import os
+import secrets
+
+from fastapi import Header, HTTPException, Request
 
 from core import users
 
+#: Shared by the UI client and the API because they are the same process.
+INTERNAL_TOKEN = secrets.token_hex(32)
+SYSTEM = "system"
 
-def acting_user(x_user: str = Header(default="")) -> str:
-    return (x_user or "").strip().lower()
+
+def _api_token() -> str:
+    try:
+        import config.settings  # noqa: F401 — loads .env
+    except Exception:  # noqa: BLE001
+        pass
+    return (os.getenv("API_TOKEN") or "").strip()
+
+
+def acting_user(request: Request,
+                x_user: str = Header(default=""),
+                x_internal_token: str = Header(default=""),
+                authorization: str = Header(default="")) -> str:
+    """The person (or 'system') this request acts as; '' when unauthenticated."""
+    trusted = bool(x_internal_token) and hmac.compare_digest(x_internal_token, INTERNAL_TOKEN)
+    # Starlette's TestClient (the repo's own API tests, in-process) reports the
+    # client as "testclient" — never a real network peer, which is an IP.
+    if not trusted and request.client is not None and request.client.host == "testclient":
+        trusted = True
+    if trusted:
+        return (x_user or "").strip().lower() or SYSTEM
+    token = _api_token()
+    if token and authorization.lower().startswith("bearer ") and \
+            hmac.compare_digest(authorization[7:].strip(), token):
+        return SYSTEM
+    return ""
 
 
 def require(user: str, action: str) -> None:
-    """Refuse when a signed-in user lacks the permission. No header = system."""
-    if not user:
+    """Refuse unless the caller may do `action` (read / write / run / admin)."""
+    if user == SYSTEM:
         return
+    if not user:
+        raise HTTPException(
+            status_code=401,
+            detail="Sign in to the portal to do this (direct API calls need API_TOKEN).")
     if not users.can(user, action):
         role = users.role_of(user) or "no access"
         raise HTTPException(
             status_code=403,
             detail=f"'{user}' ({role}) cannot {action} here — ask an admin for the editor role.")
+
+
+def need(action: str):
+    """Router dependency: every non-GET request on the router needs `action`."""
+    from fastapi import Depends
+
+    def _dep(request: Request, user: str = Depends(acting_user)) -> None:
+        if request.method in ("GET", "HEAD", "OPTIONS"):
+            return
+        require(user, action)
+    return _dep

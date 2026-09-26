@@ -145,7 +145,23 @@ def _remaining(lines: list, after: int) -> int:
     return len(_rest(lines, after))
 
 
-def _run_flow_sync(run_id: str, flow_path: str, headless: bool,
+#: One browser run at a time on this machine. Runs share process-wide state
+#: (HEADLESS env, basic-auth domains, the carousel/network caches), so a Run
+#: Center run started during a plan used to corrupt both. Plans wait on this
+#: lock; Run Center refuses with a clear message instead of queueing silently.
+_EXEC_LOCK = threading.Lock()
+
+
+def run_in_progress() -> bool:
+    return _EXEC_LOCK.locked()
+
+
+def _run_flow_sync(*args, **kwargs) -> dict:
+    with _EXEC_LOCK:
+        return _run_flow_sync_unlocked(*args, **kwargs)
+
+
+def _run_flow_sync_unlocked(run_id: str, flow_path: str, headless: bool,
                    capabilities: dict | None = None,
                    triggered_by: str = "", plan_run: str = "",
                    parameters: dict | None = None,
@@ -185,6 +201,10 @@ def _run_flow_sync(run_id: str, flow_path: str, headless: bool,
     # Bind the session's own variable store BEFORE injecting, so values land where
     # the running flow will look for them.
     bind_runtime_variables(session.runtime_variables)
+    # Tab / iframe state and the per-run caches belong to THIS run only.
+    from execution.action_service import reset_run_state, set_test_session
+    set_test_session(session)
+    reset_run_state()
 
     declared = set(secret_parameters or [])
     injected = []
@@ -391,8 +411,16 @@ def _run_flow_sync(run_id: str, flow_path: str, headless: bool,
                                 if e.get("status") != "running"]
     except Exception:  # noqa: BLE001
         pass
-    json_path, _ = report.generate_report(LOGS_DIR)
-    _index_report(run_id, os.path.basename(json_path))
+    # A report that cannot be written (disk full, permissions) must not leave
+    # the run "running" forever or kill the rest of a plan.
+    json_path = ""
+    try:
+        json_path, _ = report.generate_report(LOGS_DIR)
+        _index_report(run_id, os.path.basename(json_path))
+    except Exception as e:  # noqa: BLE001
+        logger.error("Could not save the report for run %s: %s", run_id, e)
+        log.append({"line": 0, "step": "REPORT", "status": "failed",
+                    "error": f"The run finished but its report could not be saved: {e}"})
 
     summary = {
         "run_id": run_id,
@@ -743,6 +771,15 @@ def run_test(body: RunRequest, user: str = Depends(acting_user)):
     GET /tests/results/{run_id} to poll.
     """
     require(user, "run")
+    if run_in_progress():
+        try:
+            from execution import plan_engine
+            active = plan_engine.active_run()
+        except Exception:  # noqa: BLE001
+            active = ""
+        raise HTTPException(status_code=409, detail=(
+            f"Another run is using the browser right now ({'test plan run ' + active if active else 'a Run Center run'}). "
+            "Wait for it to finish, or stop it from its page, then run again."))
     flow_path, caps, platform, platform_source, device = _prepare_run(body)
 
     # Remember how this flow was launched so it can be repeated without

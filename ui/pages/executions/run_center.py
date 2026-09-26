@@ -306,6 +306,15 @@ class RunCenter:
         if not self.flow:
             ui.notify("Pick a flow first", type="warning")
             return
+        if getattr(self, "_launching", False):
+            return                  # a double-click used to start two browsers
+        self._launching = True
+        try:
+            await self._launch()
+        finally:
+            self._launching = False
+
+    async def _launch(self) -> None:
         typed = {n: (b.value or "").strip() for n, b in self.fields.items()}
         # Only what was actually typed travels as a per-run value. A blank box
         # for a name Test Data supplies means "use the saved one", and sending

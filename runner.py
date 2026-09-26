@@ -39,6 +39,11 @@ logger = logging.getLogger(__name__)
 _thread_local = threading.local()
 
 
+
+def _unsupported(message: str):
+    """A command the web runner parses but cannot execute — fail, never pass."""
+    raise NotImplementedError(message)
+
 def _get_stop_on_failure() -> bool:
     return getattr(_thread_local, "stop_on_failure", False)
 
@@ -271,7 +276,9 @@ def _execute_step_from_command(cmd, page):
         "js_submit":                 lambda: svc.js_submit(ep, target),
         "js_dispatch":               lambda: svc.js_dispatch_event(ep, text, target),
         # ── Image ─────────────────────────────────────────────────────────────
-        "verify_image":              lambda: None,  # handled in _interpret below
+        # Not implemented for web — it used to be a silent no-op that PASSED.
+        "verify_image":              lambda: _unsupported(
+            "'verify image' is not supported on web runs yet — use 'verify element <name> is visible'."),
         # ── Tabs / Windows ───────────────────────────────────────────────────
         "switch_tab":                lambda: svc.switch_tab(page, cmd.count,
                                                               where=cmd.text or ""),

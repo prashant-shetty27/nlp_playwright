@@ -161,6 +161,10 @@ class ProjectCreate(BaseModel):
 class ProjectUpdate(BaseModel):
     steps: list[str]
     platform: str = ""
+    #: The file's modified-time when the editor opened it. When sent and the
+    #: file has changed since (someone else saved), the save is refused with
+    #: 409 instead of silently overwriting their work.
+    expected_mtime: float | None = None
 
 
 # ── Routes ─────────────────────────────────────────────────────────────────────
@@ -242,7 +246,8 @@ def get_project(name: str):
     path = _flow_path_or_422(name)
     if not os.path.exists(path):
         raise HTTPException(status_code=404, detail=f"Project '{name}' not found.")
-    return {"name": name, "steps": _read_steps(path), "meta": audit.get(name)}
+    return {"name": name, "steps": _read_steps(path), "meta": audit.get(name),
+            "mtime": os.path.getmtime(path)}
 
 
 @router.put("/{name}")
@@ -252,11 +257,17 @@ def update_project(name: str, body: ProjectUpdate, user: str = Depends(acting_us
     path = _flow_path_or_422(name)
     if not os.path.exists(path):
         raise HTTPException(status_code=404, detail=f"Project '{name}' not found.")
+    if body.expected_mtime is not None and abs(os.path.getmtime(path) - body.expected_mtime) > 0.001:
+        who = (audit.get(name) or {}).get("updated_by") or "someone"
+        raise HTTPException(status_code=409, detail=(
+            f"'{name}' was changed by {who} after you opened it. Reload to see their version, "
+            f"or overwrite it with yours."))
     header = _read_header(path)
     with open(path, "w", encoding="utf-8") as f:
         f.write(_compose(body.steps, header, platform=body.platform))
     audit.touch(name, user)
-    return {"message": f"Project '{name}' updated.", "steps": body.steps}
+    return {"message": f"Project '{name}' updated.", "steps": body.steps,
+            "mtime": os.path.getmtime(path)}
 
 
 class RenameBody(BaseModel):

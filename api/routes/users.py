@@ -11,6 +11,9 @@ DELETE /users/{name}       delete (admin; never the last admin)
 """
 from __future__ import annotations
 
+import threading
+import time
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
@@ -39,13 +42,35 @@ class UserPatch(BaseModel):
     role: str | None = None
     active: bool | None = None
     password: str | None = None
+    #: Needed when people change their OWN password (not when an admin resets one).
+    current_password: str | None = None
+
+
+#: Failed sign-ins per username in the last window — guessing is slowed down
+#: (each attempt also costs a deliberate, expensive password hash).
+_FAILS: dict[str, list[float]] = {}
+_FAILS_LOCK = threading.Lock()
+_MAX_FAILS, _WINDOW_S = 5, 300
 
 
 @router.post("/login")
 def login(body: Login):
+    key = (body.username or "").strip().lower()
+    now = time.time()
+    with _FAILS_LOCK:
+        recent = [t for t in _FAILS.get(key, []) if now - t < _WINDOW_S]
+        _FAILS[key] = recent
+        if len(recent) >= _MAX_FAILS:
+            wait = int(_WINDOW_S - (now - recent[0])) + 1
+            raise HTTPException(status_code=429,
+                                detail=f"Too many wrong attempts — try again in {wait // 60 + 1} min.")
     u = users.verify(body.username, body.password)
     if not u:
+        with _FAILS_LOCK:
+            _FAILS.setdefault(key, []).append(now)
         raise HTTPException(status_code=401, detail="Wrong username or password.")
+    with _FAILS_LOCK:
+        _FAILS.pop(key, None)
     return u
 
 
@@ -67,7 +92,9 @@ def setup(body: NewUser):
 
 @router.get("")
 def list_all(user: str = Depends(acting_user)):
-    return {"users": users.list_users(), "me": users.get(user) if user else None}
+    require(user, "read")        # names, roles and emails are not for anonymous callers
+    return {"users": users.list_users(),
+            "me": users.get(user) if user and user != "system" else None}
 
 
 @router.post("", status_code=201)
@@ -86,6 +113,9 @@ def update(name: str, body: UserPatch, user: str = Depends(acting_user)):
     admin_only = body.role is not None or body.active is not None or body.email is not None
     if not self_edit or admin_only:
         require(user, "admin")
+    elif body.password is not None and not users.verify(name, body.current_password or ""):
+        # A borrowed, signed-in browser must not be enough to take the account over.
+        raise HTTPException(status_code=403, detail="Your current password is not right.")
     try:
         return users.update(name, name=body.name, email=body.email, role=body.role,
                             active=body.active, password=body.password)

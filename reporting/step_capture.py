@@ -38,6 +38,7 @@ from __future__ import annotations
 import logging
 import os
 import re
+import time
 from collections import deque
 
 logger = logging.getLogger(__name__)
@@ -121,6 +122,47 @@ def _step_locator(step: str) -> tuple[str, str]:
         return "", ""
 
 
+def _capture(page, path: str) -> None:
+    """
+    Viewport JPEG of the page.
+
+    Chromium: straight through the DevTools protocol. page.screenshot() first
+    waits for web fonts and a stable frame, which on Justdial pages cost ~1 s
+    per step (≈50 s of a 106 s run). The CDP capture takes the frame as it is —
+    exactly what the step saw. Any other engine, or any CDP error, falls back
+    to page.screenshot().
+    """
+    try:
+        cdp = _CDP.get(id(page))
+        if cdp is None or cdp[0] is not page:
+            cdp = (page, page.context.new_cdp_session(page))
+            _CDP[id(page)] = cdp
+        left, top, w, h, zoom = page.evaluate(
+            "(()=>{const v=window.visualViewport;"
+            "return v?[v.pageLeft,v.pageTop,v.width,v.height,v.scale]"
+            ":[scrollX,scrollY,innerWidth,innerHeight,1]})()")
+        if abs(float(zoom) - 1) > 0.01:
+            # Zoomed-out page (no viewport meta): the standard capture frames it right.
+            page.screenshot(path=path, type="jpeg", quality=JPEG_QUALITY, scale="css", timeout=5000)
+            return
+        # The visible viewport, in CSS pixels (a mobile emulation is 3x device
+        # pixels: as readable, 9x fewer to encode). Clip is page-relative, hence
+        # the scroll offset. Verified pixel-identical to page.screenshot(scale="css").
+        params = {"format": "jpeg", "quality": JPEG_QUALITY, "optimizeForSpeed": True,
+                  "clip": {"x": left, "y": top, "width": w, "height": h, "scale": 1}}
+        data = cdp[1].send("Page.captureScreenshot", params)["data"]
+        import base64
+        with open(path, "wb") as f:
+            f.write(base64.b64decode(data))
+    except Exception:  # noqa: BLE001 — not Chromium, or CDP refused: the standard way
+        _CDP.pop(id(page), None)
+        page.screenshot(path=path, type="jpeg", quality=JPEG_QUALITY, scale="css", timeout=5000)
+
+
+#: page id -> (page, CDP session), so a session is opened once per page.
+_CDP: dict = {}
+
+
 def _highlight(page, step: str, failed: bool) -> bool:
     """Outline the step's element(s) and drop a badge. True when anything was added."""
     name, selector = _step_locator(step)
@@ -164,6 +206,8 @@ class StepCapture:
         #: what that mode keeps to context + 1.
         self.kept_count = 0
         self.capped = False
+        self.t_highlight = 0.0
+        self.t_shot = 0.0
         self._last_url = ""
         #: (entry, path) for shots not yet known to be worth keeping. Only used
         #: by `failure` mode; holds context + 1 so the failing step's own frame
@@ -203,6 +247,7 @@ class StepCapture:
 
     def finish(self) -> None:
         """Delete anything the run turned out not to need."""
+        _CDP.clear()                    # drop the CDP sessions / page references
         for _entry, _row, path in self._pending:
             self._discard(self._abs(path))
         self._pending.clear()
@@ -277,16 +322,17 @@ class StepCapture:
         # on a badge, so nobody has to work out from a bare screenshot WHICH
         # button was clicked or WHICH text was verified. Removed again right
         # after the frame, so the page is untouched for the next step.
+        t0 = time.perf_counter()
         marked = _highlight(target, step, failed)
+        t1 = time.perf_counter()
         try:
-            # scale="css": a mobile-emulated page has deviceScaleFactor 3, so a
-            # device-pixel shot is 9x the pixels to encode — ~1 s per step on a
-            # 129-step run. CSS pixels are just as readable in a report.
-            target.screenshot(path=path, type="jpeg", quality=JPEG_QUALITY,
-                              scale="css", timeout=5000)
+            _capture(target, path)
         finally:
             if marked:
                 _unhighlight(target)
+        t2 = time.perf_counter()
+        self.t_highlight += t1 - t0
+        self.t_shot += t2 - t1
         # Relative to data/screenshots. The report stores this, so a run stays
         # readable if the data directory is moved or copied to another machine,
         # and the UI can serve it from one static mount without path juggling.
@@ -315,4 +361,6 @@ class StepCapture:
     def summary(self) -> dict:
         return {"mode": self.mode, "context": self.context,
                 "kept": len(self._kept), "capped": self.capped,
-                "dir": self.rel_dir if self._kept else ""}
+                "dir": self.rel_dir if self._kept else "",
+                # Where screenshot time goes, so a slow run can be diagnosed.
+                "highlight_s": round(self.t_highlight, 1), "capture_s": round(self.t_shot, 1)}

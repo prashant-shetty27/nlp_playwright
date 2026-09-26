@@ -28,7 +28,7 @@ if BASE_DIR not in sys.path:
 
 #: Long enough for a model call to draft testcases; short enough that a wedged
 #: request surfaces as an error the operator can act on rather than a dead page.
-DEFAULT_TIMEOUT_S = float(os.getenv("UI_API_TIMEOUT_S", "180"))
+DEFAULT_TIMEOUT_S = float(os.getenv("UI_API_TIMEOUT_S", "420"))
 
 
 class ApiError(RuntimeError):
@@ -54,19 +54,35 @@ def _client():
 
     from api.app import app
 
+    from api.auth import INTERNAL_TOKEN
+
     user = current_user()
+    headers = {"X-Internal-Token": INTERNAL_TOKEN}
+    if user:
+        # Who is acting — for "created by / run by" and for role checks. Only
+        # honoured together with the in-process token above.
+        headers["X-User"] = user
     return httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app),
+        # raise_app_exceptions=False: an unexpected error inside an endpoint now
+        # comes back as a 500 (-> ApiError, which every page handles) instead of
+        # the raw Python exception crashing the page.
+        transport=httpx.ASGITransport(app=app, raise_app_exceptions=False),
         base_url="http://api",
         timeout=DEFAULT_TIMEOUT_S,
-        # Who is acting — for "created by / run by" and for role checks.
-        headers={"X-User": user} if user else None,
+        headers=headers,
     )
 
 
 async def _call(method: str, path: str, **kw):
+    import asyncio
+
     async with _client() as c:
-        r = await c.request(method, path, **kw)
+        try:
+            # The in-process transport ignores httpx timeouts, so a wedged
+            # endpoint used to leave a spinner running forever.
+            r = await asyncio.wait_for(c.request(method, path, **kw), DEFAULT_TIMEOUT_S)
+        except asyncio.TimeoutError as e:
+            raise ApiError(504, f"The server did not answer within {int(DEFAULT_TIMEOUT_S)} s.") from e
     if r.status_code >= 400:
         try:
             detail = r.json().get("detail")
@@ -309,13 +325,19 @@ async def get_project(name: str) -> dict:
     return await _call("GET", f"/projects/{name}")
 
 
-async def save_project(name: str, steps: list[str], platform: str = "") -> dict:
-    """Create or update — the UI should not have to know which."""
+async def save_project(name: str, steps: list[str], platform: str = "", *,
+                       expected_mtime: float | None = None,
+                       create_if_missing: bool = True) -> dict:
+    """Create or update. `expected_mtime` makes a concurrent edit a 409 instead of a
+    silent overwrite; `create_if_missing=False` stops a test case someone else
+    deleted or renamed from being quietly re-created under its old name."""
     body = {"steps": steps, "platform": platform}
+    if expected_mtime is not None:
+        body["expected_mtime"] = expected_mtime
     try:
         return await _call("PUT", f"/projects/{name}", json=body)
     except ApiError as e:
-        if e.status != 404:
+        if e.status != 404 or not create_if_missing:
             raise
         return await _call("POST", "/projects",
                            json={"name": name, "steps": steps, "platform": platform})

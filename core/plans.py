@@ -197,8 +197,23 @@ def save(name: str, suite_ids: list[str], *, description: str = "", user: str = 
     if sched.get("enabled"):
         if sched.get("frequency") not in FREQUENCIES:
             raise PlanError(f"Schedule frequency must be one of {', '.join(FREQUENCIES)}.")
-        if not re.match(r"^\d{1,2}:\d{2}$", sched.get("time") or ""):
-            raise PlanError("Schedule time must look like 09:00 (24-hour, IST).")
+        m = re.match(r"^(\d{1,2}):(\d{2})$", sched.get("time") or "")
+        if not m or int(m.group(1)) > 23 or int(m.group(2)) > 59:
+            raise PlanError("Schedule time must be a real 24-hour time like 09:00 (IST).")
+        if sched["frequency"] == "hourly":
+            try:
+                every = int(sched.get("every_hours") or 0)
+            except (TypeError, ValueError):
+                every = 0
+            if not 1 <= every <= 24:
+                raise PlanError("'Every N hours' must be a whole number from 1 to 24.")
+            sched["every_hours"] = every
+        tzname = sched.get("timezone") or DEFAULT_TZ
+        try:
+            from zoneinfo import ZoneInfo
+            ZoneInfo(tzname)
+        except Exception as e:  # noqa: BLE001
+            raise PlanError(f"Unknown time zone '{tzname}'.") from e
         if sched["frequency"] == "weekly" and not sched.get("days"):
             raise PlanError("Pick at least one day for a weekly schedule.")
         if sched["frequency"] == "once" and not sched.get("date"):

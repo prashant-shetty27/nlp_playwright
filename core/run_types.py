@@ -51,7 +51,7 @@ ICON = {"smoke": "🔥", "sanity": "🎯", "regression": "🔁", "full": "🧪"}
 _BAND_TAGS = re.compile(r"\[([a-zA-Z ,_-]+)\]")
 _HEADER_TAGS = re.compile(r"^#\s*Tags\s*:\s*(.+)$", re.I)
 _STORES = re.compile(r"\bas\s+([A-Za-z_][\w]*)\s*$|\bstore\b.*?\bas\s+([A-Za-z_][\w]*)", re.I)
-_USES = re.compile(r"\$\{([A-Za-z_][\w]*)\}")
+_USES = re.compile(r"\$\{([A-Za-z_][\w]*)\}|\bstored\s+([A-Za-z_][\w]*)")
 
 
 def _stored(line: str) -> str:
@@ -144,12 +144,22 @@ def select(lines: list[str], run_type: str | None) -> dict:
             v = _stored(lines[n - 1])
             if v:
                 stored_by.setdefault(v, b["name"])
+    prev_kept = True
     for b in a["bands"]:
-        if b["name"] not in bands_in:
+        kept = b["name"] in bands_in
+        # A kept band right after a skipped one inherits whatever page the
+        # skipped band would have left — unless it opens its own page.
+        if kept and not prev_kept and b["lines"]:
+            first = lines[b["lines"][0] - 1].strip().lower()
+            if not first.startswith(("open ", "go to ", "navigate ", "call ")):
+                warnings.append(f"{b['name']} does not start by opening a page, and the band before it "
+                                f"is not part of this {LABEL[rt]} run")
+        prev_kept = kept
+        if not kept:
             continue
         own = {_stored(lines[n - 1]) for n in b["lines"]} - {""}
         for n in b["lines"]:
-            for v in _USES.findall(lines[n - 1]):
+            for v in {a or b for a, b in _USES.findall(lines[n - 1])}:
                 src = stored_by.get(v)
                 if src and src not in bands_in and v not in own:
                     warnings.append(f"{b['name']} uses ${{{v}}}, which is only stored in {src} "

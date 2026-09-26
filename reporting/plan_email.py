@@ -28,10 +28,27 @@ logger = logging.getLogger(__name__)
 _EMAIL = re.compile(r"^[^@\s,;]+@[^@\s,;]+\.[^@\s,;]+$")
 
 
+MAX_RECIPIENTS = 20
+
+
 def recipients(raw) -> list[str]:
+    """Valid addresses, at most 20; limited to REPORT_EMAIL_DOMAINS when that is set
+    (e.g. REPORT_EMAIL_DOMAINS=justdial.com,gmail.com) so reports cannot be mailed
+    to an arbitrary outside address."""
     if isinstance(raw, (list, tuple)):
         raw = ",".join(raw)
-    return [a.strip() for a in re.split(r"[,;\s]+", raw or "") if _EMAIL.match(a.strip())]
+    allowed = {d.strip().lower().lstrip("@") for d in
+               (os.getenv("REPORT_EMAIL_DOMAINS") or "").split(",") if d.strip()}
+    out = []
+    for a in re.split(r"[,;\s]+", raw or ""):
+        a = a.strip()
+        if not _EMAIL.match(a):
+            continue
+        if allowed and a.rsplit("@", 1)[-1].lower() not in allowed:
+            continue
+        if a.lower() not in (x.lower() for x in out):
+            out.append(a)
+    return out[:MAX_RECIPIENTS]
 
 
 def configured() -> str:

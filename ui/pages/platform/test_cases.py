@@ -112,8 +112,10 @@ class TestCasesPage:
 
             async def save_then() -> None:
                 dialog.close()
-                await self.save()
-                await self.open_project(name)
+                # Only move on if the save really happened — a refused save
+                # (viewer, bad name, conflict) used to lose the edits here.
+                if await self.save():
+                    await self.open_project(name)
 
             async def discard() -> None:
                 dialog.close()
@@ -134,6 +136,9 @@ class TestCasesPage:
             return
         self.selected = name
         self.meta = data.get("meta") or {}
+        # Remembered so a save can tell whether someone else saved in between.
+        self.file_mtime = data.get("mtime")
+        self._is_new = False
         try:
             from ui.layout.topbar import set_current_flow
             set_current_flow(name)
@@ -276,6 +281,11 @@ class TestCasesPage:
         nothing moves until they confirm it.
         """
         if not self.selected:
+            return
+        if self.dirty:
+            # Renaming reloads the test case from disk under its new name, which
+            # threw unsaved steps away.
+            ui.notify("Save (or discard) your unsaved steps before renaming.", type="warning")
             return
         current = self.selected
         dialog = ui.dialog().props("persistent")
@@ -577,6 +587,28 @@ class TestCasesPage:
             pass
 
     async def render_editor(self) -> None:
+        """Redraw the editor — one redraw at a time.
+
+        Every change schedules a redraw, and a redraw awaits several API calls
+        and draws in batches; two quick clicks used to start a second redraw
+        while the first was still drawing into rows that no longer existed
+        (duplicate "Add a step" boxes, a move applied to the wrong step). A
+        request that arrives mid-redraw now just asks for one more pass.
+        """
+        if getattr(self, "_rendering", False):
+            self._rerender = True
+            return
+        self._rendering = True
+        try:
+            while True:
+                self._rerender = False
+                await self._render_editor_once()
+                if not self._rerender:
+                    break
+        finally:
+            self._rendering = False
+
+    async def _render_editor_once(self) -> None:
         # Every edit redraws the list; without this the list jumped back to
         # the top each time, so working at step 100 meant scrolling down again
         # after every click.
@@ -1037,7 +1069,7 @@ class TestCasesPage:
     async def _save_after_review(self, what: str) -> None:
         """Review edits are saved as they are applied; the review then re-runs."""
         try:
-            await api.save_project(self.selected, self.steps, self.platform)
+            await self._persist()
             self.dirty = False
             ui.notify(f"{what} — saved", type="positive")
         except api.ApiError as e:
@@ -1176,7 +1208,7 @@ class TestCasesPage:
         before = self.steps[idx - 1]
         self.steps[idx - 1] = f["fix"]
         try:
-            await api.save_project(self.selected, self.steps, self.platform)
+            await self._persist()
             self.dirty = False
             ui.notify(f"Step {idx} updated and saved", type="positive")
         except api.ApiError as e:
@@ -1560,7 +1592,7 @@ class TestCasesPage:
                     self.steps.insert(first - 1, f"call {gname}")
                     self.step_meta = {}
                     try:
-                        await api.save_project(self.selected, self.steps, self.platform)
+                        await self._persist()
                         self.dirty = False
                         ui.notify(f"Saved step group and replaced {len(idxs)} step(s) "
                                   f"with 'call {gname}'", type="positive")
@@ -1671,18 +1703,69 @@ class TestCasesPage:
         ui.timer(0.01, self.render_editor, once=True)
 
     # ── actions ─────────────────────────────────────────────────────────────
-    async def save(self) -> None:
-        if not self.selected:
-            return
+    async def _persist(self, overwrite: bool = False) -> None:
+        """Write the steps. Raises ApiError; a concurrent edit (409) also offers
+        Reload / Overwrite instead of the second save silently erasing the first."""
         try:
-            await api.save_project(self.selected, self.steps, self.platform)
-            self.dirty = False
-            ui.notify(f"Saved {self.selected}", type="positive")
-            await self.render_editor()      # drop the "unsaved" badge
-            await self.load()
-            self.render_list()
+            res = await api.save_project(
+                self.selected, self.steps, self.platform,
+                expected_mtime=None if overwrite else getattr(self, "file_mtime", None),
+                create_if_missing=getattr(self, "_is_new", False))
         except api.ApiError as e:
-            ui.notify(f"Save failed: {e.detail}", type="negative")
+            if e.status == 409:
+                self._conflict_dialog(str(e.detail))
+            elif e.status == 404:
+                e.detail = (f"'{self.selected}' no longer exists (deleted or renamed by someone "
+                            f"else). Copy your steps, then create it again.")
+            raise
+        self.file_mtime = (res or {}).get("mtime", getattr(self, "file_mtime", None))
+        self._is_new = False
+
+    def _conflict_dialog(self, detail: str) -> None:
+        with self.dialog_host if getattr(self, "dialog_host", None) else ui.element("div"):
+            dialog = ui.dialog().props("persistent")
+            with dialog, ui.card().style("width:32rem"):
+                ui.label("Someone else saved this test case").style(
+                    f"font-weight:{TYPOGRAPHY['weight_bold']}")
+                ui.label(detail).style(f"font-size:{TYPOGRAPHY['size_sm']}")
+
+                async def reload() -> None:
+                    dialog.close()
+                    self.dirty = False
+                    await self.open_project(self.selected)
+
+                async def overwrite() -> None:
+                    dialog.close()
+                    try:
+                        await self._persist(overwrite=True)
+                        self.dirty = False
+                        ui.notify(f"Saved {self.selected} (their changes were replaced)", type="warning")
+                        await self.render_editor()
+                    except api.ApiError as e:
+                        ui.notify(f"Save failed: {e.detail}", type="negative")
+
+                with ui.row().classes("w-full justify-end gap-2"):
+                    ui.button("Cancel", on_click=dialog.close).props("flat")
+                    ui.button("Reload theirs (lose mine)", on_click=reload).props("flat color=negative")
+                    ui.button("Overwrite with mine", on_click=overwrite).props("unelevated")
+        dialog.open()
+
+    async def save(self) -> bool:
+        """Save; True when it worked (callers must not carry on after a failed save)."""
+        if not self.selected:
+            return False
+        try:
+            await self._persist()
+        except api.ApiError as e:
+            if e.status != 409:
+                ui.notify(f"Save failed: {e.detail}", type="negative")
+            return False
+        self.dirty = False
+        ui.notify(f"Saved {self.selected}", type="positive")
+        await self.render_editor()      # drop the "unsaved" badge
+        await self.load()
+        self.render_list()
+        return True
 
     def run(self) -> None:
         if self.selected:
@@ -1697,6 +1780,8 @@ class TestCasesPage:
         self.selected = name
         self.steps = steps
         self.step_meta = meta or {}
+        self._is_new = True            # the first save may create the file
+        self.file_mtime = None
         self.compose_at = None
         self.selection.clear()
         self.collapsed.clear()

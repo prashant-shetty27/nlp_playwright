@@ -159,6 +159,18 @@ def restart(body: RestartRequest):
     the successor answers.
     """
     running = _running_runs()
+    try:
+        from execution import plan_engine
+        plan = plan_engine.active_run()
+    except Exception:  # noqa: BLE001
+        plan = ""
+    if plan and not body.force:
+        # Between test cases, or while it writes the report / posts to Slack, a
+        # plan has no run in the registry above — it was killed silently.
+        raise HTTPException(
+            status_code=409,
+            detail=(f"Test plan run {plan} is still in progress. Restarting stops it and "
+                    f"marks it interrupted. Send force=true to restart anyway."))
     if running and not body.force:
         raise HTTPException(
             status_code=409,

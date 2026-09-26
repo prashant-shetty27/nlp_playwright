@@ -28,7 +28,6 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 
 from api.routes import (assist, generate, health, locators, nlp, projects,
                         review, sources, stepgroups, system, testdata,
@@ -73,28 +72,51 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# ── CORS ───────────────────────────────────────────────────────────────────────
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],          # tighten this when you add a frontend origin
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# ── Same-origin only ───────────────────────────────────────────────────────────
+# There used to be a CORS policy allowing ANY site with credentials, so any web
+# page open in a browser on this Mac could read Test Data and start plans. The
+# UI runs in this same process and needs no CORS at all. On top of that, a
+# state-changing request that carries a foreign Origin (a form or script on
+# another site) is refused outright.
+from starlette.middleware.base import BaseHTTPMiddleware  # noqa: E402
+from starlette.responses import JSONResponse  # noqa: E402
+from urllib.parse import urlparse  # noqa: E402
+
+
+class _SameOriginGuard(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        if request.method not in ("GET", "HEAD", "OPTIONS"):
+            origin = request.headers.get("origin")
+            if origin and origin != "null":
+                host = request.headers.get("host", "")
+                if urlparse(origin).netloc.lower() != host.lower():
+                    return JSONResponse({"detail": "Cross-site request refused."}, status_code=403)
+            elif origin == "null":
+                return JSONResponse({"detail": "Cross-site request refused."}, status_code=403)
+        return await call_next(request)
+
+
+app.add_middleware(_SameOriginGuard)
 
 # ── Routers ────────────────────────────────────────────────────────────────────
+# Every state-changing (non-GET) request needs the right role. Routers that
+# check per endpoint keep doing so; these guards close the ones that did not
+# (a viewer could restart the server or delete Test Data / Elements).
+from fastapi import Depends  # noqa: E402
+from api.auth import need  # noqa: E402
+
 app.include_router(health.router)
-app.include_router(system.router)
-app.include_router(nlp.router)
-app.include_router(locators.router)
-app.include_router(projects.router)
-app.include_router(tests.router)
-app.include_router(sources.router)
-app.include_router(generate.router)
-app.include_router(testdata.router)
-app.include_router(stepgroups.router)
-app.include_router(review.router)
-app.include_router(assist.router)
+app.include_router(system.router, dependencies=[Depends(need("admin"))])
+app.include_router(nlp.router)            # parse / suggest / segment: read-only computations
+app.include_router(locators.router, dependencies=[Depends(need("write"))])
+app.include_router(projects.router, dependencies=[Depends(need("write"))])
+app.include_router(tests.router, dependencies=[Depends(need("run"))])
+app.include_router(sources.router, dependencies=[Depends(need("write"))])
+app.include_router(generate.router, dependencies=[Depends(need("write"))])
+app.include_router(testdata.router, dependencies=[Depends(need("write"))])
+app.include_router(stepgroups.router, dependencies=[Depends(need("write"))])
+app.include_router(review.router, dependencies=[Depends(need("write"))])
+app.include_router(assist.router, dependencies=[Depends(need("write"))])
 app.include_router(websocket.router)
 from api.routes import users as _users_routes  # noqa: E402
 app.include_router(_users_routes.router)

@@ -48,7 +48,13 @@ def _mins(sec) -> str:
 
 
 def _pretty(name: str) -> str:
-    return (name or "").replace("_", " ").strip()
+    return _esc((name or "").replace("_", " ").strip())
+
+
+def _esc(text) -> str:
+    """Slack mrkdwn escaping: '<!channel>' or '<http://x|y>' inside step or error
+    text must not ping the channel or become a link."""
+    return str(text if text is not None else "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
 def _meter(passed: int, failed: int, other: int, width: int = 10) -> str:
@@ -79,10 +85,10 @@ def build_blocks(rec: dict) -> tuple[str, list[dict]]:
         {"type": "header", "text": {"type": "plain_text", "emoji": True,
                                     "text": f"{ICON.get(st, '•')} {rec.get('plan_name')} — {label}"[:150]}},
         {"type": "context", "elements": [{"type": "mrkdwn", "text":
-            f"*Test Execution Report* · {ist(rec.get('started_at') or rec.get('queued_at'))} · {d['trigger']}"}]},
+            f"*Test Execution Report* · {ist(rec.get('started_at') or rec.get('queued_at'))} · {_esc(d['trigger'])}"}]},
     ]
     if st == "missed":
-        blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": f"⏰ {rec.get('reason', '')}"}})
+        blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": f"⏰ {_esc(rec.get('reason', ''))}"}})
         return text, blocks
     blocks += [
         {"type": "section", "fields": [
@@ -91,7 +97,7 @@ def build_blocks(rec: dict) -> tuple[str, list[dict]]:
             {"type": "mrkdwn", "text": f"*Test cases*\n✅ {t['passed']}   ❌ {t['failed']}   ⏭️ {t['not_run']}   of {t['total']}"},
             {"type": "mrkdwn", "text": f"*Steps*\n✅ {s['passed']}   ❌ {s['failed']}   ⏭️ {s['skipped']}   of {s['total']}"},
             {"type": "mrkdwn", "text": f"*Platform*\n{d['platforms']} · {d['browser'].lower()}"},
-            {"type": "mrkdwn", "text": f"*Suite(s)*\n{', '.join(d['suites'])[:200]}"},
+            {"type": "mrkdwn", "text": f"*Suite(s)*\n{_esc(', '.join(d['suites'])[:200])}"},
         ]},
         {"type": "divider"},
     ]
@@ -102,7 +108,7 @@ def build_blocks(rec: dict) -> tuple[str, list[dict]]:
         steps = f"{p}/{p + f + k} steps" if it.get("passed_steps") is not None else "—"
         dur = _mins(it["dur"]) if it["dur"] is not None else "—"
         link = f"  <{BASE_URL}/reports/{it['run_id']}|details>" if it.get("run_id") else ""
-        note = f"  _({it['note']})_" if it.get("note") else ""
+        note = f"  _({_esc(it['note'])})_" if it.get("note") else ""
         lines.append(f"{ICON.get(it.get('status'), '•')}  *{_pretty(it.get('test_case'))}*   "
                      f"{steps} · {dur}{note}{link}")
     chunk = "*Test case results*\n"
@@ -112,12 +118,12 @@ def build_blocks(rec: dict) -> tuple[str, list[dict]]:
             chunk = ""
         chunk += ln + "\n"
     blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": chunk}})
-    fails = [it for it in d["items"] if it.get("status") in ("failed", "not_run")]
+    fails = [it for it in d["items"] if it.get("status") in ("failed", "not_run") and not it.get("out_of_scope")]
     if fails:
         out = "*Why it failed*\n"
         for it in fails[:6]:
             why = it.get("first_failure") or it.get("reason") or ""
-            out += f"❌ *{_pretty(it.get('test_case'))}*\n>{why[:280]}\n"
+            out += f"❌ *{_pretty(it.get('test_case'))}*\n>{_esc(why[:280])}\n"
         blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": out[:2900]}})
     blocks.append({"type": "actions", "elements": [
         {"type": "button", "text": {"type": "plain_text", "text": "📊 View execution"},
@@ -231,7 +237,7 @@ def alert_stuck(rec: dict, h: dict) -> dict:
     if not token:
         return {"sent": False, "error": "SLACK_BOT_TOKEN is not set in .env"}
     channel = cfg.get("channel") or os.getenv("SLACK_REPORT_CHANNEL", "C0AAP4882H4")
-    text = (f"⚠️ Test Plan *{rec.get('plan_name')}* looks stuck — {h.get('message', '')}\n"
+    text = (f"⚠️ Test Plan *{_esc(rec.get('plan_name'))}* looks stuck — {_esc(h.get('message', ''))}\n"
             f"Open <{BASE_URL}/plans/run/{rec.get('id')}|the plan run> to see the live view and "
             f"stop or re-run it.")
     try:

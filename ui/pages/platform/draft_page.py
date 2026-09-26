@@ -136,25 +136,28 @@ class DraftPage:
                     ui.label(label).style(
                         f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}")
 
-    def _on_upload(self, e) -> None:
+    async def _on_upload(self, e) -> None:
         from ai_flow_builder.sheet_source import SheetError, read_sheet_bytes
+        # NiceGUI 3.x: the upload event carries `e.file` (async read); the old
+        # `e.name` / `e.content` no longer exist, so every upload failed.
+        name = getattr(e.file, "name", "upload")
         try:
-            text = read_sheet_bytes(e.name, e.content.read())
+            text = read_sheet_bytes(name, await e.file.read())
         except SheetError as err:
             ui.notify(str(err), type="negative")
             return
         except Exception as err:  # noqa: BLE001
-            ui.notify(f"Could not read {e.name}: {err}", type="negative")
+            ui.notify(f"Could not read {name}: {err}", type="negative")
             return
-        self.attachments = [a for a in self.attachments if a["name"] != e.name]
-        self.attachments.append({"name": e.name, "text": text})
+        self.attachments = [a for a in self.attachments if a["name"] != name]
+        self.attachments.append({"name": name, "text": text})
         rows = text.count("\n")
         with self.att_list:
             with ui.row().classes("items-center gap-1 no-wrap").style(
                     f"background:{TONE['read']['bg']}; border-radius:12px; padding:2px 8px"):
                 ui.icon("table_view").style(f"color:{TONE['read']['line']}; font-size:1rem")
-                ui.label(f"{e.name} · {rows} rows").style(f"font-size:{TYPOGRAPHY['size_xs']}")
-        ui.notify(f"Read {e.name} ({rows} rows) — it will be used as the baseline", type="positive")
+                ui.label(f"{name} · {rows} rows").style(f"font-size:{TYPOGRAPHY['size_xs']}")
+        ui.notify(f"Read {name} ({rows} rows) — it will be used as the baseline", type="positive")
 
     # ── drafting ────────────────────────────────────────────────────────────
     async def draft(self, text: str | None = None, redraft: bool = False) -> None:

@@ -23,6 +23,7 @@ import io
 import json
 import logging
 import os
+import threading
 from datetime import datetime, timedelta, timezone
 
 from config.settings import DATA_DIR, LOGS_DIR
@@ -133,10 +134,14 @@ def collect(rec: dict) -> dict:
             dur = _secs(it["started_at"], it["finished_at"])
         items.append({**it, "n": n, "steps": steps, "dur": dur,
                       "failed_list": [s for s in steps if s["status"] == "failed"]})
-    t = {"total": len(items),
-         "passed": sum(1 for i in items if i.get("status") == "passed"),
-         "failed": sum(1 for i in items if i.get("status") == "failed"),
-         "not_run": sum(1 for i in items if i.get("status") in ("not_run", "pending"))}
+    # Test cases with nothing tagged for this run type are "not in this run",
+    # not "not run" — they must not drag a green Smoke run down to 50 %.
+    scoped = [i for i in items if not i.get("out_of_scope")]
+    t = {"total": len(scoped),
+         "passed": sum(1 for i in scoped if i.get("status") == "passed"),
+         "failed": sum(1 for i in scoped if i.get("status") == "failed"),
+         "not_run": sum(1 for i in scoped if i.get("status") in ("not_run", "pending")),
+         "out_of_scope": len(items) - len(scoped)}
     sp = sum(int(i.get("passed_steps") or 0) for i in items)
     sf = sum(int(i.get("failed_steps") or 0) for i in items)
     ss = sum(int(i.get("skipped_steps") or 0) for i in items)
@@ -436,20 +441,41 @@ def build_pdf(html_text: str, pdf_path: str, title: str = "") -> str:
     return pdf_path
 
 
+_LOCKS: dict[str, threading.Lock] = {}
+_LOCKS_GUARD = threading.Lock()
+#: A PDF that failed once is not retried on every page view (each try starts a
+#: Chromium); "Rebuild report" (regenerate) tries again.
+_PDF_FAILED: dict[str, str] = {}
+
+
+def _lock_for(run_id: str) -> threading.Lock:
+    with _LOCKS_GUARD:
+        return _LOCKS.setdefault(run_id, threading.Lock())
+
+
 def generate(rec: dict, *, pdf: bool = True) -> dict:
-    """Write the HTML (and PDF) report; returns {"html": path, "pdf": path|"", "error": ""}."""
+    """Write the HTML (and PDF) report; returns {"html": path, "pdf": path|"", "error": ""}.
+    Files are written to a temp name and moved into place, so a download that
+    overlaps a rebuild never gets a half-written file."""
     base = _base(rec)
     os.makedirs(os.path.dirname(base), exist_ok=True)
-    out = {"html": base + ".html", "pdf": "", "error": ""}
-    with open(out["html"], "w", encoding="utf-8") as f:
-        f.write(build_html(rec))
-    if pdf:
-        try:
-            out["pdf"] = build_pdf(build_html(rec, for_pdf=True), base + ".pdf", rec.get("plan_name", ""))
-        except Exception as ex:  # noqa: BLE001
-            logger.exception("PDF report failed")
-            out["error"] = f"PDF not created: {type(ex).__name__}: {str(ex)[:200]}"
-    return out
+    with _lock_for(rec.get("id", base)):
+        out = {"html": base + ".html", "pdf": "", "error": ""}
+        tmp = base + ".html.tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write(build_html(rec))
+        os.replace(tmp, out["html"])
+        if pdf:
+            try:
+                build_pdf(build_html(rec, for_pdf=True), base + ".pdf.tmp", rec.get("plan_name", ""))
+                os.replace(base + ".pdf.tmp", base + ".pdf")
+                out["pdf"] = base + ".pdf"
+                _PDF_FAILED.pop(rec.get("id", ""), None)
+            except Exception as ex:  # noqa: BLE001
+                logger.exception("PDF report failed")
+                out["error"] = f"PDF not created: {type(ex).__name__}: {str(ex)[:200]}"
+                _PDF_FAILED[rec.get("id", "")] = out["error"]
+        return out
 
 
 def existing(rec: dict) -> dict:
@@ -458,9 +484,11 @@ def existing(rec: dict) -> dict:
             "pdf": base + ".pdf" if os.path.exists(base + ".pdf") else ""}
 
 
-def ensure(rec: dict) -> dict:
-    """The report files for a finished run, generating them the first time."""
+def ensure(rec: dict, *, need_pdf: bool = True) -> dict:
+    """The report files for a finished run, generating only what is missing."""
     have = existing(rec)
-    if have["html"] and have["pdf"]:
+    if have["html"] and (have["pdf"] or not need_pdf):
         return {**have, "error": ""}
-    return generate(rec)
+    if have["html"] and _PDF_FAILED.get(rec.get("id", "")):
+        return {**have, "error": _PDF_FAILED[rec["id"]]}
+    return generate(rec, pdf=need_pdf or not have["pdf"])

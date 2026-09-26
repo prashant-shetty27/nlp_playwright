@@ -11,7 +11,7 @@
 ###############################################
 
 # Core Automation
-playwright==1.49.0
+playwright==1.58.0     # matches the working .venv (was 1.49.0 here while 1.58 ran)
 pytest-playwright==0.6.2
 
 # Environment / Config
@@ -44,7 +44,7 @@ flask-cors
 # Mobile adapters
 # >=3.1.0: UiAutomator2Options/XCUITestOptions, W3C caps, start_recording_screen(**kwargs) API
 # <5.0.0:  guard against future major breaking changes
-Appium-Python-Client>=3.1.0,<5.0.0
+Appium-Python-Client>=3.1.0,<6.0.0   # .venv runs 5.2.6
 
 # Test data generation
 faker

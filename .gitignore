@@ -38,3 +38,4 @@ data/logs/
 .claude/
 _replica_tmp/
 *.bak
+data/meta/

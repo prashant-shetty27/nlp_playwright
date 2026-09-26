@@ -60,7 +60,20 @@ def _run_menu(plan_id: str, dense: bool = True) -> None:
                         muted(help_).style("max-width:26rem; white-space:normal")
 
 
+_STARTING: set[str] = set()
+
+
 async def _run_now(plan_id: str, run_type: str = "") -> None:
+    if plan_id in _STARTING:
+        return                      # double-click: one plan run, not two
+    _STARTING.add(plan_id)
+    try:
+        await _start_plan(plan_id, run_type)
+    finally:
+        _STARTING.discard(plan_id)
+
+
+async def _start_plan(plan_id: str, run_type: str = "") -> None:
     try:
         r = await api.run_plan(plan_id, run_type)
     except api.ApiError as e:

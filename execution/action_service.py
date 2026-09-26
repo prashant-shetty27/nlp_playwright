@@ -6,6 +6,7 @@ Extracted from actions.py with updated imports pointing to the new modules.
 Global state (RUNTIME_VARIABLES) now lives in nlp.variable_manager.
 """
 import re
+import threading
 import time
 import logging
 import os
@@ -31,13 +32,40 @@ logger = logging.getLogger(__name__)
 # ─────────────────────────────────────────────────────────────────────────────
 # TAB / WINDOW & IFRAME STATE (session-scoped)
 # ─────────────────────────────────────────────────────────────────────────────
-_TEST_SESSION: TestSession = TestSession()
+class _ThreadSession:
+    """
+    The run session of the CURRENT thread, reached through the one module name.
+
+    This used to be a single global: Run Center and plan runs never re-bound
+    it, so a tab / iframe a flow switched to stayed "active" after its browser
+    closed and every later run failed with "page has been closed" until a
+    restart — and two runs at once drove each other's tabs. Each run thread
+    now has its own; code that reads or sets `_TEST_SESSION.active_page` is
+    unchanged.
+    """
+    __slots__ = ()
+    _local = threading.local()
+
+    def _get(self) -> TestSession:
+        sess = getattr(_ThreadSession._local, "session", None)
+        if sess is None:
+            sess = TestSession()
+            _ThreadSession._local.session = sess
+        return sess
+
+    def __getattr__(self, name):
+        return getattr(self._get(), name)
+
+    def __setattr__(self, name, value):
+        setattr(self._get(), name, value)
+
+
+_TEST_SESSION = _ThreadSession()
 
 
 def set_test_session(session: TestSession | None) -> None:
-    """Bind action-service state to the active run session."""
-    global _TEST_SESSION
-    _TEST_SESSION = session or TestSession()
+    """Bind action-service state to the active run session (for this thread)."""
+    _ThreadSession._local.session = session or TestSession()
 
 
 def get_active_page(default_page):
@@ -121,8 +149,16 @@ def _get_healed_element_locator(page, locator_name):
     root = _get_locator_root(page)   # frame-aware: uses iframe context when active
     loc = root.locator(primary_xpath).first
 
-    if not loc.is_visible(timeout=3000):
-        logger.warning("Verification element not immediately visible. Attempting ML heal...")
+    # is_visible() does not wait (its timeout argument is ignored), so healing
+    # used to fire on elements that had simply not rendered yet — and could
+    # verify, then promote, the wrong element. Wait for it first.
+    try:
+        loc.wait_for(state="visible", timeout=3000)
+        visible = True
+    except Exception:  # noqa: BLE001
+        visible = False
+    if not visible:
+        logger.warning("Verification element not visible after 3 s. Attempting ML heal...")
         if dna:
             try:
                 healed_xpath = ml_heal_element(page, dna, locator_name)  # scans the real DOM; a confident heal is remembered
@@ -851,6 +887,9 @@ def verify_string_variable_contains(source_text, expected_match, ignore_case=Fal
     logger.info(f"🔎 Verifying variable contains: '{expected_match}' (Ignore Case: {ignore_casing})")
     src = str(source_text).lower() if ignore_casing else str(source_text)
     match = str(expected_match).lower() if ignore_casing else str(expected_match)
+    if not match.strip():
+        raise Exception("❌ The expected text is empty (a ${variable} probably resolved to '') — "
+                        "an empty 'contains' would pass on anything.")
     if match not in src:
         raise Exception(f"❌ Match Failed: Could not find '{expected_match}' in variable '{source_text}'")
     logger.info("✅ Variable Text Match Success.")
@@ -870,6 +909,10 @@ def verify_stored_variable_contains(variable_name, partial_text, ignore_case=Fal
     )
     src = stored_text.lower() if ignore_casing else stored_text
     match_text = str(partial_text).lower() if ignore_casing else str(partial_text)
+    if not match_text.strip():
+        raise Exception(
+            f"❌ The expected text for '{variable_name}' is empty (a ${{variable}} probably resolved "
+            f"to '') — an empty 'contains' would pass on anything.")
     if match_text not in src:
         raise Exception(
             f"❌ Match Failed: Could not find '{partial_text}' anywhere inside stored variable "
@@ -892,14 +935,48 @@ _RESULT_PAGE_MARKERS = ", ".join([
 ])
 
 
+_RESULTS_URL = re.compile(r"/nct-\d+|[?&/]search", re.I)
+
+
 def wait_for_result_page_load(page):
+    """
+    Wait until a search-results page has rendered.
+
+    On a results URL (…/nct-<id>) the step FAILS when no results markup shows
+    up — it used to log a warning and pass, so an error page, captcha or login
+    wall went unnoticed and the negative checks after it passed on a broken
+    page. Flows that also use this step as a plain "wait for the page" on the
+    home page keep working: off a results URL it just waits for the page to load.
+    RESULT_PAGE_SOFT=1 restores the old never-fail behaviour.
+    """
     started = time.perf_counter()
+    try:
+        url = page.url or ""
+    except Exception:  # noqa: BLE001
+        url = ""
+    if not _RESULTS_URL.search(url):
+        try:
+            page.wait_for_load_state("domcontentloaded", timeout=10000)
+            page.wait_for_load_state("networkidle", timeout=3000)
+        except Exception:  # noqa: BLE001 — busy pages never go idle; loaded is enough
+            pass
+        logger.info("✅ Page loaded (not a results URL) in %.1fs.", time.perf_counter() - started)
+        return
     try:
         page.wait_for_selector(_RESULT_PAGE_MARKERS, state="attached",
                                timeout=int(os.getenv("RESULT_PAGE_TIMEOUT_MS", "12000")))
         logger.info("✅ Result page loaded in %.1fs.", time.perf_counter() - started)
     except Exception:
-        logger.warning("⚠️ Results container not detected after %.0fs.", time.perf_counter() - started)
+        try:
+            where = f"{_strip_credentials(page.url)} — title {page.title()!r}"
+        except Exception:  # noqa: BLE001
+            where = "(page not readable)"
+        msg = (f"❌ No search results rendered after {time.perf_counter() - started:.0f}s on {where}. "
+               "Check for an error page, captcha or login wall.")
+        if os.getenv("RESULT_PAGE_SOFT") == "1":
+            logger.warning(msg)
+            return
+        raise AssertionError(msg)
 
 
 def wait_seconds(page, seconds: float):
@@ -1165,13 +1242,22 @@ def parent_frame(page) -> None:
 # indistinguishable from a broken locator when a test later fails downstream.
 # ─────────────────────────────────────────────────────────────────────────────
 
+def _unknown_element(locator_name: str, err: Exception) -> None:
+    """A name that is not a saved element is a typo, not 'absent' — fail on it.
+    (A misspelt popup name used to be skipped on every run, so the popup was
+    never dismissed and nothing said why.)"""
+    if "not found in any page" in str(err):
+        raise Exception(f"'{locator_name}' is not a saved element — check the spelling, or add "
+                        f"it under Elements.") from err
+
+
 def _visible_within(page, locator_name: str, timeout_s: float = 0):
     """The element's locator if it becomes visible in time, else None."""
     try:
         xpath, _dna = _resolve_live(page, locator_name)
-    except Exception as e:  # noqa: BLE001 — an unknown element is simply absent here
-        logger.info("ℹ️  '%s' is not in the element database — treating as absent (%s)",
-                    locator_name, e)
+    except Exception as e:  # noqa: BLE001
+        _unknown_element(locator_name, e)
+        logger.info("ℹ️  '%s' could not be resolved — treating as absent (%s)", locator_name, e)
         return None
     loc = _get_locator_root(page).locator(xpath).first
     try:
@@ -1229,9 +1315,9 @@ def click_if_exists(page, locator_name: str) -> None:
     """
     try:
         xpath, _dna = _resolve_live(page, locator_name)
-    except Exception:  # noqa: BLE001
-        logger.info("ℹ️  click_if_exists: '%s' is not in the element database — skipped",
-                    locator_name)
+    except Exception as e:  # noqa: BLE001
+        _unknown_element(locator_name, e)
+        logger.info("ℹ️  click_if_exists: '%s' could not be resolved — skipped", locator_name)
         return
     loc = _get_locator_root(page).locator(xpath).first
     try:
@@ -1286,11 +1372,24 @@ def _report(kind: str, where: str, expected: str, actual: str, ok: bool) -> None
 
 
 def verify_page_contains(page, text: str) -> None:
+    # Polls for up to 5 s: straight after a click the new content may not have
+    # rendered yet, and one early snapshot failed a correct page.
+    deadline = time.time() + 5
     body = _page_text(page)
+    while str(text) not in body and time.time() < deadline:
+        page.wait_for_timeout(300)
+        body = _page_text(page)
     _report("contain", "The page", text, body, str(text) in body)
 
 
 def verify_page_not_contains(page, text: str) -> None:
+    # Let the page settle first: a single snapshot taken right after a click
+    # read the OLD (or blank) page and passed before the text could appear.
+    try:
+        page.wait_for_load_state("domcontentloaded", timeout=5000)
+    except Exception:  # noqa: BLE001
+        pass
+    page.wait_for_timeout(int(settings.ABSENCE_SETTLE_MS))
     body = _page_text(page)
     if str(text) in body:
         raise AssertionError(f"The page DOES contain {text!r}, and should not.")
@@ -2766,6 +2865,7 @@ def verify_stored_variable_compare(variable_name: str, op: str, other: str) -> N
 #: Requests seen since `start capturing network requests`: (url, method, post body).
 _NET_LOG: list[tuple[str, str, str]] = []
 _NET_PAGES: set = set()
+_NET_TARGETS: list = []
 
 
 def _net_record(req) -> None:
@@ -2785,6 +2885,7 @@ def start_network_capture(page) -> None:
     if id(target) not in _NET_PAGES:
         target.on("request", _net_record)
         _NET_PAGES.add(id(target))
+    _NET_TARGETS.append(target)
     logger.info("🕸️ Network capture started")
 
 
@@ -2797,10 +2898,21 @@ def verify_network_request(needle: str, expected: bool = True, wait_s: float = 1
     """`verify network request containing "<text>" was sent` / `was not sent`
     (checks URL and POST body of every captured request; waits up to 10 s for
     an asynchronous tracker to fire before deciding)."""
+    def _pause(ms: int) -> None:
+        # time.sleep() blocks Playwright's event delivery, so no new requests
+        # were recorded while "waiting". Waiting on the page lets them in.
+        target = _NET_TARGETS[-1] if _NET_TARGETS else None
+        try:
+            target.wait_for_timeout(ms) if target is not None else time.sleep(ms / 1000)
+        except Exception:  # noqa: BLE001
+            time.sleep(ms / 1000)
+
+    if not expected:
+        _pause(2000)            # give a late tracker the chance to fire before saying "not sent"
     deadline = time.time() + (wait_s if expected else 0)
     hits = _net_matches(needle)
     while expected and not hits and time.time() < deadline:
-        time.sleep(0.5)
+        _pause(500)
         hits = _net_matches(needle)
     if expected and not hits:
         sample = "\n".join(f"   {m} {u[:140]}" for u, m, _ in _NET_LOG[-8:]) or "   (none captured)"
@@ -2922,3 +3034,12 @@ def ui_verify_stored_var_is_not(page, saved_variable_name, unexpected_text,
                                 ignore_case_True_False="False"):
     verify_stored_variable_not_equals(saved_variable_name, unexpected_text,
                                       ignore_case_True_False)
+
+
+
+def reset_run_state() -> None:
+    """Forget per-run caches so one run can never read another's data."""
+    _RP_API_DS.clear()          # carousel DS flags borrowed by the page-order check
+    _NET_LOG.clear()            # captured network requests
+    _NET_PAGES.clear()          # pages with a request listener attached
+    _NET_TARGETS.clear()

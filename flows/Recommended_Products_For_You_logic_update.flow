@@ -5,7 +5,7 @@
 # call get_product_by_ncatid for the same search, and check page + API follow
 # the priority hierarchy DS > search city > price (each exhausted before the next).
 
-# --- Purpose: TC_RP_HEADING_PRODUCT [smoke, sanity] — product category shows "Recommended Products For You"
+# --- Purpose: TC_RP_HEADING_PRODUCT [smoke] — product category shows "Recommended Products For You"
 open ${live_url_steel_merchants}
 wait for result page load
 click if visible login_prompt_skip
@@ -22,7 +22,7 @@ verify element rp_carousel_heading is visible
 verify element rp_carousel_heading contains "Recommended"
 verify element rp_carousel_heading contains "For You"
 verify element rp_product_1st is visible
-# --- Purpose: TC_RP_PRIORITY_STEEL_MERCHANTS [smoke, sanity] — DS > search city > price, page vs API (Mumbai)
+# --- Purpose: TC_RP_PRIORITY_STEEL_MERCHANTS [sanity] — DS > search city > price, page vs API (Mumbai)
 open ${live_url_steel_merchants}
 wait for result page load
 click if visible login_prompt_skip
@@ -57,6 +57,8 @@ verify element rp_carousel_heading is visible
 store count of rp_carousel_cards as productCount
 verify stored productCount is greater than 0
 store count of rp_carousel_360_badge as badgeCount
+call store_prp_url_city_nctid_queryparam_api_pass
+verify recommended products order in apiResp1
 verify recommended products carousel order on page
 # --- Purpose: TC_RP_SERVICE_CATEGORY_ORDER_MULTI_URL [regression] — hierarchy across more categories / cities
 open ${prod_Screw_Importers}

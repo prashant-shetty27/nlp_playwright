@@ -301,8 +301,10 @@ def main() -> None:
     ap.add_argument("--host", default=os.getenv("UI_HOST", "127.0.0.1"))
     ap.add_argument("--show", action="store_true", help="open a browser on start")
     args = ap.parse_args()
+    # reconnect_timeout: unsaved steps live in server memory for the page; with
+    # the 3 s default a Wi-Fi blip or a closed lid dropped the page and its edits.
     ui.run_with(fastapi_app, title="Codeless Automation", favicon="🧪",
-                storage_secret=_session_secret())
+                storage_secret=_session_secret(), reconnect_timeout=120)
     import uvicorn
     uvicorn.run(fastapi_app, host=args.host, port=args.port, log_level="info")
 

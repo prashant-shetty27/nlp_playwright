@@ -111,6 +111,18 @@ async def test_stream(websocket: WebSocket):
         await websocket.close()
         return
 
+    # This stream runs flows. The portal does not use it; scripts may, with the
+    # API_TOKEN from .env in the handshake: {"project": …, "token": "<API_TOKEN>"}.
+    # Without that any web page could open it and run tests.
+    import hmac
+    from api.auth import _api_token
+    expected = _api_token()
+    if not expected or not hmac.compare_digest(str(config.get("token") or ""), expected):
+        await websocket.send_json({"type": "error",
+                                   "message": "Not authorised: send the API_TOKEN from .env as 'token'."})
+        await websocket.close(code=1008)
+        return
+
     project = config.get("project", "steps")
     headless = bool(config.get("headless", True))
     flow_path = _flow_path(project)

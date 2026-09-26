@@ -45,12 +45,22 @@ _EMPTY = {"_comment": "Global runtime variables — managed via the Test Data sc
           "dataset_mappings": {}}
 
 
-def _read() -> dict:
-    """Load the store. A missing or unreadable file is an empty one, never a crash."""
+def _read(strict: bool = False) -> dict:
+    """Load the store. A missing file is an empty one.
+
+    strict (used before every write): a file that exists but is not valid JSON
+    raises instead of reading as empty — otherwise one save after a hand-edit
+    typo wrote back an EMPTY store and every saved value was gone.
+    """
     try:
         with open(PATH, "r", encoding="utf-8") as f:
             data = json.load(f)
-    except (OSError, json.JSONDecodeError):
+    except FileNotFoundError:
+        return json.loads(json.dumps(_EMPTY))
+    except (OSError, json.JSONDecodeError) as e:
+        if strict:
+            raise ValueError(f"Test Data file {PATH} could not be read ({e}). Fix or restore it "
+                             f"(a backup is kept as variables.json.bak) before saving.") from e
         return json.loads(json.dumps(_EMPTY))
     if not isinstance(data, dict):
         return json.loads(json.dumps(_EMPTY))
@@ -65,6 +75,12 @@ def _read() -> dict:
 
 def _write(data: dict) -> None:
     os.makedirs(os.path.dirname(PATH), exist_ok=True)
+    try:                    # last good copy, in case a value is deleted by mistake
+        import shutil
+        if os.path.exists(PATH):
+            shutil.copy2(PATH, PATH + ".bak")
+    except OSError:
+        pass
     tmp = PATH + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
@@ -194,7 +210,7 @@ def set_value(name: str, value: str, *, scope: str = "global",
         raise ValueError(f"{name!r} is not a usable variable name.")
 
     with _LOCK:
-        data = _read()
+        data = _read(strict=True)
         if settings.is_credential_name(clean):
             stored, note = "", ("Declared. Its value must come from .env — "
                                 "secrets are never written to this file.")
@@ -217,7 +233,7 @@ def set_value(name: str, value: str, *, scope: str = "global",
 
 def delete_value(name: str, *, scope: str = "global", environment: str = "") -> bool:
     with _LOCK:
-        data = _read()
+        data = _read(strict=True)
         if scope == "environment":
             bucket = data.get("env", {}).get(environment, {})
         else:

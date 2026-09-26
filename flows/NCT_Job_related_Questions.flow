@@ -1,6 +1,12 @@
 # Platform: mobilesite
 # Imported from Testsigma: NCT Job-related Questions (run 114314, B2B Touch (8AM), Samsung Galaxy S24)
 # Lines starting with '# UNSUPPORTED' or '# IF' need a manual decision.
+# Tags: regression
+# REAL LEADS: the Send Enquiry submit + OTP steps and the Get Best Price submit are OFF so scheduled runs never send
+#   leads to clients. Switch them on only when a lead is wanted.
+# Get Best Price 'No' option: only shown to a signed-in user (the OTP enquiry used to sign in), so it is OFF too.
+# Other OFF steps: the mobile Send Enquiry form has no Name field; mobile Get Best Price keeps Submit disabled
+#   until an option is chosen (no 'Please select one option' text); three pop-up checks near the top are also OFF.
 
 open https://www.justdial.com/Mumbai/Multinational-Companies-in-Link-Road-Malad-West/nct-10332493?fl=undefined&ismap=undefined&subpage=&searchCase=&term=multinat&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Multinational%20Companies&trkid=13116826-mumbai
 wait 3 seconds
@@ -28,14 +34,14 @@ wait 1 seconds
 scroll until element send_enquiry_button_1st visible, scroll by 500 pixels, scroll count 15, scroll wait 1
 click send_enquiry_button_1st
 wait 1 seconds
-# OFF (mobile Send Enquiry form has no Name field): type "Prashant" into enquiry_form_name
+# OFF: type "Prashant" into enquiry_form_name
 type "7738176962" into enquiry_form_mobile
 click enquiry_form_no
-js click enquiry_submit_button
-wait until element otp_1st_field is visible
-enter otp "537393" into otp_fields
-wait 1 seconds
-verify text "Dear Prashant" on page
+# OFF: js click enquiry_submit_button
+# OFF: wait until element otp_1st_field is visible
+# OFF: enter otp "537393" into otp_fields
+# OFF: wait 1 seconds
+# OFF: verify text "Dear Prashant" on page
 click send_enquiry_back_ps
 open https://www.justdial.com/Mumbai/Corporate-Companies-in-Link-Road-Malad-West/nct-10138533?fl=undefined&ismap=undefined&subpage=&searchCase=&term=corporate%2520com&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Corporate%20Companies&trkid=13702-mumbai
 wait 4 seconds
@@ -50,11 +56,11 @@ wait 2 seconds
 js click get_best_price_any_button
 wait 2 seconds
 verify element gbp_sheet_heading is visible
-# OFF (mobile: submit stays disabled until an option is chosen, no message): click gbp_submit_now_button
-# OFF (mobile has no validation text; the button is disabled instead): verify text "Please select one option" on page
-click get_best_price_page_no_radio_button
-click gbp_submit_now_button
-verify text "Dear Prashant" on page
+# OFF: click gbp_submit_now_button
+# OFF: verify text "Please select one option" on page
+# OFF: click get_best_price_page_no_radio_button
+# OFF: click gbp_submit_now_button
+# OFF: verify text "Dear Prashant" on page
 wait 1 seconds
 click if visible get_best_price_header_back
 click if visible enquiry_seller_pop_skip

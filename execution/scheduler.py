@@ -57,6 +57,11 @@ def _loop() -> None:
             watch_stuck()
         except Exception:  # noqa: BLE001
             logger.exception("Stuck-run check failed")
+        try:
+            from execution import retention
+            retention.daily()            # no-op unless RETENTION_DAYS is set
+        except Exception:  # noqa: BLE001
+            logger.exception("Retention clean-up failed")
         time.sleep(TICK_S)
 
 
