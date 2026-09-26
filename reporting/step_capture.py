@@ -190,7 +190,7 @@ class StepCapture:
         failed = entry.get("status") == "failed"
         try:
             if self.mode == "failure":
-                self._failure_mode(page, entry, report_row, failed)
+                self._failure_mode(page, entry, report_row, failed, step)
                 return
             if self.mode == "key" and not failed and not self._is_key(page, step):
                 return
@@ -216,7 +216,7 @@ class StepCapture:
 
     # ── modes ───────────────────────────────────────────────────────────────
     def _failure_mode(self, page, entry: dict, report_row: dict | None,
-                      failed: bool) -> None:
+                      failed: bool, step: str = "") -> None:
         """
         Keep a rolling window, and commit it only when something breaks.
 
@@ -279,7 +279,11 @@ class StepCapture:
         # after the frame, so the page is untouched for the next step.
         marked = _highlight(target, step, failed)
         try:
-            target.screenshot(path=path, type="jpeg", quality=JPEG_QUALITY)
+            # scale="css": a mobile-emulated page has deviceScaleFactor 3, so a
+            # device-pixel shot is 9x the pixels to encode — ~1 s per step on a
+            # 129-step run. CSS pixels are just as readable in a report.
+            target.screenshot(path=path, type="jpeg", quality=JPEG_QUALITY,
+                              scale="css", timeout=5000)
         finally:
             if marked:
                 _unhighlight(target)

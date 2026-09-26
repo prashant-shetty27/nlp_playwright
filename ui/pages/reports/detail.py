@@ -57,7 +57,7 @@ def _duration(ms) -> str:
         return f"{ms} ms"
     if ms < 60_000:
         return f"{ms / 1000:.2f}s"
-    return f"{ms // 60000}m {(ms % 60000) / 1000:.0f}s"
+    return f"{ms / 60000:.1f} min"
 
 
 class ReportDetail:

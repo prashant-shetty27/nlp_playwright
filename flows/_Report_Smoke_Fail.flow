@@ -1,0 +1,8 @@
+# Platform: mobilesite
+# Params : live_url_steel_merchants
+# Short smoke test that FAILS on purpose (last step) to show the failure section of the report. No leads.
+# Tags: smoke
+open ${live_url_steel_merchants}
+wait for result page load
+click if visible login_prompt_skip
+verify element rp_carousel_heading has text "Deliberate mismatch - report demo"

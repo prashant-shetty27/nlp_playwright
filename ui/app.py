@@ -43,10 +43,13 @@ from api.app import app as fastapi_app  # noqa: E402
 from ui.theme import COLORS, TYPOGRAPHY  # noqa: E402
 
 
-def _page_shell() -> None:
+def _page_shell() -> bool:
+    """Page styling, and the sign-in gate: False means 'redirected to /login'."""
     ui.add_head_html(
         f"<style>body{{font-family:{TYPOGRAPHY['family']};"
         f"background:{COLORS['surface_alt']};color:{COLORS['text']}}}</style>")
+    from ui.auth import ensure_login
+    return ensure_login()
 
 
 def _not_built(name: str, spec_path: str) -> None:
@@ -71,16 +74,75 @@ def _not_built(name: str, spec_path: str) -> None:
             .props("flat")
 
 
+@ui.page("/login")
+async def login_page(next: str = "/") -> None:  # noqa: A002 — query parameter name
+    ui.add_head_html(
+        f"<style>body{{font-family:{TYPOGRAPHY['family']};"
+        f"background:{COLORS['surface_alt']};color:{COLORS['text']}}}</style>")
+    from ui.pages.login import render
+    await render(next)
+
+
+@ui.page("/users")
+async def users_page() -> None:
+    if not _page_shell():
+        return
+    from ui.pages.admin.users import render
+    await render()
+
+
+@ui.page("/suites")
+async def suites_page() -> None:
+    if not _page_shell():
+        return
+    from ui.pages.plans.suites import render_list
+    await render_list()
+
+
+@ui.page("/suites/edit")
+async def suite_edit_page(id: str = "") -> None:  # noqa: A002
+    if not _page_shell():
+        return
+    from ui.pages.plans.suites import render_edit
+    await render_edit(id)
+
+
+@ui.page("/plans")
+async def plans_page() -> None:
+    if not _page_shell():
+        return
+    from ui.pages.plans.index import render_list
+    await render_list()
+
+
+@ui.page("/plans/edit")
+async def plan_edit_page(id: str = "") -> None:  # noqa: A002
+    if not _page_shell():
+        return
+    from ui.pages.plans.index import render_edit
+    await render_edit(id)
+
+
+@ui.page("/plans/run/{run_id}")
+async def plan_run_page(run_id: str) -> None:
+    if not _page_shell():
+        return
+    from ui.pages.plans.run import render
+    await render(run_id)
+
+
 @ui.page("/")
 async def index() -> None:
-    _page_shell()
+    if not _page_shell():
+        return
     from ui.pages.dashboard import render
     await render()
 
 
 @ui.page("/platform/{platform}")
-async def platform_page(platform: str, flow: str = "") -> None:
-    _page_shell()
+async def platform_page(platform: str, flow: str = "", line: int = 0) -> None:
+    if not _page_shell():
+        return
     from nlp.platforms import PLATFORMS, UnknownPlatform, normalise
     try:
         canonical = normalise(platform)
@@ -103,12 +165,13 @@ async def platform_page(platform: str, flow: str = "") -> None:
     # `flow` comes from the query string so the open test case survives a
     # reload or a websocket reconnect. Held only in server memory, it was
     # lost on either, and the editor came back blank with no explanation.
-    await render(canonical, flow)
+    await render(canonical, flow, line)
 
 
 @ui.page("/run")
 async def run_page(flow: str = "", platform: str = "website") -> None:
-    _page_shell()
+    if not _page_shell():
+        return
     from ui.pages.executions.run_center import render
     await render(flow, platform)
 
@@ -116,7 +179,8 @@ async def run_page(flow: str = "", platform: str = "website") -> None:
 @ui.page("/run/live")
 async def live_page(run_id: str = "", flow: str = "",
                    platform: str = "website") -> None:
-    _page_shell()
+    if not _page_shell():
+        return
     if not run_id:
         ui.navigate.to("/run")
         return
@@ -125,23 +189,27 @@ async def live_page(run_id: str = "", flow: str = "",
 
 
 @ui.page("/step-groups")
-async def step_groups_page(platform: str = "website") -> None:
-    _page_shell()
+async def step_groups_page(platform: str = "website", edit: str = "", back: str = "") -> None:
+    if not _page_shell():
+        return
     from ui.pages.platform.step_groups import render
-    await render(platform)
+    await render(platform, edit=edit, back=back)
 
 
 @ui.page("/history")
 async def history_page() -> None:
-    _page_shell()
+    if not _page_shell():
+        return
     from ui.pages.executions.history import render
     await render()
 
 
 @ui.page("/reports")
 async def reports_page() -> None:
-    _page_shell()
-    _not_built("Reports", "ui/pages/reports/index.py")
+    if not _page_shell():
+        return
+    from ui.pages.reports.index import render
+    await render()
 
 
 @ui.page("/reports/{run_id}")
@@ -153,14 +221,16 @@ async def report_detail_page(run_id: str) -> None:
     a convenience, but this page is how a failure gets diagnosed, and History
     already links straight to it.
     """
-    _page_shell()
+    if not _page_shell():
+        return
     from ui.pages.reports.detail import render
     await render(run_id)
 
 
 @ui.page("/data/variables")
 async def variables_page() -> None:
-    _page_shell()
+    if not _page_shell():
+        return
     from ui.pages.data.variables import render
     await render()
 
@@ -168,7 +238,8 @@ async def variables_page() -> None:
 @ui.page("/platform/{platform}/draft")
 async def draft_page(platform: str, extend: str = "") -> None:
     """From prompt / from a Jira ticket, as a full page (it did not fit a dialog)."""
-    _page_shell()
+    if not _page_shell():
+        return
     from nlp.platforms import UnknownPlatform, normalise
     try:
         canonical = normalise(platform)
@@ -181,7 +252,8 @@ async def draft_page(platform: str, extend: str = "") -> None:
 
 @ui.page("/platform/{platform}/elements")
 async def elements_page(platform: str, edit: str = "") -> None:
-    _page_shell()
+    if not _page_shell():
+        return
     from nlp.platforms import UnknownPlatform, normalise
     try:
         canonical = normalise(platform)
@@ -196,8 +268,31 @@ async def elements_page(platform: str, edit: str = "") -> None:
 
 @ui.page("/settings")
 async def settings_page() -> None:
-    _page_shell()
+    if not _page_shell():
+        return
     _not_built("Settings", "ui/pages/settings/environments.py")
+
+
+def _session_secret() -> str:
+    """Signs the browser session cookie. Kept in data/, created once."""
+    env = os.getenv("UI_SESSION_SECRET", "")
+    if env:
+        return env
+    path = os.path.join(BASE_DIR, "data", ".session_secret")
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return f.read().strip()
+    except FileNotFoundError:
+        import secrets
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        val = secrets.token_hex(32)
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(val)
+        try:
+            os.chmod(path, 0o600)
+        except OSError:
+            pass
+        return val
 
 
 def main() -> None:
@@ -206,7 +301,8 @@ def main() -> None:
     ap.add_argument("--host", default=os.getenv("UI_HOST", "127.0.0.1"))
     ap.add_argument("--show", action="store_true", help="open a browser on start")
     args = ap.parse_args()
-    ui.run_with(fastapi_app, title="Codeless Automation", favicon="🧪")
+    ui.run_with(fastapi_app, title="Codeless Automation", favicon="🧪",
+                storage_secret=_session_secret())
     import uvicorn
     uvicorn.run(fastapi_app, host=args.host, port=args.port, log_level="info")
 

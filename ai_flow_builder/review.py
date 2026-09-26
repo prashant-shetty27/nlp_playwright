@@ -293,6 +293,13 @@ def _fixed_waits(steps: list[str], appium: bool = False) -> list[Finding]:
         nxt = steps[i] if i < len(steps) else ""
         target = _target_of(nxt)
 
+        # A negative check ("… is not visible", "page does not contain …")
+        # is exactly the case where there is nothing to wait FOR: waiting
+        # until the element appears would fail the very test that proves it
+        # must not appear. The fixed wait is the right tool there.
+        if re.search(r"\b(is\s+not\s+visible|not\s+present|does\s+not\s+contain|"
+                     r"was\s+not\s+sent|is\s+not\s+shown)\b", nxt, re.I):
+            continue
         deliberate = bool(DELIBERATE.search(prev.replace("_", " ")))
         options = [
             {"approach": _wait_for(target, appium) if target

@@ -1,0 +1,17 @@
+{
+  "created_by": "setup",
+  "created_at": "2026-09-25T20:49:53+00:00",
+  "_format": 2,
+  "suite_name": "B2B Mobilesite Regression",
+  "description": "NCT job-related questions + Recommended Products For You (GJDT-22686) on mobilesite live.",
+  "platform": "mobilesite",
+  "scripts": [
+    "flows/NCT_Job_related_Questions.flow",
+    "flows/Recommended_Products_For_You_logic_update.flow"
+  ],
+  "updated_by": "setup",
+  "updated_at": "2026-09-25T20:49:53+00:00",
+  "execution": {
+    "stop_on_failure": false
+  }
+}

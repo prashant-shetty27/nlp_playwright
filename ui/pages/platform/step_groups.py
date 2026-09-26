@@ -20,7 +20,8 @@ from ui.layout.topbar import topbar
 from ui.theme import COLORS, TYPOGRAPHY
 
 
-async def render(platform: str = "website") -> None:
+async def render(platform: str = "website", edit: str = "", back: str = "") -> None:
+    """``edit``: open that group's editor at once; ``back``: where Save returns to."""
     try:
         platforms = await api.platforms()
     except api.ApiError:
@@ -48,8 +49,12 @@ async def render(platform: str = "website") -> None:
                 f"color:{COLORS['text_muted']}; font-size:{TYPOGRAPHY['size_sm']}")
             return
 
+        if back:
+            with ui.row().classes("items-center gap-2"):
+                ui.button("Back to the test case", icon="arrow_back",
+                          on_click=lambda: ui.navigate.to(back)).props("flat dense")
         for g in groups:
-            with ui.expansion().classes("w-full").style(
+            with ui.expansion(value=bool(edit and g["name"] == edit)).classes("w-full").style(
                     f"border:1px solid {COLORS['border']}; border-radius:6px") as exp:
                 with exp.add_slot("header"):
                     with ui.row().classes("w-full items-center gap-3 no-wrap"):
@@ -83,18 +88,54 @@ async def render(platform: str = "website") -> None:
                                 f"font-size:{TYPOGRAPHY['size_sm']}")
                     with ui.row().classes("w-full justify-end gap-1"):
                         ui.button("Edit steps", icon="edit",
-                                  on_click=lambda gg=g: _edit_dialog(gg)) \
+                                  on_click=lambda gg=g: _edit_dialog(gg, back)) \
                             .props("flat dense")
                         ui.button("Rename", icon="drive_file_rename_outline",
                                   on_click=lambda n=g["name"]: _rename_dialog(n)) \
                             .props("flat dense")
                         ui.button("Clone", icon="content_copy",
-                                  on_click=lambda n=g["name"]: _clone(n)) \
+                                  on_click=lambda n=g["name"]: _clone_dialog(n)) \
                             .props("flat dense").tooltip(
                                 "Copy under a new name — repeated steps are dropped")
                         ui.button("Delete group", icon="delete_outline",
                                   on_click=lambda n=g["name"]: _confirm_delete(n)) \
                             .props("flat dense color=negative")
+
+
+        if edit:
+            target = next((g for g in groups if g["name"] == edit), None)
+            if target is not None:
+                ui.timer(0.2, lambda: _edit_dialog(target, back), once=True)
+            else:
+                ui.notify(f"No step group called '{edit}' on this platform", type="warning")
+
+
+def _clone_dialog(name: str) -> None:
+    """Clone under a name you choose (blank = <name>_copy); duplicates are refused."""
+    dialog = ui.dialog().props("persistent")
+    with dialog, ui.card().style("width:30rem"):
+        ui.label(f"Clone {name}").style(
+            f"font-size:{TYPOGRAPHY['size_lg']}; font-weight:{TYPOGRAPHY['weight_bold']}")
+        new = ui.input("New name", placeholder=f"{name}_copy").props("outlined dense").classes("w-full")
+        note = ui.label().style(f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['warning']}")
+
+        async def go() -> None:
+            try:
+                res = await api.clone_step_group(name, (new.value or "").strip())
+            except api.ApiError as e:
+                note.set_text(e.detail[:200])
+                return
+            dialog.close()
+            extra = (f" — {res['removed_duplicates']} repeated step(s) dropped"
+                     if res.get("removed_duplicates") else "")
+            ui.notify(f"Cloned as {res['to']}{extra}. It has the same steps as {name} "
+                      f"until you edit it.", type="positive", timeout=8000)
+            ui.navigate.reload()
+
+        with ui.row().classes("w-full justify-end gap-2"):
+            ui.button("Cancel", on_click=dialog.close).props("flat")
+            ui.button("Clone", on_click=go).props("unelevated")
+    dialog.open()
 
 
 async def _clone(name: str) -> None:
@@ -110,7 +151,7 @@ async def _clone(name: str) -> None:
     ui.navigate.reload()
 
 
-def _edit_dialog(group: dict) -> None:
+def _edit_dialog(group: dict, back: str = "") -> None:
     """
     Edit a group's steps as text — one per line.
 
@@ -142,8 +183,12 @@ def _edit_dialog(group: dict) -> None:
             dialog.close()
             extra = (f" ({res['removed_duplicates']} duplicate removed)"
                      if res.get("removed_duplicates") else "")
-            ui.notify(f"Updated {res['name']}{extra}", type="positive")
-            ui.navigate.reload()
+            ui.notify(f"Updated {res['name']}{extra} — every test case that calls it "
+                      f"uses the new steps", type="positive", timeout=6000)
+            if back:
+                ui.navigate.to(back)     # straight back to the test case
+            else:
+                ui.navigate.reload()
 
         with ui.row().classes("w-full justify-end gap-2"):
             ui.button("Cancel", on_click=dialog.close).props("flat")
@@ -166,12 +211,15 @@ def _rename_dialog(name: str) -> None:
 
         async def go() -> None:
             try:
-                await api.rename_step_group(name, (box.value or "").strip())
+                res = await api.rename_step_group(name, (box.value or "").strip())
             except api.ApiError as e:
                 note.set_text(e.detail[:160])
                 return
             dialog.close()
-            ui.notify(f"Renamed to {box.value}", type="positive")
+            flows = res.get("flows_updated") or []
+            ui.notify(f"Renamed to {box.value} — `call` updated in {len(flows)} test case(s)"
+                      + (f": {', '.join(flows[:5])}" if flows else ""),
+                      type="positive", timeout=8000)
             ui.navigate.reload()
 
         with ui.row().classes("w-full justify-end gap-2"):

@@ -133,6 +133,7 @@ class TestCasesPage:
             ui.notify(f"Could not open {name}: {e.detail}", type="negative")
             return
         self.selected = name
+        self.meta = data.get("meta") or {}
         try:
             from ui.layout.topbar import set_current_flow
             set_current_flow(name)
@@ -523,7 +524,71 @@ class TestCasesPage:
         except Exception:  # noqa: BLE001 — a page still connecting has no window
             pass
 
+    def _confirm(self, title: str, lines: list[str], on_yes, *, button: str = "Delete",
+                 note: str = "Nothing is written until you press Save.") -> None:
+        """
+        One confirmation for every destructive click in the editor.
+
+        Steps, bands and bulk removals used to vanish on a single click; a
+        mis-click at step 100 was only recoverable by not saving. The dialog
+        lists exactly what goes so the person can read it before agreeing.
+        """
+        host = getattr(self, "dialog_host", None)
+        with (host if host is not None else ui.element("div")):
+            dialog = ui.dialog().props("persistent")
+        with dialog, ui.card().style("width:36rem; max-height:80vh; overflow-y:auto"):
+            ui.label(title).style(
+                f"font-size:{TYPOGRAPHY['size_lg']}; font-weight:{TYPOGRAPHY['weight_bold']}")
+            with ui.column().classes("w-full gap-0").style(
+                    f"border:1px solid {COLORS['border']}; border-radius:6px;"
+                    f"max-height:14rem; overflow-y:auto"):
+                for ln in lines[:60]:
+                    ui.label(ln).style(f"font-family:{TYPOGRAPHY['mono']};"
+                                       f"font-size:{TYPOGRAPHY['size_xs']}; padding:3px 8px")
+                if len(lines) > 60:
+                    ui.label(f"… and {len(lines) - 60} more").style(
+                        f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}; padding:3px 8px")
+            ui.label(note).style(
+                f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}")
+
+            async def go() -> None:
+                dialog.close()
+                res = on_yes()
+                if asyncio.iscoroutine(res):
+                    await res
+
+            with ui.row().classes("w-full justify-end gap-2"):
+                ui.button("Cancel", on_click=dialog.close).props("flat")
+                ui.button(button, icon="delete_outline", on_click=go) \
+                    .props("unelevated color=negative")
+        dialog.open()
+
+    def _restore_scroll(self, top: int) -> None:
+        """Put the step list back where it was once the client has rebuilt it."""
+        try:
+            ui.run_javascript(
+                "(function(){var want=%d, old=document.getElementById('steps-scroll'),"
+                "n=0, hits=0; var t=setInterval(function(){"
+                "var el=document.getElementById('steps-scroll');"
+                "if(el && el!==old){el.scrollTop=want;"
+                "if(Math.abs(el.scrollTop-want)<4 && ++hits>3){clearInterval(t);return;}}"
+                "if(++n>60){clearInterval(t);}},100);})();" % top)
+        except Exception:  # noqa: BLE001 — cosmetic
+            pass
+
     async def render_editor(self) -> None:
+        # Every edit redraws the list; without this the list jumped back to
+        # the top each time, so working at step 100 meant scrolling down again
+        # after every click.
+        try:
+            top = await ui.run_javascript(
+                "(document.getElementById('steps-scroll')||{scrollTop:0}).scrollTop", timeout=1.0)
+        except Exception as e:  # noqa: BLE001
+            import logging
+            logging.getLogger(__name__).warning("scroll read failed: %r", e)
+            top = 0
+        if top:
+            self._restore_scroll(int(top))
         try:
             await self._render_editor()
         except Exception as e:  # noqa: BLE001
@@ -567,6 +632,12 @@ class TestCasesPage:
             self._vars = {"defined": {}, "stored": [], "unresolved": []}
         # One request for every row's segmentation instead of one per row.
         await api.prefetch_segments([st for st in self.steps if not st.startswith("#")])
+        # Step groups, so a `call <name>` row can show what it expands to.
+        try:
+            self._groups = {g["name"]: g.get("steps", [])
+                            for g in await api.step_groups(self.platform)}
+        except api.ApiError:
+            self._groups = {}
         self.right.clear()
         with self.right:
             with ui.row().classes("w-full items-center gap-2"):
@@ -583,6 +654,12 @@ class TestCasesPage:
                            if not st.strip().startswith(self.PURPOSE))
                 ui.label(f"{real} steps").style(
                     f"color:{COLORS['text_muted']}; font-size:{TYPOGRAPHY['size_sm']}")
+                meta = getattr(self, "meta", {}) or {}
+                if meta.get("updated_by"):
+                    ui.label(f"· edited by {meta['updated_by']} "
+                             f"{(meta.get('updated_at') or '')[:16].replace('T', ' ')} UTC").style(
+                        f"color:{COLORS['text_muted']}; font-size:{TYPOGRAPHY['size_xs']}") \
+                        .tooltip(f"created by {meta.get('created_by', '?')}")
                 if self.dirty:
                     with ui.row().classes("items-center gap-1") \
                             .props('data-unsaved="1"').style(
@@ -636,7 +713,7 @@ class TestCasesPage:
             # Only the step list scrolls. The name, Save / Run buttons and the
             # Select row stay put, so at step 100 "Select" is still one click
             # away instead of a scroll to the top of the page.
-            with ui.column().classes("w-full gap-0").style(
+            with ui.column().classes("w-full gap-0").props('id="steps-scroll"').style(
                     f"border:1px solid {COLORS['border']}; border-radius:6px;"
                     f"max-height:calc(100vh - 17rem); overflow-y:auto"):
                 # A purpose band applies to every step below it until the
@@ -683,7 +760,9 @@ class TestCasesPage:
                              on_add=self._open_composer,
                              on_edit=self.edit_step, on_delete=self.delete_step,
                              on_move=self.move_step,
-                             token_queue=token_queue)
+                             token_queue=token_queue,
+                             group_steps=getattr(self, "_groups", {}),
+                             on_edit_group=self._edit_group)
                 if self.compose_at == len(self.steps):
                     await self._compose_row()
 
@@ -943,6 +1022,13 @@ class TestCasesPage:
         idx = int(f.get("step_index") or 0)
         if not 0 < idx <= len(self.steps):
             return
+        self._confirm(f"Remove step {idx} and save?", [f"{idx}  {self.steps[idx - 1]}"],
+                      lambda: self._remove_from_finding_now(idx),
+                      note="Review changes are saved to the test case immediately.")
+
+    async def _remove_from_finding_now(self, idx: int) -> None:
+        if not 0 < idx <= len(self.steps):
+            return
         gone = self.steps.pop(idx - 1)
         self.step_meta = {}
         self.selection.clear()
@@ -1164,6 +1250,12 @@ class TestCasesPage:
 
     def _remove_band(self, index: int) -> None:
         """Drop the annotation, keep every step it covered."""
+        self._confirm("Remove this purpose band?",
+                      [self.steps[index - 1].strip()[len(self.PURPOSE):].strip(),
+                       "(the steps under it stay exactly as they are)"],
+                      lambda: self._remove_band_now(index), button="Remove band")
+
+    def _remove_band_now(self, index: int) -> None:
         self.steps.pop(index - 1)
         self.collapsed.discard(index)
         self.step_meta = {}
@@ -1258,6 +1350,12 @@ class TestCasesPage:
             self.selection.clear()
         ui.timer(0.01, self.render_editor, once=True)
 
+    def _edit_group(self, name: str) -> None:
+        """Open the group on the Step Groups page; Save there comes back here."""
+        back = f"/platform/{self.platform}?flow={quote(self.selected or '', safe='')}"
+        ui.navigate.to(f"/step-groups?platform={self.platform}&edit={quote(name, safe='')}"
+                       f"&back={quote(back, safe='')}")
+
     def _render_selection_toolbar(self) -> None:
         bar = getattr(self, "sel_bar", None)
         if bar is None:
@@ -1343,6 +1441,14 @@ class TestCasesPage:
         ui.timer(0.01, self.render_editor, once=True)
 
     def _bulk_delete(self) -> None:
+        idxs = sorted(self.selection)
+        if not idxs:
+            return
+        self._confirm(f"Remove {len(idxs)} selected step(s)?",
+                      [f"{i}  {self.steps[i - 1]}" for i in idxs if 0 < i <= len(self.steps)],
+                      self._bulk_delete_now, button=f"Remove {len(idxs)}")
+
+    def _bulk_delete_now(self) -> None:
         self.dirty = True
         for i in sorted(self.selection, reverse=True):
             self.steps.pop(i - 1)
@@ -1524,12 +1630,35 @@ class TestCasesPage:
         ui.timer(0.01, self.render_editor, once=True)
 
     def edit_step(self, index: int, text: str) -> None:
-        if text:
+        if not text:
+            ui.timer(0.01, self.render_editor, once=True)
+            return
+        old_call = self._call_target(self.steps[index - 1])
+        new_call = self._call_target(text)
+        if old_call and new_call and old_call != new_call:
+            # A `call` line is never retyped here — the group is renamed on the
+            # Step Groups page, which rewrites every test case that uses it.
+            ui.notify("Step groups are renamed on the Step Groups page (use the edit "
+                      "icon on this row) — every test case is updated there",
+                      type="warning", timeout=6000)
+        else:
             self.steps[index - 1] = text
             self.dirty = True
         ui.timer(0.01, self.render_editor, once=True)
 
+    @staticmethod
+    def _call_target(step: str) -> str:
+        import re
+        m = re.match(r"^call\s+(.+?)\s*$", (step or "").strip(), re.I)
+        return m.group(1) if m else ""
+
     def delete_step(self, index: int) -> None:
+        if not 0 < index <= len(self.steps):
+            return
+        self._confirm(f"Remove step {index}?", [f"{index}  {self.steps[index - 1]}"],
+                      lambda: self._delete_step_now(index))
+
+    def _delete_step_now(self, index: int) -> None:
         self.steps.pop(index - 1)
         self.dirty = True
         self.step_meta = {}          # positions shifted; stale metadata would mislead
@@ -1580,7 +1709,18 @@ class TestCasesPage:
         await self.render_editor()
 
 
-async def render(platform: str, flow: str = "") -> None:
+def _focus_line(line: int) -> None:
+    """Scroll the step list to one step and flash it (opened from a report)."""
+    ui.run_javascript(
+        "(function(){var n=0;var t=setInterval(function(){"
+        "var el=document.querySelector('#steps-scroll [data-step=\"%d\"]');"
+        "if(el){clearInterval(t);el.scrollIntoView({block:'center'});"
+        "el.style.transition='box-shadow .3s';el.style.boxShadow='inset 0 0 0 2px #ef4444';"
+        "setTimeout(function(){el.style.boxShadow='';},4000);}"
+        "if(++n>80){clearInterval(t);}},150);})();" % int(line))
+
+
+async def render(platform: str, flow: str = "", line: int = 0) -> None:
     page = TestCasesPage(platform)
     await page.load()
     # Known before the first paint so the top bar's Run button names THIS test
@@ -1593,6 +1733,8 @@ async def render(platform: str, flow: str = "") -> None:
     # dropped back to "Select a test case" with the author's place lost.
     if flow and flow in page.projects:
         await page.open_project(flow)
+        if line:
+            _focus_line(line)
     else:
         # Nothing named in the URL: reopen what was last open rather than
         # showing an empty pane. Deferred by a tick because reading browser

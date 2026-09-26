@@ -13,7 +13,7 @@
     "steps": [
       "open https://staging2.justdial.com/rne/JDM42UP7BK/JA",
       "wait 5 seconds",
-      "verify exact text \"Referral Code (JDM42UP7BK) Applied \u2022 You got 15 days Free trial\"",
+      "verify exact text \"Referral Code (JDM42UP7BK) Applied • You got 15 days Free trial\"",
       "type \"7715882134\" into mobile_field",
       "click mobile_get_started",
       "open new tab",
@@ -39,6 +39,28 @@
     ],
     "created_at": "2026-09-22T12:40:13.063791+00:00",
     "step_count": 2,
+    "platform": "mobilesite"
+  },
+  "store_prp_url_city_nctid_queryparam_api_pass": {
+    "steps": [
+      "store regex \"justdial\\.com/([^/]+)/\" from page url as city1",
+      "store regex \"justdial\\.com/[^/]+/([^/?]+)/nct-\" from page url as query1",
+      "store regex \"nct-(\\d+)\" from page url as ncatid1",
+      "api get \"${rp_api_base_live}&city=${city1}&ncatid=${ncatid1}&query=${query1}\" as apiResp1"
+    ],
+    "created_at": "2026-09-25T16:59:23.363206+00:00",
+    "step_count": 4,
+    "platform": "mobilesite"
+  },
+  "sg-verify-product_api": {
+    "steps": [
+      "verify stored apiResp1 contains \"${uiName1}\"",
+      "verify recommended products order in apiResp1",
+      "verify recommended products carousel order on page",
+      "verify recommended products prefer search city on page"
+    ],
+    "created_at": "2026-09-25T17:00:55.924395+00:00",
+    "step_count": 4,
     "platform": "mobilesite"
   }
 }

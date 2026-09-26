@@ -27,6 +27,8 @@ NAV = [
     ("Step Groups", "/step-groups", "playlist_add_check", None),
     ("__sep__", "", "", None),
     ("__head__", "Execute", "", None),
+    ("Test Suites", "/suites", "folder_special", None),
+    ("Test Plans", "/plans", "event_repeat", None),
     ("Run Center", "/run", "play_circle", None),
     ("History", "/history", "history", None),
     ("__sep__", "", "", None),
@@ -34,6 +36,7 @@ NAV = [
     ("Test Data", "/data/variables", "dataset", None),
     ("Reports", "/reports", "assessment", None),
     ("Settings", "/settings", "settings", None),
+    ("Users", "/users", "group", "admin"),
 ]
 
 
@@ -63,7 +66,11 @@ def sidebar(active: str = "", platforms: list[dict] | None = None) -> None:
                 f"font-weight:{TYPOGRAPHY['weight_bold']}; font-size:{TYPOGRAPHY['size_md']};"
                 f"color:{COLORS['text']}; padding:6px 8px 10px")
 
-            for label, route, icon, _ in NAV:
+            from ui.auth import role as _role
+            me = _role()
+            for label, route, icon, need in NAV:
+                if need and need != me:
+                    continue
                 if label == "__sep__":
                     ui.separator().style("margin:6px 0")
                     continue

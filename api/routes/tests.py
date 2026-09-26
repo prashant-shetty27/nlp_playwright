@@ -12,10 +12,11 @@ import threading
 import time
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, field_validator
 
 from config.settings import LOGS_DIR
+from api.auth import acting_user, require
 
 import logging
 logger = logging.getLogger(__name__)
@@ -31,6 +32,25 @@ os.makedirs(LOGS_DIR, exist_ok=True)
 #: would hold every step of every one of them. Bounded, oldest evicted first.
 MAX_RETAINED_RUNS = int(os.getenv("MAX_RETAINED_RUNS", "200"))
 _runs: "OrderedDict[str, dict]" = OrderedDict()
+
+
+#: Run ids asked to stop at the next step boundary.
+_cancelled: set[str] = set()
+
+
+def cancel(run_id: str) -> None:
+    _cancelled.add(run_id)
+
+
+def progress_of(run_id: str) -> dict | None:
+    """Live progress of a running run (None when not running in this process)."""
+    with _runs_lock:
+        info = _runs.get(run_id)
+        if not info:
+            return None
+        if info.get("status") != "running":
+            return {"finished": True}
+        return dict(info.get("progress") or {})
 
 
 def _remember(run_id: str, payload: dict) -> None:
@@ -127,12 +147,14 @@ def _remaining(lines: list, after: int) -> int:
 
 def _run_flow_sync(run_id: str, flow_path: str, headless: bool,
                    capabilities: dict | None = None,
+                   triggered_by: str = "", plan_run: str = "",
                    parameters: dict | None = None,
                    secret_parameters: list | None = None,
                    environment: str = "",
                    stop_on_failure: bool = True,
                    screenshot_mode: str = "all",
-                   screenshot_context: int = 5) -> dict:
+                   screenshot_context: int = 5,
+                   run_type: str = "") -> dict:
     """
     Runs the NLP flow in a thread, captures step results,
     persists a JSON report, and returns the summary dict.
@@ -153,7 +175,11 @@ def _run_flow_sync(run_id: str, flow_path: str, headless: bool,
     sanitize_database()
 
     project_name = os.path.basename(flow_path).replace(".flow", "")
-    report = TestReportManager(testplan_name=project_name, executer_name="api")
+    report = TestReportManager(testplan_name=project_name,
+                               executer_name=triggered_by or "api")
+    report.meta["triggered_by"] = triggered_by or "api"
+    if plan_run:
+        report.meta["plan_run"] = plan_run
 
     session = TestSession()
     # Bind the session's own variable store BEFORE injecting, so values land where
@@ -200,41 +226,83 @@ def _run_flow_sync(run_id: str, flow_path: str, headless: bool,
     # Every step the run WILL execute, published before the first one starts,
     # so the live page can draw the whole list and tick rows as they finish
     # instead of showing "waiting for the first step" for the whole run.
+    # Smoke / Sanity / Regression: steps outside the selected bands are blanked
+    # (line numbers kept), so the loop, the live list and "not run after a
+    # failure" all see only this run's steps. No run type = every step, as before.
+    from core import run_types as _rt
+    selection = {"run": None, "bands_in": [], "bands_out": [], "warnings": []}
     try:
         with open(flow_path, "r", encoding="utf-8") as _f:
-            planned = [{"line": n, "step": ln.strip()}
-                       for n, ln in enumerate(_f.readlines(), 1)
-                       if ln.strip() and not ln.strip().startswith("#")]
+            flow_lines = _f.readlines()
+        if _rt.normalise(run_type):
+            selection = _rt.select(flow_lines, run_type)
+            if selection["run"] is not None:
+                flow_lines = [ln if (n in selection["run"] or not ln.strip()
+                                     or ln.strip().startswith("#")) else "\n"
+                              for n, ln in enumerate(flow_lines, 1)]
+        planned = [{"line": n, "step": ln.strip()}
+                   for n, ln in enumerate(flow_lines, 1)
+                   if ln.strip() and not ln.strip().startswith("#")]
     except Exception:  # noqa: BLE001
+        flow_lines = None
         planned = []
+    if _rt.normalise(run_type):
+        report.meta["run_type"] = _rt.normalise(run_type)
+        report.meta["bands_in"] = selection["bands_in"]
+        report.meta["bands_out"] = selection["bands_out"]
+        for w in selection["warnings"]:
+            logger.warning("⚠️ %s", w)
 
     def _publish(current: dict | None = None) -> None:
         """Progress snapshot for GET /tests/results/{run_id} while running."""
         snap = list(log)
         if current is not None:
-            snap.append({**current, "status": "running"})
+            snap.append({**current, "status": "running", "since": time.time()})
         with _runs_lock:
             info = _runs.get(run_id)
             if info is not None and info.get("status") == "running":
                 info["progress"] = {"planned": planned, "log": snap,
                                     "total": len(planned),
                                     "passed": passed, "failed": failed,
-                                    "skipped": skipped_count}
+                                    "skipped": skipped_count,
+                                    "updated_at": time.time()}
 
     _publish()
 
     shots = StepCapture(run_id, mode=screenshot_mode, context=screenshot_context)
+    # Where the time goes: steps themselves vs screenshots vs browser start-up.
+    timing = {"run_started": time.perf_counter(), "capture_s": 0.0, "steps_s": 0.0}
+
+    def _capture(page_, entry_, step_, row_):
+        t = time.perf_counter()
+        shots.after_step(page_, entry_, step_, row_)
+        timing["capture_s"] += time.perf_counter() - t
 
     try:
         page = open_browser(session, capabilities=capabilities or None)
 
-        with open(flow_path, "r", encoding="utf-8") as f:
-            lines = f.readlines()
+        if flow_lines is not None:
+            lines = flow_lines
+        else:
+            with open(flow_path, "r", encoding="utf-8") as f:
+                lines = f.readlines()
 
         for line_num, raw in enumerate(lines, 1):
             step = raw.strip()
             if not step or step.startswith("#"):
                 continue
+
+            if run_id in _cancelled:
+                # "Stop now" from the plan page / a stuck-run alert: the rest
+                # is recorded as not run, the browser still closes cleanly.
+                reason = "not run — execution stopped by user"
+                for skipped_no, skipped in [(line_num, step)] + list(_rest(lines, line_num)):
+                    log.append({"line": skipped_no, "step": skipped,
+                                "status": "skipped", "error": reason})
+                    report.add_result(skipped, "skipped", reason=reason)
+                    skipped_count += 1
+                _publish()
+                break
 
             entry: dict = {"line": line_num, "step": step}
             started = time.perf_counter()
@@ -257,7 +325,7 @@ def _run_flow_sync(run_id: str, flow_path: str, headless: bool,
                 # the row that was already recorded.
                 row = report.add_result(step, "passed",
                                         duration_ms=entry["duration_ms"])
-                shots.after_step(page, entry, step, row)
+                _capture(page, entry, step, row)
             except Exception as e:
                 entry["status"] = "failed"
                 entry["error"] = str(e).strip()
@@ -265,9 +333,9 @@ def _run_flow_sync(run_id: str, flow_path: str, headless: bool,
                 failed += 1
                 row = report.add_result(step, "failed", reason=str(e).strip(),
                                         duration_ms=entry["duration_ms"])
-                shots.after_step(page, entry, step, row)
-                log.append(entry)
+                _capture(page, entry, step, row)
                 if stop_on_failure:
+                    log.append(entry)   # (otherwise appended once, below)
                     # Everything after a failure is running against a page that
                     # is not where the test thinks it is. Those steps do not
                     # test anything — they produce a second, unrelated failure
@@ -308,7 +376,23 @@ def _run_flow_sync(run_id: str, flow_path: str, headless: bool,
     # report file outlives the process, and it is the file the detail page reads
     # when it explains why a step has no image.
     report.meta["screenshots"] = shots.summary()
+    total_s = time.perf_counter() - timing["run_started"]
+    steps_s = sum((e.get("duration_ms") or 0) for e in log) / 1000
+    report.meta["timing"] = {"total_s": round(total_s, 1), "steps_s": round(steps_s, 1),
+                             "screenshots_s": round(timing["capture_s"], 1),
+                             "other_s": round(max(total_s - steps_s - timing["capture_s"], 0), 1)}
+    logger.info("⏱ Run %s: %.0fs total — steps %.0fs, screenshots %.0fs, browser/other %.0fs",
+                run_id, total_s, steps_s, timing["capture_s"], report.meta["timing"]["other_s"])
+    # The run id goes INTO the report: the file is named by local time, not by
+    # run id, so without this a restart made every Live / Report link 404.
+    report.meta["run_id"] = run_id
+    try:
+        report.meta["lines"] = [e.get("line") for e in log
+                                if e.get("status") != "running"]
+    except Exception:  # noqa: BLE001
+        pass
     json_path, _ = report.generate_report(LOGS_DIR)
+    _index_report(run_id, os.path.basename(json_path))
 
     summary = {
         "run_id": run_id,
@@ -324,8 +408,14 @@ def _run_flow_sync(run_id: str, flow_path: str, headless: bool,
         # was hit. Without it, "there is no screenshot for step 12" is
         # indistinguishable from a bug.
         "screenshots": shots.summary(),
+        "timing": report.meta.get("timing"),
+        "run_type": report.meta.get("run_type", ""),
+        "bands_in": selection["bands_in"],
+        "bands_out": selection["bands_out"],
         "log": log,
         "report_file": json_path,
+        "triggered_by": triggered_by or "api",
+        "plan_run": plan_run,
         "finished_at": datetime.now(timezone.utc).isoformat(),
     }
 
@@ -338,6 +428,127 @@ def _run_flow_sync(run_id: str, flow_path: str, headless: bool,
             _runs.popitem(last=False)
 
     return summary
+
+
+# ── Finding a saved report by run id ──────────────────────────────────────────
+# Report files are named report_<flow>_<local time>.json, while run ids are UTC
+# stamps with microseconds — so "run_id in filename" never matched, and every
+# run looked lost after a restart (blank Live page, "Report not found").
+_RUN_INDEX = os.path.join(LOGS_DIR, "_run_index.json")
+_index_lock = threading.Lock()
+
+
+def _index_report(run_id: str, fname: str) -> None:
+    with _index_lock:
+        try:
+            with open(_RUN_INDEX, "r", encoding="utf-8") as f:
+                idx = json.load(f)
+        except Exception:  # noqa: BLE001
+            idx = {}
+        idx[run_id] = fname
+        if len(idx) > 5000:
+            idx = dict(list(idx.items())[-5000:])
+        tmp = _RUN_INDEX + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(idx, f)
+        os.replace(tmp, _RUN_INDEX)
+
+
+def _find_report(run_id: str) -> str:
+    """Path of the saved report for run_id, or '' — index, plan runs, then a scan."""
+    safe = os.path.basename(run_id)
+    try:
+        with open(_RUN_INDEX, "r", encoding="utf-8") as f:
+            fname = json.load(f).get(safe)
+        if fname and os.path.exists(os.path.join(LOGS_DIR, fname)):
+            return os.path.join(LOGS_DIR, fname)
+    except Exception:  # noqa: BLE001
+        pass
+    names = [n for n in os.listdir(LOGS_DIR)
+             if n.startswith("report") and n.endswith(".json")]
+    for n in names:
+        if safe in n:
+            return os.path.join(LOGS_DIR, n)
+    # Plan runs record the report file of every test case they ran.
+    runs_dir = os.path.join(os.path.dirname(LOGS_DIR), "plan_runs")
+    if os.path.isdir(runs_dir):
+        for n in os.listdir(runs_dir):
+            try:
+                with open(os.path.join(runs_dir, n), "r", encoding="utf-8") as f:
+                    rec = json.load(f)
+            except Exception:  # noqa: BLE001
+                continue
+            for it in rec.get("items") or []:
+                if safe == it.get("run_id") or safe in (it.get("run_ids") or []):
+                    rf = it.get("report_file") or ""
+                    if rf and os.path.exists(os.path.join(LOGS_DIR, rf)):
+                        return os.path.join(LOGS_DIR, rf)
+    # Older reports: screenshots live under runs/<run_id>/, so the id is in the text.
+    names.sort(key=lambda n: os.path.getmtime(os.path.join(LOGS_DIR, n)), reverse=True)
+    for n in names[:400]:
+        path = os.path.join(LOGS_DIR, n)
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                text = f.read()
+        except Exception:  # noqa: BLE001
+            continue
+        if f'"run_id": "{safe}"' in text or f"runs/{safe}/" in text:
+            try:
+                _index_report(safe, n)
+            except Exception:  # noqa: BLE001
+                pass
+            return path
+    return ""
+
+
+def _guess_lines(rep: dict) -> list:
+    """Flow line of each step, for reports saved before lines were recorded."""
+    try:
+        from config.settings import FLOWS_DIR
+    except Exception:  # noqa: BLE001
+        FLOWS_DIR = "flows"
+    path = os.path.join(FLOWS_DIR, f"{rep.get('testplan', '')}.flow")
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            flow = [(n, ln.strip()) for n, ln in enumerate(f, 1)
+                    if ln.strip() and not ln.strip().startswith("#")]
+    except OSError:
+        return []
+    out, j = [], 0
+    for r in rep.get("results") or []:
+        text = (r.get("test_name") or "").strip()
+        k = j
+        while k < len(flow) and flow[k][1] != text:
+            k += 1
+        if k < len(flow):
+            out.append(flow[k][0])
+            j = k + 1
+        else:
+            out.append(None)      # the file changed since; no link rather than a wrong one
+    return out
+
+
+def _as_result(run_id: str, rep: dict, fname: str) -> dict:
+    """A saved report, shaped so both Live (reads `log`) and Report (reads `results`) work."""
+    out = dict(rep)
+    summ = rep.get("summary") or {}
+    out.setdefault("run_id", run_id)
+    out["status"] = "done"
+    out["report_file"] = fname
+    out.setdefault("project", rep.get("testplan", ""))
+    for k in ("total", "passed", "failed", "skipped"):
+        out.setdefault(k, summ.get(k, 0))
+    if not rep.get("log"):
+        lines = rep.get("lines") or _guess_lines(rep)
+        out["log"] = [{
+            "step": r.get("test_name", ""),
+            "status": r.get("status", ""),
+            "error": r.get("reason", ""),
+            "screenshot": r.get("screenshot", ""),
+            "duration_ms": r.get("duration_ms"),
+            "line": lines[i] if i < len(lines) else None,
+        } for i, r in enumerate(rep.get("results") or [])]
+    return out
 
 
 # ── Routes ─────────────────────────────────────────────────────────────────────
@@ -396,7 +607,8 @@ def _declared_platform(flow_path: str) -> str | None:
     return None
 
 
-def _start_run_thread(run_id: str, flow_path: str, body: RunRequest, caps: dict) -> None:
+def _start_run_thread(run_id: str, flow_path: str, body: RunRequest, caps: dict,
+                      triggered_by: str = "") -> None:
     """
     Start the run on a worker thread and return immediately to the caller.
 
@@ -417,6 +629,7 @@ def _start_run_thread(run_id: str, flow_path: str, body: RunRequest, caps: dict)
             "stop_on_failure": getattr(body, "stop_on_failure", True),
             "screenshot_mode": getattr(body, "screenshot_mode", "all"),
             "screenshot_context": getattr(body, "screenshot_context", 5),
+            "triggered_by": triggered_by,
         },
         name=f"flow-run-{run_id}",
         daemon=True,
@@ -424,17 +637,16 @@ def _start_run_thread(run_id: str, flow_path: str, body: RunRequest, caps: dict)
     thread.start()
 
 
-@router.post("/run")
-def run_test(body: RunRequest):
+def _prepare_run(body: "RunRequest", flow_path: str = ""):
     """
-    Launch a .flow run.  Returns run_id immediately; result available via
-    GET /tests/results/{run_id}.
+    Everything Run Center does before a test case starts: resolve the file,
+    the platform (its own header wins), the device, the capabilities, and
+    refuse up front when a value the steps need is missing.
 
-    For synchronous blocking execution (small flows) the result is also
-    returned directly once the background task completes — use
-    GET /tests/results/{run_id} to poll.
+    Shared with Test Plans so a scheduled run behaves exactly like a manual one.
+    Returns (flow_path, caps, platform, platform_source, device).
     """
-    flow_path = _flow_path(body.project)
+    flow_path = flow_path or _flow_path(body.project)
     if not os.path.exists(flow_path):
         raise HTTPException(status_code=404, detail=f"Project '{body.project}' not found.")
 
@@ -517,13 +729,32 @@ def run_test(body: RunRequest):
     # Remember how this flow was launched so it can be repeated without
     # re-answering every question. Secret VALUES are never written — only the
     # names, so Quick Run knows what to ask for again rather than storing it.
+    return flow_path, caps, platform, platform_source, device
+
+
+@router.post("/run")
+def run_test(body: RunRequest, user: str = Depends(acting_user)):
+    """
+    Launch a .flow run.  Returns run_id immediately; result available via
+    GET /tests/results/{run_id}.
+
+    For synchronous blocking execution (small flows) the result is also
+    returned directly once the background task completes — use
+    GET /tests/results/{run_id} to poll.
+    """
+    require(user, "run")
+    flow_path, caps, platform, platform_source, device = _prepare_run(body)
+
+    # Remember how this flow was launched so it can be repeated without
+    # re-answering every question. Secret VALUES are never written — only the
+    # names, so Quick Run knows what to ask for again rather than storing it.
     _remember_setup(body)
 
     run_id = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S_%f")
 
     _remember(run_id, {"status": "running", "result": None})
 
-    _start_run_thread(run_id, flow_path, body, caps)
+    _start_run_thread(run_id, flow_path, body, caps, triggered_by=user)
 
     return {
         "run_id": run_id,
@@ -653,6 +884,10 @@ def run_history(limit: int = 50):
             "summary": summary,
             "steps": total,
             "status": "passed" if total and not failed else ("failed" if failed else "empty"),
+            "duration_s": ((data.get("timing") or {}).get("total_s")
+                           or round(sum((r.get("duration_ms") or 0) for r in data.get("results") or []) / 1000, 1)),
+            "plan_run": data.get("plan_run", ""),
+            "triggered_by": data.get("triggered_by", ""),
         })
         if len(rows) >= limit:
             break
@@ -674,15 +909,13 @@ def get_result(run_id: str):
             return {"run_id": run_id, "status": "running", **(info.get("progress") or {})}
         return info["result"]
 
-    # Fall back to persisted report file
-    # run_id doubles as the timestamp portion of the filename
-    for fname in os.listdir(LOGS_DIR):
-        if fname.endswith(".json") and run_id in fname:
-            path = os.path.join(LOGS_DIR, fname)
-            try:
-                with open(path, "r", encoding="utf-8") as f:
-                    return json.load(f)
-            except Exception as e:
-                raise HTTPException(status_code=500, detail=f"Failed to read report: {e}")
+    # Fall back to the persisted report file.
+    path = _find_report(run_id)
+    if path:
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                return _as_result(run_id, json.load(f), os.path.basename(path))
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to read report: {e}")
 
     raise HTTPException(status_code=404, detail=f"Run '{run_id}' not found.")

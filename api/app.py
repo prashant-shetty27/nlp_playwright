@@ -49,6 +49,12 @@ async def lifespan(app: FastAPI):
     logger.info("🚀 NLP-Playwright API starting up...")
     # Pre-warm the action registry so first /tests/run isn't slow
     import execution.action_service  # noqa: F401 — registers @codeless_snippet
+    # Scheduled Test Plans fire from inside this process (it owns the browser).
+    try:
+        from execution import scheduler
+        scheduler.start()
+    except Exception:  # noqa: BLE001 — never block startup on the scheduler
+        logger.exception("Scheduler did not start")
     yield
     logger.info("🛑 NLP-Playwright API shutting down.")
 
@@ -90,6 +96,10 @@ app.include_router(stepgroups.router)
 app.include_router(review.router)
 app.include_router(assist.router)
 app.include_router(websocket.router)
+from api.routes import users as _users_routes  # noqa: E402
+app.include_router(_users_routes.router)
+from api.routes import suites_plans as _sp_routes  # noqa: E402
+app.include_router(_sp_routes.router)
 
 
 # ── Static files ───────────────────────────────────────────────────────────────

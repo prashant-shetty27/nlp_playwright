@@ -219,6 +219,7 @@ class NlpInput:
     def _submit(self, _=None) -> None:
         text = (self.input.value or "").strip()
         if not text:
+            ui.notify("Type a step first — an empty line is not a step", type="warning")
             return
         if _SLOT.search(text):
             # A placeholder is not a value. Adding `open {url}` to the test

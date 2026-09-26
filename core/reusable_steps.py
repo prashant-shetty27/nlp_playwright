@@ -71,12 +71,27 @@ def get(name: str) -> List[str]:
     Raises KeyError with a clear message if not found.
     """
     data = _load_raw()
-    if name not in data:
-        raise KeyError(
-            f"Reusable steps '{name}' not found. "
-            f"Available: {', '.join(sorted(data.keys())) or '(none)'}"
-        )
-    return data[name]["steps"]
+    if name in data:
+        return data[name]["steps"]
+    # Forgiving lookup: `call SG - Store PRP URL` should find
+    # 'sg_store_prp_url' — case, spaces, hyphens/dashes/underscores and a
+    # leading "SG" tag are how people write the same name differently, not
+    # different groups. Only an unambiguous match is accepted.
+    want = _loose(name)
+    hits = [k for k in data if _loose(k) == want]
+    if len(hits) == 1:
+        return data[hits[0]]["steps"]
+    raise KeyError(
+        f"Reusable steps '{name}' not found. "
+        f"Available: {', '.join(sorted(data.keys())) or '(none)'}"
+    )
+
+
+def _loose(name: str) -> str:
+    import re as _re
+    n = _re.sub(r"[\s\-\u2013\u2014_]+", "_", (name or "").strip().lower()).strip("_")
+    n = _re.sub(r"^sg_", "", n)
+    return n
 
 
 def list_for(platform: str = "") -> List[str]:

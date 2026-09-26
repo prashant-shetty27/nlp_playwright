@@ -132,6 +132,55 @@ def _quick_run(route: str, current_flow: str = "", current_platform: str = "") -
     ui.timer(0.2, arm, once=True)
 
 
+def _plan_alert() -> None:
+    """
+    A running Test Plan, visible from every page — red when it looks stuck.
+
+    Scheduled plans run while nobody is watching; without this a hung step at
+    07:00 was only noticed when the Slack summary never arrived.
+    """
+    from urllib.parse import quote
+    holder = ui.row().classes("items-center gap-1")
+    state = {"sig": None, "warned": set()}
+
+    async def check() -> None:
+        from ui import api_client as api
+        try:
+            h = await api.plans_health()
+        except Exception:  # noqa: BLE001 — never break the top bar
+            return
+        rid = h.get("active") or ""
+        sig = (rid, h.get("stuck"), h.get("kind"), h.get("done"))
+        if sig == state["sig"]:
+            return
+        state["sig"] = sig
+        holder.clear()
+        if not rid:
+            return
+        url = f"/plans/run/{quote(rid)}"
+        with holder:
+            if h.get("stuck"):
+                ui.button("Execution stuck", icon="warning",
+                          on_click=lambda: ui.navigate.to(url)) \
+                    .props("unelevated dense no-caps color=negative") \
+                    .tooltip(f"{h.get('plan_name')}: {h.get('message', '')} — click to see what to do")
+                key = (rid, h.get("kind"), h.get("line"))
+                if key not in state["warned"]:
+                    state["warned"].add(key)
+                    ui.notify(f"⚠ Test plan “{h.get('plan_name')}” looks stuck. "
+                              "Click “Execution stuck” in the top bar to see what to do.",
+                              type="warning", timeout=12000, position="top")
+            else:
+                done = f" · {h.get('done')}/{h.get('total')}" if h.get("total") else ""
+                ui.button(f"Plan running{done}", icon="play_circle",
+                          on_click=lambda: ui.navigate.to(url)) \
+                    .props("flat dense no-caps color=primary") \
+                    .tooltip(f"{h.get('plan_name')} — {h.get('test_case') or 'queued'}")
+
+    ui.timer(0.5, check, once=True)
+    ui.timer(20.0, check)
+
+
 def _restart_button() -> None:
     """
     Restart the server from the page it is serving.
@@ -274,6 +323,63 @@ def topbar(breadcrumb: list[str], *, platforms: list[dict] | None = None,
                 ).props("outlined dense options-dense").style("min-width:11rem")
             _quick_run(quick_run_route, current_flow=current_flow,
                        current_platform=platform)
+            _plan_alert()
             _restart_button()
             ui.button(icon="settings", on_click=lambda: ui.navigate.to("/settings")) \
                 .props("flat dense").tooltip("Settings")
+            _user_menu()
+
+
+def _user_menu() -> None:
+    """Who is signed in, their role, change password, sign out."""
+    from ui.auth import current, sign_out
+    u = current()
+    if not u:
+        return
+    initials = "".join(p[0] for p in (u.get("name") or u["username"]).split()[:2]).upper() or "?"
+    with ui.button(initials).props("round unelevated dense size=sm") \
+            .style(f"background:{COLORS['primary']}; color:white") \
+            .tooltip(f"{u.get('name')} ({u['role']})"):
+        with ui.menu():
+            with ui.column().classes("gap-0").style("padding:8px 14px"):
+                ui.label(u.get("name") or u["username"]).style(
+                    f"font-weight:{TYPOGRAPHY['weight_bold']}")
+                ui.label(f"{u['username']} · {u['role']}").style(
+                    f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}")
+            ui.separator()
+            ui.menu_item("Change password", on_click=_password_dialog)
+            if u["role"] == "admin":
+                ui.menu_item("Manage users", on_click=lambda: ui.navigate.to("/users"))
+            ui.menu_item("Sign out", on_click=sign_out)
+
+
+def _password_dialog() -> None:
+    from ui import api_client as api
+    from ui.auth import current
+    u = current()
+    if not u:
+        return
+    dialog = ui.dialog().props("persistent")
+    with dialog, ui.card().style("width:26rem"):
+        ui.label("Change password").style(f"font-weight:{TYPOGRAPHY['weight_bold']}")
+        new = ui.input("New password", password=True, password_toggle_button=True) \
+            .props("outlined dense").classes("w-full")
+        again = ui.input("Repeat it", password=True).props("outlined dense").classes("w-full")
+        msg = ui.label().style(f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['danger']}")
+
+        async def go() -> None:
+            if (new.value or "") != (again.value or ""):
+                msg.set_text("The two passwords differ.")
+                return
+            try:
+                await api.update_user(u["username"], password=new.value or "")
+            except api.ApiError as e:
+                msg.set_text(e.detail)
+                return
+            dialog.close()
+            ui.notify("Password changed", type="positive")
+
+        with ui.row().classes("w-full justify-end gap-2"):
+            ui.button("Cancel", on_click=dialog.close).props("flat")
+            ui.button("Change", on_click=go).props("unelevated")
+    dialog.open()

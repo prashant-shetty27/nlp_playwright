@@ -27,3 +27,14 @@ logs/
 .vscode/
 .idea/
 *.code-workspace
+
+# Portal runtime data / secrets (added 26 Sep 2026)
+data/.session_secret
+data/users.json
+data/plan_runs/
+data/plan_reports/
+data/logs/
+.nicegui/
+.claude/
+_replica_tmp/
+*.bak

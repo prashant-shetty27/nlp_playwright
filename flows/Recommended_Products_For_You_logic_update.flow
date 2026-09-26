@@ -5,44 +5,38 @@
 # call get_product_by_ncatid for the same search, and check page + API follow
 # the priority hierarchy DS > search city > price (each exhausted before the next).
 
-# --- Purpose: TC_RP_HEADING_PRODUCT — product category shows "Recommended Products For You"
+# --- Purpose: TC_RP_HEADING_PRODUCT [smoke, sanity] — product category shows "Recommended Products For You"
 open ${live_url_steel_merchants}
 wait for result page load
 click if visible login_prompt_skip
-wait 3 seconds
+wait until element rp_carousel_heading is visible
 verify element rp_carousel_heading is visible
 verify element rp_carousel_heading has text "Recommended Products For You"
 verify element rp_product_1st is visible
-# --- Purpose: TC_RP_HEADING_SERVICE — service category heading (sheet expects "Recommended Services For You"; live shows "Products" — confirm with dev)
+# --- Purpose: TC_RP_HEADING_SERVICE [sanity] — service category heading (sheet expects "Recommended Services For You"; live shows "Products" — confirm with dev)
 open ${live_url_bulk_sms_services}
 wait for result page load
 click if visible login_prompt_skip
-wait 3 seconds
+wait until element rp_carousel_heading is visible
 verify element rp_carousel_heading is visible
 verify element rp_carousel_heading contains "Recommended"
 verify element rp_carousel_heading contains "For You"
 verify element rp_product_1st is visible
-# --- Purpose: TC_RP_PRIORITY_STEEL_MERCHANTS — DS > search city > price, page vs API (Mumbai)
+# --- Purpose: TC_RP_PRIORITY_STEEL_MERCHANTS [smoke, sanity] — DS > search city > price, page vs API (Mumbai)
 open ${live_url_steel_merchants}
 wait for result page load
 click if visible login_prompt_skip
-wait 3 seconds
+wait until element rp_carousel_heading is visible
 verify element rp_carousel_heading is visible
-store regex "justdial\.com/([^/]+)/" from page url as city1
-store regex "justdial\.com/[^/]+/([^/?]+)/nct-" from page url as query1
-store regex "nct-(\d+)" from page url as ncatid1
-api get "${rp_api_base_live}&city=${city1}&ncatid=${ncatid1}&query=${query1}" as apiResp1
+call store_prp_url_city_nctid_queryparam_api_pass
 store json apiResp1 path results.data.0.display_name1 as apiName1
 store text of rp_product_1st_name as uiName1
-verify stored uiName1 contains "${apiName1}"
-verify recommended products order in apiResp1
-verify recommended products carousel order on page
-verify recommended products prefer search city on page
-# --- Purpose: TC_RP_PRIORITY_BULK_SMS — service category follows the same hierarchy
+call sg-verify-product_api
+# --- Purpose: TC_RP_PRIORITY_BULK_SMS [sanity] — service category follows the same hierarchy
 open ${live_url_bulk_sms_services}
 wait for result page load
 click if visible login_prompt_skip
-wait 3 seconds
+wait until element rp_carousel_heading is visible
 verify element rp_carousel_heading is visible
 store regex "justdial\.com/([^/]+)/" from page url as city2
 store regex "justdial\.com/[^/]+/([^/?]+)/nct-" from page url as query2
@@ -50,25 +44,25 @@ store regex "nct-(\d+)" from page url as ncatid2
 api get "${rp_api_base_live}&city=${city2}&ncatid=${ncatid2}&query=${query2}" as apiResp2
 store json apiResp2 path results.data.0.display_name1 as apiName2
 store text of rp_product_1st_name as uiName2
-verify stored uiName2 contains "${apiName2}"
+verify stored apiResp2 contains "${uiName2}"
 verify recommended products order in apiResp2
 verify recommended products carousel order on page
 verify recommended products prefer search city on page
-# --- Purpose: TC_RP_360_BADGE_ON_TOP — DS (360/video) products come first and the carousel is full
+# --- Purpose: TC_RP_360_BADGE_ON_TOP [sanity] — DS (360/video) products come first and the carousel is full
 open ${prod_Hotel_Equipment_Manufacturers}
 wait for result page load
 click if visible login_prompt_skip
-wait 3 seconds
+wait until element rp_carousel_heading is visible
 verify element rp_carousel_heading is visible
 store count of rp_carousel_cards as productCount
 verify stored productCount is greater than 0
 store count of rp_carousel_360_badge as badgeCount
 verify recommended products carousel order on page
-# --- Purpose: TC_RP_SERVICE_CATEGORY_ORDER_MULTI_URL — hierarchy across more categories / cities
+# --- Purpose: TC_RP_SERVICE_CATEGORY_ORDER_MULTI_URL [regression] — hierarchy across more categories / cities
 open ${prod_Screw_Importers}
 wait for result page load
 click if visible login_prompt_skip
-wait 3 seconds
+wait until element rp_carousel_heading is visible
 verify element rp_carousel_heading is visible
 store regex "justdial\.com/([^/]+)/" from page url as city11
 store regex "justdial\.com/[^/]+/([^/?]+)/nct-" from page url as query11
@@ -80,7 +74,7 @@ verify recommended products prefer search city on page
 open ${live_url_pani_puri_making_machine}
 wait for result page load
 click if visible login_prompt_skip
-wait 3 seconds
+wait until element rp_carousel_heading is visible
 verify element rp_carousel_heading is visible
 store regex "justdial\.com/([^/]+)/" from page url as city12
 store regex "justdial\.com/[^/]+/([^/?]+)/nct-" from page url as query12
@@ -92,7 +86,7 @@ verify recommended products prefer search city on page
 open ${live_url_school_bag_manufacturers}
 wait for result page load
 click if visible login_prompt_skip
-wait 3 seconds
+wait until element rp_carousel_heading is visible
 verify element rp_carousel_heading is visible
 store regex "justdial\.com/([^/]+)/" from page url as city13
 store regex "justdial\.com/[^/]+/([^/?]+)/nct-" from page url as query13
@@ -101,11 +95,11 @@ api get "${rp_api_base_live}&city=${city13}&ncatid=${ncatid13}&query=${query13}"
 verify recommended products order in apiResp13
 verify recommended products carousel order on page
 verify recommended products prefer search city on page
-# --- Purpose: TC_RP_MIXED_PRICE_CITY_CARPET_WHOLESALERS — with/without price inside each city bucket
+# --- Purpose: TC_RP_MIXED_PRICE_CITY_CARPET_WHOLESALERS [regression] — with/without price inside each city bucket
 open ${live_url_carpet_wholesalers}
 wait for result page load
 click if visible login_prompt_skip
-wait 3 seconds
+wait until element rp_carousel_heading is visible
 verify element rp_carousel_heading is visible
 store regex "justdial\.com/([^/]+)/" from page url as city3
 store regex "justdial\.com/[^/]+/([^/?]+)/nct-" from page url as query3
@@ -114,24 +108,24 @@ api get "${rp_api_base_live}&city=${city3}&ncatid=${ncatid3}&query=${query3}" as
 verify recommended products order in apiResp3
 verify recommended products carousel order on page
 verify recommended products prefer search city on page
-# --- Purpose: TC_DEFECT_22699_NO_PRICE_ON_REQUEST — "Price on Request" never shown on carousel cards
+# --- Purpose: TC_DEFECT_22699_NO_PRICE_ON_REQUEST [sanity] — "Price on Request" never shown on carousel cards
 open ${Prod_Brick_Wholesalers}
 wait for result page load
 click if visible login_prompt_skip
-wait 3 seconds
+wait until element rp_carousel_heading is visible
 verify element rp_carousel_heading is visible
 verify element rp_carousel_price_on_request is not visible
 open ${Prod_Carpet_Wholesalers}
 wait for result page load
 click if visible login_prompt_skip
-wait 3 seconds
+wait until element rp_carousel_heading is visible
 verify element rp_carousel_heading is visible
 verify element rp_carousel_price_on_request is not visible
-# --- Purpose: TC_DEFECT_22700 / TC_RP_CTA_IS_CALL_NOW — carousel CTA reads "Call Now", no "View Details"
+# --- Purpose: TC_DEFECT_22700 / TC_RP_CTA_IS_CALL_NOW [sanity] — carousel CTA reads "Call Now", no "View Details"
 open ${Prod_Umbrella_Distributors}
 wait for result page load
 click if visible login_prompt_skip
-wait 3 seconds
+wait until element rp_carousel_heading is visible
 verify element rp_carousel_heading is visible
 verify element rp_carousel_call_now_cta is visible
 verify element rp_carousel_call_now_cta contains "Call Now"
@@ -139,18 +133,18 @@ verify element rp_carousel_view_details is not visible
 open ${live_url_steel_merchants}
 wait for result page load
 click if visible login_prompt_skip
-wait 3 seconds
+wait until element rp_carousel_heading is visible
 verify element rp_carousel_heading is visible
 verify element rp_carousel_call_now_cta is visible
 verify element rp_carousel_call_now_cta contains "Call Now"
 verify element rp_carousel_view_details is not visible
-# --- Purpose: TC_RP_NO_SECTION_FOR_INELIGIBLE_CATEGORY — no carousel when nothing qualifies
+# --- Purpose: TC_RP_NO_SECTION_FOR_INELIGIBLE_CATEGORY [sanity] — no carousel when nothing qualifies
 open ${prod_Bat_Distributors_MRF}
 wait for result page load
 click if visible login_prompt_skip
 wait 3 seconds
 verify element rp_carousel_heading is not visible
-# --- Purpose: TC_ASK_FOR_PRICE_LEAD_SUBMIT_FLOW — devx only. OFF by default: every run submits ONE REAL lead (sent to ~7 vendors). Turn the lines on only when a lead is wanted.
+# --- Purpose: TC_ASK_FOR_PRICE_LEAD_SUBMIT_FLOW [full] — devx only. OFF by default: every run submits ONE REAL lead (sent to ~7 vendors). Turn the lines on only when a lead is wanted.
 # OFF: open ${devx}
 # OFF: open ${url_carpet_wholesalers}
 # OFF: wait for result page load

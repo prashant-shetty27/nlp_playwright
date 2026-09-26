@@ -11,10 +11,12 @@ DELETE /projects/{name}             — delete a flow file
 import os
 import re
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from config.settings import FLOWS_DIR
+from api.auth import acting_user, require
+from core import audit
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -222,13 +224,15 @@ def list_projects(platform: str = ""):
 
 
 @router.post("", status_code=201)
-def create_project(body: ProjectCreate):
+def create_project(body: ProjectCreate, user: str = Depends(acting_user)):
     """Create a new .flow project file."""
+    require(user, "write")
     path = _flow_path_or_422(body.name)
     if os.path.exists(path):
         raise HTTPException(status_code=409, detail=f"Project '{body.name}' already exists.")
     with open(path, "w", encoding="utf-8") as f:
         f.write(_compose(body.steps, platform=body.platform))
+    audit.touch(os.path.basename(path)[:-5], user, created=True)
     return {"message": f"Project '{body.name}' created.", "path": path}
 
 
@@ -238,18 +242,20 @@ def get_project(name: str):
     path = _flow_path_or_422(name)
     if not os.path.exists(path):
         raise HTTPException(status_code=404, detail=f"Project '{name}' not found.")
-    return {"name": name, "steps": _read_steps(path)}
+    return {"name": name, "steps": _read_steps(path), "meta": audit.get(name)}
 
 
 @router.put("/{name}")
-def update_project(name: str, body: ProjectUpdate):
+def update_project(name: str, body: ProjectUpdate, user: str = Depends(acting_user)):
     """Overwrite all steps of a .flow project."""
+    require(user, "write")
     path = _flow_path_or_422(name)
     if not os.path.exists(path):
         raise HTTPException(status_code=404, detail=f"Project '{name}' not found.")
     header = _read_header(path)
     with open(path, "w", encoding="utf-8") as f:
         f.write(_compose(body.steps, header, platform=body.platform))
+    audit.touch(name, user)
     return {"message": f"Project '{name}' updated.", "steps": body.steps}
 
 
@@ -286,19 +292,26 @@ def check_name(name: str):
 
 
 @router.post("/{name}/rename")
-def rename_project(name: str, body: RenameBody):
+def rename_project(name: str, body: RenameBody, user: str = Depends(acting_user)):
     """Rename a test case, its sidecar map, and every suite/plan naming it."""
     from execution.refactor import RenameError, rename_flow
 
+    if body.apply:
+        require(user, "write")
     try:
-        return rename_flow(name, body.new_name, apply=body.apply)
+        res = rename_flow(name, body.new_name, apply=body.apply)
+        if body.apply:
+            audit.rename(name, body.new_name)
+            audit.touch(body.new_name, user)
+        return res
     except RenameError as e:
         raise HTTPException(status_code=409, detail=str(e)) from e
 
 
 @router.delete("/{name}", status_code=200)
-def delete_project(name: str):
+def delete_project(name: str, user: str = Depends(acting_user)):
     """Delete a .flow project file."""
+    require(user, "write")
     path = _flow_path_or_422(name)
     if not os.path.exists(path):
         raise HTTPException(status_code=404, detail=f"Project '{name}' not found.")

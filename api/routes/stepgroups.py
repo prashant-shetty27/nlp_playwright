@@ -35,6 +35,18 @@ def list_groups(platform: str = Query("")):
     return {"groups": rs.describe(platform), "platform": platform}
 
 
+def _same_steps_as(steps: list[str], except_name: str = "") -> str:
+    """Name of an existing group with exactly these steps (ignoring case/space), else ''."""
+    norm = [" ".join((st or "").split()).lower() for st in steps if (st or "").strip()]
+    for g in rs.describe():
+        if g["name"] == except_name:
+            continue
+        theirs = [" ".join(st.split()).lower() for st in g.get("steps", []) if st.strip()]
+        if theirs == norm:
+            return g["name"]
+    return ""
+
+
 @router.post("", status_code=201)
 def save_group(body: GroupBody):
     """
@@ -44,6 +56,12 @@ def save_group(body: GroupBody):
     steps in an existing group may be used by flows the author cannot see from
     here. Repeat with overwrite=true to replace it deliberately.
     """
+    twin = _same_steps_as(body.steps, except_name=body.name)
+    if twin:
+        raise HTTPException(
+            status_code=409,
+            detail=(f"These exact steps are already saved as the step group '{twin}'. "
+                    f"Use `call {twin}` instead of saving a second copy."))
     try:
         rs.save(body.name, body.steps, overwrite=body.overwrite,
                 platform=body.platform)
@@ -140,6 +158,12 @@ def edit_group(name: str, body: EditBody):
             unique.append(st.strip())
     if not unique:
         raise HTTPException(status_code=422, detail="A group needs at least one step.")
+    twin = _same_steps_as(unique, except_name=name)
+    if twin:
+        raise HTTPException(
+            status_code=409,
+            detail=(f"After this edit '{name}' would have exactly the same steps as "
+                    f"'{twin}'. Keep one of them, or make them differ."))
     existing = {g["name"]: g for g in rs.describe()}
     try:
         rs.save(name, unique, overwrite=True,
@@ -170,4 +194,40 @@ def rename_group(name: str, body: GroupRename):
     except ValueError as e:
         raise HTTPException(status_code=409, detail=str(e)) from e
     rs.delete(name)
-    return {"renamed": name, "to": body.new_name}
+    # Every test case that calls the old name is rewritten, or the rename
+    # would silently break them at run time ("Reusable steps … not found").
+    updated = _rewrite_calls(name, body.new_name)
+    return {"renamed": name, "to": body.new_name, "flows_updated": updated}
+
+
+def _rewrite_calls(old: str, new: str) -> list[str]:
+    """Replace `call <old>` with `call <new>` in all flows; returns the flows touched."""
+    import os
+    import re
+
+    from config import settings
+
+    def loose(n: str) -> str:
+        n = re.sub(r"[\s\-\u2013\u2014_]+", "_", (n or "").strip().lower()).strip("_")
+        return re.sub(r"^sg_", "", n)
+
+    touched: list[str] = []
+    want = loose(old)
+    pat = re.compile(r"^(\s*(?:#\s*OFF:\s*)?call\s+)(.+?)\s*$", re.I)
+    for fn in sorted(os.listdir(settings.FLOWS_DIR)):
+        if not fn.endswith(".flow"):
+            continue
+        path = os.path.join(settings.FLOWS_DIR, fn)
+        with open(path, "r", encoding="utf-8") as f:
+            lines = f.read().splitlines(keepends=True)
+        changed = False
+        for i, ln in enumerate(lines):
+            m = pat.match(ln.rstrip("\n"))
+            if m and loose(m.group(2)) == want:
+                lines[i] = f"{m.group(1)}{new}\n"
+                changed = True
+        if changed:
+            with open(path, "w", encoding="utf-8") as f:
+                f.writelines(lines)
+            touched.append(fn[:-5])
+    return touched

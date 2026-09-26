@@ -1,0 +1,8 @@
+# Platform: mobilesite
+# Params : live_url_steel_merchants
+# Short smoke test for checking reports / Slack / email (4 steps, no leads).
+# Tags: smoke
+open ${live_url_steel_merchants}
+wait for result page load
+click if visible login_prompt_skip
+verify element rp_carousel_heading is visible

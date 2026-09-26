@@ -40,15 +40,27 @@ class ApiError(RuntimeError):
         self.detail = detail
 
 
+def current_user() -> str:
+    """The signed-in person for this browser, or '' outside a page context."""
+    try:
+        from nicegui import app as _ng
+        return str(_ng.storage.user.get("username", "") or "")
+    except Exception:  # noqa: BLE001 — timers / startup have no user context
+        return ""
+
+
 def _client():
     import httpx
 
     from api.app import app
 
+    user = current_user()
     return httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app),
         base_url="http://api",
         timeout=DEFAULT_TIMEOUT_S,
+        # Who is acting — for "created by / run by" and for role checks.
+        headers={"X-User": user} if user else None,
     )
 
 
@@ -420,3 +432,121 @@ async def restart_server(force: bool = False) -> dict:
     while the process can still send it. The caller then polls /health.
     """
     return await _call("POST", "/system/restart", json={"force": force})
+
+
+# ── Users ────────────────────────────────────────────────────────────────────
+async def login(username: str, password: str) -> dict:
+    return await _call("POST", "/accounts/login", json={"username": username, "password": password})
+
+
+async def setup_needed() -> bool:
+    return bool((await _call("GET", "/accounts/setup")).get("needs_setup"))
+
+
+async def setup_admin(username: str, password: str, name: str = "", email: str = "") -> dict:
+    return await _call("POST", "/accounts/setup", json={"username": username, "password": password,
+                                                     "name": name, "email": email})
+
+
+async def list_users() -> dict:
+    return await _call("GET", "/accounts")
+
+
+async def create_user(username: str, password: str, name: str, email: str, role: str) -> dict:
+    return await _call("POST", "/accounts", json={"username": username, "password": password,
+                                               "name": name, "email": email, "role": role})
+
+
+async def update_user(username: str, **fields) -> dict:
+    return await _call("PUT", f"/accounts/{username}", json=fields)
+
+
+async def delete_user(username: str) -> dict:
+    return await _call("DELETE", f"/accounts/{username}")
+
+
+# ── Test Suites / Test Plans ─────────────────────────────────────────────────
+async def suites(platform: str = "") -> list[dict]:
+    return (await _call("GET", "/testsuites", params={"platform": platform} if platform else None))["suites"]
+
+
+async def suite(suite_id: str) -> dict:
+    return await _call("GET", f"/testsuites/{suite_id}")
+
+
+async def save_suite(name: str, platform: str, test_cases: list[str], description: str = "",
+                     suite_id: str = "") -> dict:
+    body = {"name": name, "platform": platform, "test_cases": test_cases, "description": description}
+    if suite_id:
+        return await _call("PUT", f"/testsuites/{suite_id}", json=body)
+    return await _call("POST", "/testsuites", json=body)
+
+
+async def delete_suite(suite_id: str) -> dict:
+    return await _call("DELETE", f"/testsuites/{suite_id}")
+
+
+async def plans() -> list[dict]:
+    return (await _call("GET", "/testplans"))["plans"]
+
+
+async def plan(plan_id: str) -> dict:
+    return await _call("GET", f"/testplans/{plan_id}")
+
+
+async def save_plan(name: str, suite_ids: list[str], *, description: str = "", execution: dict,
+                    schedule: dict, notify: dict, plan_id: str = "") -> dict:
+    body = {"name": name, "suites": suite_ids, "description": description,
+            "execution": execution, "schedule": schedule, "notify": notify}
+    if plan_id:
+        return await _call("PUT", f"/testplans/{plan_id}", json=body)
+    return await _call("POST", "/testplans", json=body)
+
+
+async def delete_plan(plan_id: str) -> dict:
+    return await _call("DELETE", f"/testplans/{plan_id}")
+
+
+async def run_plan(plan_id: str, run_type: str = "") -> dict:
+    return await _call("POST", f"/testplans/{plan_id}/run",
+                       params={"run_type": run_type} if run_type else None)
+
+
+async def preview_plan(plan_id: str) -> dict:
+    return await _call("GET", f"/testplans/{plan_id}/preview")
+
+
+async def plan_runs(plan_id: str = "", limit: int = 50) -> list[dict]:
+    params = {"limit": limit}
+    if plan_id:
+        params["plan"] = plan_id
+    return (await _call("GET", "/testplans/runs", params=params))["runs"]
+
+
+async def plan_run(run_id: str) -> dict:
+    return await _call("GET", f"/testplans/runs/{run_id}")
+
+
+async def stop_plan_run(run_id: str, now: bool = False) -> dict:
+    return await _call("POST", f"/testplans/runs/{run_id}/stop",
+                       params={"now": "true"} if now else None)
+
+
+async def email_plan_run(run_id: str, to: str = "") -> dict:
+    return await _call("POST", f"/testplans/runs/{run_id}/email", json={"to": to})
+
+
+async def close_plan_run(run_id: str) -> dict:
+    return await _call("POST", f"/testplans/runs/{run_id}/close")
+
+
+async def plans_health() -> dict:
+    return await _call("GET", "/testplans/health")
+
+
+async def renotify_plan_run(run_id: str) -> dict:
+    return await _call("POST", f"/testplans/runs/{run_id}/notify")
+
+
+async def scheduler_status() -> dict:
+    return await _call("GET", "/testplans/scheduler")

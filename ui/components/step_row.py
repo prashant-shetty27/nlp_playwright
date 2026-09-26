@@ -69,7 +69,9 @@ def step_row(index: int, nlp_text: str, *, action: str = "", target: str = "",
              on_toggle_enabled: Callable[[int], None] | None = None,
              on_add: Callable[[int, str], None] | None = None,
              on_drop: Callable[[int, int], None] | None = None,
-             token_queue: list | None = None) -> ui.element:
+             token_queue: list | None = None,
+             group_steps: dict[str, list[str]] | None = None,
+             on_edit_group: Callable[[str], None] | None = None) -> ui.element:
     """
     ``token_queue``: when given, the step's token renderer is appended to it
     instead of being scheduled on its own timer, so the caller can draw a long
@@ -77,15 +79,24 @@ def step_row(index: int, nlp_text: str, *, action: str = "", target: str = "",
     """
     editing = {"on": False}
 
+    # A `call <group>` step is a different kind of row: it stands for a saved
+    # sequence, so it is drawn with its own colour, a badge, and a fold that
+    # shows the steps it expands to (read-only, capped in height so the rows
+    # below it stay in view).
+    group_name = _called_group(nlp_text)
+    group_body = _group_lookup(group_name, group_steps) if group_name else None
+
     row = ui.row().classes("w-full items-center gap-2 px-2 py-1 no-wrap").style(
         f"border-bottom:1px solid {COLORS['border']};"
-        f"background:{COLORS['surface']};"
+        + (f"background:{COLORS['primary']}0F; border-left:4px solid {COLORS['primary']};"
+           if group_name else f"background:{COLORS['surface']};")
         + ("opacity:0.5;" if disabled else "")
     )
     # Drag to reorder. The up/down buttons stay: dragging is quicker for a long
     # move, buttons are surer for a single nudge, and a mis-drop that silently
     # reorders a test is exactly the kind of error nobody notices until a run
     # fails for an unrelated-looking reason.
+    row.props(f'data-step="{index}"')   # lets a report link scroll to this step
     if on_drop:
         row.props(f'draggable="true" data-idx="{index}"')
         row.on("dragstart", lambda e, i=index: ui.run_javascript(
@@ -120,7 +131,12 @@ def step_row(index: int, nlp_text: str, *, action: str = "", target: str = "",
             f"width:1.6rem; text-align:right; color:{COLORS['text_muted']};"
             f"font-family:{TYPOGRAPHY['mono']}; font-size:{TYPOGRAPHY['size_sm']}")
 
-        if action:
+        if group_name:
+            ui.label("step group").style(
+                f"background:{COLORS['primary']}; color:white; border-radius:4px;"
+                f"padding:1px 7px; font-size:{TYPOGRAPHY['size_xs']};"
+                f"font-family:{TYPOGRAPHY['mono']}; white-space:nowrap")
+        elif action:
             colour = action_color(action)
             ui.label(action).style(
                 f"background:{colour}1A; color:{colour}; border-radius:4px;"
@@ -139,7 +155,19 @@ def step_row(index: int, nlp_text: str, *, action: str = "", target: str = "",
                 # ui/components/token_step.py. The pencil below still edits the
                 # whole line; this is for changing one element or one number
                 # without retyping the rest.
-                if on_edit:
+                if group_name:
+                    # Read-only here on purpose: the group's name and steps
+                    # are edited on the Step Groups page (the edit icon on this
+                    # row goes there), so a `call` can never drift from the
+                    # group it points at.
+                    with ui.row().classes("items-center gap-1 no-wrap"):
+                        ui.label("call").style(
+                            f"font-family:{TYPOGRAPHY['mono']}; font-size:{TYPOGRAPHY['size_sm']};"
+                            f"color:{COLORS['text']}")
+                        ui.label(group_name).style(
+                            f"font-family:{TYPOGRAPHY['mono']}; font-size:{TYPOGRAPHY['size_sm']};"
+                            f"font-weight:{TYPOGRAPHY['weight_bold']}; color:{COLORS['primary']}")
+                elif on_edit:
                     from ui.components.token_step import TokenStep
 
                     tok = TokenStep(nlp_text, platform=platform,
@@ -161,6 +189,18 @@ def step_row(index: int, nlp_text: str, *, action: str = "", target: str = "",
                     ui.label(nlp_text).style(
                         f"font-family:{TYPOGRAPHY['mono']}; font-size:{TYPOGRAPHY['size_sm']};"
                         f"color:{COLORS['text']}; word-break:break-all")
+
+        if group_name:
+            n_steps = len(group_body) if group_body is not None else 0
+            ui.label(f"{n_steps} steps" if group_body is not None else "not found").style(
+                f"color:{COLORS['danger'] if group_body is None else COLORS['text_muted']};"
+                f"font-size:{TYPOGRAPHY['size_xs']}; white-space:nowrap")
+            fold = ui.button(icon="expand_more").props("flat dense size=xs") \
+                .tooltip("Show the steps this group runs")
+            if on_edit_group:
+                ui.button(icon="edit_note").props("flat dense size=xs") \
+                    .on("click", lambda g=group_name: on_edit_group(g)) \
+                    .tooltip("Edit this step group (opens Step Groups, comes back here)")
 
         if target:
             tgt = ui.label(target).style(
@@ -206,7 +246,19 @@ def step_row(index: int, nlp_text: str, *, action: str = "", target: str = "",
                                       placeholder="Edit this step",
                                       clearable=False)
                     with ui.row().classes("no-wrap gap-0").style("margin-top:2px"):
-                        ui.button(icon="check", on_click=lambda: editor._submit()) \
+                        def _save_line() -> None:
+                            # An emptied box is not a change to keep: the row
+                            # was left blank and looked deleted. Say so and
+                            # restore the step instead.
+                            if not (editor.input.value or "").strip():
+                                ui.notify("A step cannot be empty — restored the "
+                                          "previous text (use the bin icon to remove a step)",
+                                          type="warning")
+                                cancel()
+                                return
+                            editor._submit()
+
+                        ui.button(icon="check", on_click=_save_line) \
                             .props("flat dense size=sm color=positive") \
                             .tooltip("Save this step (Enter)")
                         ui.button(icon="close", on_click=cancel) \
@@ -234,10 +286,68 @@ def step_row(index: int, nlp_text: str, *, action: str = "", target: str = "",
                     .on("click", lambda i=index: on_add(i, "below")) \
                     .tooltip("Insert a new step BELOW this one")
 
-        if on_edit:
+        if on_edit and not group_name:
             ui.button(icon="edit").props("flat dense size=xs").on("click", start_edit) \
                 .tooltip("Edit this step")
         if on_delete:
             ui.button(icon="delete_outline").props("flat dense size=xs color=negative") \
                 .on("click", lambda: on_delete(index)).tooltip("Remove this step")
+    if group_name:
+        # The expansion lives under the row, not inside it, so the row keeps
+        # its single-line layout; capped height with its own scrollbar so a
+        # 30-step group does not push everything below it off the screen.
+        body = ui.column().classes("w-full gap-0").style(
+            f"background:{COLORS['primary']}08; border-left:4px solid {COLORS['primary']};"
+            f"border-bottom:1px solid {COLORS['border']};"
+            f"max-height:11rem; overflow-y:auto; padding:2px 0 4px 3.4rem;"
+            # flex:none — inside the scrolling step list (a flex column) an
+            # overflow:auto child is allowed to shrink to nothing, and did.
+            f"flex:none; min-height:2rem")
+        body.set_visibility(False)
+        with body:
+            if group_body is None:
+                ui.label(f"No step group called '{group_name}' — check Step Groups.").style(
+                    f"color:{COLORS['danger']}; font-size:{TYPOGRAPHY['size_xs']}; padding:4px 8px")
+            for k, st in enumerate(group_body or [], 1):
+                with ui.row().classes("items-center gap-2 no-wrap").style("padding:2px 8px"):
+                    ui.label(f"{index}.{k}").style(
+                        f"width:2.6rem; text-align:right; color:{COLORS['text_muted']};"
+                        f"font-family:{TYPOGRAPHY['mono']}; font-size:{TYPOGRAPHY['size_xs']}")
+                    ui.label(st).style(
+                        f"font-family:{TYPOGRAPHY['mono']}; font-size:{TYPOGRAPHY['size_xs']};"
+                        f"color:{COLORS['text']}; word-break:break-all")
+
+        def _toggle_fold() -> None:
+            body.set_visibility(not body.visible)
+            fold.props(f"icon={'expand_less' if body.visible else 'expand_more'}")
+
+        fold.on("click", _toggle_fold)
+
     return row
+
+
+def _called_group(text: str) -> str:
+    """The group name in a `call <name>` step, else ''."""
+    import re
+
+    t = (text or "").strip()
+    m = re.match(r"^call\s+(.+?)\s*$", t, re.I)
+    return m.group(1) if m else ""
+
+
+def _group_lookup(name: str, groups: dict[str, list[str]] | None) -> list[str] | None:
+    """Exact name first, then the same forgiving match the runner uses."""
+    import re
+
+    if not groups:
+        return None
+    if name in groups:
+        return groups[name]
+
+    def loose(n: str) -> str:
+        n = re.sub(r"[\s\-\u2013\u2014_]+", "_", (n or "").strip().lower()).strip("_")
+        return re.sub(r"^sg_", "", n)
+
+    want = loose(name)
+    hits = [k for k in groups if loose(k) == want]
+    return groups[hits[0]] if len(hits) == 1 else None

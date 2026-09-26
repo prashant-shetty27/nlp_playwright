@@ -236,7 +236,11 @@ def open_site(page, url: str):
     try:
         page.goto(sanitized_url, wait_until="domcontentloaded", timeout=30000)
         try:
-            page.wait_for_load_state("networkidle", timeout=10000)
+            # Capped at 5 s: ad / tracking beacons keep a Justdial page from ever
+            # going idle, so this used to burn its full 10 s on most opens. The
+            # next step waits for what it actually needs (result page / element).
+            page.wait_for_load_state("networkidle",
+                                     timeout=int(os.getenv("OPEN_IDLE_TIMEOUT_MS", "5000")))
         except Exception:
             pass  # networkidle timeout is non-fatal
     except Exception as e:
@@ -877,12 +881,25 @@ def verify_stored_variable_contains(variable_name, partial_text, ignore_case=Fal
 # ─────────────────────────────────────────────────────────────────────────────
 # WAITS & SCROLLS
 # ─────────────────────────────────────────────────────────────────────────────
+#: Result-page markers for EVERY platform. Only the desktop container was
+#: listed, so on mobilesite this step waited out its full 15 s on every call
+#: (14 calls = 3.5 min per Recommended run) and then passed anyway.
+_RESULT_PAGE_MARKERS = ", ".join([
+    ".result-content-container",           # website
+    "h1[class*='result--h1']",             # mobilesite (Waptouch) results heading
+    "[class*='resultlist--']",             # mobilesite result cards
+    "[class*='resultbox']",                # older desktop / JDMart listings
+])
+
+
 def wait_for_result_page_load(page):
+    started = time.perf_counter()
     try:
-        page.wait_for_selector(".result-content-container", timeout=15000)
-        logger.info("✅ Result page successfully loaded.")
+        page.wait_for_selector(_RESULT_PAGE_MARKERS, state="attached",
+                               timeout=int(os.getenv("RESULT_PAGE_TIMEOUT_MS", "12000")))
+        logger.info("✅ Result page loaded in %.1fs.", time.perf_counter() - started)
     except Exception:
-        logger.warning("⚠️ Results container not detected.")
+        logger.warning("⚠️ Results container not detected after %.0fs.", time.perf_counter() - started)
 
 
 def wait_seconds(page, seconds: float):
@@ -2459,13 +2476,18 @@ def _rp_check_order(items: list[dict], city: str, source: str) -> None:
         rows.append((i, _RP_BUCKETS.index(key) + 1, _RP_LABEL[key], it["name"], it["city"] or "?"))
     logger.info("📊 Recommended products (%s) vs search city '%s':\n%s", source, city,
                 "\n".join(f"   {i:>2}. P{p} [{lbl}]  {n[:50]}  ({c})" for i, p, lbl, n, c in rows))
+    table = "\n".join(
+        f"   {i:>2}. P{p} [{lbl}]  {n[:48]}  ({c})"
+        + (f"  — {items[i - 1].get('company', '')[:28]}" if items[i - 1].get("company") else "")
+        for i, p, lbl, n, c in rows)
     for prev, cur in zip(rows, rows[1:]):
         if cur[1] < prev[1]:
             raise Exception(
                 f"❌ Priority order broken in {source}: #{cur[0]} '{cur[3][:50]}' is "
                 f"P{cur[1]} [{cur[2]}] but comes after #{prev[0]} '{prev[3][:50]}' "
                 f"which is P{prev[1]} [{prev[2]}]. A higher-priority group must be "
-                f"exhausted before a lower one is shown (GJDT-22686).")
+                f"exhausted before a lower one is shown (GJDT-22686).\n"
+                f"What {source} contained at this moment (search city {city}):\n{table}")
     logger.info("✅ %s: %d products follow the priority hierarchy.", source, len(rows))
 
 
@@ -2525,15 +2547,28 @@ def verify_recommended_order_api(variable_name: str, city: str = "", page=None) 
         if not item_city:
             m = re.search(r"/jdmart/([^/]+)/", str(x.get("url", "")))
             item_city = m.group(1).replace("-", " ") if m else ""
-        ds = bool(x.get("image3d")) or bool(x.get("thumb_3d_image")) or _rp_has_video(x)
+        # Digital Showroom = 360° (image3d / thumb_3d_image) OR AI-video /
+        # showroom media (`showcase`, a non-empty list). Service categories
+        # never show a badge on the results page, so this is the only signal.
+        ds = (bool(x.get("image3d")) or bool(x.get("thumb_3d_image"))
+              or bool(x.get("showcase")) or _rp_has_video(x))
+        pm = re.search(r"pid-(\d+)", str(x.get("url", "")))
         items.append({
             "name": str(x.get("display_name1", "")),
             "city": item_city,
             "ds": ds,
             "price": bool(str(x.get("price", "")).strip()),
+            "pid": pm.group(1) if pm else "",
         })
+    # Keyed by PRODUCT ID, not name: two sellers can list the same product
+    # name ("Business Bulk SMS Services" — Delhi with a showroom, Mumbai
+    # without), and a name key let the second overwrite the first.
     _RP_API_DS.clear()
-    _RP_API_DS.update({it["name"].strip().lower(): it["ds"] for it in items if it["name"]})
+    for it in items:
+        if it["pid"]:
+            _RP_API_DS["pid:" + it["pid"]] = it["ds"]
+        key = "nc:" + it["name"].strip().lower() + "|" + (it["city"] or "").strip().lower()
+        _RP_API_DS[key] = _RP_API_DS.get(key, False) or it["ds"]
     _rp_check_order(items, city, f"API ${{{variable_name}}}")
 
 
@@ -2549,15 +2584,90 @@ def verify_recommended_order_page(page, city: str = "") -> None:
     # Same reader as the city-preference check; DS for AI-video products is
     # borrowed from the last verified API response (the page has no badge).
     items = _rp_cards(page)
-    _rp_check_order(items or [], city, "the page carousel")
+    try:
+        _rp_check_order(items or [], city, "the page carousel")
+    except Exception as e:
+        shot = _rp_evidence(page, "order")
+        raise Exception(f"{e}\nAll cards as rendered: {shot}" if shot else str(e)) from None
+
+
+def _rp_evidence(page, tag: str) -> str:
+    """
+    Photograph EVERY card of the carousel, not just the 2–3 in view.
+
+    The carousel scrolls sideways, so the step screenshot never showed the
+    cards a failure was about, and the next page load may show a different
+    set. The cards are copied onto a temporary white sheet as a numbered grid,
+    photographed, and the sheet is removed — the page itself is not touched.
+    """
+    try:
+        import time as _t
+
+        from config import settings
+        handle = page.evaluate_handle("""() => {
+          const car = [...document.querySelectorAll('.carousel_parent_short')]
+            .find(c => /Recommended (Products|Services) For You/i.test(c.textContent || ''));
+          if (!car) return null;
+          document.getElementById('__rp_evidence')?.remove();
+          // A clean copy on a white sheet: the real carousel lives in a
+          // fixed-height box, so re-flowing it in place spilled the cards
+          // over the listings below and made the picture unreadable.
+          const sheet = document.createElement('div');
+          sheet.id = '__rp_evidence';
+          sheet.style.cssText = 'position:fixed;left:0;top:0;z-index:2147483647;background:#fff;'
+            + 'padding:8px;width:' + Math.max(360, window.innerWidth) + 'px;box-sizing:border-box;'
+            + 'font-family:sans-serif';
+          const head = document.createElement('div');
+          head.textContent = (car.querySelector('.carousel_heading')?.textContent || 'Carousel')
+            + '  —  ' + location.pathname.split('/').slice(1, 3).join(' / ')
+            + '  —  ' + new Date().toLocaleString();
+          head.style.cssText = 'font:bold 13px sans-serif;margin:0 0 6px';
+          sheet.appendChild(head);
+          const grid = document.createElement('div');
+          grid.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:6px';
+          [...car.querySelectorAll('a.carousel_view3-parent')].forEach((a, i) => {
+            const c = a.cloneNode(true);
+            c.removeAttribute('href');
+            c.style.cssText = 'position:relative;display:block;width:auto;height:auto;'
+              + 'border:1px solid #ddd;border-radius:6px;overflow:hidden;flex:none';
+            c.querySelectorAll('img').forEach(im => { im.style.maxHeight = '70px'; im.style.width = 'auto'; });
+            const b = document.createElement('div');
+            b.textContent = '#' + (i + 1);
+            b.style.cssText = 'position:absolute;top:3px;left:3px;z-index:9;background:#d32f2f;'
+              + 'color:#fff;font:bold 12px sans-serif;padding:1px 5px;border-radius:4px';
+            c.appendChild(b);
+            grid.appendChild(c);
+          });
+          sheet.appendChild(grid);
+          document.body.appendChild(sheet);
+          return sheet;
+        }""")
+        el = handle.as_element() if handle else None
+        if el is None:
+            return ""
+        path = os.path.join(settings.LOGS_DIR, f"carousel_{tag}_{_t.strftime('%Y%m%d_%H%M%S')}.png")
+        el.screenshot(path=path)
+        page.evaluate("() => document.getElementById('__rp_evidence')?.remove()")
+        logger.info("📸 Carousel evidence (all cards): %s", path)
+        return path
+    except Exception as ex:  # noqa: BLE001 — evidence must never mask the real failure
+        logger.warning("Could not photograph the carousel: %s", ex)
+        return ""
 
 
 def _rp_cards(page) -> list[dict]:
     """The rendered 'Recommended … For You' cards, in carousel order."""
     cards = _rp_cards_raw(page)
     for c in cards:
-        api_ds = _RP_API_DS.get((c.get("name") or "").strip().lower())
-        if api_ds and not c.get("ds"):
+        if c.get("ds"):
+            continue
+        api_ds = None
+        if c.get("pid"):
+            api_ds = _RP_API_DS.get("pid:" + c["pid"])
+        if api_ds is None:
+            api_ds = _RP_API_DS.get("nc:" + (c.get("name") or "").strip().lower()
+                                    + "|" + (c.get("city") or "").strip().lower())
+        if api_ds:
             c["ds"] = True   # AI-video DS: known to the API, no badge on the page
     return cards
 
@@ -2572,8 +2682,10 @@ def _rp_cards_raw(page) -> list[dict]:
         const info = a.querySelector('.carousel_view3-infoDiv');
         const spans = info ? [...info.querySelectorAll('span.carousel_text_wrap')] : [];
         const price = (a.querySelector('.carousel_view3-price') || {}).textContent || '';
+        const pm = (a.getAttribute('href') || '').match(/pid-(\d+)/);
         return { name: spans[0] ? spans[0].textContent.trim() : '',
                  company: spans[1] ? spans[1].textContent.trim() : '',
+                 pid: pm ? pm[1] : '',
                  city: m ? m[1].replace(/-/g, ' ') : '',
                  ds: !!a.querySelector('.carouselview__img3dicn, .carouselview__img3dwrp'),
                  price: /\\d/.test(price) };
@@ -2621,7 +2733,9 @@ def verify_recommended_prefer_city(page, city: str = "") -> None:
             if not _rp_same_city(c["city"], want):
                 seen_outside = seen_outside or (i, c)
             elif seen_outside:
+                shot = _rp_evidence(page, "city")
                 raise Exception(
+                    (f"All cards as rendered: {shot}\n" if shot else "") +
                     f"❌ City preference broken: #{i} '{c['name'][:45]}' ({c['city']}, the "
                     f"search city) comes after #{seen_outside[0]} "
                     f"'{seen_outside[1]['name'][:45]}' ({seen_outside[1]['city']}) in the "

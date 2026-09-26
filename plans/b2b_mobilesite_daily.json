@@ -1,0 +1,46 @@
+{
+  "created_by": "setup",
+  "created_at": "2026-09-25T20:49:53+00:00",
+  "_format": 2,
+  "plan_name": "B2B Mobilesite Daily",
+  "description": "Daily morning regression of the B2B mobilesite suite. Results to #b2b-selenium-reports.",
+  "platform": "mobilesite",
+  "selected_suites": [
+    "suites/b2b_mobilesite_regression.json"
+  ],
+  "execution": {
+    "headless": false,
+    "retry_failed": true,
+    "stop_on_failure": false,
+    "stop_on_first_failure": false
+  },
+  "schedule": {
+    "enabled": true,
+    "frequency": "daily",
+    "time": "11:45",
+    "days": [
+      "mon",
+      "tue",
+      "wed",
+      "thu",
+      "fri"
+    ],
+    "every_hours": 4,
+    "date": "",
+    "timezone": "Asia/Kolkata"
+  },
+  "notify": {
+    "slack": true,
+    "channel": "C0AAP4882H4",
+    "when": "always"
+  },
+  "next_run": "2026-09-27T06:15:00+00:00",
+  "updated_by": "prashantshetty",
+  "updated_at": "2026-09-25T21:03:34+00:00",
+  "last_run": {
+    "id": "PR_20260926_061521_b2b_mobilesite_daily",
+    "status": "failed",
+    "at": "2026-09-26T06:15:21+00:00",
+    "trigger": "schedule"
+  }
+}
