@@ -1,0 +1,46 @@
+{
+  "_comment": "Template. Copy to variables.json (git-ignored) or fill values on the Test Data screen.",
+  "dataset_mappings": {},
+  "global": {
+    "test_mobile": "",
+    "static_otp": "",
+    "username": "",
+    "password": "",
+    "url_school_bag_manufacturers": "",
+    "url_pani_puri_making_machine": "",
+    "url_steel_merchants": "",
+    "url_carpet_wholesalers": "",
+    "url_bulk_sms_services": "",
+    "devx": "",
+    "rp_api_base": "",
+    "live_url_school_bag_manufacturers": "",
+    "live_url_pani_puri_making_machine": "",
+    "live_url_steel_merchants": "",
+    "live_url_carpet_wholesalers": "",
+    "live_url_bulk_sms_services": "",
+    "rp_api_base_live": "",
+    "live_url_steel_merchants_indore": "",
+    "live_url_steel_merchants_mumbai": "",
+    "Prod_Brick_Wholesalers": "",
+    "Prod_Carpet_Wholesalers": "",
+    "Prod_Umbrella_Distributors": "",
+    "Prod_Hercules_Bicycle_Wholesalers": "",
+    "Prod_Jeans_Wholesalers_Pepe_Jeans": "",
+    "prod_Hotel_Equipment_Manufacturers": "",
+    "prod_Screw_Importers": "",
+    "serv_Crane_Services": "",
+    "prod_Cargo_Box_Manufacturers": "",
+    "prod_Bat_Distributors_MRF": ""
+  },
+  "env": {
+    "local": {},
+    "staging": {
+      "base_url": "",
+      "staging2": "",
+      "password_staging2": ""
+    },
+    "cloud": {
+      "base_url": ""
+    }
+  }
+}

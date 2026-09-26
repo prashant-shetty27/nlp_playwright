@@ -1,0 +1,42 @@
+{
+  "_comment": "Test Environments — define base URLs, domain overrides, and auth credentials per environment.",
+  "active": "local",
+  "envs": {
+    "local": {
+      "base_url": "",
+      "domain_override": "",
+      "domain_source": "",
+      "auth_type": "",
+      "username": "",
+      "password": "",
+      "notes": ""
+    },
+    "staging": {
+      "base_url": "https://staging.example.com",
+      "domain_override": "staging.example.com",
+      "domain_source": "www.example.com",
+      "auth_type": "",
+      "username": "",
+      "password": "",
+      "notes": "Staging server — replaces www.example.com with staging.example.com"
+    },
+    "staging_auth": {
+      "base_url": "https://staging2.justdial.com",
+      "domain_override": "staging2.justdial.com",
+      "domain_source": "www.justdial.com",
+      "auth_type": "",
+      "username": "",
+      "password": "",
+      "notes": "Staging with HTTP Basic auth — replaces justdial.com domain"
+    },
+    "production": {
+      "base_url": "https://www.example.com",
+      "domain_override": "",
+      "domain_source": "",
+      "auth_type": "",
+      "username": "",
+      "password": "",
+      "notes": "Production — no domain replacement"
+    }
+  }
+}

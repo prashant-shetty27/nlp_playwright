@@ -39,3 +39,8 @@ data/logs/
 _replica_tmp/
 *.bak
 data/meta/
+
+# Test Data and environment credentials — local only (templates: *.example.json)
+data/common/variables.json
+data/common/variables.json.bak
+config/environments.json
