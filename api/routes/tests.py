@@ -65,6 +65,19 @@ _runs_lock = threading.Lock()
 
 # ── Request models ─────────────────────────────────────────────────────────────
 
+
+_NET_ERRORS = ("ERR_CONNECTION_CLOSED", "ERR_CONNECTION_REFUSED", "ERR_CONNECTION_RESET",
+               "ERR_NAME_NOT_RESOLVED", "ERR_INTERNET_DISCONNECTED", "ERR_CONNECTION_TIMED_OUT",
+               "ERR_TIMED_OUT", "ERR_ADDRESS_UNREACHABLE", "ERR_TUNNEL_CONNECTION_FAILED")
+
+
+def _site_did_not_load(step: str, error: str) -> bool:
+    """An 'open' (or a group that opens a page) that never reached the site. Every
+    later step would only fail against a blank page, so the run stops there even
+    when 'stop at the first failure' is off."""
+    return "Navigation Error" in error and any(n in error for n in _NET_ERRORS)
+
+
 class RunRequest(BaseModel):
     project: str          # e.g. "steps"  (maps to flows/steps.flow)
     headless: bool = True
@@ -354,7 +367,8 @@ def _run_flow_sync_unlocked(run_id: str, flow_path: str, headless: bool,
                 row = report.add_result(step, "failed", reason=str(e).strip(),
                                         duration_ms=entry["duration_ms"])
                 _capture(page, entry, step, row)
-                if stop_on_failure:
+                site_down = _site_did_not_load(step, str(e))
+                if stop_on_failure or site_down:
                     log.append(entry)   # (otherwise appended once, below)
                     # Everything after a failure is running against a page that
                     # is not where the test thinks it is. Those steps do not
@@ -363,12 +377,12 @@ def _run_flow_sync_unlocked(run_id: str, flow_path: str, headless: bool,
                     # half-entered data. Stop, and say what was not reached.
                     logger.error("⛔ Step %d failed — stopping. %d step(s) not run.",
                                  line_num, _remaining(lines, line_num))
+                    why = ("not run — the site did not load, so no later step can be checked"
+                           if site_down else "not run — an earlier step failed")
                     for skipped_no, skipped in _rest(lines, line_num):
                         log.append({"line": skipped_no, "step": skipped,
-                                    "status": "skipped",
-                                    "error": "not run — an earlier step failed"})
-                        report.add_result(skipped, "skipped",
-                                          reason="not run — an earlier step failed")
+                                    "status": "skipped", "error": why})
+                        report.add_result(skipped, "skipped", reason=why)
                         skipped_count += 1
                     _publish()
                     break

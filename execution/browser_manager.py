@@ -4,6 +4,7 @@ Browser lifecycle management — extracted from actions.py.
 Uses TestSession to hold state instead of module-level globals.
 """
 import os
+import sys
 import re
 import json
 import logging
@@ -368,6 +369,18 @@ def open_browser(session: TestSession | None = None, record_video: bool = False,
         raise ValueError(
             f"Unknown browser engine '{engine}'. Valid engines: chromium, firefox, webkit."
         )
+    offscreen = False
+    if engine == "chromium" and headless and sys.platform in ("darwin", "win32") \
+            and os.environ.get("TRUE_HEADLESS", "").lower() not in ("1", "true", "yes"):
+        # Sites' bot protection refuses headless Chromium: justdial.com closes the
+        # connection (ERR_CONNECTION_CLOSED) for every headless run, even the full
+        # Chromium in its new headless mode, while the same run headed loads fine.
+        # On a desktop the run is therefore a normal browser window placed off the
+        # screen — nothing shows, and the site sees an ordinary browser.
+        # TRUE_HEADLESS=1 in .env brings back real headless (e.g. for a CI box).
+        offscreen = True
+        launch_kwargs["headless"] = False
+        launch_kwargs["args"] = ["--window-position=-10000,-10000", "--disable-infobars"]
     try:
         browser = engine_factory.launch(**launch_kwargs)
     except Exception as e:
@@ -381,7 +394,7 @@ def open_browser(session: TestSession | None = None, record_video: bool = False,
             ) from e
         raise
     logger.info("🌐 Engine: %s | %s%s", engine,
-                "headless" if headless else "headed",
+                "headless (off-screen window)" if offscreen else ("headless" if headless else "headed"),
                 f"  (engine chosen by device '{_setting('device_name')}')"
                 if _setting("device_name") and not _setting("browser") else "")
 

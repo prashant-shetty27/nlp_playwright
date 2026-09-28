@@ -199,9 +199,10 @@ def _reachability_hint(host: str) -> str:
     if ip.is_private or shared:
         return (f"'{host}' resolves to {ip}, which is an internal address — it "
                 f"is only routable from inside the corporate network. The name "
-                f"resolved and the connection opened, so this is not the test: "
-                f"check the VPN is connected, then confirm with "
-                f"`curl -I https://{host}/` before running again. ")
+                f"resolved and the connection opened, then the site closed it. "
+                f"Check the VPN is connected; if it is and the page opens in your "
+                f"own browser, the site is refusing the automated browser "
+                f"(try the run with Headless off). ")
     return ""
 
 
