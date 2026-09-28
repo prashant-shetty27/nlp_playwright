@@ -86,6 +86,11 @@ def parse_step(step: str) -> Command:
     _al = re.match(r'^verify\s+alert\s+text\s+"([^"]*)"$', s, re.I)
     if _al:
         return Command(type="verify_alert_text", text=_al.group(1))
+    # type "<text>" into focused field — keys go to whatever has focus (Testsigma
+    # "Enter data … on focused element"); adds to what the field already holds.
+    _foc = re.match(r'^type\s+"(.*)"\s+into\s+(?:the\s+)?focused\s+(?:field|element)$', s, re.I)
+    if _foc:
+        return Command(type="type_focused", text=_foc.group(1))
     _alt = re.match(r'^type\s+"([^"]*)"\s+into\s+alert$', s, re.I)
     if _alt:
         return Command(type="type_into_alert", text=_alt.group(1))
@@ -641,19 +646,19 @@ def parse_step(step: str) -> Command:
     # verify stored <var> equals "<value>"  |  verify stored <var> is "<value>"
     #                                        |  verify stored <var> is equal to "<value>"
     # =============================
-    m = re.match(r'^verify\s+stored\s+(?:variable\s+)?(\S+)\s+(?:equals|is\s+equal\s+to|is)\s+"(.*?)"$', s, re.I)
+    m = re.match(r'^verify\s+stored\s+(?:variable\s+)?(\S+)\s+(?:equals|is\s+equal\s+to|is)\s+"(.*?)"(\s+ignoring\s+case)?$', s, re.I)
     if m:
-        var_name, value = m.groups()
-        return Command(type="verify_var_equals", target=var_name, text=value)
+        var_name, value, ic = m.groups()
+        return Command(type="verify_var_equals", target=var_name, text=value, values=["ignore_case"] if ic else [])
 
     # =============================
     # VERIFY STORED VARIABLE CONTAINS
     # verify <var> contains "<partial>"  |  verify stored <var> contains "<partial>"
     # =============================
-    m = re.match(r'^verify\s+(?:stored\s+)?(?:variable\s+)?(\S+)\s+contains\s+"(.*?)"$', s, re.I)
+    m = re.match(r'^verify\s+(?:stored\s+)?(?:variable\s+)?(\S+)\s+contains\s+"(.*?)"(\s+ignoring\s+case)?$', s, re.I)
     if m:
-        var_name, partial = m.groups()
-        return Command(type="verify_var_contains", target=var_name, text=partial)
+        var_name, partial, ic = m.groups()
+        return Command(type="verify_var_contains", target=var_name, text=partial, values=["ignore_case"] if ic else [])
 
     # =============================
     # ALERT / PERMISSION HANDLING
@@ -667,6 +672,34 @@ def parse_step(step: str) -> Command:
     # =============================
     if re.match(r'^(?:dismiss|skip|close|handle)\s+(?:play\s+)?rating(?:\s+popup)?$', s, re.I):
         return Command(type="dismiss_play_rating")
+
+    # =============================
+    # Plain Testsigma-style steps (used by the Testsigma importer too)
+    # wait until element <loc> is not visible
+    # select option "<value or label>" in <loc>
+    # clear <loc>
+    # run javascript "<one line of JS>"
+    # scroll element <loc> horizontally by <N>
+    # remove "<chars>" from "<text or ${var}>" and store as <var>
+    # =============================
+    m = re.match(r'^wait\s+until\s+(?:element\s+)?(\S+)\s+is\s+not\s+(?:visible|displayed|present)$', s, re.I)
+    if m:
+        return Command(type="wait_until_not_visible", target=m.group(1))
+    m = re.match(r'^select\s+option\s+"(.*?)"\s+in\s+(\S+)$', s, re.I)
+    if m:
+        return Command(type="select_option", text=m.group(1), target=m.group(2))
+    m = re.match(r'^clear\s+(?:text\s+(?:in|of)\s+)?(?!alerts?$)(\S+)$', s, re.I)
+    if m:
+        return Command(type="clear_field", target=m.group(1))
+    m = re.match(r'^run\s+javascript\s+"(.+)"$', s, re.I)
+    if m:
+        return Command(type="run_javascript", text=m.group(1))
+    m = re.match(r'^scroll\s+element\s+(\S+)\s+horizontally\s+by\s+(-?\d+)(?:\s+pixels?)?$', s, re.I)
+    if m:
+        return Command(type="scroll_element_x", target=m.group(1), text=m.group(2))
+    m = re.match(r'^remove\s+"(.*?)"\s+from\s+"(.*?)"\s+and\s+store\s+as\s+(\S+)$', s, re.I)
+    if m:
+        return Command(type="remove_text", values=[m.group(1)], text=m.group(2), variable_name=m.group(3))
 
     # WAIT FOR ELEMENT — explicit visibility wait (no scrolling)
     # wait for element <name>  |  wait until element <name>  |  wait until <name> visible
@@ -689,12 +722,19 @@ def parse_step(step: str) -> Command:
         return Command(type="press_back")
     if re.match(r'^go\s+forward$', s, re.I) or re.match(r'^browser\s+forward$', s, re.I):
         return Command(type="go_forward")
+    # press key Space | press key Tab | press key Escape … (one keyboard key on the page)
+    m = re.match(r'^press\s+key\s+(\w+)$', s, re.I)
+    if m:
+        return Command(type="press_key", text=m.group(1).capitalize())
     if re.match(r'^press\s+home$', s, re.I):
         return Command(type="press_home")
     if re.match(r'^press\s+(?:enter|return|search)$', s, re.I):
         return Command(type="press_enter")
     if re.match(r'^(?:hide|dismiss)\s+keyboard$', s, re.I):
         return Command(type="hide_keyboard")
+    # "Wait until the current page is loaded completely" (Testsigma)
+    if re.match(r'^wait\s+(?:for\s+|until\s+)?(?:the\s+)?(?:current\s+)?page\s+(?:to\s+)?(?:is\s+)?load(?:ed)?(?:\s+completely)?$', s, re.I):
+        return Command(type="wait_page_load")
 
     # =============================
     # SWIPE

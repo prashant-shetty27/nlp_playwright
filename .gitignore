@@ -44,3 +44,4 @@ data/meta/
 data/common/variables.json
 data/common/variables.json.bak
 config/environments.json
+data/testsigma_exports/

@@ -572,3 +572,25 @@ async def renotify_plan_run(run_id: str) -> dict:
 
 async def scheduler_status() -> dict:
     return await _call("GET", "/testplans/scheduler")
+
+
+# ── Testsigma import ─────────────────────────────────────────────────────────
+async def testsigma_probe(path: str) -> dict:
+    return await _call("GET", "/testsigma/probe", params={"path": path})
+
+
+async def testsigma_pull(run_id: int) -> dict:
+    return await _call("POST", "/testsigma/pull", json={"run_id": int(run_id)})
+
+
+async def testsigma_pull_status(run_id: int) -> dict:
+    return await _call("GET", f"/testsigma/pull/{int(run_id)}")
+
+
+async def testsigma_preview(run_id: int, test_case_id: int) -> dict:
+    return await _call("GET", f"/testsigma/runs/{int(run_id)}/cases/{int(test_case_id)}/preview")
+
+
+async def testsigma_import(run_id: int, test_case_ids: list[int], overwrite: bool = False) -> dict:
+    return await _call("POST", f"/testsigma/runs/{int(run_id)}/import",
+                       json={"test_case_ids": test_case_ids, "overwrite": overwrite})

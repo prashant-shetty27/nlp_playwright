@@ -37,6 +37,7 @@ NAV = [
     ("Reports", "/reports", "assessment", None),
     ("Settings", "/settings", "settings", None),
     ("Users", "/users", "group", "admin"),
+    ("Testsigma import", "/testsigma", "cloud_download", "admin"),
 ]
 
 

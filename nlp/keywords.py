@@ -324,6 +324,13 @@ KEYWORD_MAP = {
         "template": "fetch otp for \"{text}\" as {variable}"
     },
 
+    "wait_page_load": {
+        "phrases": ["wait for page to load", "wait until page is loaded", "wait page load"],
+        "action": "wait_page_load",
+        "help": "waits for the page's load event (max 30 s), then up to 3 s for network quiet",
+        "template": "wait for page to load"
+    },
+
     "verify_stored_variable_equals": {
         "phrases": ["verify stored variable equals", "verify stored is equal to", "verify variable equals",
                     "assert variable equals", "compare stored values"],
@@ -630,5 +637,53 @@ KEYWORD_MAP = {
                     "store value as variable"],
         "action": "create_variable",
         "template": "create variable {variable} with value \"{text}\""
+    },
+
+    # --- 11. PLAIN TESTSIGMA-STYLE STEPS ------------------------------------
+    # Generic steps the Testsigma importer maps to. Each does one visible thing.
+    "wait_until_not_visible": {
+        "phrases": ["wait until element is not visible", "wait for popup to close",
+                    "wait until element disappears", "wait for loader to go"],
+        "action": "wait_until_not_visible",
+        "template": "wait until element {locator} is not visible"
+    },
+    "select_option": {
+        "phrases": ["select option", "choose from dropdown", "select dropdown value"],
+        "action": "select_option",
+        "help": "picks by the option's value, else by the label shown",
+        "template": "select option \"{text}\" in {locator}"
+    },
+    "type_focused": {
+        "phrases": ["type into focused field", "enter data on focused element", "keep typing"],
+        "action": "type_focused",
+        "help": "keys go to the field that has focus and add to its text",
+        "template": "type \"{text}\" into focused field"
+    },
+    "press_key": {
+        "phrases": ["press key", "press space", "press tab", "press escape"],
+        "action": "press_key",
+        "help": "one keyboard key: Space, Tab, Escape, Enter, Backspace",
+        "template": "press key {text}"
+    },
+    "clear_field": {
+        "phrases": ["clear field", "clear text", "empty the input"],
+        "action": "clear_field",
+        "template": "clear {locator}"
+    },
+    "run_javascript": {
+        "phrases": ["run javascript", "execute javascript", "execute js"],
+        "action": "run_javascript",
+        "template": "run javascript \"{text}\""
+    },
+    "scroll_element_horizontally": {
+        "phrases": ["scroll element horizontally", "scroll carousel sideways", "scroll tabs right"],
+        "action": "scroll_element_x",
+        "template": "scroll element {locator} horizontally by {number}"
+    },
+    "remove_text": {
+        "phrases": ["remove special character", "remove text from variable", "strip character"],
+        "action": "remove_text",
+        "help": "a copy of the text without the given characters, stored in a new variable",
+        "template": "remove \"{text}\" from \"{text}\" and store as {variable}"
     }
 }

@@ -156,6 +156,7 @@ def _execute_step_from_command(cmd, page):
         # ── Navigation ───────────────────────────────────────────────────────
         "open":                      lambda: svc.open_site(ep, target),
         "refresh":                   lambda: svc.refresh_page(ep),
+        "wait_page_load":            lambda: svc.wait_page_load(ep),
         "browser_permission":        lambda: svc.set_browser_permission(ep, target, text),
         # ── Text matching: page and element ──────────────────────────────────
         "verify_page_contains":      lambda: svc.verify_page_contains(ep, text),
@@ -218,9 +219,20 @@ def _execute_step_from_command(cmd, page):
         "verify_element_exact":      lambda: svc.verify_element_exact_text(ep, target, text),
         "verify_element_contains":   lambda: svc.verify_element_contains_text(ep, target, text),
         # ── Verification — Variables ─────────────────────────────────────────
-        "verify_var_contains":       lambda: svc.verify_stored_variable_contains(target, text),
+        "verify_var_contains":       lambda: svc.verify_stored_variable_contains(
+                                         target, text, ignore_case="ignore_case" in (cmd.values or [])),
         "verify_var_not_equals":     lambda: svc.verify_stored_variable_not_equals(target, text),
-        "verify_var_equals":         lambda: svc.verify_stored_variable_equals(target, text),
+        "verify_var_equals":         lambda: svc.verify_stored_variable_equals(
+                                         target, text, ignore_case="ignore_case" in (cmd.values or [])),
+        # ── Plain Testsigma-style steps ──────────────────────────────────────
+        "wait_until_not_visible":    lambda: svc.wait_until_element_not_visible(ep, target),
+        "select_option":             lambda: svc.select_option(ep, target, text),
+        "type_focused":              lambda: svc.type_into_focused(ep, text),
+        "press_key":                 lambda: ep.keyboard.press(cmd.text),
+        "clear_field":               lambda: svc.clear_field(ep, target),
+        "run_javascript":            lambda: svc.run_javascript(ep, cmd.text),
+        "scroll_element_x":          lambda: svc.scroll_element_horizontally(ep, target, text),
+        "remove_text":               lambda: svc.remove_text((cmd.values or [""])[0], text, cmd.variable_name),
         # ── Visibility / condition-based wait / multi-input OTP ───────────────
         "verify_element_visible":    lambda: svc.verify_element_visible(ep, target),
         "verify_element_not_exists": lambda: svc.verify_element_not_exists(ep, target),

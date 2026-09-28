@@ -91,6 +91,14 @@ async def users_page() -> None:
     await render()
 
 
+@ui.page("/testsigma")
+async def testsigma_page() -> None:
+    if not _page_shell():
+        return
+    from ui.pages.testsigma.index import render
+    await render()
+
+
 @ui.page("/suites")
 async def suites_page() -> None:
     if not _page_shell():

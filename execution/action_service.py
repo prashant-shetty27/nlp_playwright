@@ -983,6 +983,18 @@ def wait_seconds(page, seconds: float):
     page.wait_for_timeout(float(seconds) * 1000)
 
 
+def wait_page_load(page):
+    """Wait until the page has finished loading (the load event), then briefly for
+    network quiet — Testsigma's "Wait until the current page is loaded completely"."""
+    started = time.perf_counter()
+    page.wait_for_load_state("load", timeout=30000)
+    try:
+        page.wait_for_load_state("networkidle", timeout=3000)
+    except Exception:  # noqa: BLE001 — pages with trackers never go idle; loaded is enough
+        pass
+    logger.info("✅ Page loaded in %.1fs", time.perf_counter() - started)
+
+
 def refresh_page(page):
     page.reload(wait_until="load")
 
@@ -2469,6 +2481,67 @@ def wait_until_element_visible(page, locator_name, timeout_ms: int | None = None
             f"'{locator_name}' ({selector}) did not become visible within {timeout}ms"
         ) from e
     logger.info("✅ Element '%s' became visible.", locator_name)
+
+
+def wait_until_element_not_visible(page, locator_name, timeout_ms: int | None = None):
+    """Wait until the element is gone or hidden (a popup closing, a loader ending)."""
+    selector = _resolve_locator_or_raise(locator_name, page)
+    timeout = int(timeout_ms or settings.ACTION_TIMEOUT_MS)
+    logger.info("⏳ Waiting up to %dms for '%s' to disappear", timeout, locator_name)
+    try:
+        page.locator(selector).first.wait_for(state="hidden", timeout=timeout)
+    except PlaywrightTimeoutError as e:
+        raise Exception(f"'{locator_name}' ({selector}) was still visible after {timeout}ms") from e
+    logger.info("✅ Element '%s' is not visible.", locator_name)
+
+
+def select_option(page, locator_name, option):
+    """Pick an option in a <select> by its value, falling back to its visible label."""
+    loc = _get_healed_element_locator(page, locator_name)
+    option = str(option)
+    by_value = loc.evaluate("(el, v) => [...(el.options || [])].some(o => o.value === v)", option)
+    if by_value:
+        loc.select_option(value=option, timeout=5000)
+    else:                                   # not a value — the label people see
+        loc.select_option(label=option, timeout=5000)
+    logger.info("✅ Selected '%s' in '%s'", option, locator_name)
+
+
+def type_into_focused(page, text):
+    """Type into whatever has focus, key by key — adds to the field's current text."""
+    page.keyboard.type(str(text), delay=30)
+    logger.info("⌨️ Typed %d characters into the focused field", len(str(text)))
+
+
+def clear_field(page, locator_name):
+    """Empty an input / textarea."""
+    loc = _get_healed_element_locator(page, locator_name)
+    loc.fill("", timeout=5000)
+    logger.info("🧹 Cleared '%s'", locator_name)
+
+
+def run_javascript(page, script):
+    """Run a line of JavaScript in the page — the Testsigma 'Execute javascript' step."""
+    logger.info("🧩 Running JavaScript: %s", str(script)[:120])
+    page.evaluate(f"() => {{ {script} }}")
+
+
+def scroll_element_horizontally(page, locator_name, pixels):
+    """Scroll a horizontal carousel / tab strip sideways by N pixels."""
+    loc = _get_healed_element_locator(page, locator_name)
+    px = int(float(str(pixels).strip()))
+    # The strip that scrolls is the element itself or its nearest scrollable parent.
+    loc.evaluate("(el, px) => { let b = el; while (b && b.scrollWidth <= b.clientWidth) b = b.parentElement;"
+                 " (b || el).scrollBy(px, 0); }", px)
+    logger.info("↔️ Scrolled '%s' horizontally by %dpx", locator_name, px)
+
+
+def remove_text(chars, source, variable_name):
+    """`remove "&" from "${var}" and store as <var>` — a copy without those characters."""
+    text = resolve_variables(str(source))
+    out = " ".join(text.replace(str(chars), " ").split()) if str(chars).strip() else text
+    RUNTIME_VARIABLES[variable_name] = out
+    logger.info("💾 %r without %r -> ${%s} = %r", text[:60], chars, variable_name, out[:60])
 
 
 def enter_otp(page, otp_value, locator_name):
