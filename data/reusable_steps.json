@@ -62,5 +62,51 @@
     "created_at": "2026-09-25T17:00:55.924395+00:00",
     "step_count": 4,
     "platform": "mobilesite"
+  },
+  "Live_Touch_Chrome_Navigate_to_Homepage_setup_Popup": {
+    "steps": [
+      "open https://www.justdial.com/",
+      "wait 5 seconds",
+      "scroll to touch_login_popup_may_be_later",
+      "click touch_login_popup_may_be_later",
+      "call Location_Popup",
+      "wait for page to load"
+    ],
+    "created_at": "2026-09-28T12:23:25.632225+00:00",
+    "step_count": 6,
+    "platform": "mobilesite"
+  },
+  "PS_Touch_Location_Popup": {
+    "steps": [
+      "open https://www.justdial.com/",
+      "click consent_button",
+      "click consent_text"
+    ],
+    "created_at": "2026-09-28T12:23:25.031201+00:00",
+    "step_count": 3,
+    "platform": "mobilesite"
+  },
+  "SG_Ask_for_Price_Non_Login_to_Login_Hindi": {
+    "steps": [
+      "verify element nct_login_ask_for_price is visible",
+      "verify element prp_open_rfq_login_pop_jd_logo is visible",
+      "verify text \"सहज अनुभव के लिए लॉगिन करें\" on page",
+      "click text_41fb82",
+      "click text_8d5ae1",
+      "type \"9987996046\" into prp_login_mobile"
+    ],
+    "created_at": "2026-09-28T12:23:25.039837+00:00",
+    "step_count": 6,
+    "platform": "mobilesite"
+  },
+  "Location_Popup": {
+    "steps": [
+      "allow browser permission geolocation",
+      "click consent_button",
+      "click consent_text"
+    ],
+    "created_at": "2026-09-28T12:23:25.640783+00:00",
+    "step_count": 3,
+    "platform": "mobilesite"
   }
 }

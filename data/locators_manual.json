@@ -619,5 +619,31 @@
       "custom_xpath": "(//div[contains(@class,'carousel_parent_short')][.//span[contains(@class,'carousel_heading')][contains(normalize-space(),'Recommended ') and contains(normalize-space(),'For You')]]//a[contains(@class,'carousel_view3-parent')])[3]//div[contains(@class,'carousel_view3-infoDiv')]/span[1]",
       "_note": "name on the 3rd Recommended Products card (plain page-vs-API check)"
     }
+  },
+  "ts_nct_ask_for_price": {
+    "touch_login_popup_may_be_later": "//span[contains(text(),'Maybe Later')]",
+    "nct_ask_for_price": "(//span[contains(text(),'Ask for Price')])[1]",
+    "nct_login_ask_for_price": "//div[contains(@class,'newlogin lgnpopup')]",
+    "prp_open_rfq_login_pop_jd_logo": "//span[contains(@class,'loginjdlogo')]",
+    "nct_login_text_ask_for_price": "(//span[contains(text(),'Login for a seamless experience')])[1]",
+    "prp_login_mobile": "//input[@type='tel']",
+    "nct_login_pop_continue_button": "//*[contains(normalize-space(),'NCT Login Pop Continue button')]",
+    "nct_login_otp_field": "//input[@id='0']",
+    "nct_ask_for_price_acknowledgement_toast_msg": "//*[contains(text(),'Dear')]",
+    "touch_signin_home_page": "//span[@class='loginusrimg']",
+    "touch_home_english_tab": "//span[contains(text(),'English')]",
+    "touch_home_hindi_langauge": "(//input[@id='hi']/following::i)[1]",
+    "text_8d5ae1": "//*[normalize-space()='कीमत पूछें']",
+    "text_41fb82": "//*[normalize-space()='शायद बाद में']",
+    "allow_text": "//*[normalize-space()='Allow']"
+  },
+  "ts_nct_recommended_open_rfq_all_logics": {
+    "recommeded_product_carousel_img": "//div[@class=\"carousel_scroll\"]",
+    "nct_recommended_products_carousel_section": "//div[@class='carousel_scroll']",
+    "nct_open_rfq_section": "//div[@class='rorfq__cnt']",
+    "nct_people_also_searched_for_section": "//div[contains(@class,'carousel_parent_border')]",
+    "nct_bd7_banner": "//div[@class='bd7__cnt']",
+    "nct_result_card_6th": "(//div[@class='resultlist__dtacell'])[6]",
+    "nct_recommended_product_view_all": "//span[contains(@class,'carousel_view-all-text')]"
   }
 }

@@ -1,0 +1,43 @@
+# Platform: mobilesite
+# Imported from Testsigma: NCT - Recommended & Open RFQ All Logics (test case 4008, run 115613, last result SUCCESS)
+# Tags: regression
+# OFF steps: every step that would send a REAL lead / enquiry / OTP is switched off,
+#   plus the checks that only pass after it. Switch them on only when a lead is wanted.
+
+call Live_Touch_Chrome_Navigate_to_Homepage_setup_Popup
+open https://www.justdial.com/Mumbai/Pin-Wholesalers-in-Paras-Nagar-Kandivali-West/nct-10367185?stype=category_list&ismap=&term=pin%2520wholesalers&frt=1&searchLocUpdate=0&jdxflag=&ll=searchbox&srcterm=Pin%20Wholesalers&trkid=13290779-mumbai-fcat-cate
+wait 3 seconds
+scroll down 1200
+wait 1 seconds
+wait until element recommeded_product_carousel_img is visible
+verify element nct_recommended_products_carousel_section is visible
+verify element nct_open_rfq_section is visible
+open https://www.justdial.com/Kolkata/Wire-Wholesalers/nct-10541446?trkid=208031-kolkata&term=wire%20wholesalers&cbflg=1
+wait 3 seconds
+scroll down 1200
+wait 1 seconds
+wait until element recommeded_product_carousel_img is visible
+verify element nct_people_also_searched_for_section is visible
+verify element nct_open_rfq_section is visible
+open https://www.justdial.com/Mumbai/CCTV-Dealers-CP-Plus-in-Ayojan-Nagar/nct-10951547?fl=undefined&ismap=undefined&subpage=&searchCase=&term=cctv%2520&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=3&stype=category_list&srcterm=CCTV%20Dealers-CP%20Plus&trkid=14027-mumbai
+wait 3 seconds
+scroll down 200
+wait 1 seconds
+# OFF: verify element nct_recommended_products_carousel_section is visible
+verify element nct_bd7_banner is visible
+scroll to nct_result_card_6th
+wait 1 seconds
+scroll down 300
+scroll down 300
+wait 1 seconds
+verify element nct_open_rfq_section is not visible
+open https://www.justdial.com/Mumbai/Aluminium-Dealers-Jindal-in-Paras-Nagar-Kandivali-West/nct-13058691?fl=undefined&ismap=undefined&subpage=&searchCase=&term=Jindal%2520Aluminium%2520Profile%2520Dealers&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Aluminium%20Dealers-Jindal&trkid=281948997-mumbai
+wait 3 seconds
+scroll down 600
+scroll down 300
+# OFF: verify element nct_recommended_product_view_all is not visible
+scroll down 600
+scroll down 600
+verify element nct_bd7_banner is not visible
+scroll down 1200
+verify element nct_open_rfq_section is visible
