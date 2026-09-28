@@ -237,7 +237,8 @@ def _execute_step_from_command(cmd, page):
         "verify_element_visible":    lambda: svc.verify_element_visible(ep, target),
         "verify_element_not_exists": lambda: svc.verify_element_not_exists(ep, target),
         "verify_element_not_visible": lambda: svc.verify_element_not_visible(ep, target),
-        "wait_until_visible":        lambda: svc.wait_until_element_visible(ep, target),
+        "wait_until_visible":        lambda: svc.wait_until_element_visible(
+                                         ep, target, (cmd.wait * 1000) if cmd.wait else None),
         "wait_until_text_not":       lambda: svc.wait_until_element_text_not(ep, target, text),
         "enter_otp":                 lambda: svc.enter_otp(ep, text, target),
         "fetch_otp":                 lambda: svc.fetch_otp_from_portal(

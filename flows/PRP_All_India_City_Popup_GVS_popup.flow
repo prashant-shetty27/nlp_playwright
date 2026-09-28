@@ -1,0 +1,29 @@
+# Platform: mobilesite
+# Imported from Testsigma: PRP All India City Popup & GVS popup (test case 1325, run 115613, last result SUCCESS)
+# Tags: regression
+# OFF steps: every step that would send a REAL lead / enquiry / OTP is switched off,
+#   plus the checks that only pass after it. Switch them on only when a lead is wanted.
+
+call PS_Touch_Location_Popup
+# OFF: call Live_Touch_Chrome_Navigate_to_Homepage_setup_Popup
+open https://www.justdial.com/india/Brick?ismap=&srcterm=Brick
+wait for page to load
+delete all cookies
+refresh page
+wait 3 seconds
+call PS_consent_popup
+scroll to prp_bd7_banner_section
+verify element prp_bd7_banner_section is visible
+# OFF: scroll until element prp_all_india_city_banner_section visible, scroll by 600 pixels, scroll count 15, scroll wait 1
+# OFF: scroll until element prp_all_india_explore_related_catg_carousel visible, scroll by 600 pixels, scroll count 15, scroll wait 1
+# OFF: click if visible b2b_prp_all_india_location_pop_cross
+# OFF: scroll until element prp_all_india_confused_which_text visible, scroll by 600 pixels, scroll count 15, scroll wait 1
+# OFF: wait 2 seconds
+# OFF: click if visible b2b_prp_all_india_location_pop_cross
+# OFF: scroll until element prp_all_india_people_also_search_carousel visible, scroll by 600 pixels, scroll count 15, scroll wait 1
+wait 1 seconds
+# Testsigma scrolled until the GVS popup opened (it opens when the page is scrolled):
+scroll down 1200
+wait until element b2b_prp_gvs_popup is visible up to 30 seconds
+wait 3 seconds
+run javascript "document.querySelector('[class*="skipbtn"]').click();"

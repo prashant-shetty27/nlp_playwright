@@ -467,9 +467,13 @@ def parse_step(step: str) -> Command:
     # wait until element <locator> is visible
     # Must precede the generic `wait for|until <target>` rule below.
     # =============================
-    m = re.match(r'^wait\s+until\s+element\s+(\S+)\s+is\s+visible$', s, re.I)
+    # … is visible up to 40 seconds   (longer than the default action timeout —
+    # a popup that the site opens on a timer, as Testsigma's own 30 s wait allows)
+    m = re.match(r'^wait\s+until\s+element\s+(\S+)\s+is\s+visible'
+                 r'(?:\s+(?:up\s+to|within|for)\s+(\d+)\s+seconds?)?$', s, re.I)
     if m:
-        return Command(type="wait_until_visible", target=m.group(1))
+        return Command(type="wait_until_visible", target=m.group(1),
+                       wait=int(m.group(2)) if m.group(2) else None)
 
     # =============================
     # ENTER OTP — distribute an N-digit code across N ordered inputs

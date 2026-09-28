@@ -1,0 +1,40 @@
+# Platform: mobilesite
+# Imported from Testsigma: PRP Filter Combinations (test case 3650, run 115613, last result SUCCESS)
+# Tags: regression
+# OFF steps: every step that would send a REAL lead / enquiry / OTP is switched off,
+#   plus the checks that only pass after it. Switch them on only when a lead is wanted.
+
+call Live_Touch_Chrome_Navigate_to_Homepage_setup_Popup
+create variable searchTerm1 with value "Chilli"
+create variable searchTerm2 with value "Onions"
+open https://www.justdial.com/jdmart
+wait until element home_top_all_categories_section is visible
+click b2b_search_field
+wait 2 seconds
+type "${searchTerm1}" into b2b_search_field
+call SG_B2B_AS_1st_Selection
+call SG_PRP_Brand_Filter
+call SG_Seller_Type_Filter_Apply_verify
+open https://www.justdial.com/jdmart/
+call SG_Autosuggest_Search_Home_to_PRP
+type "${searchTerm2}" into focused field
+call SG_B2B_AS_1st_Selection
+wait 2 seconds
+call SG_PRP_Brand_Filter
+call SG_Seller_Type_Filter_Apply_verify
+open https://www.justdial.com/jdmart/
+call SG_Autosuggest_Search_Home_to_PRP
+type "${searchTerm1}" into focused field
+call SG_B2B_AS_1st_Selection
+wait 3 seconds
+call SG_Filter_Div_Brand_Filter_Apply
+open https://www.justdial.com/Mumbai/Chilli-Wholesalers-in-Link-Road-Malad-West/nct-10097187?fl=undefined&ismap=undefined&subpage=&searchCase=&term=chilli%2520whole&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Chilli%20Wholesalers&trkid=192771-mumbai
+wait 3 seconds
+call SG_NCT_Scroll_to_Recommended_Produt_section_click
+call SG_PRP_Brand_Filter
+# OFF: call SG_Seller_Type_Filter_Apply_verify
+open https://www.justdial.com/Mumbai/Chilli-Wholesalers-in-Link-Road-Malad-West/nct-10097187?fl=undefined&ismap=undefined&subpage=&searchCase=&term=chilli%2520whole&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Chilli%20Wholesalers&trkid=192771-mumbai
+wait 3 seconds
+call SG_NCT_Scroll_to_Recommended_Produt_section_click
+call SG_Filter_Div_Brand_Filter_Apply
+call SG_Seller_Type_Filter_Apply_verify

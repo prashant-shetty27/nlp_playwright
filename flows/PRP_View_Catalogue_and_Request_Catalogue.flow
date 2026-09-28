@@ -1,0 +1,21 @@
+# Platform: mobilesite
+# Imported from Testsigma: PRP View Catalogue and Request Catalogue (test case 2136, run 115613, last result FAILURE)
+# Tags: regression
+# OFF steps: every step that would send a REAL lead / enquiry / OTP is switched off,
+#   plus the checks that only pass after it. Switch them on only when a lead is wanted.
+
+call PS_Touch_Location_Popup
+open https://www.justdial.com/jdmart/Mumbai/CCTV/jdm-1016209-ent-2-13630321?fl=undefined&ismap=undefined&subpage=&searchCase=&term=cctv&searchLocUpdate=0&stype=category_list&srcterm=CCTV
+wait 3 seconds
+wait for page to load
+call SG_PRP_Request_Catalogue_Non_Login_to_Login_Flow
+# OFF: call SG_PRP_Request_Catalogue_PDP_Seller_Brochure_Not_p
+# OFF: call SG_View_Catalogue_PDP_Seller_Brochure_Verification
+delete all cookies
+open https://www.justdial.com/jdmart/Mumbai/CCTV/jdm-1016209-ent-2-13630321?fl=undefined&ismap=undefined&subpage=&searchCase=&term=cctv&searchLocUpdate=0&stype=category_list&srcterm=CCTV&isLogin=1
+wait 3 seconds
+call PS_consent_popup
+# OFF: refresh page
+# OFF: wait 3 seconds
+call SG_PRP_View_Catalogue_Non_Login_to_Login_Flow
+delete all cookies

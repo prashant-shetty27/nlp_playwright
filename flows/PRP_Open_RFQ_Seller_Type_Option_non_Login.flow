@@ -1,0 +1,34 @@
+# Platform: mobilesite
+# Imported from Testsigma: PRP Open RFQ Seller Type Option (non Login) (test case 2134, run 115613, last result SUCCESS)
+# Tags: regression
+# OFF steps: every step that would send a REAL lead / enquiry / OTP is switched off,
+#   plus the checks that only pass after it. Switch them on only when a lead is wanted.
+
+open https://www.justdial.com/jdmart/Mumbai/CCTV/jdm-1016209-ent-2-13630321?fl=undefined&ismap=undefined&subpage=&searchCase=&term=cctv&searchLocUpdate=0&stype=category_list&srcterm=CCTV
+wait 3 seconds
+delete all cookies
+open https://www.justdial.com/jdmart/Mumbai/CCTV/jdm-1016209-ent-2-13630321?fl=undefined&ismap=undefined&subpage=&searchCase=&term=cctv&searchLocUpdate=0&stype=category_list&srcterm=CCTV
+wait 3 seconds
+scroll down 600
+wait 1 seconds
+scroll to prp_open_rfq_seller_type_section
+verify element prp_open_rfq_seller_type_section is visible
+verify element prp_open_rfq_seller_type_section contains "All"
+verify element prp_open_rfq_seller_type_section contains "Wholesalers"
+verify element prp_open_rfq_seller_type_section contains "Importers"
+verify element prp_open_rfq_seller_type_section contains "Distributors"
+verify element prp_open_rfq_seller_type_section contains "Manufacturers"
+verify element prp_open_rfq_seller_type_section contains "Exporters"
+verify element prp_open_rfq_seller_type_section contains "Dealers"
+click prp_open_rfq_seller_type_wholesaler
+# OFF: click prp_open_rfq_seller_type_submit
+wait 2 seconds
+# OFF: call SG_PRP_Request_View_Catalogue_Non_Login_to_Login
+# OFF: wait until element prp_open_rfq_seller_type_toast_msg is visible
+# OFF: verify element prp_open_rfq_seller_type_toast_msg is visible
+wait 1 seconds
+# OFF: scroll to prp_open_rqq_seller_type_post_login_mobile
+# OFF: store value of prp_open_rqq_seller_type_post_login_mobile as ts_field_value
+# OFF: verify stored ts_field_value equals "9987996046"
+# OFF: verify element prp_bd5_banner_img is visible
+delete all cookies

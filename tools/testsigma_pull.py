@@ -229,10 +229,15 @@ def load_bundle(run_id: str, test_case_id: int) -> dict:
 _LEAD = re.compile(
     r"submit|send\s*enquiry|send\s*inquiry|get\s*best\s*price.*(submit|send|continue)|get\s*quotes?|"
     r"request\s*(catalogue|catalog|callback|call\s*back|quote|more\s*photos|sample)|buy\s*a?\s*sample|"
-    r"\botp\b|verify\s*otp|post\s*(your\s*)?requirement|place\s*order|book\s*now|"
+    r"\botp\b|verify\s*otp|login\s*with\s*otp|loginwithotp|get\s*best\s*deal|"
+    r"post\s*(your\s*)?requirement|place\s*order|book\s*now|"
     r"(login|lead|enquiry|rfq|gbp|price).*(continue|proceed)|(continue|proceed).*(login|lead|enquiry|rfq)",
     re.I)
 #: After a lead is sent, the thank-you checks cannot pass with the send switched off.
+#: A check that says details / an enquiry WENT to sellers: the click before it sent
+#: a real lead even though its own wording did not say so.
+_SENT = re.compile(r"(details|enquiry|requirement|request)\s+(have|has)\s+been\s+sent|sent\s+to\s+(the\s+)?"
+                   r"(relevant\s+)?(sellers?|suppliers?|vendors?)", re.I)
 _LEAD_AFTER = re.compile(r"acknowledg|thank\s*you|success(fully)?\s*(sent|submitted)|dear\s+\w+|toast", re.I)
 _SCROLLABLE = re.compile(r"\s+and\s+with\s+scrollable\s+(true|false)\s*$", re.I)
 
@@ -333,11 +338,16 @@ class _Ctx:
         definition = (e or {}).get("definition")
         kind = ((e or {}).get("locatorType") or "xpath").lower()
         if definition and kind != "xpath":
-            definition = {"id": f"//*[@id='{definition}']", "name": f"//*[@name='{definition}']",
-                          "class_name": f"//*[contains(@class,'{definition}')]",
-                          "css_selector": definition, "link_text": f"//a[normalize-space()='{definition}']",
-                          "partial_link_text": f"//a[contains(normalize-space(),'{definition}')]",
-                          "tag_name": f"//{definition}"}.get(kind, definition)
+            d = str(definition)
+            jsq = re.match(r"""^document\.querySelector\((['"])(.*)\1\)\s*;?$""", d.strip())
+            definition = {"id": f"//*[@id='{d}']", "id_value": f"//*[@id='{d}']",
+                          "name": f"//*[@name='{d}']", "name_value": f"//*[@name='{d}']",
+                          "class_name": f"//*[contains(@class,'{d}')]",
+                          "css_selector": d, "csspath": d,
+                          "js_path": jsq.group(2) if jsq else d,
+                          "link_text": f"//a[normalize-space()='{d}']",
+                          "partial_link_text": f"//a[contains(normalize-space(),'{d}')]",
+                          "tag_name": f"//{d}"}.get(kind, d)
         android_attr = bool(definition) and re.search(r"@(?:text|resource-id|content-desc)\b", str(definition))
         if android_attr:
             # An Android-app locator (@text='Consent'): the element is a phone dialog,
@@ -426,6 +436,8 @@ _MAP = [
      lambda m, c: [f"verify element {c.loc(m['el'])} is visible"]),
     (r"^verify that the current page does not display (?:an )?element\s+(?P<el>.+)$",
      lambda m, c: [f"verify element {c.loc(m['el'])} is not visible"]),
+    (r"^verify that the element\s+(?P<el>.+?)\s+displays text contains\s+(?P<t>.+)$",
+     lambda m, c: [f'verify element {c.loc(m["el"])} contains "{c.value("testData", m["t"])}"']),
     (r"^verify that the element\s+(?P<el>.+?)\s+(?:displays|contains) text\s+(?P<t>.+)$",
      lambda m, c: [f"verify element {c.loc(m['el'])} contains {_q(m['t'])}"]),
     (r"^verify that the element\s+(?P<el>.+?)\s+is (?:displayed|visible|present)$",
@@ -494,6 +506,7 @@ def _verify_if(m, c: "_Ctx"):
 
 
 _COMPILED = [(re.compile(p, re.I), h) for p, h in _MAP]
+_JS_TAP = re.compile(r"^click on the element\s+(?P<el>.+?)\s+using javascript executor$", re.I)
 _TAP = re.compile(r"^(?:tap|click) on\s+(?P<el>.+?)(?:\s+if (?:visible|present|displayed))?$", re.I)
 _ENTER_FOCUSED = re.compile(r"^enter data\s+(?P<v>.+?)\s+on (?:the )?focused element$", re.I)
 _WHILE = re.compile(r"^while (?:the )?element\s+(?P<el>.+?)\s+is not (?:visible|displayed|present)(?: on the page)?$", re.I)
@@ -502,7 +515,9 @@ _IF_VISIBLE = re.compile(r"^(?:if )?(?:the )?element\s+(?P<el>.+?)\s+is (?:visib
 
 def _one(action: str, ctx: _Ctx) -> list[str] | None:
     # "…and With Scrollable TRUE/FALSE" is a Testsigma mobile option, not part of the check.
-    a = _SCROLLABLE.sub("", " ".join(str(action or "").split()))
+    raw = " ".join(str(action or "").split())
+    scroll_first = bool(re.search(r"with\s+scrollable\s+true\s*$", raw, re.I))
+    a = _SCROLLABLE.sub("", raw)
     if ctx.native and not re.match(r"^switch to", a, re.I):
         # A tap on an Android dialog (e.g. "Allow" location for the Chrome APP).
         # That is the phone's permission for Chrome, not a grant to the site, and
@@ -513,6 +528,13 @@ def _one(action: str, ctx: _Ctx) -> list[str] | None:
         m = rx.match(a)
         if m:
             out = h(m, ctx)
+            if scroll_first and out:
+                # "…With Scrollable TRUE": Testsigma scrolls the element into view
+                # before checking it — pages that load or pop up on scroll need that.
+                t = re.match(r"^(?:verify element|store text of|store value of|store attribute \S+ of) (\S+)(?=\s)",
+                             out[0])
+                if t and not out[0].endswith("is not visible"):
+                    out = [f"scroll to {t.group(1)}"] + out
             # A dialog tap makes the next "tap on the element with text …" optional too.
             ctx.after_dialog = bool(out) and any(
                 ln.startswith("click if visible ") and ln.split()[-1] in ctx.optional_names for ln in out)
@@ -557,8 +579,14 @@ def convert(bundle: dict, *, platform: str = "mobilesite") -> dict:
     off: list[str] = []
     group_src = {int(k): v for k, v in (bundle.get("groups") or {}).items()}
 
+    lead_groups: set[str] = set()
+
     def lines_for(steps: list, where: str) -> list[str]:
-        return emit(_normalise_steps(steps), where, {"lead_sent": False})
+        st = {"lead_sent": False}
+        lines = emit(_normalise_steps(steps), where, st)
+        if st.get("had_lead"):
+            lead_groups.add(slug(where.replace("step group ", "", 1))[:50].rstrip("_"))
+        return lines
 
     def todo_tree(node: dict, where: str, out: list[str], depth: int = 0) -> None:
         """An unconverted step and everything inside it, written as TODO comments — nothing hidden."""
@@ -594,20 +622,28 @@ def convert(bundle: dict, *, platform: str = "mobilesite") -> dict:
                     groups_out[gname] = lines_for(g.get("steps") or [], f"step group {action}")
                     ctx.cur = s
                 emitted = [f"call {gname}"]
+                if gname in lead_groups:
+                    # The group sends (a switched-off) lead: what follows the call
+                    # in this test depends on it, exactly as if the steps were inline.
+                    st["after_group_lead"] = True
             elif _WHILE.match(action):
                 el = _WHILE.match(action)["el"]
                 body = [" ".join(str(c.get("action") or "").split()).lower() for c in s["_children"]]
                 scrolling = [b.startswith(("swipe", "scroll", "wait", "pagescroll")) or
                              b.startswith("store numberfunctions") for b in body]
+                # Taps inside a scroll loop close whatever pops up on the way (a
+                # sign-in sheet, the GVS popup): run them as "click if visible".
                 closers = [c for c, b, sc in zip(s["_children"], body, scrolling)
-                           if not sc and _TAP.match(b) and re.search(r"\sif (?:visible|present|displayed)$", b)]
+                           if not sc and (_TAP.match(b) or _JS_TAP.match(b))]
                 if all(sc or c in closers for c, sc in zip(s["_children"], scrolling)):
                     ctx.cur = s
                     target = ctx.loc(el)
                     emitted = []
                     for c in closers:          # a popup Testsigma closed while scrolling
                         ctx.cur = c
-                        emitted.append(f"click if visible {ctx.loc(_TAP.match(' '.join(str(c.get('action')).split()))['el'])}")
+                        ca = " ".join(str(c.get("action")).split())
+                        m_ = _JS_TAP.match(ca) or _TAP.match(ca)
+                        emitted.append(f"click if visible {ctx.loc(m_['el'])}")
                     emitted.append(f"scroll until element {target} visible, scroll by 600 pixels, "
                                    f"scroll count 15, scroll wait 1")
                 else:
@@ -647,15 +683,28 @@ def convert(bundle: dict, *, platform: str = "mobilesite") -> dict:
                 todo_tree(s, where, out)
                 i += consumed
                 continue
+            if _SENT.search(action) and not st["lead_sent"]:
+                # Switch off the action that sent it: the last click / type above.
+                for k in range(len(out) - 1, -1, -1):
+                    if re.match(r"^(?:js )?click |^type ", out[k]):
+                        off.append(f"{where}: {out[k]}   (REAL LEAD — the next check says details were sent)")
+                        out[k] = f"# OFF: {out[k]}"
+                        break
+                st["lead_sent"] = True
+                st["had_lead"] = True
             for ln in emitted:
                 if ln.startswith(("open ", "delete all cookies", "refresh page")):
                     st["lead_sent"] = False      # a fresh page: nothing below depends on the lead any more
-                is_lead = bool(_LEAD.search(action)) and not ln.startswith(("open ", "wait ", "verify ", "scroll", "call "))
+                # A scroll loop only names the element it scrolls to ("While Request
+                # Catalogue is not visible"); its lines never send anything.
+                is_lead = (bool(_LEAD.search(action)) and not _WHILE.match(action)
+                           and not ln.startswith(("open ", "wait ", "verify ", "scroll", "call ")))
                 # After a switched-off lead, the steps that follow it (OTP, thank-you checks,
                 # the next sheet) cannot run either — until the page is opened again.
-                after_lead = st["lead_sent"] and not ln.startswith("wait ")
+                after_lead = st["lead_sent"] and not re.match(r"^wait \d", ln)
                 if is_lead:
                     st["lead_sent"] = True
+                    st["had_lead"] = True
                 if disabled or is_lead or after_lead:
                     why = "disabled in Testsigma" if disabled else (
                         "REAL LEAD" if is_lead else "only after the lead step above")
@@ -663,6 +712,9 @@ def convert(bundle: dict, *, platform: str = "mobilesite") -> dict:
                     out.append(f"# OFF: {ln}")
                 else:
                     out.append(ln)
+            if st.pop("after_group_lead", False):
+                st["lead_sent"] = True
+                st["had_lead"] = True
             i += consumed
         return out
 
@@ -747,11 +799,44 @@ def import_case(run_id: str, test_case_id: int, *, platform: str = "mobilesite",
     existing = load_locators()
     known = {n for els in existing.values() if isinstance(els, dict) for n in els}
     added = 0
+    by_xpath = {x: n for els in existing.values() if isinstance(els, dict)
+                for n, x in els.items() if isinstance(x, str)}
+    renames: dict[str, str] = {}
+    owner = {n: g for g, els in existing.items() if isinstance(els, dict) for n in els}
+    fixed = 0
     for lname, meta in res["elements"].items():
-        if meta["native"] or lname in known:
+        if meta["native"]:
+            continue
+        if lname in known:
+            # A locator this importer saved earlier (group ts_…) follows the
+            # converter's latest reading of Testsigma; hand-made ones are kept.
+            g = owner.get(lname, "")
+            if g.startswith("ts_") and existing[g].get(lname) != meta["xpath"] and meta["found"]:
+                existing[g][lname] = meta["xpath"]
+                fixed += 1
+            continue
+        if meta["xpath"] in by_xpath:
+            # The same element is already saved under another name: use that one
+            # (the locator store keeps one name per XPath).
+            renames[lname] = by_xpath[meta["xpath"]]
             continue
         if add_locator(group, lname, meta["xpath"]):
             added += 1
+            by_xpath[meta["xpath"]] = lname
+    if fixed:
+        from locators.manager import save_locators
+        cur = load_locators()
+        for g, els in existing.items():
+            if g.startswith("ts_") and isinstance(els, dict):
+                for n, x in els.items():
+                    if n in cur.get(g, {}) and cur[g][n] != x:
+                        cur[g][n] = x
+        save_locators(cur)
+    if renames:
+        rx = re.compile(r"\b(" + "|".join(map(re.escape, renames)) + r")\b")
+        fix = lambda ln: rx.sub(lambda m: renames[m.group(1)], ln)  # noqa: E731
+        res["flow"] = "\n".join(fix(ln) for ln in res["flow"].split("\n"))
+        res["groups"] = {g: [fix(ln) for ln in ls] for g, ls in res["groups"].items()}
     kept: list[str] = []
     for gname, lines in res["groups"].items():
         # A step group holds runnable steps only: comment lines inside a group
@@ -775,5 +860,6 @@ def import_case(run_id: str, test_case_id: int, *, platform: str = "mobilesite",
         reg["flows"].append(flow_name)
     _save_registry(reg)
     return {"name": flow_name, "status": "imported", "steps": res["steps"], "elements_added": added,
-            "groups": list(res["groups"]), "existing_groups_kept": kept, "todo": len(res["todo"]),
+            "groups": list(res["groups"]), "existing_groups_kept": kept, "renamed_elements": renames,
+            "todo": len(res["todo"]),
             "off": len(res["off"]), "missing_elements": res["missing_elements"]}

@@ -304,7 +304,20 @@ def click_element(page, locator_name):
 
     try:
         logger.info(f"🖱️ Attempting click on: {locator_name}")
-        page.locator(primary_xpath).first.click(timeout=5000)
+        target = page.locator(primary_xpath).first
+        try:
+            is_select = target.evaluate("el => el.tagName === 'SELECT'", timeout=2000)
+        except (PlaywrightTimeoutError, PlaywrightError, TypeError):
+            is_select = False
+        if is_select:
+            # A real click on a <select> opens the browser's own option list, a
+            # native window that no step can close — and while it is open the
+            # page cannot be photographed, so the run hung. Focus it instead;
+            # "select option … in …" picks the value.
+            target.focus(timeout=5000)
+            logger.info("✅ '%s' is a dropdown — focused (use 'select option' to pick).", locator_name)
+            return
+        target.click(timeout=5000)
         logger.info("✅ Click successful.")
         _stabilize_page(page)
     except (PlaywrightTimeoutError, PlaywrightError):
@@ -836,10 +849,13 @@ def verify_global_exact_text(page, text: str, ignore_case=False, exact_match=Fal
     logger.info(f"🔎 Verifying {match_mode} text globally: '{text}' (Ignore Case: {ignore_casing})")
     if ignore_casing:
         pattern = f"^{re.escape(str(text))}$" if exact_match else re.escape(str(text))
-        loc = page.get_by_text(re.compile(pattern, re.IGNORECASE)).first
+        loc = page.get_by_text(re.compile(pattern, re.IGNORECASE))
     else:
-        loc = page.get_by_text(str(text), exact=exact_match).first
-    expect(loc).to_be_visible(timeout=5000)
+        loc = page.get_by_text(str(text), exact=exact_match)
+    # The text must be SHOWN somewhere. `.first` alone picked the first match in
+    # the DOM, often a copy in a closed menu or filter sheet, and failed while
+    # the same text was plainly on screen.
+    expect(loc.filter(visible=True).first).to_be_visible(timeout=5000)
     logger.info(f"Global {match_mode.lower()} match confirmed.")
 
 
