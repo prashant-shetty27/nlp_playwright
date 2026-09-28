@@ -637,6 +637,16 @@ def parse_step(step: str) -> Command:
         return Command(type="verify_var_not_equals", target=var_name, text=value)
 
     # =============================
+    # VERIFY STORED VARIABLE EQUALS  (exact match, Testsigma "Verify … is equal to")
+    # verify stored <var> equals "<value>"  |  verify stored <var> is "<value>"
+    #                                        |  verify stored <var> is equal to "<value>"
+    # =============================
+    m = re.match(r'^verify\s+stored\s+(?:variable\s+)?(\S+)\s+(?:equals|is\s+equal\s+to|is)\s+"(.*?)"$', s, re.I)
+    if m:
+        var_name, value = m.groups()
+        return Command(type="verify_var_equals", target=var_name, text=value)
+
+    # =============================
     # VERIFY STORED VARIABLE CONTAINS
     # verify <var> contains "<partial>"  |  verify stored <var> contains "<partial>"
     # =============================

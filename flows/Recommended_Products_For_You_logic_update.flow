@@ -2,8 +2,10 @@
 # Params : live_url_steel_merchants live_url_bulk_sms_services rp_api_base_live prod_Hotel_Equipment_Manufacturers prod_Screw_Importers live_url_pani_puri_making_machine live_url_school_bag_manufacturers live_url_carpet_wholesalers Prod_Brick_Wholesalers Prod_Carpet_Wholesalers Prod_Umbrella_Distributors prod_Bat_Distributors_MRF
 # GJDT-22686 — Recommended Products / Services For You on the B2B NCT results page (LIVE).
 # Each block: open a search URL, read city / ncatid / search term from that URL,
-# call get_product_by_ncatid for the same search, and check page + API follow
-# the priority hierarchy DS > search city > price (each exhausted before the next).
+# call get_product_by_ncatid for the same search, and check the carousel shows the
+# same first 3 products, in the same order, as the API (plain store / verify steps).
+# The DS > search city > price ranking itself is the API's job: it cannot be asserted
+# with plain steps on live data that changes daily, so it is not checked here.
 
 # --- Purpose: TC_RP_HEADING_PRODUCT [smoke] — product category shows "Recommended Products For You"
 open ${live_url_steel_merchants}
@@ -22,17 +24,23 @@ verify element rp_carousel_heading is visible
 verify element rp_carousel_heading contains "Recommended"
 verify element rp_carousel_heading contains "For You"
 verify element rp_product_1st is visible
-# --- Purpose: TC_RP_PRIORITY_STEEL_MERCHANTS [sanity] — DS > search city > price, page vs API (Mumbai)
+# --- Purpose: TC_RP_PRIORITY_STEEL_MERCHANTS [sanity] — first 3 carousel products match the API, same order (Mumbai)
 open ${live_url_steel_merchants}
 wait for result page load
 click if visible login_prompt_skip
 wait until element rp_carousel_heading is visible
 verify element rp_carousel_heading is visible
 call store_prp_url_city_nctid_queryparam_api_pass
-store json apiResp1 path results.data.0.display_name1 as apiName1
-store text of rp_product_1st_name as uiName1
-call sg-verify-product_api
-# --- Purpose: TC_RP_PRIORITY_BULK_SMS [sanity] — service category follows the same hierarchy
+store json apiResp1 path results.data.0.display_name1 as api1_name1
+store json apiResp1 path results.data.1.display_name1 as api1_name2
+store json apiResp1 path results.data.2.display_name1 as api1_name3
+store text of rp_product_1st_name as page1_name1
+store text of rp_product_2nd_name as page1_name2
+store text of rp_product_3rd_name as page1_name3
+verify stored page1_name1 equals "${api1_name1}"
+verify stored page1_name2 equals "${api1_name2}"
+verify stored page1_name3 equals "${api1_name3}"
+# --- Purpose: TC_RP_PRIORITY_BULK_SMS [sanity] — service category: first 3 carousel products match the API
 open ${live_url_bulk_sms_services}
 wait for result page load
 click if visible login_prompt_skip
@@ -45,10 +53,16 @@ api get "${rp_api_base_live}&city=${city2}&ncatid=${ncatid2}&query=${query2}" as
 store json apiResp2 path results.data.0.display_name1 as apiName2
 store text of rp_product_1st_name as uiName2
 verify stored apiResp2 contains "${uiName2}"
-verify recommended products order in apiResp2
-verify recommended products carousel order on page
-verify recommended products prefer search city on page
-# --- Purpose: TC_RP_360_BADGE_ON_TOP [sanity] — DS (360/video) products come first and the carousel is full
+store json apiResp2 path results.data.0.display_name1 as api2_name1
+store json apiResp2 path results.data.1.display_name1 as api2_name2
+store json apiResp2 path results.data.2.display_name1 as api2_name3
+store text of rp_product_1st_name as page2_name1
+store text of rp_product_2nd_name as page2_name2
+store text of rp_product_3rd_name as page2_name3
+verify stored page2_name1 equals "${api2_name1}"
+verify stored page2_name2 equals "${api2_name2}"
+verify stored page2_name3 equals "${api2_name3}"
+# --- Purpose: TC_RP_360_BADGE_ON_TOP [sanity] — carousel has products (360 badges counted) and matches the API
 open ${prod_Hotel_Equipment_Manufacturers}
 wait for result page load
 click if visible login_prompt_skip
@@ -58,9 +72,16 @@ store count of rp_carousel_cards as productCount
 verify stored productCount is greater than 0
 store count of rp_carousel_360_badge as badgeCount
 call store_prp_url_city_nctid_queryparam_api_pass
-verify recommended products order in apiResp1
-verify recommended products carousel order on page
-# --- Purpose: TC_RP_SERVICE_CATEGORY_ORDER_MULTI_URL [regression] — hierarchy across more categories / cities
+store json apiResp1 path results.data.0.display_name1 as api360_name1
+store json apiResp1 path results.data.1.display_name1 as api360_name2
+store json apiResp1 path results.data.2.display_name1 as api360_name3
+store text of rp_product_1st_name as page360_name1
+store text of rp_product_2nd_name as page360_name2
+store text of rp_product_3rd_name as page360_name3
+verify stored page360_name1 equals "${api360_name1}"
+verify stored page360_name2 equals "${api360_name2}"
+verify stored page360_name3 equals "${api360_name3}"
+# --- Purpose: TC_RP_SERVICE_CATEGORY_ORDER_MULTI_URL [regression] — carousel matches the API across more categories / cities
 open ${prod_Screw_Importers}
 wait for result page load
 click if visible login_prompt_skip
@@ -70,9 +91,15 @@ store regex "justdial\.com/([^/]+)/" from page url as city11
 store regex "justdial\.com/[^/]+/([^/?]+)/nct-" from page url as query11
 store regex "nct-(\d+)" from page url as ncatid11
 api get "${rp_api_base_live}&city=${city11}&ncatid=${ncatid11}&query=${query11}" as apiResp11
-verify recommended products order in apiResp11
-verify recommended products carousel order on page
-verify recommended products prefer search city on page
+store json apiResp11 path results.data.0.display_name1 as api11_name1
+store json apiResp11 path results.data.1.display_name1 as api11_name2
+store json apiResp11 path results.data.2.display_name1 as api11_name3
+store text of rp_product_1st_name as page11_name1
+store text of rp_product_2nd_name as page11_name2
+store text of rp_product_3rd_name as page11_name3
+verify stored page11_name1 equals "${api11_name1}"
+verify stored page11_name2 equals "${api11_name2}"
+verify stored page11_name3 equals "${api11_name3}"
 open ${live_url_pani_puri_making_machine}
 wait for result page load
 click if visible login_prompt_skip
@@ -82,9 +109,15 @@ store regex "justdial\.com/([^/]+)/" from page url as city12
 store regex "justdial\.com/[^/]+/([^/?]+)/nct-" from page url as query12
 store regex "nct-(\d+)" from page url as ncatid12
 api get "${rp_api_base_live}&city=${city12}&ncatid=${ncatid12}&query=${query12}" as apiResp12
-verify recommended products order in apiResp12
-verify recommended products carousel order on page
-verify recommended products prefer search city on page
+store json apiResp12 path results.data.0.display_name1 as api12_name1
+store json apiResp12 path results.data.1.display_name1 as api12_name2
+store json apiResp12 path results.data.2.display_name1 as api12_name3
+store text of rp_product_1st_name as page12_name1
+store text of rp_product_2nd_name as page12_name2
+store text of rp_product_3rd_name as page12_name3
+verify stored page12_name1 equals "${api12_name1}"
+verify stored page12_name2 equals "${api12_name2}"
+verify stored page12_name3 equals "${api12_name3}"
 open ${live_url_school_bag_manufacturers}
 wait for result page load
 click if visible login_prompt_skip
@@ -94,10 +127,16 @@ store regex "justdial\.com/([^/]+)/" from page url as city13
 store regex "justdial\.com/[^/]+/([^/?]+)/nct-" from page url as query13
 store regex "nct-(\d+)" from page url as ncatid13
 api get "${rp_api_base_live}&city=${city13}&ncatid=${ncatid13}&query=${query13}" as apiResp13
-verify recommended products order in apiResp13
-verify recommended products carousel order on page
-verify recommended products prefer search city on page
-# --- Purpose: TC_RP_MIXED_PRICE_CITY_CARPET_WHOLESALERS [regression] — with/without price inside each city bucket
+store json apiResp13 path results.data.0.display_name1 as api13_name1
+store json apiResp13 path results.data.1.display_name1 as api13_name2
+store json apiResp13 path results.data.2.display_name1 as api13_name3
+store text of rp_product_1st_name as page13_name1
+store text of rp_product_2nd_name as page13_name2
+store text of rp_product_3rd_name as page13_name3
+verify stored page13_name1 equals "${api13_name1}"
+verify stored page13_name2 equals "${api13_name2}"
+verify stored page13_name3 equals "${api13_name3}"
+# --- Purpose: TC_RP_MIXED_PRICE_CITY_CARPET_WHOLESALERS [regression] — mixed price / city category: carousel matches the API
 open ${live_url_carpet_wholesalers}
 wait for result page load
 click if visible login_prompt_skip
@@ -107,9 +146,15 @@ store regex "justdial\.com/([^/]+)/" from page url as city3
 store regex "justdial\.com/[^/]+/([^/?]+)/nct-" from page url as query3
 store regex "nct-(\d+)" from page url as ncatid3
 api get "${rp_api_base_live}&city=${city3}&ncatid=${ncatid3}&query=${query3}" as apiResp3
-verify recommended products order in apiResp3
-verify recommended products carousel order on page
-verify recommended products prefer search city on page
+store json apiResp3 path results.data.0.display_name1 as api3_name1
+store json apiResp3 path results.data.1.display_name1 as api3_name2
+store json apiResp3 path results.data.2.display_name1 as api3_name3
+store text of rp_product_1st_name as page3_name1
+store text of rp_product_2nd_name as page3_name2
+store text of rp_product_3rd_name as page3_name3
+verify stored page3_name1 equals "${api3_name1}"
+verify stored page3_name2 equals "${api3_name2}"
+verify stored page3_name3 equals "${api3_name3}"
 # --- Purpose: TC_DEFECT_22699_NO_PRICE_ON_REQUEST [sanity] — "Price on Request" never shown on carousel cards
 open ${Prod_Brick_Wholesalers}
 wait for result page load

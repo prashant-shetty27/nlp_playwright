@@ -85,7 +85,7 @@ def _snippets_from_templates(choice_list: str, already: dict) -> dict:
     for key, entry in KEYWORD_MAP.items():
         template = entry.get("template")
         action = entry.get("action", "")
-        if not template or entry.get("deprecated") or action in covered:
+        if not template or entry.get("deprecated") or entry.get("hidden") or action in covered:
             continue
 
         body, tab = template, 0

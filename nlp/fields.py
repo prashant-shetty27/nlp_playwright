@@ -39,7 +39,7 @@ TARGET_IS_LOCATOR = {
 }
 
 #: Command types whose `target` is a variable name, not a locator.
-TARGET_IS_VARIABLE = {"create_variable", "verify_var_contains", "verify_var_not_equals",
+TARGET_IS_VARIABLE = {"create_variable", "verify_var_contains", "verify_var_not_equals", "verify_var_equals",
                       "fetch_otp", "math", "extract_json",
                       "verify_recommended_order_api", "extract_regex",
                       "verify_var_compare"}

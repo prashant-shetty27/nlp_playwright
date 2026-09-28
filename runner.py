@@ -127,7 +127,7 @@ def _load_run_config() -> dict:
 
 # ── NLP flow ──────────────────────────────────────────────────────────────────
 # Command types whose `target` is a variable name to look up or create, not a value.
-_VARIABLE_NAME_TARGETS = {"verify_var_contains", "verify_var_not_equals",
+_VARIABLE_NAME_TARGETS = {"verify_var_contains", "verify_var_not_equals", "verify_var_equals",
                           "create_variable", "extract_json",
                           "verify_recommended_order_api", "extract_regex",
                           "verify_var_compare"}
@@ -220,6 +220,7 @@ def _execute_step_from_command(cmd, page):
         # ── Verification — Variables ─────────────────────────────────────────
         "verify_var_contains":       lambda: svc.verify_stored_variable_contains(target, text),
         "verify_var_not_equals":     lambda: svc.verify_stored_variable_not_equals(target, text),
+        "verify_var_equals":         lambda: svc.verify_stored_variable_equals(target, text),
         # ── Visibility / condition-based wait / multi-input OTP ───────────────
         "verify_element_visible":    lambda: svc.verify_element_visible(ep, target),
         "verify_element_not_exists": lambda: svc.verify_element_not_exists(ep, target),

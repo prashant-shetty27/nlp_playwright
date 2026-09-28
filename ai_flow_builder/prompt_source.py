@@ -64,8 +64,8 @@ def step_vocabulary() -> list[str]:
 
         for entry in KEYWORD_MAP.values():
             t = (entry or {}).get("template")
-            if not t:
-                continue
+            if not t or (entry or {}).get("hidden") or (entry or {}).get("deprecated"):
+                continue        # the AI drafts only plain, readable steps
             # A step whose meaning is not obvious from its words carries a
             # one-line description; without it the model wrote assumptions
             # about what a step checks instead of using it with confidence.

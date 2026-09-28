@@ -2937,6 +2937,22 @@ def store_network_request(needle: str, variable_name: str) -> None:
     logger.info("💾 Network request -> ${%s} = %s %s", variable_name, method, url[:200])
 
 
+def verify_stored_variable_equals(variable_name, expected_text, ignore_case=False):
+    """Assert a stored variable EXACTLY equals the value (spaces at the ends ignored)."""
+    if variable_name not in RUNTIME_VARIABLES:
+        raise Exception(
+            f"❌ Execution Error: Variable '{variable_name}' is not stored in memory. "
+            f"Did you run the store step first?")
+    stored = str(RUNTIME_VARIABLES[variable_name]).strip()
+    expected = str(expected_text).strip()
+    ignore_casing = _parse_boolean(ignore_case)
+    lhs, rhs = (stored.lower(), expected.lower()) if ignore_casing else (stored, expected)
+    logger.info("🔎 Verifying stored '%s' equals '%s'", variable_name, expected)
+    if lhs != rhs:
+        raise AssertionError(f"❌ Stored '{variable_name}' is '{stored}', expected exactly '{expected}'.")
+    logger.info("✅ '%s' equals '%s'", variable_name, expected)
+
+
 def verify_stored_variable_not_equals(variable_name, unexpected_text, ignore_case=False):
     """Assert a stored variable does NOT exactly equal the given value."""
     if variable_name not in RUNTIME_VARIABLES:

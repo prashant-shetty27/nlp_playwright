@@ -610,6 +610,14 @@
     },
     "rp_carousel_ask_for_price_ctas": {
       "custom_xpath": "//div[contains(@class,'carousel_parent_short')][.//span[contains(@class,'carousel_heading')][contains(normalize-space(),'Recommended ') and contains(normalize-space(),'For You')]]//*[contains(@class,'carousel_view3-askPrice')]"
+    },
+    "rp_product_2nd_name": {
+      "custom_xpath": "(//div[contains(@class,'carousel_parent_short')][.//span[contains(@class,'carousel_heading')][contains(normalize-space(),'Recommended ') and contains(normalize-space(),'For You')]]//a[contains(@class,'carousel_view3-parent')])[2]//div[contains(@class,'carousel_view3-infoDiv')]/span[1]",
+      "_note": "name on the 2nd Recommended Products card (plain page-vs-API check)"
+    },
+    "rp_product_3rd_name": {
+      "custom_xpath": "(//div[contains(@class,'carousel_parent_short')][.//span[contains(@class,'carousel_heading')][contains(normalize-space(),'Recommended ') and contains(normalize-space(),'For You')]]//a[contains(@class,'carousel_view3-parent')])[3]//div[contains(@class,'carousel_view3-infoDiv')]/span[1]",
+      "_note": "name on the 3rd Recommended Products card (plain page-vs-API check)"
     }
   }
 }

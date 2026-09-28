@@ -89,7 +89,7 @@ def suggest(body: SuggestRequest):
         # Deprecated entries name an action no runner dispatches. Their phrasing
         # is kept in the map for the record, but suggesting them would hand the
         # operator a step that cannot run.
-        if entry.get("deprecated"):
+        if entry.get("deprecated") or entry.get("hidden"):
             continue
         action = entry.get("action", "")
         # Never suggest something this platform's runner cannot execute.

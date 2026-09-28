@@ -142,12 +142,18 @@ KEYWORD_MAP = {
     },
 
     "verify_recommended_prefer_city": {
+        # Feature-specific black-box check: still runs in existing flows, but is no
+        # longer suggested — new steps use plain, readable store / verify steps.
+        "hidden": True,
         "phrases": ["verify recommended products prefer search city", "city preference carousel"],
         "action": "verify_recommended_prefer_city",
         "help": "within each DS group, every card from the search city must precede cards from other cities; passes with a note when no in-city card exists",
         "template": "verify recommended products prefer search city on page"
     },
     "store_recommended_position": {
+        # Feature-specific black-box check: still runs in existing flows, but is no
+        # longer suggested — new steps use plain, readable store / verify steps.
+        "hidden": True,
         "phrases": ["store position of recommended product", "carousel position of"],
         "action": "store_recommended_position",
         "help": "1-based position of the first carousel card whose product name or company contains the text; 0 when not shown",
@@ -161,6 +167,9 @@ KEYWORD_MAP = {
     },
 
     "verify_recommended_order_api": {
+        # Feature-specific black-box check: still runs in existing flows, but is no
+        # longer suggested — new steps use plain, readable store / verify steps.
+        "hidden": True,
         "phrases": ["verify recommended products order", "recommended products priority",
                     "carousel priority api"],
         "action": "verify_recommended_order_api",
@@ -168,6 +177,9 @@ KEYWORD_MAP = {
         "template": "verify recommended products order in {variable}"
     },
     "verify_recommended_order_page": {
+        # Feature-specific black-box check: still runs in existing flows, but is no
+        # longer suggested — new steps use plain, readable store / verify steps.
+        "hidden": True,
         "phrases": ["verify recommended products carousel order", "carousel order on page",
                     "recommended products page priority"],
         "action": "verify_recommended_order_page",
@@ -310,6 +322,14 @@ KEYWORD_MAP = {
         ],
         "action": "fetch_otp",
         "template": "fetch otp for \"{text}\" as {variable}"
+    },
+
+    "verify_stored_variable_equals": {
+        "phrases": ["verify stored variable equals", "verify stored is equal to", "verify variable equals",
+                    "assert variable equals", "compare stored values"],
+        "action": "verify_var_equals",
+        "help": "exact match (ends trimmed); the value may itself be a ${variable}, e.g. page value vs API value",
+        "template": "verify stored {variable} equals \"{text}\""
     },
 
     "verify_stored_variable_is_not": {
