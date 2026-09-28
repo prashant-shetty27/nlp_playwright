@@ -1,9 +1,6 @@
 # Platform: mobilesite
 # Imported from Testsigma: PRP Open RFQ Seller Type Option (Login) (test case 2551, run 115613, last result SUCCESS)
 # Tags: regression
-# OFF (login): the "What are you looking for" banner shows only when signed in, and the OTP sign-in is switched off.
-# OFF steps: every step that would send a REAL lead / enquiry / OTP is switched off,
-#   plus the checks that only pass after it. Switch them on only when a lead is wanted.
 
 call Live_Touch_Chrome_Navigate_to_Homepage_setup_Popup
 click touch_signin_home_page
@@ -11,16 +8,17 @@ click touch_contextual_signin
 wait 2 seconds
 type "9987996046" into rfq_mobile_number_input
 wait 2 seconds
-# OFF: js click touch_loginwithotp_button
-# OFF: wait until element touch_home_otp_1stfield is visible
-# OFF: click touch_home_otp_1stfield
+js click home_login_with_otp
+wait until element touch_home_otp_1stfield is visible
+type if visible "537393" into touch_home_otp_1stfield
 wait 1 seconds
-# OFF: type "537393" into focused field
 wait 1 seconds
+# Signed-in cookies make this page redirect in a loop: clear them first (Prashant, 28 Sep).
+delete all cookies
 open https://www.justdial.com/jdmart/Delhi/Scrap/jdm-1094774-ent-15-1094774?fl=undefined&ismap=undefined&subpage=&searchCase=&term=scrap&searchLocUpdate=0&stype=category_list&srcterm=Scrap
 wait 2 seconds
-# OFF: scroll until element prp_what_are_you_looking_for_seller_type_banner visible, scroll by 600 pixels, scroll count 15, scroll wait 1
-# OFF: scroll to prp_what_are_you_looking_for_seller_type_banner
+scroll until element prp_what_are_you_looking_for_seller_type_banner visible, scroll by 600 pixels, scroll count 15, scroll wait 1
+scroll to prp_what_are_you_looking_for_seller_type_banner
 scroll to prp_open_rfq_seller_type_section
 verify element prp_open_rfq_seller_type_section is visible
 verify element prp_open_rfq_seller_type_section contains "All"
@@ -30,5 +28,5 @@ verify element prp_open_rfq_seller_type_section contains "Distributors"
 verify element prp_open_rfq_seller_type_section contains "Exporters"
 verify element prp_open_rfq_seller_type_section contains "Dealers"
 verify element prp_open_rfq_seller_type_section contains "Buyer"
-# OFF: click prp_open_rfq_seller_type_wholesaler
-# OFF: verify text "Results updated successfully and your details have been sent to the relevant sellers." on page
+click prp_open_rfq_seller_type_wholesaler
+verify text "Results updated successfully and your details have been sent to the relevant sellers." on page

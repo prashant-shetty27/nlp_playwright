@@ -227,19 +227,46 @@ def load_bundle(run_id: str, test_case_id: int) -> dict:
 # ─────────────────────────────────────────────────────────────────────────────
 #: Things that send a real lead / enquiry to clients when clicked or entered.
 _LEAD = re.compile(
-    r"submit|send\s*enquiry|send\s*inquiry|get\s*best\s*price.*(submit|send|continue)|get\s*quotes?|"
+    r"send\s*enquiry|send\s*inquiry|get\s*best\s*price.*(submit|send|continue)|get\s*quotes?|"
     r"request\s*(catalogue|catalog|callback|call\s*back|quote|more\s*photos|sample)|buy\s*a?\s*sample|"
-    r"\botp\b|verify\s*otp|login\s*with\s*otp|loginwithotp|get\s*best\s*deal|"
-    r"post\s*(your\s*)?requirement|place\s*order|book\s*now|"
-    r"(login|lead|enquiry|rfq|gbp|price).*(continue|proceed)|(continue|proceed).*(login|lead|enquiry|rfq)",
+    r"get\s*best\s*deal|post\s*(your\s*)?requirement|place\s*order|book\s*now|"
+    r"(lead|enquiry|rfq|gbp|price).*(submit|continue|proceed)|"
+    r"(submit|continue|proceed).*(lead|enquiry|rfq)",
     re.I)
+#: A button that STARTS a lead (the sheet it opens asks for mobile + OTP, and
+#: signing in on that sheet is what sends the lead to the seller).
+_LEAD_CTA = re.compile(
+    r"ask\s*for\s*price|get\s*best\s*(price|deal)|request\s*(catalogue|catalog|callback|call\s*back|quote|sample)|"
+    r"view\s*catalogue|send\s*enquiry|get\s*quotes?|buy\s*a?\s*sample|\brfq\b|post\s*(your\s*)?requirement",
+    re.I)
+#: Sign-in steps: mobile, continue, OTP, login / submit on the sign-in sheet.
+_SIGNIN = re.compile(r"continue|submit|proceed|verify|(log\s*in|login|sign\s*in|signin).*(button|btn|cta)", re.I)
+#: Closing or skipping a sheet never sends anything.
+_DISMISS = re.compile(r"close|cross|cancel|skip|no\s*thanks|may\s*be\s*later|maybe\s*later|back", re.I)
+#: Signing in (mobile + OTP) creates no lead. It runs, but only with these
+#: numbers, which the site blocks from reaching clients (28 Sep, Prashant).
+#: TEST_MOBILES in .env replaces the list. A step typing any other mobile is OFF.
+TEST_MOBILES = {n.strip() for n in os.environ.get(
+    "TEST_MOBILES", "9987996046,7977184984,7738176962").split(",") if n.strip()}
+_MOBILE = re.compile(r"(?<!\d)[6-9]\d{9}(?!\d)")
 #: After a lead is sent, the thank-you checks cannot pass with the send switched off.
-#: A check that says details / an enquiry WENT to sellers: the click before it sent
-#: a real lead even though its own wording did not say so.
-_SENT = re.compile(r"(details|enquiry|requirement|request)\s+(have|has)\s+been\s+sent|sent\s+to\s+(the\s+)?"
-                   r"(relevant\s+)?(sellers?|suppliers?|vendors?)", re.I)
 _LEAD_AFTER = re.compile(r"acknowledg|thank\s*you|success(fully)?\s*(sent|submitted)|dear\s+\w+|toast", re.I)
 _SCROLLABLE = re.compile(r"\s+and\s+with\s+scrollable\s+(true|false)\s*$", re.I)
+
+
+def _load_aliases() -> dict:
+    try:
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "testsigma_aliases.json"),
+                  encoding="utf-8") as f:
+            d = json.load(f)
+    except (OSError, ValueError):
+        return {}
+    out = {k: v for k, v in d.items() if not k.startswith("_")}
+    out.update({k.lower(): v for k, v in out.items()})
+    return out
+
+
+_ALIASES = _load_aliases()
 
 
 def _q(s: str) -> str:
@@ -321,6 +348,9 @@ class _Ctx:
 
     def loc(self, ts_name: str) -> str:
         ts_name = _SCROLLABLE.sub("", ts_name.strip())
+        alias = _ALIASES.get(ts_name) or _ALIASES.get(ts_name.lower())
+        if alias:
+            return alias
         name = self._norm(ts_name, kind="locator")
         if name in self.used:
             return name
@@ -580,12 +610,16 @@ def convert(bundle: dict, *, platform: str = "mobilesite") -> dict:
     group_src = {int(k): v for k, v in (bundle.get("groups") or {}).items()}
 
     lead_groups: set[str] = set()
+    signin_groups: set[str] = set()     # groups that sign in (continue / submit / verify)
 
     def lines_for(steps: list, where: str) -> list[str]:
         st = {"lead_sent": False}
         lines = emit(_normalise_steps(steps), where, st)
+        gslug = slug(where.replace("step group ", "", 1))[:50].rstrip("_")
         if st.get("had_lead"):
-            lead_groups.add(slug(where.replace("step group ", "", 1))[:50].rstrip("_"))
+            lead_groups.add(gslug)
+        if st.get("signs_in"):
+            signin_groups.add(gslug)
         return lines
 
     def todo_tree(node: dict, where: str, out: list[str], depth: int = 0) -> None:
@@ -622,6 +656,10 @@ def convert(bundle: dict, *, platform: str = "mobilesite") -> dict:
                     groups_out[gname] = lines_for(g.get("steps") or [], f"step group {action}")
                     ctx.cur = s
                 emitted = [f"call {gname}"]
+                if st.get("lead_cta") and gname in signin_groups:
+                    # A sign-in group called right after a lead button: signing in
+                    # there is what sends the lead.
+                    st["call_is_lead"] = True
                 if gname in lead_groups:
                     # The group sends (a switched-off) lead: what follows the call
                     # in this test depends on it, exactly as if the steps were inline.
@@ -683,31 +721,46 @@ def convert(bundle: dict, *, platform: str = "mobilesite") -> dict:
                 todo_tree(s, where, out)
                 i += consumed
                 continue
-            if _SENT.search(action) and not st["lead_sent"]:
-                # Switch off the action that sent it: the last click / type above.
-                for k in range(len(out) - 1, -1, -1):
-                    if re.match(r"^(?:js )?click |^type ", out[k]):
-                        off.append(f"{where}: {out[k]}   (REAL LEAD — the next check says details were sent)")
-                        out[k] = f"# OFF: {out[k]}"
-                        break
-                st["lead_sent"] = True
-                st["had_lead"] = True
             for ln in emitted:
                 if ln.startswith(("open ", "delete all cookies", "refresh page")):
                     st["lead_sent"] = False      # a fresh page: nothing below depends on the lead any more
                 # A scroll loop only names the element it scrolls to ("While Request
                 # Catalogue is not visible"); its lines never send anything.
-                is_lead = (bool(_LEAD.search(action)) and not _WHILE.match(action)
-                           and not ln.startswith(("open ", "wait ", "verify ", "scroll", "call ")))
+                acts = not ln.startswith(("open ", "wait ", "verify ", "scroll", "call ", "store ", "create "))
+                if ln.startswith(("open ", "delete all cookies", "refresh page")):
+                    st["lead_cta"] = False
+                # Signing in with a blocked test number sends nothing — unless the
+                # sign-in sheet was opened by a lead button (Ask for Price, Get Best
+                # Price, Request Catalogue…): then signing in IS the lead.
+                is_lead = acts and not _WHILE.match(action) and (
+                    bool(_LEAD.search(action)) or
+                    (st.get("lead_cta") and bool(_SIGNIN.search(action)) and not _DISMISS.search(action)
+                     and ln.startswith(("click", "js click"))))
+                # The Open RFQ seller-type choice only filters results — no leadgen
+                # call (confirmed by Prashant, 28 Sep).
+                seller_type = bool(re.search(r"seller\s*type", action, re.I))
+                if seller_type:
+                    is_lead = False
+                if st.pop("call_is_lead", False) and ln.startswith("call "):
+                    is_lead = True
+                if (acts and _SIGNIN.search(action) and not _DISMISS.search(action)
+                        and ln.startswith(("click", "js click"))):
+                    st["signs_in"] = True
+                if acts and _LEAD_CTA.search(action) and not seller_type and ln.startswith(("click", "js click")):
+                    st["lead_cta"] = True
                 # After a switched-off lead, the steps that follow it (OTP, thank-you checks,
                 # the next sheet) cannot run either — until the page is opened again.
                 after_lead = st["lead_sent"] and not re.match(r"^wait \d", ln)
                 if is_lead:
                     st["lead_sent"] = True
                     st["had_lead"] = True
-                if disabled or is_lead or after_lead:
+                other_mobile = ln.startswith("type ") and any(
+                    m_ not in TEST_MOBILES for m_ in _MOBILE.findall(ln.split(" into ")[0]))
+                if disabled or is_lead or after_lead or other_mobile:
                     why = "disabled in Testsigma" if disabled else (
-                        "REAL LEAD" if is_lead else "only after the lead step above")
+                        "REAL LEAD" if is_lead else
+                        "mobile number is not one of the blocked test numbers" if other_mobile else
+                        "only after the lead step above")
                     off.append(f"{where}: {ln}   ({why})")
                     out.append(f"# OFF: {ln}")
                 else:

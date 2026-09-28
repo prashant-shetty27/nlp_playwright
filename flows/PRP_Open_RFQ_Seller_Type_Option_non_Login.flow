@@ -21,14 +21,14 @@ verify element prp_open_rfq_seller_type_section contains "Manufacturers"
 verify element prp_open_rfq_seller_type_section contains "Exporters"
 verify element prp_open_rfq_seller_type_section contains "Dealers"
 click prp_open_rfq_seller_type_wholesaler
-# OFF: click prp_open_rfq_seller_type_submit
+click prp_open_rfq_seller_type_submit
 wait 2 seconds
-# OFF: call SG_PRP_Request_View_Catalogue_Non_Login_to_Login
-# OFF: wait until element prp_open_rfq_seller_type_toast_msg is visible
-# OFF: verify element prp_open_rfq_seller_type_toast_msg is visible
+call SG_PRP_Request_View_Catalogue_Non_Login_to_Login
+wait until element prp_open_rfq_seller_type_toast_msg is visible
+verify element prp_open_rfq_seller_type_toast_msg is visible
 wait 1 seconds
-# OFF: scroll to prp_open_rqq_seller_type_post_login_mobile
-# OFF: store value of prp_open_rqq_seller_type_post_login_mobile as ts_field_value
-# OFF: verify stored ts_field_value equals "9987996046"
-# OFF: verify element prp_bd5_banner_img is visible
+scroll to prp_open_rqq_seller_type_post_login_mobile
+store value of prp_open_rqq_seller_type_post_login_mobile as ts_field_value
+verify stored ts_field_value equals "9987996046"
+verify element prp_bd5_banner_img is visible
 delete all cookies

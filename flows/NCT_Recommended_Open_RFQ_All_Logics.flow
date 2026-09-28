@@ -10,20 +10,26 @@ wait 3 seconds
 scroll down 1200
 wait 1 seconds
 wait until element recommeded_product_carousel_img is visible
+scroll to nct_recommended_products_carousel_section
 verify element nct_recommended_products_carousel_section is visible
+scroll to nct_open_rfq_section
 verify element nct_open_rfq_section is visible
 open https://www.justdial.com/Kolkata/Wire-Wholesalers/nct-10541446?trkid=208031-kolkata&term=wire%20wholesalers&cbflg=1
 wait 3 seconds
 scroll down 1200
 wait 1 seconds
 wait until element recommeded_product_carousel_img is visible
+scroll to nct_people_also_searched_for_section
 verify element nct_people_also_searched_for_section is visible
+scroll to nct_open_rfq_section
 verify element nct_open_rfq_section is visible
 open https://www.justdial.com/Mumbai/CCTV-Dealers-CP-Plus-in-Ayojan-Nagar/nct-10951547?fl=undefined&ismap=undefined&subpage=&searchCase=&term=cctv%2520&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=3&stype=category_list&srcterm=CCTV%20Dealers-CP%20Plus&trkid=14027-mumbai
 wait 3 seconds
 scroll down 200
 wait 1 seconds
+# OFF: scroll to nct_recommended_products_carousel_section
 # OFF: verify element nct_recommended_products_carousel_section is visible
+scroll to nct_bd7_banner
 verify element nct_bd7_banner is visible
 scroll to nct_result_card_6th
 wait 1 seconds
@@ -40,4 +46,5 @@ scroll down 600
 scroll down 600
 verify element nct_bd7_banner is not visible
 scroll down 1200
+scroll to nct_open_rfq_section
 verify element nct_open_rfq_section is visible

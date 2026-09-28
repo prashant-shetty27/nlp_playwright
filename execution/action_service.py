@@ -1196,8 +1196,16 @@ def verify_alert_text(page, expected: str) -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def delete_all_cookies(page) -> None:
+    """Cookies AND the open site's local / session storage.
+    With only the cookies gone, justdial's page script still found its saved
+    session in storage and the next page came up blank (or redirected in a
+    loop after sign-in). Clearing both is a clean start, as a new visitor."""
     page.context.clear_cookies()
-    logger.info("🍪 Cleared all cookies")
+    try:
+        page.evaluate("() => { try { localStorage.clear(); sessionStorage.clear(); } catch (e) {} }")
+    except PlaywrightError:
+        pass  # about:blank or a closed page — nothing stored
+    logger.info("🍪 Cleared all cookies and this site's stored data")
 
 
 def delete_cookie(page, name: str) -> None:

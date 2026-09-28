@@ -713,7 +713,6 @@
   },
   "ts_prp_open_rfq_seller_type_option_login": {
     "touch_contextual_signin": "//span[text()='Sign in']",
-    "touch_loginwithotp_button": "//*[contains(normalize-space(),'Touch_LoginWithOTP_Button')]",
     "touch_home_otp_1stfield": "//input[@id=\"0\"]",
     "prp_what_are_you_looking_for_seller_type_banner": "//*[contains(text(),'What are you looking for')]"
   },

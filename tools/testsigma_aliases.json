@@ -1,0 +1,4 @@
+{
+  "_note": "Testsigma element name -> an element already in the portal. Used when Testsigma's own element was deleted or its locator no longer matches, so the imported step uses the portal element instead of a guessed one.",
+  "Touch_LoginWithOTP_Button": "home_login_with_otp"
+}
