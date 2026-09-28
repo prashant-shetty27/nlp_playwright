@@ -50,7 +50,7 @@ def atomic_write_json(path: str, data: dict, indent: int = 2) -> None:
     fd, tmp_path = tempfile.mkstemp(prefix=f".{base}.", suffix=".tmp", dir=os.path.dirname(path) or ".")
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
-            json.dump(data, fh, indent=indent)
+            json.dump(data, fh, indent=indent, ensure_ascii=False)   # keep ₹, — and Hindi readable
             fh.flush()
             os.fsync(fh.fileno())
         os.replace(tmp_path, path)

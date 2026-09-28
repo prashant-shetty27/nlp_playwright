@@ -146,18 +146,21 @@ def _pull(run_id: str) -> None:
         _set(run_id, state="error", message=f"{type(e).__name__}: {e}"[:400])
 
 
-def _collect_groups(steps: list, groups: dict, get) -> list[int]:
-    """Every step group these steps call, recursively (fetched once each)."""
+def _collect_groups(steps: list, groups: dict, get, _seen: set | None = None) -> list[int]:
+    """Every step group these steps call, recursively (each fetched once, but its
+    inner groups are listed for every case that uses it)."""
+    seen = set() if _seen is None else _seen
     used: list[int] = []
     for s in steps or []:
         gid = s.get("stepGroupId")
-        if s.get("type") == "STEP_GROUP" and gid:
+        if s.get("type") == "STEP_GROUP" and gid and gid not in seen:
+            seen.add(gid)
             if gid not in groups:
                 groups[gid] = {"id": gid, "name": s.get("action", str(gid)), "steps": []}
                 groups[gid]["steps"] = get(f"/api/v2/test_steps/find_all/{gid}")
-                for inner in _collect_groups(groups[gid]["steps"], groups, get):
-                    if inner not in used:
-                        used.append(inner)
+            for inner in _collect_groups(groups[gid]["steps"], groups, get, seen):
+                if inner not in used:
+                    used.append(inner)
             if gid not in used:
                 used.append(gid)
     return used
@@ -184,11 +187,38 @@ def cases(run_id: str) -> list[dict]:
                 if not re.search(r"_(after|before)test$", str(c.get("name") or ""), re.I)]
 
 
+def _group_pool(run_id: str) -> dict:
+    """Every step group saved anywhere in this run (older pulls left a nested group
+    out of a case when an earlier case had already fetched its parent)."""
+    pool: dict = {}
+    d = run_dir(run_id)
+    for fn in os.listdir(d):
+        if fn.endswith(".json") and fn != "index.json":
+            with open(os.path.join(d, fn), encoding="utf-8") as f:
+                pool.update(json.load(f).get("groups") or {})
+    return pool
+
+
 def load_bundle(run_id: str, test_case_id: int) -> dict:
     for c in cases(run_id):
         if int(c["test_case_id"]) == int(test_case_id):
             with open(os.path.join(run_dir(run_id), c["file"]), encoding="utf-8") as f:
-                return json.load(f)
+                b = json.load(f)
+            pool = _group_pool(run_id)
+            groups = b.setdefault("groups", {})
+            todo = [g for g in groups.values()]
+            while todo:
+                g = todo.pop()
+                for st in g.get("steps") or []:
+                    gid = str(st.get("stepGroupId") or "")
+                    if st.get("type") == "STEP_GROUP" and gid and gid not in groups and gid in pool:
+                        groups[gid] = pool[gid]
+                        todo.append(pool[gid])
+            for st in b.get("steps") or []:
+                gid = str(st.get("stepGroupId") or "")
+                if st.get("type") == "STEP_GROUP" and gid and gid not in groups and gid in pool:
+                    groups[gid] = pool[gid]
+            return b
     raise KeyError(f"test case {test_case_id} is not in run {run_id} — pull the run first")
 
 
@@ -223,6 +253,7 @@ class _Ctx:
                 self.by_name[" ".join(str(e["name"]).lower().split())] = e
         self.used: dict[str, dict] = {}          # tool name -> {testsigma, xpath, type}
         self.cur: dict = {}                       # the Testsigma step being converted
+        self.native = False                       # between "switch to native" and back
         self.vars: set[str] = set()               # variables this case stores
         self.nums: dict[str, str] = {}            # variables stored as a plain number
         self.missing: list[str] = []
@@ -232,6 +263,12 @@ class _Ctx:
         """A Testsigma step that has no meaning in a browser run — nothing to run."""
         self.skipped.append(why)
         return []
+
+    def go_native(self, on: bool) -> list[str]:
+        """Testsigma leaves the page for Chrome's own dialogs (the location prompt).
+        A browser run has no such dialog: the permission is granted to the page instead."""
+        self.native = on
+        return self.skip("switch to Chrome's native dialogs" if on else "back to the page")
 
     def data(self, key: str) -> tuple[str | None, str | None]:
         """(type, value) of the current step's test data — type is raw / runtime / parameter …"""
@@ -317,7 +354,8 @@ _MAP = [
     (r"^(?:(?:refresh|reload) the (?:current )?page|tap on the refresh in the browser)$", lambda m, c: ["refresh page"]),
     (r"^(?:tap on|press) the (?P<k>space|enter|tab|escape|backspace)(?: key)?$",
      lambda m, c: [f"press key {m['k'].capitalize()}"]),
-    (r"^switch to (?:native view context|context with name .+|web ?view.*)$", lambda m, c: c.skip("native context switch")),
+    (r"^switch to native view context$", lambda m, c: c.go_native(True)),
+    (r"^switch to (?:context with name .+|web ?view.*)$", lambda m, c: c.go_native(False)),
     (r"^hide the keyboard$", lambda m, c: c.skip("no on-screen keyboard in the browser")),
     (r"^wait until the current page is loaded completely$", lambda m, c: ["wait for page to load"]),
     (r"^store (?:the )?text from the element\s+(?P<el>.+?)\s+into a variable\s+(?P<v>.+)$",
@@ -450,6 +488,14 @@ _IF_VISIBLE = re.compile(r"^(?:if )?(?:the )?element\s+(?P<el>.+?)\s+is (?:visib
 def _one(action: str, ctx: _Ctx) -> list[str] | None:
     # "…and With Scrollable TRUE/FALSE" is a Testsigma mobile option, not part of the check.
     a = _SCROLLABLE.sub("", " ".join(str(action or "").split()))
+    if ctx.native and not re.match(r"^switch to", a, re.I):
+        # A tap on Chrome's own permission dialog: grant the permission to the page instead.
+        if re.search(r"\ballow\b", a, re.I):
+            if getattr(ctx, "_granted", False):
+                return ctx.skip(f"native dialog: {a}")
+            ctx._granted = True
+            return ["allow browser permission geolocation"]
+        return ctx.skip(f"native dialog: {a}")
     for rx, h in _COMPILED:
         m = rx.match(a)
         if m:
@@ -523,7 +569,8 @@ def convert(bundle: dict, *, platform: str = "mobilesite") -> dict:
                 i += 1
                 continue
             if s.get("type") == "STEP_GROUP":
-                gname = slug(action) if action else f"group_{s.get('stepGroupId')}"
+                # Step group names here are at most 50 characters.
+                gname = (slug(action) if action else f"group_{s.get('stepGroupId')}")[:50].rstrip("_")
                 g = group_src.get(s.get("stepGroupId"))
                 if g is not None and gname not in groups_out:
                     groups_out[gname] = []          # placeholder: recursion guard
@@ -584,8 +631,12 @@ def convert(bundle: dict, *, platform: str = "mobilesite") -> dict:
                 i += consumed
                 continue
             for ln in emitted:
+                if ln.startswith(("open ", "delete all cookies", "refresh page")):
+                    st["lead_sent"] = False      # a fresh page: nothing below depends on the lead any more
                 is_lead = bool(_LEAD.search(action)) and not ln.startswith(("open ", "wait ", "verify ", "scroll", "call "))
-                after_lead = st["lead_sent"] and ln.startswith("verify") and bool(_LEAD_AFTER.search(action))
+                # After a switched-off lead, the steps that follow it (OTP, thank-you checks,
+                # the next sheet) cannot run either — until the page is opened again.
+                after_lead = st["lead_sent"] and not ln.startswith("wait ")
                 if is_lead:
                     st["lead_sent"] = True
                 if disabled or is_lead or after_lead:
@@ -599,6 +650,21 @@ def convert(bundle: dict, *, platform: str = "mobilesite") -> dict:
         return out
 
     body = lines_for(bundle.get("steps") or [], "test case")
+
+    # A group whose every step is OFF / TODO has nothing to run and cannot be
+    # saved; the calls to it are switched off (repeat: a group may only call such groups).
+    def runnable(lines):
+        return [ln for ln in lines if ln and not ln.startswith("#")]
+    changed = True
+    while changed:
+        changed = False
+        empty = {g for g, ls in groups_out.items() if not runnable(ls)}
+        for g, ls in list(groups_out.items()) + [("", body)]:
+            for k, ln in enumerate(ls):
+                if ln.startswith("call ") and ln[5:].strip() in empty:
+                    ls[k] = f"# OFF: {ln}"
+                    off.append(f"{g or 'test case'}: {ln}   (the group has no step that can run)")
+                    changed = True
     name = bundle.get("name", "")
     header = [f"# Platform: {platform}",
               f"# Imported from Testsigma: {name} (test case {bundle.get('test_case_id')}, run {bundle.get('run_id')}, "
@@ -620,6 +686,30 @@ def convert(bundle: dict, *, platform: str = "mobilesite") -> dict:
 # ─────────────────────────────────────────────────────────────────────────────
 # 3. IMPORT (writes into the portal)
 # ─────────────────────────────────────────────────────────────────────────────
+_REGISTRY = os.path.join(EXPORT_DIR, "imported.json")
+
+
+def _registry() -> dict:
+    """What this importer created: only those may be replaced by a re-import.
+    A hand-built test case or step group with the same name is never overwritten."""
+    try:
+        with open(_REGISTRY, encoding="utf-8") as f:
+            d = json.load(f)
+    except (OSError, ValueError):
+        d = {}
+    d.setdefault("flows", [])
+    d.setdefault("groups", [])
+    return d
+
+
+def _save_registry(d: dict) -> None:
+    os.makedirs(EXPORT_DIR, exist_ok=True)
+    tmp = _REGISTRY + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(d, f, indent=1)
+    os.replace(tmp, _REGISTRY)
+
+
 def import_case(run_id: str, test_case_id: int, *, platform: str = "mobilesite",
                 overwrite: bool = False) -> dict:
     from core import reusable_steps
@@ -629,8 +719,13 @@ def import_case(run_id: str, test_case_id: int, *, platform: str = "mobilesite",
     res = convert(bundle, platform=platform)
     flow_name = slug(res["name"])
     flow_path = os.path.join(BASE_DIR, "flows", flow_name + ".flow")
-    if os.path.exists(flow_path) and not overwrite:
-        return {"name": flow_name, "status": "exists", "detail": "a test case with this name already exists"}
+    reg = _registry()
+    if os.path.exists(flow_path):
+        if not overwrite:
+            return {"name": flow_name, "status": "exists", "detail": "a test case with this name already exists"}
+        if flow_name not in reg["flows"]:
+            return {"name": flow_name, "status": "exists",
+                    "detail": "a hand-built test case has this name — it is never replaced by an import"}
     group = normalise_name("ts " + res["name"], kind="group")[:60]
     existing = load_locators()
     known = {n for els in existing.values() if isinstance(els, dict) for n in els}
@@ -640,18 +735,28 @@ def import_case(run_id: str, test_case_id: int, *, platform: str = "mobilesite",
             continue
         if add_locator(group, lname, meta["xpath"]):
             added += 1
+    kept: list[str] = []
     for gname, lines in res["groups"].items():
         # A step group holds runnable steps only: comment lines inside a group
         # reach the parser. Its OFF / TODO lines are reported by the preview.
         steps = [ln for ln in lines if ln and not ln.startswith("#")]
+        if not steps:
+            continue
+        mine = gname in reg["groups"]
         try:
-            reusable_steps.save(gname, steps, overwrite=overwrite, platform=platform)
+            reusable_steps.save(gname, steps, overwrite=overwrite and mine, platform=platform)
+            if gname not in reg["groups"]:
+                reg["groups"].append(gname)
         except ValueError as e:
             if not str(e).startswith("DUPLICATE:"):
                 raise
+            kept.append(gname)                  # an existing group of the same name is used as it is
     os.makedirs(os.path.dirname(flow_path), exist_ok=True)
     with open(flow_path, "w", encoding="utf-8") as f:
         f.write(res["flow"])
+    if flow_name not in reg["flows"]:
+        reg["flows"].append(flow_name)
+    _save_registry(reg)
     return {"name": flow_name, "status": "imported", "steps": res["steps"], "elements_added": added,
-            "groups": list(res["groups"]), "todo": len(res["todo"]), "off": len(res["off"]),
-            "missing_elements": res["missing_elements"]}
+            "groups": list(res["groups"]), "existing_groups_kept": kept, "todo": len(res["todo"]),
+            "off": len(res["off"]), "missing_elements": res["missing_elements"]}
