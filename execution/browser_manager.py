@@ -20,6 +20,19 @@ logger = logging.getLogger(__name__)
 # ─────────────────────────────────────────────────────────────────────────────
 # HELPERS
 # ─────────────────────────────────────────────────────────────────────────────
+
+def default_geolocation() -> dict:
+    """Where the browser says it is when location is allowed. Without a position a
+    granted location request times out and sites show an error page.
+    GEO_LOCATION="lat,lon" in .env; default Mumbai."""
+    raw = os.environ.get("GEO_LOCATION", "19.0760,72.8777")
+    try:
+        lat, lon = (float(x) for x in raw.split(",", 1))
+    except ValueError:
+        lat, lon = 19.0760, 72.8777
+    return {"latitude": lat, "longitude": lon}
+
+
 def _ensure_dir(path: str) -> None:
     os.makedirs(path, exist_ok=True)
 
@@ -187,9 +200,11 @@ def build_context_options(capabilities: dict | None, devices) -> dict:
         # for a permission that was not granted, so nothing blocks the run.
         permissions = []
 
+    geo = {"geolocation": default_geolocation()} if "geolocation" in permissions else {}
+
     # ── Desktop: unchanged from the original implementation ──────────────────
     if not wants_mobile_web(caps):
-        return dict(no_viewport=True, permissions=permissions)
+        return dict(no_viewport=True, permissions=permissions, **geo)
 
     # ── Mobile: resolve the device descriptor from Playwright's registry ─────
     device_name = str(caps.get("device_name") or settings.MOBILE_DEVICE_EMULATION or "").strip()
@@ -223,6 +238,7 @@ def build_context_options(capabilities: dict | None, devices) -> dict:
         "is_mobile": descriptor["is_mobile"],
         "has_touch": descriptor["has_touch"],
         "permissions": permissions,
+        **geo,
     }
 
     # ── Explicit suite overrides (mobile mode only) ──────────────────────────

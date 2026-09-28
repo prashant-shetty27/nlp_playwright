@@ -254,6 +254,8 @@ class _Ctx:
         self.used: dict[str, dict] = {}          # tool name -> {testsigma, xpath, type}
         self.cur: dict = {}                       # the Testsigma step being converted
         self.native = False                       # between "switch to native" and back
+        self.optional_names: set[str] = set()     # elements from Android dialogs
+        self.after_dialog = False                 # the step before tapped an Android dialog
         self.vars: set[str] = set()               # variables this case stores
         self.nums: dict[str, str] = {}            # variables stored as a plain number
         self.missing: list[str] = []
@@ -265,8 +267,8 @@ class _Ctx:
         return []
 
     def go_native(self, on: bool) -> list[str]:
-        """Testsigma leaves the page for Chrome's own dialogs (the location prompt).
-        A browser run has no such dialog: the permission is granted to the page instead."""
+        """Testsigma leaves the page for Android's own dialogs (Chrome's location
+        permission). A browser run has no such dialog, so those taps are skipped."""
         self.native = on
         return self.skip("switch to Chrome's native dialogs" if on else "back to the page")
 
@@ -336,6 +338,12 @@ class _Ctx:
                           "css_selector": definition, "link_text": f"//a[normalize-space()='{definition}']",
                           "partial_link_text": f"//a[contains(normalize-space(),'{definition}')]",
                           "tag_name": f"//{definition}"}.get(kind, definition)
+        android_attr = bool(definition) and re.search(r"@(?:text|resource-id|content-desc)\b", str(definition))
+        if android_attr:
+            # An Android-app locator (@text='Consent'): the element is a phone dialog,
+            # not page content. Keep a web form of it; the tap becomes optional.
+            definition = re.sub(r"@text\s*=", "normalize-space()=", str(definition))
+            self.optional_names.add(name)
         if not definition:
             self.missing.append(ts_name)
             t = ts_name.replace("'", "")
@@ -435,10 +443,10 @@ _MAP = [
     (r"^tap on the element with text\s+(?P<t>.+?)\s+if (?:visible|present|displayed)$",
      lambda m, c: [f"click if visible {c.text_el(m['t'])}"]),
     (r"^tap on the element with text\s+(?P<t>.+?)$",
-     lambda m, c: [f"click {c.text_el(m['t'])}"]),
+     lambda m, c: [f"click if visible {c.text_el(m['t'])}" if c.after_dialog else f"click {c.text_el(m['t'])}"]),
     (r"^tap on\s+(?P<el>.+?)\s+if (?:visible|present|displayed)$",
      lambda m, c: [f"click if visible {c.loc(m['el'])}"]),
-    (r"^(?:tap|click) on\s+(?P<el>.+?)$", lambda m, c: [f"click {c.loc(m['el'])}"]),
+    (r"^(?:tap|click) on\s+(?P<el>.+?)$", lambda m, c: _tap(m, c)),
     (r"^scroll the window to\s+(?P<n>-?\d+)\s+offset vertically$",
      lambda m, c: [f"scroll down {m['n']}"]),
     (r"^scroll\s+(?:down\s+|up\s+)?to the element\s+(?P<el>.+?)\s+into view$",
@@ -446,6 +454,13 @@ _MAP = [
     (r"^swipe bottom to top(?: in the screen)?$", lambda m, c: ["scroll down 600"]),
     (r"^swipe top to bottom(?: in the screen)?$", lambda m, c: ["scroll up 600"]),
 ]
+
+
+def _tap(m, c: "_Ctx"):
+    """Tap on X. A tap on an Android dialog element (Chrome's consent sheet) is
+    optional in a browser run — that sheet only exists on the phone."""
+    name = c.loc(m["el"])
+    return [f"click if visible {name}" if name in c.optional_names else f"click {name}"]
 
 
 def _store_literal(m, c: "_Ctx"):
@@ -489,17 +504,19 @@ def _one(action: str, ctx: _Ctx) -> list[str] | None:
     # "…and With Scrollable TRUE/FALSE" is a Testsigma mobile option, not part of the check.
     a = _SCROLLABLE.sub("", " ".join(str(action or "").split()))
     if ctx.native and not re.match(r"^switch to", a, re.I):
-        # A tap on Chrome's own permission dialog: grant the permission to the page instead.
-        if re.search(r"\ballow\b", a, re.I):
-            if getattr(ctx, "_granted", False):
-                return ctx.skip(f"native dialog: {a}")
-            ctx._granted = True
-            return ["allow browser permission geolocation"]
-        return ctx.skip(f"native dialog: {a}")
+        # A tap on an Android dialog (e.g. "Allow" location for the Chrome APP).
+        # That is the phone's permission for Chrome, not a grant to the site, and
+        # a browser run has no such dialog — so nothing to run. (Granting the site
+        # location instead changes what justdial shows: NCT pages then redirect.)
+        return ctx.skip(f"Android dialog: {a}")
     for rx, h in _COMPILED:
         m = rx.match(a)
         if m:
-            return h(m, ctx)
+            out = h(m, ctx)
+            # A dialog tap makes the next "tap on the element with text …" optional too.
+            ctx.after_dialog = bool(out) and any(
+                ln.startswith("click if visible ") and ln.split()[-1] in ctx.optional_names for ln in out)
+            return out
     return None
 
 

@@ -201,8 +201,8 @@ def _reachability_hint(host: str) -> str:
                 f"is only routable from inside the corporate network. The name "
                 f"resolved and the connection opened, then the site closed it. "
                 f"Check the VPN is connected; if it is and the page opens in your "
-                f"own browser, the site is refusing the automated browser "
-                f"(try the run with Headless off). ")
+                f"own browser, the site briefly refused the automated browser — "
+                f"run again. ")
     return ""
 
 
@@ -1497,6 +1497,12 @@ def set_browser_permission(page, permission: str, decision: str) -> None:
                 origin = None
         context.grant_permissions([perm], origin=origin) if origin \
             else context.grant_permissions([perm])
+        if perm == "geolocation":
+            # Granting location without a position makes every location request
+            # time out, and sites show their error page instead ("Timeout
+            # expired" on justdial). A real phone has a position; give one too.
+            from execution.browser_manager import default_geolocation
+            context.set_geolocation(default_geolocation())
         logger.info("🔓 Granted browser permission '%s'%s", perm,
                     f" for {origin}" if origin else "")
     except Exception as e:  # noqa: BLE001
