@@ -36,7 +36,7 @@ scroll to prp_9th_result_touch
 verify element prp_9th_result_touch is visible
 wait 2 seconds
 call SG_PRP_GVS_Popup
-scroll until element b2b_prp_watch_related_videos_heading visible, scroll by 600 pixels, scroll count 15, scroll wait 1
+swipe bottom to top until element b2b_prp_watch_related_videos_heading is visible, max 15 times, wait 1
 call SG_PRP_Watch_Related_Video
 # OFF: call RFQ_Non_Login_Flow_to_Login_and_Continue_Search
 wait 1 seconds

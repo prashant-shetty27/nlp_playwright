@@ -6,7 +6,7 @@
   "description": "Recommended Products For You (GJDT-22686) only — used to try Smoke / Sanity runs. No leads.",
   "platform": "mobilesite",
   "scripts": [
-    "flows/Recommended_Products_For_You_logic_update.flow"
+    "flows/Nct_Recommended_Products_For_You_Newlogic.flow"
   ],
   "updated_by": "prashantshetty",
   "updated_at": "2026-09-26T07:12:33+00:00",

@@ -72,7 +72,7 @@
       "call Location_Popup",
       "wait for page to load"
     ],
-    "created_at": "2026-09-28T17:48:47.183502+00:00",
+    "created_at": "2026-09-28T20:01:29.322310+00:00",
     "step_count": 6,
     "platform": "mobilesite"
   },
@@ -82,7 +82,7 @@
       "click if visible consent_button",
       "click if visible consent_text"
     ],
-    "created_at": "2026-09-28T17:44:35.483171+00:00",
+    "created_at": "2026-09-28T20:01:28.641115+00:00",
     "step_count": 3,
     "platform": "mobilesite"
   },
@@ -100,7 +100,7 @@
       "type \"537393\" into focused field",
       "verify element nct_ask_for_price_acknowledgement_toast_msg is visible"
     ],
-    "created_at": "2026-09-28T17:44:31.640450+00:00",
+    "created_at": "2026-09-28T20:01:25.432245+00:00",
     "step_count": 11,
     "platform": "mobilesite"
   },
@@ -109,7 +109,7 @@
       "click if visible consent_button",
       "click if visible consent_text"
     ],
-    "created_at": "2026-09-28T17:48:47.194056+00:00",
+    "created_at": "2026-09-28T20:01:29.334845+00:00",
     "step_count": 2,
     "platform": "mobilesite"
   },
@@ -122,14 +122,13 @@
       "verify element b2b_prp_bd7_banner_name is visible",
       "verify element b2b_prp_bd7_banner_mobile is visible"
     ],
-    "created_at": "2026-09-28T17:44:32.720977+00:00",
+    "created_at": "2026-09-28T20:01:26.679399+00:00",
     "step_count": 6,
     "platform": "mobilesite"
   },
   "SG_PRP_GVS_Popup": {
     "steps": [
-      "scroll down 1200",
-      "wait until element b2b_prp_gvs_popup is visible up to 30 seconds",
+      "swipe bottom to top until element b2b_prp_gvs_popup is visible, max 15 times, wait 1",
       "verify element b2b_prp_gvs_popup is visible",
       "verify element b2b_prp_gvs_popup_img is visible",
       "verify element b2b_prp_gvs_popup_heading is visible",
@@ -142,8 +141,8 @@
       "click b2b_prp_gvs_popup_skip",
       "wait until element b2b_prp_gvs_popup_skip is not visible"
     ],
-    "created_at": "2026-09-28T16:56:53.611063+00:00",
-    "step_count": 13,
+    "created_at": "2026-09-28T19:46:40.413216+00:00",
+    "step_count": 12,
     "platform": "mobilesite"
   },
   "SG_PRP_Watch_Related_Video": {
@@ -173,7 +172,7 @@
       "select option \"units\" in units_dropdown",
       "wait 2 seconds"
     ],
-    "created_at": "2026-09-28T17:44:32.734241+00:00",
+    "created_at": "2026-09-28T20:01:26.695969+00:00",
     "step_count": 24,
     "platform": "mobilesite"
   },
@@ -182,7 +181,7 @@
       "call SG_Touch_B2B_RFQ_Login_Form",
       "wait 1 seconds"
     ],
-    "created_at": "2026-09-28T17:44:32.744939+00:00",
+    "created_at": "2026-09-28T20:01:26.709670+00:00",
     "step_count": 2,
     "platform": "mobilesite"
   },
@@ -203,7 +202,7 @@
       "wait 5 seconds",
       "wait 1 seconds"
     ],
-    "created_at": "2026-09-28T17:44:32.755700+00:00",
+    "created_at": "2026-09-28T20:01:26.722784+00:00",
     "step_count": 14,
     "platform": "mobilesite"
   },
@@ -219,47 +218,46 @@
       "type \"537393\" into prp_login_otp",
       "wait 1 seconds"
     ],
-    "created_at": "2026-09-28T17:44:34.431248+00:00",
+    "created_at": "2026-09-28T20:01:27.985108+00:00",
     "step_count": 9,
     "platform": "mobilesite"
   },
   "SG_PRP_Request_Catalogue_Non_Login_to_Login_Flow": {
     "steps": [
-      "click if visible b2b_prp_gvs_popup_skip",
-      "scroll until element prp_request_catalogue_1st visible, scroll by 600 pixels, scroll count 15, scroll wait 1",
+      "swipe bottom to top until element prp_request_catalogue_1st is visible, closing b2b_prp_gvs_popup_skip, max 15 times, wait 1",
       "wait 2 seconds",
       "wait 3 seconds",
       "wait 2 seconds"
     ],
-    "created_at": "2026-09-28T17:44:34.418999+00:00",
-    "step_count": 5,
+    "created_at": "2026-09-28T20:01:27.973063+00:00",
+    "step_count": 4,
     "platform": "mobilesite"
   },
   "SG_PRP_Request_Catalogue_PDP_Seller_Brochure_Not_p": {
     "steps": [
-      "scroll until element prp_request_catalogue_after_scroll visible, scroll by 600 pixels, scroll count 15, scroll wait 1",
+      "swipe bottom to top until element prp_request_catalogue_after_scroll is visible, max 15 times, wait 1",
       "wait 3 seconds",
       "wait 3 seconds"
     ],
-    "created_at": "2026-09-28T17:44:34.442376+00:00",
+    "created_at": "2026-09-28T20:01:27.998813+00:00",
     "step_count": 3,
     "platform": "mobilesite"
   },
   "SG_View_Catalogue_PDP_Seller_Brochure_Verification": {
     "steps": [
-      "scroll until element prp_view_catalogue_1st visible, scroll by 600 pixels, scroll count 15, scroll wait 1",
+      "swipe bottom to top until element prp_view_catalogue_1st is visible, max 15 times, wait 1",
       "scroll to prp_view_catalogue_1st",
       "wait 1 seconds",
       "click prp_product_random_view_catalogue",
       "wait 3 seconds",
-      "scroll until element pdp_heading_more_from_this_seller visible, scroll by 600 pixels, scroll count 15, scroll wait 1",
+      "swipe bottom to top until element pdp_heading_more_from_this_seller is visible, max 15 times, wait 1",
       "scroll to pdp_seller_brochure_section",
       "verify element pdp_seller_brochure_section is visible",
       "wait 1 seconds",
       "press back",
       "wait 3 seconds"
     ],
-    "created_at": "2026-09-28T17:44:34.453479+00:00",
+    "created_at": "2026-09-28T20:01:28.011520+00:00",
     "step_count": 11,
     "platform": "mobilesite"
   },
@@ -268,14 +266,13 @@
       "click if visible consent_button",
       "click if visible consent_text"
     ],
-    "created_at": "2026-09-28T17:44:34.464165+00:00",
+    "created_at": "2026-09-28T20:01:28.025190+00:00",
     "step_count": 2,
     "platform": "mobilesite"
   },
   "SG_PRP_View_Catalogue_Non_Login_to_Login_Flow": {
     "steps": [
-      "click if visible b2b_prp_gvs_popup_skip",
-      "scroll until element prp_request_catalogue_1st visible, scroll by 600 pixels, scroll count 15, scroll wait 1",
+      "swipe bottom to top until element prp_request_catalogue_1st is visible, closing b2b_prp_gvs_popup_skip, max 15 times, wait 1",
       "wait 2 seconds",
       "click prp_view_catalogue_1st",
       "wait 3 seconds",
@@ -284,8 +281,8 @@
       "wait 3 seconds",
       "wait 2 seconds"
     ],
-    "created_at": "2026-09-28T17:44:34.474663+00:00",
-    "step_count": 9,
+    "created_at": "2026-09-28T20:01:28.039361+00:00",
+    "step_count": 8,
     "platform": "mobilesite"
   },
   "SG_Touch_Core_Login_9987996046": {
@@ -298,7 +295,7 @@
       "type \"537393\" into touch_home_otp_1stfield",
       "wait 2 seconds"
     ],
-    "created_at": "2026-09-28T17:44:35.493695+00:00",
+    "created_at": "2026-09-28T20:01:28.654848+00:00",
     "step_count": 7,
     "platform": "mobilesite"
   },
@@ -308,7 +305,7 @@
       "wait until element ps_touch_b2b_prp_1st_product is visible",
       "verify element b2b_prp is not visible"
     ],
-    "created_at": "2026-09-28T17:44:35.506686+00:00",
+    "created_at": "2026-09-28T20:01:28.671289+00:00",
     "step_count": 3,
     "platform": "mobilesite"
   },
@@ -317,7 +314,7 @@
       "wait until element ps_touch_b2b_prp_1st_product is visible",
       "verify element whatsapp_button is not visible"
     ],
-    "created_at": "2026-09-28T17:44:35.517110+00:00",
+    "created_at": "2026-09-28T20:01:28.683672+00:00",
     "step_count": 2,
     "platform": "mobilesite"
   },
@@ -329,7 +326,7 @@
       "wait 3 seconds",
       "wait for page to load"
     ],
-    "created_at": "2026-09-28T17:44:36.056369+00:00",
+    "created_at": "2026-09-28T20:01:29.348457+00:00",
     "step_count": 5,
     "platform": "mobilesite"
   },
@@ -340,7 +337,7 @@
       "wait 3 seconds",
       "verify page does not contain \"No results found!\""
     ],
-    "created_at": "2026-09-28T17:44:36.067575+00:00",
+    "created_at": "2026-09-28T20:01:29.360734+00:00",
     "step_count": 4,
     "platform": "mobilesite"
   },
@@ -353,7 +350,7 @@
       "verify page does not contain \"No results found!\"",
       "verify text \"Wholesaler\" on page"
     ],
-    "created_at": "2026-09-28T17:44:36.078679+00:00",
+    "created_at": "2026-09-28T20:01:29.373561+00:00",
     "step_count": 6,
     "platform": "mobilesite"
   },
@@ -365,7 +362,7 @@
       "click b2b_search_field",
       "wait 2 seconds"
     ],
-    "created_at": "2026-09-28T17:44:36.090194+00:00",
+    "created_at": "2026-09-28T20:01:29.385729+00:00",
     "step_count": 5,
     "platform": "mobilesite"
   },
@@ -378,17 +375,17 @@
       "wait 3 seconds",
       "verify page does not contain \"No results found!\""
     ],
-    "created_at": "2026-09-28T17:44:36.101565+00:00",
+    "created_at": "2026-09-28T20:01:29.399146+00:00",
     "step_count": 6,
     "platform": "mobilesite"
   },
   "SG_NCT_Scroll_to_Recommended_Produt_section_click": {
     "steps": [
-      "scroll until element nct_recommended_products_carousel_section visible, scroll by 600 pixels, scroll count 15, scroll wait 1",
+      "swipe bottom to top until element nct_recommended_products_carousel_section is visible, max 15 times, wait 1",
       "click nct_recommended_product_view_all",
       "wait 3 seconds"
     ],
-    "created_at": "2026-09-28T17:44:36.111862+00:00",
+    "created_at": "2026-09-28T20:01:29.411935+00:00",
     "step_count": 3,
     "platform": "mobilesite"
   }

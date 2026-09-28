@@ -33,17 +33,17 @@ scroll to nct_bd7_banner
 verify element nct_bd7_banner is visible
 scroll to nct_result_card_6th
 wait 1 seconds
-scroll down 300
-scroll down 300
+swipe middle to top
+swipe middle to top
 wait 1 seconds
 verify element nct_open_rfq_section is not visible
 open https://www.justdial.com/Mumbai/Aluminium-Dealers-Jindal-in-Paras-Nagar-Kandivali-West/nct-13058691?fl=undefined&ismap=undefined&subpage=&searchCase=&term=Jindal%2520Aluminium%2520Profile%2520Dealers&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Aluminium%20Dealers-Jindal&trkid=281948997-mumbai
 wait 3 seconds
-scroll down 600
-scroll down 300
+swipe bottom to top
+swipe middle to top
 # OFF: verify element nct_recommended_product_view_all is not visible
-scroll down 600
-scroll down 600
+swipe bottom to top
+swipe bottom to top
 verify element nct_bd7_banner is not visible
 scroll down 1200
 scroll to nct_open_rfq_section

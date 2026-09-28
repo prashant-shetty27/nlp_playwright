@@ -659,6 +659,19 @@ KEYWORD_MAP = {
         "help": "keys go to the field that has focus and add to its text",
         "template": "type \"{text}\" into focused field"
     },
+    "swipe_screen": {
+        "phrases": ["swipe bottom to top", "swipe top to bottom", "swipe up", "swipe down",
+                    "finger scroll", "swipe the screen"],
+        "action": "swipe_screen",
+        "help": "a finger dragged across the screen, like scrolling on a phone",
+        "template": "swipe bottom to top {number} times"
+    },
+    "swipe_until_visible": {
+        "phrases": ["swipe until visible", "swipe until element", "keep swiping until"],
+        "action": "swipe_until_visible",
+        "help": "add ', closing <element>' to close a popup that opens while swiping",
+        "template": "swipe bottom to top until element {locator} is visible, max {number} times"
+    },
     "press_key": {
         "phrases": ["press key", "press space", "press tab", "press escape"],
         "action": "press_key",

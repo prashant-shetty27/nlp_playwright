@@ -228,6 +228,12 @@ def _execute_step_from_command(cmd, page):
         "wait_until_not_visible":    lambda: svc.wait_until_element_not_visible(ep, target),
         "select_option":             lambda: svc.select_option(ep, target, text),
         "type_focused":              lambda: svc.type_into_focused(ep, text),
+        "swipe_screen":              lambda: [svc.swipe_screen(ep, (cmd.values or ["bottom_top"])[0], cmd.wait)
+                                              for _ in range(int(cmd.count or 1))],
+        "swipe_until_visible":       lambda: svc.swipe_until_element_visible(
+                                         ep, target, (cmd.values or ["bottom_top"])[0],
+                                         int(cmd.count or 15), cmd.wait if cmd.wait is not None else 1,
+                                         closers=(cmd.values or [])[1:]),
         "press_key":                 lambda: ep.keyboard.press(cmd.text),
         "clear_field":               lambda: svc.clear_field(ep, target),
         "run_javascript":            lambda: svc.run_javascript(ep, cmd.text),

@@ -7,6 +7,11 @@ import re
 from nlp.command import Command
 
 
+def _swipe_span(words: str) -> str:
+    w = " ".join(words.lower().split())
+    return {"up": "bottom_top", "down": "top_bottom"}.get(w, w.replace(" to ", "_"))
+
+
 def parse_step(step: str) -> Command:
     s = step.strip()
 
@@ -743,6 +748,25 @@ def parse_step(step: str) -> Command:
     # =============================
     # SWIPE
     # =============================
+    # Finger swipe (Testsigma wording):
+    #   swipe bottom to top [in the screen] [3 times] [for duration 2 seconds]
+    #   swipe up | swipe down | swipe bottom to middle | swipe middle to top …
+    #   swipe bottom to top until element <loc> is visible[, max 15 times][, wait 1]
+    _SW = r'(bottom\s+to\s+top|top\s+to\s+bottom|bottom\s+to\s+middle|middle\s+to\s+top|' \
+          r'top\s+to\s+middle|middle\s+to\s+bottom|up|down)'
+    #   … , closing <loc> [and <loc>]  — a popup that opens while swiping is closed if it shows
+    m = re.match(r'^swipe\s+' + _SW + r'(?:\s+in\s+the\s+screen)?\s+until\s+(?:element\s+)?(\S+)\s+is\s+visible'
+                 r'(?:,?\s*closing\s+([^\s,]+(?:\s+and\s+[^\s,]+)*))?'
+                 r'(?:,?\s*max\s+(\d+)\s+times?)?(?:,?\s*wait\s+(\d+(?:\.\d+)?))?$', s, re.I)
+    if m:
+        closers = [c for c in re.split(r'\s+and\s+', m.group(3) or "") if c]
+        return Command(type="swipe_until_visible", target=m.group(2), values=[_swipe_span(m.group(1))] + closers,
+                       count=int(m.group(4) or 15), wait=float(m.group(5) or 1))
+    m = re.match(r'^swipe\s+' + _SW + r'(?:\s+in\s+the\s+screen)?(?:\s+(\d+)\s+times?)?'
+                 r'(?:\s+for\s+duration\s+(\d+(?:\.\d+)?)\s+seconds?)?$', s, re.I)
+    if m:
+        return Command(type="swipe_screen", values=[_swipe_span(m.group(1))],
+                       count=int(m.group(2) or 1), wait=float(m.group(3)) if m.group(3) else None)
     if re.match(r'^swipe\s+left$', s, re.I):
         return Command(type="swipe_left")
     if re.match(r'^swipe\s+right$', s, re.I):

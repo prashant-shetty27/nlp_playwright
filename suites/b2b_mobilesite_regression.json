@@ -7,7 +7,7 @@
   "platform": "mobilesite",
   "scripts": [
     "flows/NCT_Job_related_Questions.flow",
-    "flows/Recommended_Products_For_You_logic_update.flow"
+    "flows/Nct_Recommended_Products_For_You_Newlogic.flow"
   ],
   "updated_by": "setup",
   "updated_at": "2026-09-25T20:49:53+00:00",

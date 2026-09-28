@@ -4,18 +4,26 @@
     "Prashant/B2B",
     "Prashant/B2B/PRP",
     "Prashant/Core",
-    "Prashant/Core/NCT"
+    "Prashant/Core/NCT",
+    "Trails"
   ],
   "assign": {
     "NCT_Ask_for_Price": "Prashant/Core/NCT",
     "NCT_Job_related_Questions": "Prashant/Core/NCT",
     "NCT_Recommended_Open_RFQ_All_Logics": "Prashant/Core/NCT",
+    "Nct_Recommended_Products_For_You_Newlogic": "Prashant/Core/NCT",
     "PRP_All_India_City_Popup_GVS_popup": "Prashant/B2B/PRP",
     "PRP_Filter_Combinations": "Prashant/B2B/PRP",
     "PRP_Open_RFQ_Seller_Type_Option_Login": "Prashant/B2B/PRP",
     "PRP_Open_RFQ_Seller_Type_Option_non_Login": "Prashant/B2B/PRP",
     "PRP_Sanity_Ball_Bearing": "Prashant/B2B/PRP",
     "PRP_View_Catalogue_and_Request_Catalogue": "Prashant/B2B/PRP",
-    "PRP_WA_removed_in_Non_Login": "Prashant/B2B/PRP"
+    "PRP_WA_removed_in_Non_Login": "Prashant/B2B/PRP",
+    "RECOMMEDED_PRODUCT_CASES_VIA_JIRA": "Trails",
+    "Recommended_Product_Carousel_Logic": "Trails",
+    "Recommended_Product_Carousel_Logic_Live": "Trails",
+    "Recommended_Product_City_Preference": "Trails",
+    "_Report_Smoke_Fail": "Trails",
+    "_Report_Smoke_Pass": "Trails"
   }
 }

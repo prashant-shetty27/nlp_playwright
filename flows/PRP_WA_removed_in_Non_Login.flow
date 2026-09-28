@@ -41,6 +41,6 @@ scroll to whatsapp_button
 verify element whatsapp_button is visible
 delete all cookies
 call PS_Touch_Consent_Popup
-scroll until element best_price_button_12th visible, scroll by 600 pixels, scroll count 15, scroll wait 1
+swipe bottom to top until element best_price_button_12th is visible, max 15 times, wait 1
 wait 1 seconds
 verify element whatsapp_button is not visible

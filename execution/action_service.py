@@ -1064,6 +1064,112 @@ def save_page_source(page, name: str) -> str:
     return path
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# SWIPE — a finger dragged across the screen, as on a phone
+# ─────────────────────────────────────────────────────────────────────────────
+#: Where the finger starts and ends, as a share of the screen height.
+_SWIPE_SPAN = {
+    "bottom_top": (0.80, 0.20), "top_bottom": (0.20, 0.80),
+    "bottom_middle": (0.80, 0.50), "middle_top": (0.50, 0.20),
+    "top_middle": (0.20, 0.50), "middle_bottom": (0.50, 0.80),
+}
+
+
+def swipe_screen(page, span: str = "bottom_top", duration_s: float | None = None) -> None:
+    """
+    Drag a finger across the screen — Testsigma's "Swipe bottom to top".
+
+    `scroll down N` sends mouse-wheel events and jumps the page; a site that
+    reacts to touch (popups that open "when the user scrolls", lazy sections,
+    sticky bars) may not see it as a person scrolling. This is a real touch
+    gesture through the browser's own input pipeline (touch start, moves, end,
+    then the page's own momentum), so the page receives what a phone sends.
+    On a desktop page (no touch) it falls back to the same gesture with a mouse.
+    """
+    y0, y1 = _SWIPE_SPAN.get(span, _SWIPE_SPAN["bottom_top"])
+    size = page.viewport_size or page.evaluate("() => ({width: innerWidth, height: innerHeight})")
+    w, h = int(size["width"]), int(size["height"])
+    secs = float(duration_s) if duration_s else 0.35
+    touch = bool(page.evaluate("() => navigator.maxTouchPoints > 0 || 'ontouchstart' in window"))
+    x, ya, yb = int(w / 2), int(y0 * h), int(y1 * h)
+    steps = max(8, min(120, int(secs / 0.016)))
+    if touch:
+        # touchstart -> touchmoves -> touchend, as a finger does; the browser
+        # then scrolls the page itself, momentum included.
+        cdp = page.context.new_cdp_session(page)
+        try:
+            cdp.send("Input.dispatchTouchEvent", {"type": "touchStart", "touchPoints": [{"x": x, "y": ya}]})
+            for i in range(1, steps + 1):
+                cdp.send("Input.dispatchTouchEvent", {
+                    "type": "touchMove", "touchPoints": [{"x": x, "y": ya + (yb - ya) * i / steps}]})
+                page.wait_for_timeout(int(secs * 1000 / steps))
+            cdp.send("Input.dispatchTouchEvent", {"type": "touchEnd", "touchPoints": []})
+        finally:
+            try:
+                cdp.detach()
+            except Exception:  # noqa: BLE001
+                pass
+    else:
+        # Desktop page: the same movement as small wheel steps.
+        for _ in range(steps):
+            page.mouse.wheel(0, (ya - yb) / steps)
+            page.wait_for_timeout(int(secs * 1000 / steps))
+    page.wait_for_timeout(500)               # let the fling settle
+    logger.info("👆 Swiped %s (%s, %.1fs)", span.replace("_", " to "), "touch" if touch else "mouse", secs)
+
+
+def swipe_until_element_visible(page, target: str, span: str = "bottom_top",
+                                max_swipes: int = 15, wait_s: float = 1,
+                                closers: list[str] | None = None) -> None:
+    """Swipe, look, swipe again — Testsigma's "While X is not visible: swipe".
+    `closers`: popups that may open on the way (e.g. a location sheet); each is
+    closed when it shows, so it does not block the next swipe."""
+    from locators.manager import get_locator_and_dna
+    xpath, _ = get_locator_and_dna(target)
+    if not xpath:
+        raise Exception(f"Locator '{target}' not found")
+    close_xpaths = []
+    for c in closers or []:
+        cx, _ = get_locator_and_dna(c)
+        if not cx:
+            raise Exception(f"Locator '{c}' not found")
+        close_xpaths.append((c, cx))
+
+    def close_popups() -> None:
+        for name, cx in close_xpaths:
+            loc = page.locator(cx).first
+            try:
+                if loc.count() and loc.is_visible(timeout=200):
+                    loc.click(timeout=2000)
+                    logger.info("✖️ Closed '%s' while swiping", name)
+                    page.wait_for_timeout(300)
+            except Exception:  # noqa: BLE001 — it went away on its own
+                pass
+    size = page.viewport_size or {"width": 412, "height": 915}
+
+    def seen() -> bool:
+        loc = page.locator(xpath).first
+        try:
+            if loc.count() == 0 or not loc.is_visible(timeout=300):
+                return False
+            box = loc.bounding_box(timeout=300)
+        except Exception:  # noqa: BLE001
+            return False
+        return bool(box) and box["y"] < size["height"] and box["y"] + box["height"] > 0
+
+    for i in range(int(max_swipes) + 1):
+        if seen():
+            logger.info("👆 '%s' in view after %d swipe(s)", target, i)
+            return
+        if i == int(max_swipes):
+            break
+        close_popups()
+        swipe_screen(page, span)
+        if wait_s:
+            page.wait_for_timeout(int(float(wait_s) * 1000))
+    raise Exception(f"'{target}' did not appear after {max_swipes} swipe(s) {span.replace('_', ' to ')}.")
+
+
 def scroll_until_element_visible(page, target: str, pixels=500, direction="down",
                                  max_scrolls=None, scroll_wait=1) -> bool:
     """

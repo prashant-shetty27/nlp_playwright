@@ -443,17 +443,17 @@ _MAP = [
     (r"^clear the text displayed in the\s+(?P<el>.+?)\s+field$",
      lambda m, c: [f"clear {c.loc(m['el'])}"]),
     (r"^swipe the element\s+(?P<el>.+?)\s+into view$", lambda m, c: [f"scroll to {c.loc(m['el'])}"]),
-    (r"^swipe (?P<d>bottom to top|top to bottom) for duration \d+ seconds?$",
-     lambda m, c: ["scroll down 600" if m["d"].startswith("bottom") else "scroll up 600"]),
+    (r"^swipe (?P<d>bottom to top|top to bottom) for duration (?P<n>\d+) seconds?$",
+     lambda m, c: [f"swipe {m['d'].lower()} for duration {m['n']} seconds"]),
     (r"^scroll the element\s+(?P<el>.+?)\s+to\s+(?P<n>-?\d+)\s+offset horizontally$",
      lambda m, c: [f"scroll element {c.loc(m['el'])} horizontally by {m['n']}"]),
     (r"^scroll the window to page down offset vertically$", lambda m, c: ["scroll down 600"]),
     (r"^scroll the window to\s+(?P<v>[A-Za-z_]\w*)\s+offset vertically$",
      lambda m, c: [f"scroll down {c.nums[m['v']]}"] if m["v"] in c.nums else None),
-    (r"^swipe bottom to middle(?: in the screen)?$", lambda m, c: ["scroll down 300"]),
-    (r"^swipe middle to top(?: in the screen)?$", lambda m, c: ["scroll down 300"]),
-    (r"^swipe top to middle(?: in the screen)?$", lambda m, c: ["scroll up 300"]),
-    (r"^swipe middle to bottom(?: in the screen)?$", lambda m, c: ["scroll up 300"]),
+    (r"^swipe bottom to middle(?: in the screen)?$", lambda m, c: ["swipe bottom to middle"]),
+    (r"^swipe middle to top(?: in the screen)?$", lambda m, c: ["swipe middle to top"]),
+    (r"^swipe top to middle(?: in the screen)?$", lambda m, c: ["swipe top to middle"]),
+    (r"^swipe middle to bottom(?: in the screen)?$", lambda m, c: ["swipe middle to bottom"]),
     (r"^wait until the element\s+(?P<el>.+?)\s+is\s+(?:clickable|visible|present|enabled|displayed)$",
      lambda m, c: [f"wait until element {c.loc(m['el'])} is visible"]),
     (r"^wait until the text\s+(?P<t>.+?)\s+is (?:present|visible|displayed)(?: on the current page)?$",
@@ -493,8 +493,8 @@ _MAP = [
      lambda m, c: [f"scroll down {m['n']}"]),
     (r"^scroll\s+(?:down\s+|up\s+)?to the element\s+(?P<el>.+?)\s+into view$",
      lambda m, c: [f"scroll to {c.loc(m['el'])}"]),
-    (r"^swipe bottom to top(?: in the screen)?$", lambda m, c: ["scroll down 600"]),
-    (r"^swipe top to bottom(?: in the screen)?$", lambda m, c: ["scroll up 600"]),
+    (r"^swipe bottom to top(?: in the screen)?$", lambda m, c: ["swipe bottom to top"]),
+    (r"^swipe top to bottom(?: in the screen)?$", lambda m, c: ["swipe top to bottom"]),
 ]
 
 
@@ -677,13 +677,22 @@ def convert(bundle: dict, *, platform: str = "mobilesite") -> dict:
                     ctx.cur = s
                     target = ctx.loc(el)
                     emitted = []
+                    close_names = []
                     for c in closers:          # a popup Testsigma closed while scrolling
                         ctx.cur = c
                         ca = " ".join(str(c.get("action")).split())
                         m_ = _JS_TAP.match(ca) or _TAP.match(ca)
-                        emitted.append(f"click if visible {ctx.loc(m_['el'])}")
-                    emitted.append(f"scroll until element {target} visible, scroll by 600 pixels, "
-                                   f"scroll count 15, scroll wait 1")
+                        close_names.append(ctx.loc(m_['el']))
+                    if any(b.startswith("swipe") for b in body):
+                        # Testsigma swiped with a finger: do the same, not a pixel jump,
+                        # closing on every swipe what it closed inside its loop.
+                        closing = f", closing {' and '.join(close_names)}" if close_names else ""
+                        emitted.append(f"swipe bottom to top until element {target} is visible{closing}, "
+                                       f"max 15 times, wait 1")
+                    else:
+                        emitted += [f"click if visible {n}" for n in close_names]
+                        emitted.append(f"scroll until element {target} visible, scroll by 600 pixels, "
+                                       f"scroll count 15, scroll wait 1")
                 else:
                     emitted = None
             elif _IF_VISIBLE.match(action) and s["_children"] and all(

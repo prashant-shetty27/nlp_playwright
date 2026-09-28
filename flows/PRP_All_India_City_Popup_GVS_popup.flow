@@ -23,6 +23,6 @@ verify element prp_bd7_banner_section is visible
 # OFF: scroll until element prp_all_india_people_also_search_carousel visible, scroll by 600 pixels, scroll count 15, scroll wait 1
 wait 1 seconds
 # Testsigma scrolled until the GVS popup opened (it opens when the page is scrolled):
-scroll until element b2b_prp_gvs_popup visible, scroll by 600 pixels, scroll count 15, scroll wait 2
+swipe bottom to top until element b2b_prp_gvs_popup is visible, closing b2b_prp_all_india_location_pop_cross, max 15 times, wait 1
 wait 3 seconds
 run javascript "document.querySelector('[class*="skipbtn"]').click();"
