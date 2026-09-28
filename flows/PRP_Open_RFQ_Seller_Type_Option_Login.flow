@@ -6,15 +6,13 @@ call Live_Touch_Chrome_Navigate_to_Homepage_setup_Popup
 click touch_signin_home_page
 click touch_contextual_signin
 wait 2 seconds
-type "9987996046" into rfq_mobile_number_input
+type "7977184984" into rfq_mobile_number_input
 wait 2 seconds
 js click home_login_with_otp
 wait until element touch_home_otp_1stfield is visible
 type if visible "537393" into touch_home_otp_1stfield
 wait 1 seconds
 wait 1 seconds
-# Signed-in cookies make this page redirect in a loop: clear them first (Prashant, 28 Sep).
-delete all cookies
 open https://www.justdial.com/jdmart/Delhi/Scrap/jdm-1094774-ent-15-1094774?fl=undefined&ismap=undefined&subpage=&searchCase=&term=scrap&searchLocUpdate=0&stype=category_list&srcterm=Scrap
 wait 2 seconds
 scroll until element prp_what_are_you_looking_for_seller_type_banner visible, scroll by 600 pixels, scroll count 15, scroll wait 1
