@@ -54,6 +54,15 @@ class ImportBody(BaseModel):
     platform: str = "mobilesite"
 
 
+def module_folder(name: str) -> str:
+    """Folder an imported test case goes into: <root>/Core/NCT or <root>/B2B/<module>.
+    TESTSIGMA_FOLDER_ROOT in .env changes the root (default Prashant)."""
+    import os
+    root = os.environ.get("TESTSIGMA_FOLDER_ROOT", "Prashant").strip() or "Prashant"
+    mod = _module(name)
+    return f"{root}/Core/{mod}" if mod == "NCT" else f"{root}/B2B/{mod}"
+
+
 def _module(name: str) -> str:
     n = (name or "").strip().lower()
     for key, label in (("nct", "NCT"), ("prp", "PRP"), ("pdp", "PDP"), ("catalogue", "Catalogue"),
@@ -99,10 +108,16 @@ def import_cases(run_id: int, body: ImportBody, user: str = Depends(acting_user)
     require(user, "admin")
     from tools import testsigma_pull as P
     out = []
+    from core import folders
+    names = {int(c["test_case_id"]): c["name"] for c in P.cases(str(run_id))}
     for tc in body.test_case_ids:
         try:
-            out.append({"test_case_id": tc, **P.import_case(str(run_id), tc, platform=body.platform,
-                                                            overwrite=body.overwrite)})
+            res = P.import_case(str(run_id), tc, platform=body.platform, overwrite=body.overwrite)
+            # File it by module (Prashant/Core/NCT, Prashant/B2B/PDP …) unless it
+            # already sits in a folder someone chose.
+            if res.get("status") == "imported" and not folders.folder_of(res["name"]):
+                folders.assign([res["name"]], module_folder(names.get(int(tc), res["name"])))
+            out.append({"test_case_id": tc, **res})
         except Exception as e:  # noqa: BLE001 — one bad case must not stop the batch
             out.append({"test_case_id": tc, "status": "error", "detail": f"{type(e).__name__}: {e}"[:300]})
     return {"results": out}

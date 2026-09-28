@@ -83,6 +83,11 @@ class TestCasesPage:
         #: very end, so putting one into the middle of a written test meant
         #: appending it and walking it up the list one press at a time.
         self.compose_at: int | None = None
+        #: Folders (Testsigma-style tree): {"folders": [paths], "assign": {test: path}}.
+        self.folder_data: dict = {"folders": [], "assign": {}}
+        #: Folders shown open. New test cases go into `current_folder`.
+        self.open_folders: set[str] = set()
+        self.current_folder: str = ""
 
     # ── data ────────────────────────────────────────────────────────────────
     async def load(self) -> None:
@@ -93,6 +98,10 @@ class TestCasesPage:
             raw = await api.list_projects(self.platform)
             self.projects = sorted(
                 p if isinstance(p, str) else p.get("name", "") for p in raw)
+            try:
+                self.folder_data = await api.folders()
+            except api.ApiError:
+                self.folder_data = {"folders": [], "assign": {}}
         except api.ApiError as e:
             ui.notify(f"Could not load: {e.detail}", type="negative")
 
@@ -393,9 +402,11 @@ class TestCasesPage:
                                        value=self.filter,
                                        on_change=lambda e: self._filter(e.value)) \
                     .props("outlined dense clearable").classes("flex-grow")
+                ui.button(icon="create_new_folder", on_click=lambda: self._folder_dialog("new")) \
+                    .props("flat dense").tooltip("New folder")
                 ui.button(icon="checklist", on_click=self._toggle_pick) \
                     .props("flat dense" + (" color=primary" if self.pick_mode else "")) \
-                    .tooltip("Select several test cases to delete")
+                    .tooltip("Select several test cases to move or delete")
                 ui.button(icon="chevron_left", on_click=self._toggle_list) \
                     .props("flat dense").tooltip("Hide the list")
             self.pick_bar = ui.row().classes("w-full items-center gap-2 no-wrap")
@@ -408,37 +419,213 @@ class TestCasesPage:
         self.render_rows()
 
     def render_rows(self) -> None:
-        """Redraw only the rows. Called on every keystroke; the input is untouched."""
+        """Redraw only the rows (folder tree). Called on every keystroke; the input is untouched."""
         if not getattr(self, "list_box", None):
             return
         self.list_box.clear()
+        assign = self.folder_data.get("assign", {})
         shown = [p for p in self.projects if self.filter in p.lower()]
         with self.list_box:
-            if not shown:
+            if not shown and not self.folder_data.get("folders"):
                 ui.label("Nothing matches that search" if self.filter
                          else "No test cases yet").style(
                     f"padding:10px; color:{COLORS['text_muted']};"
                     f"font-size:{TYPOGRAPHY['size_sm']}")
-            for name in shown:
-                on = name == self.selected
-                row = ui.row().classes("w-full items-center no-wrap cursor-pointer") \
-                    .style(f"padding:7px 10px;"
-                           f"border-bottom:1px solid {COLORS['border']};"
-                           f"background:"
-                           f"{COLORS['primary'] + '12' if on else 'transparent'}")
-                with row:
-                    if self.pick_mode:
-                        ui.checkbox(value=name in self.picked,
-                                    on_change=lambda e, n=name: self._pick(n, e.value)) \
-                            .props("dense")
-                    ui.label(name).style(
-                        f"font-size:{TYPOGRAPHY['size_sm']};"
-                        f"font-family:{TYPOGRAPHY['mono']}")
-                if self.pick_mode:
-                    row.on("click", lambda n=name: self._pick(n, n not in self.picked))
-                else:
-                    row.on("click", lambda n=name: self.open_project_guarded(n))
+            elif self.filter:
+                # Searching: a flat list, each row saying which folder it is in.
+                for name in shown:
+                    self._test_row(name, 0, folder=assign.get(name, "") or "Unfiled")
+                if not shown:
+                    ui.label("Nothing matches that search").style(
+                        f"padding:10px; color:{COLORS['text_muted']}; font-size:{TYPOGRAPHY['size_sm']}")
+            else:
+                folders = sorted(self.folder_data.get("folders", []), key=str.lower)
+                for top in [f for f in folders if "/" not in f]:
+                    self._folder_node(top, folders, assign, 0)
+                unfiled = [n for n in shown if not assign.get(n) or assign.get(n) not in folders]
+                if unfiled:
+                    self._folder_header("", "Unfiled", len(unfiled), 0, unfiled=True)
+                    if "" in self.open_folders or not folders:
+                        for n in unfiled:
+                            self._test_row(n, 1)
         self._render_pick_bar(shown)
+
+    def _count_in(self, path: str, assign: dict) -> int:
+        """Test cases in this folder and everything under it."""
+        return sum(1 for t, f in assign.items()
+                   if t in self.projects and (f == path or f.startswith(path + "/")))
+
+    def _folder_node(self, path: str, folders: list[str], assign: dict, depth: int) -> None:
+        self._folder_header(path, path.split("/")[-1], self._count_in(path, assign), depth)
+        if path not in self.open_folders:
+            return
+        for sub in [f for f in folders if f.startswith(path + "/") and "/" not in f[len(path) + 1:]]:
+            self._folder_node(sub, folders, assign, depth + 1)
+        for t in sorted(t for t, f in assign.items() if f == path and t in self.projects):
+            self._test_row(t, depth + 1)
+
+    def _folder_header(self, path: str, label: str, count: int, depth: int,
+                       unfiled: bool = False) -> None:
+        is_open = path in self.open_folders or (unfiled and not self.folder_data.get("folders"))
+        current = (path == self.current_folder) and not unfiled and bool(path)
+        row = ui.row().classes("w-full items-center no-wrap cursor-pointer gap-1").style(
+            f"padding:6px 8px 6px {8 + depth * 14}px; border-bottom:1px solid {COLORS['border']};"
+            f"background:{COLORS['primary'] + '0d' if current else COLORS['surface'] if 'surface' in COLORS else 'transparent'}")
+        with row:
+            ui.icon("expand_more" if is_open else "chevron_right", size="18px").style(
+                f"color:{COLORS['text_muted']}")
+            ui.icon("folder_open" if is_open else ("inventory_2" if unfiled else "folder"),
+                    size="18px").style(f"color:{COLORS['primary'] if not unfiled else COLORS['text_muted']}")
+            ui.label(label).classes("flex-grow").style(
+                f"font-size:{TYPOGRAPHY['size_sm']}; font-weight:{TYPOGRAPHY['weight_bold']}")
+            ui.label(str(count)).style(f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}")
+            if not unfiled:
+                with ui.button(icon="more_vert").props("flat dense round size=sm") \
+                        .on("click.stop", lambda: None):
+                    with ui.menu():
+                        ui.menu_item("New sub-folder", on_click=lambda p=path: self._folder_dialog("new", p))
+                        ui.menu_item("Rename", on_click=lambda p=path: self._folder_dialog("rename", p))
+                        ui.menu_item("Delete folder", on_click=lambda p=path: self._folder_delete_dialog(p))
+        row.on("click", lambda p=path: self._toggle_folder(p))
+
+    def _toggle_folder(self, path: str) -> None:
+        if path in self.open_folders:
+            self.open_folders.discard(path)
+        else:
+            self.open_folders.add(path)
+        # The folder last opened is where "+ New Test Case" puts the new one.
+        self.current_folder = path
+        self.render_rows()
+
+    def _test_row(self, name: str, depth: int, folder: str = "") -> None:
+        on = name == self.selected
+        row = ui.row().classes("w-full items-center no-wrap cursor-pointer gap-1") \
+            .style(f"padding:6px 10px 6px {10 + depth * 14}px;"
+                   f"border-bottom:1px solid {COLORS['border']};"
+                   f"background:"
+                   f"{COLORS['primary'] + '12' if on else 'transparent'}")
+        with row:
+            if self.pick_mode:
+                ui.checkbox(value=name in self.picked,
+                            on_change=lambda e, n=name: self._pick(n, e.value)) \
+                    .props("dense")
+            else:
+                ui.icon("description", size="16px").style(f"color:{COLORS['text_muted']}")
+            with ui.column().classes("gap-0").style("min-width:0"):
+                ui.label(name).style(
+                    f"font-size:{TYPOGRAPHY['size_sm']};"
+                    f"font-family:{TYPOGRAPHY['mono']}; word-break:break-all")
+                if folder:
+                    ui.label(folder).style(
+                        f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}")
+        if self.pick_mode:
+            row.on("click", lambda n=name: self._pick(n, n not in self.picked))
+        else:
+            row.on("click", lambda n=name: self.open_project_guarded(n))
+
+    # ── folders ─────────────────────────────────────────────────────────────
+    def _folder_dialog(self, mode: str, path: str = "") -> None:
+        """mode 'new' (a folder, or a sub-folder of `path`) or 'rename' (`path`)."""
+        with self.dialog_host:
+            dialog = ui.dialog()
+        with dialog, ui.card().style("width:28rem"):
+            if mode == "rename":
+                ui.label(f"Rename folder {path}").style(f"font-weight:{TYPOGRAPHY['weight_bold']}")
+                name = ui.input("New name", value=path.split("/")[-1]).props("outlined dense autofocus") \
+                    .classes("w-full")
+            else:
+                ui.label("New sub-folder of " + path if path else "New folder").style(
+                    f"font-weight:{TYPOGRAPHY['weight_bold']}")
+                name = ui.input("Name", placeholder="e.g. PDP   —   or a path: Prashant/B2B/PDP") \
+                    .props("outlined dense autofocus").classes("w-full")
+                ui.label("A path with / creates the parents too.").style(
+                    f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}")
+
+            async def save() -> None:
+                val = (name.value or "").strip()
+                if not val:
+                    return
+                try:
+                    if mode == "rename":
+                        res = await api.rename_folder(path, val)
+                        new = res.get("path", "")
+                        self.open_folders = {new + o[len(path):] if o == path or o.startswith(path + "/")
+                                             else o for o in self.open_folders}
+                        if self.current_folder == path or self.current_folder.startswith(path + "/"):
+                            self.current_folder = new + self.current_folder[len(path):]
+                    else:
+                        res = await api.create_folder(f"{path}/{val}" if path else val)
+                        new = res.get("path", "")
+                        parts = new.split("/")
+                        self.open_folders.update("/".join(parts[:i]) for i in range(1, len(parts) + 1))
+                        self.current_folder = new
+                except api.ApiError as e:
+                    ui.notify(e.detail, type="warning")
+                    return
+                dialog.close()
+                await self.load()
+                self.render_rows()
+            name.on("keydown.enter", save)
+            with ui.row().classes("w-full justify-end gap-2"):
+                ui.button("Cancel", on_click=dialog.close).props("flat")
+                ui.button("Rename" if mode == "rename" else "Create", on_click=save).props("unelevated")
+        dialog.open()
+
+    def _folder_delete_dialog(self, path: str) -> None:
+        n = self._count_in(path, self.folder_data.get("assign", {}))
+        parent = "/".join(path.split("/")[:-1]) or "Unfiled"
+
+        async def go() -> None:
+            try:
+                await api.delete_folder(path)
+            except api.ApiError as e:
+                ui.notify(e.detail, type="warning")
+                return
+            self.open_folders = {o for o in self.open_folders if not (o == path or o.startswith(path + "/"))}
+            if self.current_folder == path or self.current_folder.startswith(path + "/"):
+                self.current_folder = ""
+            await self.load()
+            self.render_rows()
+        self._confirm(f"Delete folder {path}?",
+                      [f"Its sub-folders go too. The {n} test case(s) in it are NOT deleted — "
+                       f"they move to {parent}."], go, button="Delete folder", note="")
+
+    def _move_dialog(self) -> None:
+        tests = sorted(self.picked)
+        if not tests:
+            return
+        with self.dialog_host:
+            dialog = ui.dialog()
+        with dialog, ui.card().style("width:30rem"):
+            ui.label(f"Move {len(tests)} test case(s) to").style(f"font-weight:{TYPOGRAPHY['weight_bold']}")
+            options = {"": "Unfiled"} | {f: f for f in sorted(self.folder_data.get("folders", []), key=str.lower)}
+            pick = ui.select(options, value=self.current_folder if self.current_folder in options else "",
+                             with_input=True).props("outlined dense").classes("w-full")
+            ui.label("Or type a new folder path (created for you):").style(
+                f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}")
+            new = ui.input(placeholder="Prashant/B2B/PDP").props("outlined dense").classes("w-full")
+
+            async def go() -> None:
+                target = (new.value or "").strip() or (pick.value or "")
+                try:
+                    res = await api.assign_folder(tests, target)
+                except api.ApiError as e:
+                    ui.notify(e.detail, type="warning")
+                    return
+                dest = res.get("folder", "")
+                if dest and dest != "Unfiled":
+                    parts = dest.split("/")
+                    self.open_folders.update("/".join(parts[:i]) for i in range(1, len(parts) + 1))
+                dialog.close()
+                ui.notify(f"Moved {len(tests)} to {dest}", type="positive")
+                self.picked.clear()
+                self.pick_mode = False
+                await self.load()
+                self.render_list()
+            with ui.row().classes("w-full justify-end gap-2"):
+                ui.button("Cancel", on_click=dialog.close).props("flat")
+                ui.button("Move", icon="drive_file_move", on_click=go).props("unelevated")
+        dialog.open()
 
     # ── bulk delete ─────────────────────────────────────────────────────────
     def _toggle_pick(self) -> None:
@@ -464,6 +651,8 @@ class TestCasesPage:
                                              else self.picked.difference_update(shown),
                                              self.render_rows())).props("dense")
             ui.space()
+            ui.button("Move", icon="drive_file_move", on_click=self._move_dialog) \
+                .props("flat dense").set_enabled(bool(self.picked))
             ui.button(f"Delete {len(self.picked)}", icon="delete_outline",
                       on_click=self._bulk_delete_dialog) \
                 .props("unelevated dense color=negative").set_enabled(bool(self.picked))
@@ -1789,6 +1978,11 @@ class TestCasesPage:
         # A whole drafted testcase was lost that way, with nothing on screen
         # saying it was at risk.
         self.dirty = bool(steps)
+        if self.current_folder:
+            try:
+                await api.assign_folder([name], self.current_folder)
+            except api.ApiError:
+                pass
         await self.load()
         self.render_list()
         await self.render_editor()

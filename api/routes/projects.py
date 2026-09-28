@@ -314,6 +314,8 @@ def rename_project(name: str, body: RenameBody, user: str = Depends(acting_user)
         if body.apply:
             audit.rename(name, body.new_name)
             audit.touch(body.new_name, user)
+            from core import folders
+            folders.on_rename(name, res.get("new_name") or body.new_name)
         return res
     except RenameError as e:
         raise HTTPException(status_code=409, detail=str(e)) from e
@@ -327,4 +329,6 @@ def delete_project(name: str, user: str = Depends(acting_user)):
     if not os.path.exists(path):
         raise HTTPException(status_code=404, detail=f"Project '{name}' not found.")
     os.remove(path)
+    from core import folders
+    folders.on_delete(name)
     return {"message": f"Project '{name}' deleted."}

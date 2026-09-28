@@ -594,3 +594,24 @@ async def testsigma_preview(run_id: int, test_case_id: int) -> dict:
 async def testsigma_import(run_id: int, test_case_ids: list[int], overwrite: bool = False) -> dict:
     return await _call("POST", f"/testsigma/runs/{int(run_id)}/import",
                        json={"test_case_ids": test_case_ids, "overwrite": overwrite})
+
+
+# ── Test case folders ──────────────────────────────────────────────────────────
+async def folders() -> dict:
+    return await _call("GET", "/folders")
+
+
+async def create_folder(path: str) -> dict:
+    return await _call("POST", "/folders", json={"path": path})
+
+
+async def rename_folder(path: str, new_name: str) -> dict:
+    return await _call("POST", "/folders/rename", json={"path": path, "new_name": new_name})
+
+
+async def delete_folder(path: str) -> dict:
+    return await _call("POST", "/folders/delete", json={"path": path})
+
+
+async def assign_folder(tests: list[str], folder: str) -> dict:
+    return await _call("POST", "/folders/assign", json={"tests": tests, "folder": folder})

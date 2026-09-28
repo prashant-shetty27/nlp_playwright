@@ -110,6 +110,8 @@ app.include_router(system.router, dependencies=[Depends(need("admin"))])
 app.include_router(nlp.router)            # parse / suggest / segment: read-only computations
 app.include_router(locators.router, dependencies=[Depends(need("write"))])
 app.include_router(projects.router, dependencies=[Depends(need("write"))])
+from api.routes import folders as _folder_routes  # noqa: E402
+app.include_router(_folder_routes.router, dependencies=[Depends(need("write"))])
 app.include_router(tests.router, dependencies=[Depends(need("run"))])
 app.include_router(sources.router, dependencies=[Depends(need("write"))])
 app.include_router(generate.router, dependencies=[Depends(need("write"))])

@@ -1,0 +1,21 @@
+{
+  "folders": [
+    "Prashant",
+    "Prashant/B2B",
+    "Prashant/B2B/PRP",
+    "Prashant/Core",
+    "Prashant/Core/NCT"
+  ],
+  "assign": {
+    "NCT_Ask_for_Price": "Prashant/Core/NCT",
+    "NCT_Job_related_Questions": "Prashant/Core/NCT",
+    "NCT_Recommended_Open_RFQ_All_Logics": "Prashant/Core/NCT",
+    "PRP_All_India_City_Popup_GVS_popup": "Prashant/B2B/PRP",
+    "PRP_Filter_Combinations": "Prashant/B2B/PRP",
+    "PRP_Open_RFQ_Seller_Type_Option_Login": "Prashant/B2B/PRP",
+    "PRP_Open_RFQ_Seller_Type_Option_non_Login": "Prashant/B2B/PRP",
+    "PRP_Sanity_Ball_Bearing": "Prashant/B2B/PRP",
+    "PRP_View_Catalogue_and_Request_Catalogue": "Prashant/B2B/PRP",
+    "PRP_WA_removed_in_Non_Login": "Prashant/B2B/PRP"
+  }
+}
