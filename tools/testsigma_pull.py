@@ -247,7 +247,7 @@ _DISMISS = re.compile(r"close|cross|cancel|skip|no\s*thanks|may\s*be\s*later|may
 #: numbers, which the site blocks from reaching clients (28 Sep, Prashant).
 #: TEST_MOBILES in .env replaces the list. A step typing any other mobile is OFF.
 TEST_MOBILES = {n.strip() for n in os.environ.get(
-    "TEST_MOBILES", "9987996046,7977184984,7738176962,7738138167").split(",") if n.strip()}
+    "TEST_MOBILES", "9987996046,7977184984,7738176962").split(",") if n.strip()}
 _MOBILE = re.compile(r"(?<!\d)[6-9]\d{9}(?!\d)")
 #: After a lead is sent, the thank-you checks cannot pass with the send switched off.
 _LEAD_AFTER = re.compile(r"acknowledg|thank\s*you|success(fully)?\s*(sent|submitted)|dear\s+\w+|toast", re.I)

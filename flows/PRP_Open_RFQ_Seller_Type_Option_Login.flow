@@ -6,12 +6,11 @@ call Live_Touch_Chrome_Navigate_to_Homepage_setup_Popup
 click touch_signin_home_page
 click touch_contextual_signin
 wait 2 seconds
-type "7738138167" into rfq_mobile_number_input
+type "9987996046" into rfq_mobile_number_input
 wait 2 seconds
 js click home_login_with_otp
 wait until element touch_home_otp_1stfield is visible
-fetch otp for "7738138167" as otp
-enter otp "${otp}" into otp_input
+type if visible "537393" into touch_home_otp_1stfield
 wait 1 seconds
 wait 1 seconds
 open https://www.justdial.com/jdmart/Delhi/Scrap/jdm-1094774-ent-15-1094774?fl=undefined&ismap=undefined&subpage=&searchCase=&term=scrap&searchLocUpdate=0&stype=category_list&srcterm=Scrap
