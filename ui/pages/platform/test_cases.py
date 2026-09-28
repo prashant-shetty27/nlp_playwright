@@ -487,6 +487,37 @@ class TestCasesPage:
                         ui.menu_item("Rename", on_click=lambda p=path: self._folder_dialog("rename", p))
                         ui.menu_item("Delete folder", on_click=lambda p=path: self._folder_delete_dialog(p))
         row.on("click", lambda p=path: self._toggle_folder(p))
+        # Drop target: drag a test case onto a folder (or onto Unfiled) to move it.
+        row.on("dragover.prevent", lambda: None)
+        row.on("dragenter", js_handler="(e) => e.currentTarget.style.outline = "
+               f"'2px dashed {COLORS['primary']}'")
+        row.on("dragleave", js_handler="(e) => e.currentTarget.style.outline = ''")
+        row.on("drop.prevent", lambda p=path: self._drop_on(p))
+
+    async def _drop_on(self, folder: str) -> None:
+        name = getattr(self, "_dragging", None)
+        self._dragging = None
+        if not name:
+            return
+        await self._move_to([name], folder)
+
+    async def _move_to(self, tests: list[str], folder: str) -> None:
+        if all(self.folder_data.get("assign", {}).get(t, "") == folder for t in tests):
+            self.render_rows()          # dropped where it already was
+            return
+        try:
+            res = await api.assign_folder(tests, folder)
+        except api.ApiError as e:
+            ui.notify(e.detail, type="warning")
+            return
+        dest = res.get("folder", "") or "Unfiled"
+        if folder:
+            parts = folder.split("/")
+            self.open_folders.update("/".join(parts[:i]) for i in range(1, len(parts) + 1))
+        ui.notify(f"Moved {', '.join(tests) if len(tests) < 3 else f'{len(tests)} test cases'} to {dest}",
+                  type="positive")
+        await self.load()
+        self.render_rows()
 
     def _toggle_folder(self, path: str) -> None:
         if path in self.open_folders:
@@ -518,10 +549,20 @@ class TestCasesPage:
                 if folder:
                     ui.label(folder).style(
                         f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}")
+            if not self.pick_mode:
+                ui.space()
+                with ui.button(icon="more_vert").props("flat dense round size=xs") \
+                        .on("click.stop", lambda: None):
+                    with ui.menu():
+                        ui.menu_item("Move to folder…",
+                                     on_click=lambda n=name: self._move_dialog([n]))
         if self.pick_mode:
             row.on("click", lambda n=name: self._pick(n, n not in self.picked))
         else:
             row.on("click", lambda n=name: self.open_project_guarded(n))
+            # Drag a test case onto a folder to move it there.
+            row.props('draggable="true"').tooltip("Drag onto a folder to move")
+            row.on("dragstart", lambda n=name: setattr(self, "_dragging", n))
 
     # ── folders ─────────────────────────────────────────────────────────────
     def _folder_dialog(self, mode: str, path: str = "") -> None:
@@ -590,8 +631,8 @@ class TestCasesPage:
                       [f"Its sub-folders go too. The {n} test case(s) in it are NOT deleted — "
                        f"they move to {parent}."], go, button="Delete folder", note="")
 
-    def _move_dialog(self) -> None:
-        tests = sorted(self.picked)
+    def _move_dialog(self, only: list[str] | None = None) -> None:
+        tests = sorted(only) if only else sorted(self.picked)
         if not tests:
             return
         with self.dialog_host:
@@ -607,21 +648,12 @@ class TestCasesPage:
 
             async def go() -> None:
                 target = (new.value or "").strip() or (pick.value or "")
-                try:
-                    res = await api.assign_folder(tests, target)
-                except api.ApiError as e:
-                    ui.notify(e.detail, type="warning")
-                    return
-                dest = res.get("folder", "")
-                if dest and dest != "Unfiled":
-                    parts = dest.split("/")
-                    self.open_folders.update("/".join(parts[:i]) for i in range(1, len(parts) + 1))
                 dialog.close()
-                ui.notify(f"Moved {len(tests)} to {dest}", type="positive")
-                self.picked.clear()
-                self.pick_mode = False
-                await self.load()
-                self.render_list()
+                if not only:
+                    self.picked.clear()
+                    self.pick_mode = False
+                    self.render_list()
+                await self._move_to(tests, target)
             with ui.row().classes("w-full justify-end gap-2"):
                 ui.button("Cancel", on_click=dialog.close).props("flat")
                 ui.button("Move", icon="drive_file_move", on_click=go).props("unelevated")
@@ -651,7 +683,7 @@ class TestCasesPage:
                                              else self.picked.difference_update(shown),
                                              self.render_rows())).props("dense")
             ui.space()
-            ui.button("Move", icon="drive_file_move", on_click=self._move_dialog) \
+            ui.button("Move", icon="drive_file_move", on_click=lambda: self._move_dialog()) \
                 .props("flat dense").set_enabled(bool(self.picked))
             ui.button(f"Delete {len(self.picked)}", icon="delete_outline",
                       on_click=self._bulk_delete_dialog) \
