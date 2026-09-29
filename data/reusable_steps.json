@@ -92,7 +92,7 @@
       "verify element prp_open_rfq_login_pop_jd_logo is visible",
       "verify text \"सहज अनुभव के लिए लॉगिन करें\" on page",
       "click text_41fb82",
-      "click text_8d5ae1",
+      "click text_ask_price_in_hindi",
       "type \"9987996046\" into prp_login_mobile",
       "js click nct_login_pop_continue_button",
       "click nct_login_otp_field",
@@ -100,7 +100,7 @@
       "type \"537393\" into focused field",
       "verify element nct_ask_for_price_acknowledgement_toast_msg is visible"
     ],
-    "created_at": "2026-09-28T20:01:25.432245+00:00",
+    "created_at": "2026-09-29T10:59:17.896458+00:00",
     "step_count": 11,
     "platform": "mobilesite"
   },
@@ -290,12 +290,12 @@
       "click touch_signin_home_page",
       "click touch_contextual_signin",
       "type \"9987996046\" into rfq_mobile_number_input",
-      "js click home_login_with_otp",
+      "js click allpages_login_mobile_continue",
       "wait 3 seconds",
       "type \"537393\" into touch_home_otp_1stfield",
       "wait 2 seconds"
     ],
-    "created_at": "2026-09-28T20:01:28.654848+00:00",
+    "created_at": "2026-09-29T09:58:28.320263+00:00",
     "step_count": 7,
     "platform": "mobilesite"
   },

@@ -8,7 +8,7 @@ click touch_contextual_signin
 wait 2 seconds
 type "9987996046" into rfq_mobile_number_input
 wait 2 seconds
-js click home_login_with_otp
+js click allpages_login_mobile_continue
 wait until element touch_home_otp_1stfield is visible
 type if visible "537393" into touch_home_otp_1stfield
 wait 1 seconds

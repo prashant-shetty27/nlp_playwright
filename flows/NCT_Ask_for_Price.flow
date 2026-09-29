@@ -33,5 +33,5 @@ click touch_home_hindi_langauge
 wait 2 seconds
 open https://www.justdial.com/Mumbai/Cranes-On-Rent-in-Link-Road-Malad-West/nct-10146502?fl=undefined&ismap=undefined&subpage=&searchCase=&term=crane&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Cranes%20On%20Rent&trkid=21263-mumbai
 wait 3 seconds
-click text_8d5ae1
+click text_ask_price_in_hindi
 call SG_Ask_for_Price_Non_Login_to_Login_Hindi

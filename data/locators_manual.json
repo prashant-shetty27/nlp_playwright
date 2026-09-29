@@ -633,9 +633,12 @@
     "touch_signin_home_page": "//span[@class='loginusrimg']",
     "touch_home_english_tab": "//span[contains(text(),'English')]",
     "touch_home_hindi_langauge": "(//input[@id='hi']/following::i)[1]",
-    "text_8d5ae1": "//*[normalize-space()='कीमत पूछें']",
     "text_41fb82": "//*[normalize-space()='शायद बाद में']",
-    "allow_text": "//*[normalize-space()='Allow']"
+    "allow_text": "//*[normalize-space()='Allow']",
+    "text_ask_price_in_hindi": {
+      "xpath": "//*[normalize-space()='कीमत पूछें']",
+      "dna": {}
+    }
   },
   "ts_nct_recommended_open_rfq_all_logics": {
     "recommeded_product_carousel_img": "//div[@class=\"carousel_scroll\"]",
@@ -740,9 +743,12 @@
   },
   "ts_prp_wa_removed_in_non_login": {
     "whatsapp_button": "//span[text()='WhatsApp']",
-    "home_login_with_otp": "//button[@type='submit']",
     "b2b_prp": "//*[text()='WhatsApp']",
-    "best_price_button_12th": "(//div[text()='Best Price'])[12]"
+    "best_price_button_12th": "(//div[text()='Best Price'])[12]",
+    "allpages_login_mobile_continue": {
+      "xpath": "//button[@type='submit']",
+      "dna": {}
+    }
   },
   "ts_prp_filter_combinations": {
     "home_top_all_categories_section": "//div[contains(@class,'b2bH_cardcontainer')]",
