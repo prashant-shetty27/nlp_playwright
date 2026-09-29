@@ -36,6 +36,8 @@ TARGET_IS_LOCATOR = {
     "wait_until_text_not", "enter_otp",
     "js_click", "js_scroll_to", "js_type", "js_set_value", "js_focus", "js_submit",
     "js_dispatch",
+    "swipe_until_visible", "wait_until_not_visible", "select_option",
+    "clear_field", "scroll_element_x",
 }
 
 #: Command types whose `target` is a variable name, not a locator.
@@ -85,6 +87,12 @@ class Segment:
     end: int = 0
     #: For a slot, its declared name ("locator" in `{locator}`).
     slot: str = ""
+
+
+#: Commands whose values[] holds element names after a fixed prefix:
+#: {command type: index of the first element name}. swipe_until_visible keeps
+#: the swipe span at values[0] and the closers after it.
+EXTRA_LOCATORS = {"swipe_until_visible": 1}
 
 
 def _role_for_target(command_type: str) -> str:
@@ -170,6 +178,19 @@ def segment(step: str, parsed: dict | None = None) -> list[Segment]:
                 if span:
                     marks.append((span[0], span[1], "value", role, ""))
                     taken.append(span)
+
+        # Extra element names a command carries beyond its target — the
+        # popups a swipe closes on the way ("…, closing X and Y"). They are
+        # locators as much as the target is, so they get the same blue chip
+        # and the same picker instead of reading as plain text.
+        if ctype in EXTRA_LOCATORS:
+            vals = parsed.get("values")
+            for v in (vals[EXTRA_LOCATORS[ctype]:] if isinstance(vals, list) else []):
+                if isinstance(v, str) and re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", v):
+                    span = _find(step, v, taken)
+                    if span:
+                        marks.append((span[0], span[1], "value", "locator", ""))
+                        taken.append(span)
 
         # Numbers live in their own fields ("wait 5 seconds" -> wait=5.0), and a
         # float renders as "5.0" while the step says "5", so the digits are found
