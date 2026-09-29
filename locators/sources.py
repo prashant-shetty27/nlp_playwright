@@ -81,21 +81,25 @@ class Entry:
 
 #: The registry. Order here is documentation only — precedence decides lookups.
 _SOURCES: list[LocatorSource] = [
-    LocatorSource(
-        id="recorded",
-        settings_attr="RECORDED_ELEMENTS_FILE",
-        label="Recorded by the spy",
-        writable=False,
-        precedence=0,
-        runners=("web",),
-    ),
+    # The hand-edited database wins (precedence 0): what is edited on the
+    # Elements page is what runs. The spy's recording is a fallback for names
+    # the manual store does not have. (Reversed 29 Sep 2026 — with recorded
+    # first, editing an element that also existed in a recording did nothing.)
     LocatorSource(
         id="manual",
         settings_attr="MANUAL_LOCATORS_FILE",
         label="Added by hand",
         writable=True,
-        precedence=1,
+        precedence=0,
         runners=("web", "appium"),
+    ),
+    LocatorSource(
+        id="recorded",
+        settings_attr="RECORDED_ELEMENTS_FILE",
+        label="Recorded by the spy",
+        writable=False,
+        precedence=1,
+        runners=("web",),
     ),
 ]
 
@@ -307,7 +311,14 @@ def grouped(platform: str = "website") -> dict[str, dict]:
         rec = e.record
         shown = dict(rec) if isinstance(rec, dict) else {"value": rec}
         shown["_source"] = e.source_id
-        out.setdefault(e.group, {})[e.name] = shown
+        bucket = out.setdefault(e.group, {})
+        if e.name in bucket:
+            # Same group AND name in two sources: entries() is in precedence
+            # order, so the one already here is the one that runs. Keep it
+            # editable; note the shadowed copy on it.
+            bucket[e.name].setdefault("_also_in", []).append(e.source_id)
+            continue
+        bucket[e.name] = shown
     return out
 
 

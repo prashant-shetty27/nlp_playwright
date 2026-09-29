@@ -226,6 +226,16 @@ async def rename_locator(page: str, name: str, new_name: str,
                        json={"new_name": new_name, "apply": apply})
 
 
+async def merge_locators(keep: str, drop: list[str], apply: bool = False) -> dict:
+    """Preview (apply=False) or carry out folding `drop` names into `keep`."""
+    return await _call("POST", "/locators/merge", json={"keep": keep, "drop": drop, "apply": apply})
+
+
+async def bulk_delete_locators(items: list[dict]) -> dict:
+    """Delete several editable elements; returns {deleted, refused}."""
+    return await _call("POST", "/locators/bulk-delete", json={"items": items})
+
+
 async def delete_locator(page: str, name: str) -> dict:
     return await _call("DELETE", f"/locators/{page}/{name}")
 

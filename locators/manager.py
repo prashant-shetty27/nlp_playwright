@@ -218,7 +218,28 @@ def get_locator_and_dna(locator_name: str) -> tuple:
     seen_in: list[str] = []
     result: tuple = (None, None)
 
-    # 1. ML database first
+    # 1. The hand-edited database first: what the Elements page shows is what runs
+    manual_path = settings.MANUAL_LOCATORS_FILE
+    if os.path.exists(manual_path):
+        try:
+            with file_lock(manual_path, exclusive=False):
+                manual_data = read_json(manual_path, retries=2)
+            for page, elements in manual_data.items():
+                if page in _APPIUM_PLATFORM_KEYS or not isinstance(elements, dict):
+                    continue
+                if locator_name in elements:
+                    seen_in.append(f"manual:{page}")
+                    if result[0]:
+                        continue
+                    entry = elements[locator_name]
+                    if isinstance(entry, dict):
+                        result = (_resolve_selector(entry), entry)
+                    else:
+                        result = (entry, None)  # plain string
+        except Exception as e:
+            logger.error("❌ Error reading locators_manual.json: %s", e)
+
+    # 2. The spy recording second — a fallback only
     ml_path = settings.RECORDED_ELEMENTS_FILE
     if os.path.exists(ml_path):
         try:
@@ -246,27 +267,6 @@ def get_locator_and_dna(locator_name: str) -> tuple:
                     result = (xpath, dna)
         except Exception as e:
             logger.error("❌ Error reading recorded_elements.json: %s", e)
-
-    # 2. Manual database second
-    manual_path = settings.MANUAL_LOCATORS_FILE
-    if os.path.exists(manual_path):
-        try:
-            with file_lock(manual_path, exclusive=False):
-                manual_data = read_json(manual_path, retries=2)
-            for page, elements in manual_data.items():
-                if page in _APPIUM_PLATFORM_KEYS or not isinstance(elements, dict):
-                    continue
-                if locator_name in elements:
-                    seen_in.append(f"manual:{page}")
-                    if result[0]:
-                        continue
-                    entry = elements[locator_name]
-                    if isinstance(entry, dict):
-                        result = (_resolve_selector(entry), entry)
-                    else:
-                        result = (entry, None)  # plain string
-        except Exception as e:
-            logger.error("❌ Error reading locators_manual.json: %s", e)
 
     if len(seen_in) > 1:
         logger.warning("⚠️  Element '%s' is defined in %s — using %s. Rename or "

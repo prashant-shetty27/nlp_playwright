@@ -223,6 +223,19 @@ def add_locator(body: LocatorBody):
             status_code=503,
             detail="No writable locator database is registered.",
         )
+    # A name that says nothing (text_8d5ae1, element_3, x, test) or an empty
+    # selector is refused outright — the review would only flag it later.
+    from locators.review import name_problem, suggest_name
+    prob = name_problem(name)
+    if prob and prob[0] == "junk_name" and not body.force:
+        raise HTTPException(status_code=422, detail={
+            "message": prob[1] + " Give it a name that says what it is.",
+            "why": "A step reads as 'click " + name + "' — nobody can tell what it does.",
+            "suggested": suggest_name(body.xpath, body.dna)})
+    if not (body.xpath or "").strip():
+        raise HTTPException(status_code=422, detail={
+            "message": "The element needs a selector (CSS or XPath).",
+            "why": "Without one nothing can find it on the page."})
 
     # Checked BEFORE anything is written. Afterwards a duplicate is referenced
     # by tests and removing it means editing them.
@@ -286,6 +299,57 @@ def add_locator(body: LocatorBody):
 class LocatorRename(BaseModel):
     new_name: str
     apply: bool = False
+
+
+class MergeBody(BaseModel):
+    keep: str
+    drop: list[str]
+    apply: bool = False
+
+
+@router.post("/merge")
+def merge_locators_route(body: MergeBody):
+    """Fold duplicate elements into one name; steps are rewritten to it."""
+    from execution.refactor import RenameError, merge_locators
+
+    try:
+        return merge_locators(body.keep, body.drop, apply=body.apply)
+    except RenameError as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
+
+
+class BulkDeleteBody(BaseModel):
+    items: list[dict]        # [{"page": …, "name": …}]
+
+
+@router.post("/bulk-delete")
+def bulk_delete_locators(body: BulkDeleteBody):
+    """
+    Delete several editable elements at once. Each is checked as a single
+    delete is: one still used by a step or group is refused and reported,
+    the rest go. Recorded (spy) entries cannot be deleted here.
+    """
+    from execution.refactor import references_to_locator
+
+    data = load_locators()
+    deleted, refused = [], []
+    for it in body.items:
+        page, name = str(it.get("page") or ""), str(it.get("name") or "")
+        if page not in data or name not in data[page]:
+            refused.append({"page": page, "name": name, "reason": "not in the editable database"})
+            continue
+        refs = references_to_locator(name)
+        if refs:
+            refused.append({"page": page, "name": name,
+                            "reason": "still used by " + ", ".join(r["file"] for r in refs[:4])})
+            continue
+        del data[page][name]
+        if not data[page]:
+            del data[page]
+        deleted.append({"page": page, "name": name})
+    if deleted:
+        _write_manual(data)
+    return {"deleted": deleted, "refused": refused}
 
 
 @router.post("/{page}/{name}/rename")

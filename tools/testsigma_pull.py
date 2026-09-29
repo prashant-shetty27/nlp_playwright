@@ -337,9 +337,16 @@ class _Ctx:
         """An element for 'the element with text T' — visible under Elements, not hidden in a step."""
         name = self._norm(f"{text} text", kind="locator")
         if name in ("text", "") or not re.search(r"[a-z0-9]", name.replace("text", "")):
-            # Non-Latin text (e.g. Hindi) normalises to nothing — keep it unique and stable.
-            import hashlib
-            name = "text_" + hashlib.md5(str(text).encode("utf-8")).hexdigest()[:6]
+            # Non-Latin text (e.g. Hindi): a romanised name (puchhen_text),
+            # not a hash (text_8d5ae1) that says nothing in a step.
+            from locators.review import romanise
+            rom = re.sub(r"[^a-z0-9]+", "_", romanise(str(text)).lower()).strip("_")
+            rom = "_".join(rom.split("_")[:5])
+            if len(rom) >= 3:
+                name = self._norm(f"{rom} text", kind="locator")
+            else:
+                import hashlib
+                name = "text_" + hashlib.md5(str(text).encode("utf-8")).hexdigest()[:6]
         if name not in self.used:
             t = str(text).replace("'", "")
             self.used[name] = {"testsigma": f"element with text {text}",

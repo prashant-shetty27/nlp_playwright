@@ -299,6 +299,15 @@ class ElementsPage:
                                       on_click=lambda: save(force=True)) \
                                 .props("flat dense color=negative")
                         return
+                    if e.status == 422 and isinstance(detail, dict):
+                        note.set_text(detail.get("message", "")[:200])
+                        with warn:
+                            if detail.get("suggested"):
+                                sug = detail["suggested"]
+                                ui.button(f"Use '{sug}'", icon="auto_fix_high",
+                                          on_click=lambda v=sug: n_in.set_value(v)) \
+                                    .props("flat dense no-caps").style(f"color:{COLORS['primary']}")
+                        return
                     note.set_text(str(detail)[:200])
                     return
                 if name and group and new_group != group and new_name == name:
@@ -397,11 +406,18 @@ class ElementsPage:
             ui.notify(f"Review failed: {e.detail}", type="negative")
             return
         box.clear()
+        self._picked: dict[tuple, dict] = {}
         with box:
             with ui.row().classes("w-full items-center gap-2"):
                 ui.label(f"Element review — {len(findings)} finding(s)").style(
                     f"font-weight:{TYPOGRAPHY['weight_bold']}")
                 ui.space()
+                self.bulk_label = ui.label("").style(
+                    f"font-size:{TYPOGRAPHY['size_sm']}; color:{COLORS['text_muted']}")
+                ui.button("Delete selected", icon="delete_sweep",
+                          on_click=self._delete_selected) \
+                    .props("flat dense no-caps color=negative") \
+                    .tooltip("Delete every ticked element (each is refused if a step still uses it)")
                 ui.button(icon="close", on_click=box.clear).props("flat dense size=sm") \
                     .tooltip("Hide the review")
             if not findings:
@@ -423,10 +439,24 @@ class ElementsPage:
                                   value=sev == "high").classes("w-full").style(
                         f"border-left:3px solid {colour}; border-radius:4px;"
                         f"background:{colour}0D"):
-                    ui.label(rows[0]["why"]).style(
-                        f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']};"
-                        f"padding:0 8px 6px")
+                    with ui.row().classes("w-full items-center gap-2").style("padding:0 8px 6px"):
+                        ui.label(rows[0]["why"]).classes("flex-grow").style(
+                            f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}")
+                        editable = [f for f in rows if self._editable(f)]
+                        if editable:
+                            ui.button("Select all here", icon="checklist",
+                                      on_click=lambda rs=editable: self._select_all(rs)) \
+                                .props("flat dense size=sm no-caps")
                     seen: set[tuple] = set()
+                    if kind == "duplicate_selector":
+                        # One row per selector, with a Merge that keeps the
+                        # most-used name and rewrites the steps.
+                        by_sel: dict[str, list[dict]] = {}
+                        for f in rows:
+                            by_sel.setdefault(f.get("selector", ""), []).append(f)
+                        for sel, fs in by_sel.items():
+                            self._merge_row(sel, fs)
+                        continue
                     for f in rows:
                         key = (f["group"], f["name"])
                         if key in seen:
@@ -434,22 +464,122 @@ class ElementsPage:
                         seen.add(key)
                         self._review_row(f)
 
+    def _editable(self, f: dict) -> bool:
+        rec = (self.groups.get(f["group"]) or {}).get(f["name"])
+        return rec is not None and rec.get("_source") in (None, "manual")
+
+    def _select_all(self, rows: list[dict]) -> None:
+        for f in rows:
+            self._picked[(f["group"], f["name"])] = f
+        self._refresh_bulk()
+        ui.notify(f"{len(rows)} element(s) selected — press 'Delete selected' when ready", type="info")
+
+    def _refresh_bulk(self) -> None:
+        n = len(getattr(self, "_picked", {}))
+        lbl = getattr(self, "bulk_label", None)
+        if lbl is not None:
+            lbl.set_text(f"{n} selected" if n else "")
+
+    async def _delete_selected(self) -> None:
+        items = list(getattr(self, "_picked", {}).values())
+        if not items:
+            ui.notify("Tick the elements to delete first", type="warning")
+            return
+        dialog = ui.dialog().props("persistent")
+        with dialog, ui.card().style("width:36rem; max-height:80vh; overflow-y:auto"):
+            ui.label(f"Delete {len(items)} element(s)?").style(
+                f"font-weight:{TYPOGRAPHY['weight_bold']}")
+            ui.label("Permanent. Any still used by a step or group is refused and kept.").style(
+                f"font-size:{TYPOGRAPHY['size_sm']}; color:{COLORS['text_muted']}")
+            with ui.column().classes("w-full gap-0").style(
+                    f"border:1px solid {COLORS['border']}; border-radius:6px;"
+                    f"max-height:16rem; overflow-y:auto; padding:4px 8px"):
+                for f in items:
+                    ui.label(f"{f['group']} / {f['name']}").style(
+                        f"font-family:{TYPOGRAPHY['mono']}; font-size:{TYPOGRAPHY['size_xs']}")
+
+            async def go() -> None:
+                try:
+                    res = await api.bulk_delete_locators(
+                        [{"page": f["group"], "name": f["name"]} for f in items])
+                except api.ApiError as e:
+                    ui.notify(f"Could not delete: {e.detail}", type="negative")
+                    return
+                dialog.close()
+                d, r = res.get("deleted", []), res.get("refused", [])
+                ui.notify(f"Deleted {len(d)}" + (f", kept {len(r)} still in use" if r else ""),
+                          type="positive" if d else "warning", timeout=6000)
+                await self._reload()
+                await self._review()
+
+            with ui.row().classes("w-full justify-end gap-2"):
+                ui.button("Cancel", on_click=dialog.close).props("flat")
+                ui.button(f"Delete {len(items)}", on_click=go).props("unelevated color=negative")
+        dialog.open()
+
+    def _merge_row(self, selector: str, fs: list[dict]) -> None:
+        """One selector saved under several names: keep one, rewrite the rest."""
+        names = sorted({f["name"] for f in fs}, key=lambda n: -max(
+            (x.get("used_by", 0) for x in fs if x["name"] == n), default=0))
+        used = {n: max((x.get("used_by", 0) for x in fs if x["name"] == n), default=0) for n in names}
+        with ui.row().classes("w-full items-center gap-2 no-wrap").style("padding:2px 8px"):
+            ui.label(selector[:60]).style(
+                f"font-family:{TYPOGRAPHY['mono']}; font-size:{TYPOGRAPHY['size_xs']};"
+                f"color:{COLORS['text_muted']}; min-width:18rem; overflow:hidden;"
+                f"text-overflow:ellipsis; white-space:nowrap")
+            keep = ui.select({n: f"{n}  (used {used[n]}×)" for n in names}, value=names[0],
+                             label="Keep").props("dense outlined").style("min-width:20rem")
+            ui.label("→ the other name(s) are rewritten in every step, then deleted").style(
+                f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}")
+            ui.space()
+
+            async def merge() -> None:
+                k = keep.value
+                drop = [n for n in names if n != k]
+                try:
+                    res = await api.merge_locators(k, drop, apply=True)
+                except api.ApiError as e:
+                    ui.notify(f"Merge failed: {e.detail}", type="negative")
+                    return
+                left = res.get("not_deletable") or []
+                ui.notify(f"Merged into {k}" + (f" (recorded copies kept: {', '.join(left)})" if left else ""),
+                          type="positive", timeout=6000)
+                await self._reload()
+                await self._review()
+            ui.button("Merge", icon="call_merge", on_click=merge).props("flat dense size=sm no-caps") \
+                .style(f"color:{COLORS['primary']}")
+
     def _review_row(self, f: dict) -> None:
         group, name = f["group"], f["name"]
         rec = (self.groups.get(group) or {}).get(name)
+        editable = self._editable(f)
         with ui.row().classes("w-full items-center gap-2 no-wrap").style("padding:2px 8px"):
+            if editable:
+                def toggle(e, ff=f):
+                    key = (ff["group"], ff["name"])
+                    if e.value:
+                        self._picked[key] = ff
+                    else:
+                        self._picked.pop(key, None)
+                    self._refresh_bulk()
+                ui.checkbox(value=(group, name) in self._picked, on_change=toggle).props("dense")
+            else:
+                ui.label("").style("width:1.6rem")
             ui.label(name).style(f"font-family:{TYPOGRAPHY['mono']};"
                                  f"font-size:{TYPOGRAPHY['size_sm']}; min-width:16rem")
             ui.label(group).style(f"font-size:{TYPOGRAPHY['size_xs']};"
                                   f"color:{COLORS['text_muted']}; min-width:12rem")
-            detail = f.get("selector") or ""
-            if f["kind"] == "duplicate_selector":
-                detail = "also: " + ", ".join(f.get("others") or [])
-            elif f["kind"] == "duplicate_name":
+            # The selector is always shown — it is what the element IS.
+            ui.label((f.get("selector") or "(no selector)")[:60]).style(
+                f"font-family:{TYPOGRAPHY['mono']}; font-size:{TYPOGRAPHY['size_xs']};"
+                f"color:{COLORS['text']}; min-width:18rem; max-width:24rem; overflow:hidden;"
+                f"text-overflow:ellipsis; white-space:nowrap").tooltip(f.get("selector") or "")
+            detail = ""
+            if f["kind"] == "duplicate_name":
                 detail = "also in: " + ", ".join(f"{o['source']}:{o['group']}"
                                                   for o in (f.get("others") or []))
-            ui.label(detail[:70]).classes("flex-grow").style(
-                f"font-family:{TYPOGRAPHY['mono']}; font-size:{TYPOGRAPHY['size_xs']};"
+            ui.label(detail[:60]).classes("flex-grow").style(
+                f"font-size:{TYPOGRAPHY['size_xs']};"
                 f"color:{COLORS['text_muted']}; overflow:hidden; text-overflow:ellipsis;"
                 f"white-space:nowrap")
             used = f.get("used_by")
@@ -459,7 +589,7 @@ class ElementsPage:
                     f"white-space:nowrap")
             ui.button(icon="search", on_click=lambda n=name: self._show(n)) \
                 .props("flat dense size=xs").tooltip("Show it in the list")
-            if rec is not None and (rec.get("_source") in (None, "manual")):
+            if editable:
                 ui.button("Edit", icon="edit",
                           on_click=lambda g=group, n=name, r=rec: self._edit_dialog(g, n, r)) \
                     .props("flat dense size=sm no-caps") \

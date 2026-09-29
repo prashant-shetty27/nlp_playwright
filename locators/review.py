@@ -104,6 +104,68 @@ def name_problem(name: str) -> tuple[str, str] | None:
     return None
 
 
+def romanise(text: str) -> str:
+    """
+    Plain-ASCII words for a name: 'पूछें' -> 'puchen'. unidecode when
+    installed; otherwise Unicode decomposition (Latin accents) and a small
+    Devanagari table so Hindi labels still produce readable names.
+    """
+    try:
+        from unidecode import unidecode
+        return unidecode(text)
+    except Exception:  # noqa: BLE001
+        pass
+    import unicodedata
+    out = []
+    for ch in unicodedata.normalize("NFKD", text):
+        if ch in _DEVANAGARI:
+            out.append(_DEVANAGARI[ch])
+        elif not unicodedata.combining(ch):
+            out.append(ch if ord(ch) < 128 else " ")
+    return "".join(out)
+
+
+_DEVANAGARI = {
+    "अ": "a", "आ": "aa", "इ": "i", "ई": "ee", "उ": "u", "ऊ": "oo", "ए": "e", "ऐ": "ai",
+    "ओ": "o", "औ": "au", "क": "k", "ख": "kh", "ग": "g", "घ": "gh", "च": "ch", "छ": "chh",
+    "ज": "j", "झ": "jh", "ट": "t", "ठ": "th", "ड": "d", "ढ": "dh", "ण": "n", "त": "t",
+    "थ": "th", "द": "d", "ध": "dh", "न": "n", "प": "p", "फ": "ph", "ब": "b", "भ": "bh",
+    "म": "m", "य": "y", "र": "r", "ल": "l", "व": "v", "श": "sh", "ष": "sh", "स": "s",
+    "ह": "h", "ा": "a", "ि": "i", "ी": "ee", "ु": "u", "ू": "oo", "े": "e", "ै": "ai",
+    "ो": "o", "ौ": "au", "ं": "n", "ँ": "n", "ः": "h", "्": "", "़": "", "ृ": "ri",
+    "।": " ", "ॉ": "o", "ॅ": "e", "ऑ": "o", "ऍ": "e", "ञ": "ny", "ङ": "ng",
+}
+
+
+def suggest_name(selector: str, dna: dict | None = None) -> str:
+    """A readable name from what the selector or DNA says about the element."""
+    words: list[str] = []
+    d = dna or {}
+    attrs = d.get("attributes") or {}
+    for cand in (attrs.get("id"), attrs.get("name"), attrs.get("aria-label"), attrs.get("title"),
+                 attrs.get("placeholder"), d.get("innerText")):
+        if cand and str(cand).strip():
+            words.append(str(cand))
+            break
+    if not words and selector:
+        m = re.search(r"(?:@id|@name|@aria-label|@title|@placeholder|normalize-space\(\)|text\(\))\s*=\s*['\"]([^'\"]+)", selector)
+        if m:
+            words.append(m.group(1))
+        else:
+            m = re.search(r"#([A-Za-z][\w-]+)|\.([A-Za-z][\w-]+)|contains\(@class,\s*['\"]([^'\"]+)", selector)
+            if m:
+                words.append(next(g for g in m.groups() if g))
+    raw = " ".join(words)
+    raw = romanise(raw)
+    name = re.sub(r"[^a-z0-9]+", "_", raw.lower()).strip("_")
+    name = "_".join(name.split("_")[:5])
+    tag = str(d.get("tagName") or "").lower()
+    suffix = {"button": "button", "a": "link", "input": "field", "select": "dropdown", "img": "image"}.get(tag, "")
+    if suffix and not name.endswith(suffix):
+        name = f"{name}_{suffix}" if name else suffix
+    return name if len(name) >= 3 else ""
+
+
 def review_elements(platform: str = "website", *, with_usage: bool = True) -> list[dict]:
     from locators.sources import entries
 

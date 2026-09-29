@@ -248,6 +248,50 @@ def rename_locator(page: str, old: str, new: str, *, apply: bool = False) -> dic
     return {"applied": True, "new_name": new_name, "changes": changes}
 
 
+def merge_locators(keep: str, drop: list[str], *, apply: bool = False) -> dict:
+    """
+    Fold duplicate elements into one: every step that names any of `drop`
+    is rewritten to `keep`, then the dropped elements are deleted from the
+    editable database. Recorded (spy) copies cannot be deleted here — they
+    are reported and left; with manual-first precedence they no longer win.
+    """
+    from locators.manager import load_locators, save_locators
+    from locators.sources import owner
+
+    if owner(keep, "website") is None:
+        raise RenameError(f"'{keep}' does not exist, so nothing can be merged into it.")
+    drop = [d for d in dict.fromkeys(drop) if d and d != keep]
+    if not drop:
+        raise RenameError("Nothing to merge.")
+    data = load_locators()
+    changes: list[dict] = []
+    left: list[str] = []
+    plan: list[tuple[str, str, list[dict]]] = []   # (name, group, refs)
+    for name in drop:
+        grp = next((g for g, els in data.items() if isinstance(els, dict) and name in els), "")
+        refs = references_to_locator(name)
+        changes.extend({**r, "kind": f"rewrite {name} → {keep}"} for r in refs)
+        if grp:
+            changes.append({"file": "data/locators_manual.json", "kind": "delete",
+                            "detail": f"{grp}/{name}"})
+        else:
+            left.append(name)
+        plan.append((name, grp, refs))
+    if not apply:
+        return {"applied": False, "keep": keep, "changes": changes, "not_deletable": left}
+    for name, grp, refs in plan:
+        pattern = _word_re(name)
+        _rewrite_flows(pattern, keep, [r for r in refs if r.get("kind") != "step group"])
+        _rewrite_step_groups(pattern, keep, [r for r in refs if r.get("kind") == "step group"])
+        if grp:
+            data = load_locators()
+            data.get(grp, {}).pop(name, None)
+            if grp in data and not data[grp]:
+                del data[grp]
+            save_locators(data)
+    return {"applied": True, "keep": keep, "changes": changes, "not_deletable": left}
+
+
 def _rewrite_step_groups(pattern: re.Pattern, replacement: str,
                          refs: list[dict]) -> None:
     """Apply a rename inside every step group that referenced the old name."""

@@ -854,7 +854,16 @@ def _unknown_locator_dialog(name: str, platform: str, *,
                         ui.button("Save anyway", on_click=lambda: save(True)) \
                             .props("flat dense color=negative")
                     return
-                ui.notify(str(detail)[:160], type="negative")
+                if e.status == 422 and isinstance(detail, dict):
+                    with verdict:
+                        ui.label(detail.get("message", "")).style(
+                            f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['danger']}")
+                        if detail.get("suggested"):
+                            ui.label(f"Suggested name: {detail['suggested']}").style(
+                                f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['primary']}")
+                    return
+                ui.notify(str(detail if not isinstance(detail, dict) else detail.get("message", ""))[:160],
+                          type="negative")
                 return
 
             saved = res.get("normalised", {}).get("name") or (el_name.value or "").strip()
