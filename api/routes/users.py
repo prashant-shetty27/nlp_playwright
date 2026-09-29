@@ -85,7 +85,7 @@ def setup(body: NewUser):
         raise HTTPException(status_code=409, detail="Setup is already done — sign in instead.")
     try:
         return users.create(body.username, body.password, name=body.name,
-                            email=body.email, role="admin")
+                            email=body.email, role="admin", first_only=True)
     except users.UserError as e:
         raise HTTPException(status_code=422, detail=str(e)) from e
 

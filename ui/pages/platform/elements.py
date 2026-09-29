@@ -288,6 +288,14 @@ class ElementsPage:
                         return
                     note.set_text(str(detail)[:200])
                     return
+                if name and group and new_group != group and new_name == name:
+                    # A group change is a MOVE: drop the old record, or the
+                    # name exists twice and the next load warns "duplicate".
+                    try:
+                        await api.delete_locator(group, name)
+                    except api.ApiError as e:
+                        ui.notify(f"Saved under {new_group}, but the old copy in {group} "
+                                  f"could not be removed: {e.detail}", type="warning", timeout=8000)
                 dialog.close()
                 ui.notify(f"Saved {new_name} — every test using it picks up the "
                           f"new selector on its next run", type="positive",

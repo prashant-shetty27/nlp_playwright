@@ -108,7 +108,9 @@ def _check_password(pw: str) -> None:
 
 
 def create(username: str, password: str, *, name: str = "", email: str = "",
-           role: str = "editor", created_by: str = "") -> dict:
+           role: str = "editor", created_by: str = "", first_only: bool = False) -> dict:
+    """`first_only`: refuse unless no user exists yet (the /setup route), checked
+    under the same lock as the write, so two setup calls cannot both succeed."""
     username = (username or "").strip().lower()
     if not _NAME_RE.match(username):
         raise UserError("Username: 3–32 characters, lower-case letters, digits, . _ - "
@@ -118,12 +120,16 @@ def create(username: str, password: str, *, name: str = "", email: str = "",
     _check_password(password)
     with _lock:
         data = _load()
+        if first_only and data:
+            raise UserError("Setup is already done — sign in instead.")
         if username in data:
             raise UserError(f"A user called '{username}' already exists.")
         if email and any(v.get("email", "").lower() == email.strip().lower() for v in data.values()):
             raise UserError(f"{email} is already used by another user.")
         if not data:
             role = "admin"                    # the first user is always an admin
+        if username == "system":
+            raise UserError("'system' is reserved for the portal itself.")
         salt = secrets.token_hex(16)
         data[username] = {"name": (name or username).strip(), "email": (email or "").strip(),
                           "role": role, "active": True, "salt": salt,

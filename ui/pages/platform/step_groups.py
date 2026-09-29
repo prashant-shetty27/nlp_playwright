@@ -44,15 +44,20 @@ async def render(platform: str = "website", edit: str = "", back: str = "") -> N
             f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']};"
             f"max-width:54rem")
 
+        # Only a path on this portal: ?back=https://elsewhere would send a
+        # signed-in user off-site.
+        if back and not (back.startswith("/") and not back.startswith("//")):
+            back = ""
+        if back:
+            with ui.row().classes("items-center gap-2"):
+                ui.button("Back to the test case", icon="arrow_back",
+                          on_click=lambda: ui.navigate.to(back)).props("flat dense")
+
         if not groups:
             ui.label("No step groups on this platform yet.").style(
                 f"color:{COLORS['text_muted']}; font-size:{TYPOGRAPHY['size_sm']}")
             return
 
-        if back:
-            with ui.row().classes("items-center gap-2"):
-                ui.button("Back to the test case", icon="arrow_back",
-                          on_click=lambda: ui.navigate.to(back)).props("flat dense")
         for g in groups:
             with ui.expansion(value=bool(edit and g["name"] == edit)).classes("w-full").style(
                     f"border:1px solid {COLORS['border']}; border-radius:6px") as exp:
