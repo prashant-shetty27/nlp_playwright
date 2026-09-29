@@ -216,6 +216,7 @@ def review(steps: list[str], *, platform: str = "website",
     out += _assertion_placement(live)
     out += _shadowed_elements(live, platform)
     out += _length_and_shape(live)
+    out += _code_in_steps(live)
 
     for f in out:
         if not f.bucket_note:
@@ -229,7 +230,7 @@ def review(steps: list[str], *, platform: str = "website",
 _MUST, _OPTIONAL = "must", "optional"
 
 #: Findings that mean the test is broken, or passes when it should not.
-_BROKEN = {"unknown_element", "no_assertion", "assertion_placement",
+_BROKEN = {"unknown_element", "no_assertion", "assertion_placement", "code_in_step",
            "shadowed_element", "hardcoded_value"}
 
 
@@ -572,6 +573,33 @@ def _redundant_waits(steps: list[str]) -> list[Finding]:
                 why="Almost certainly one was added while debugging and never "
                     "removed. Combine them, or replace both with a wait for the "
                     "thing you actually need.", fix=""))
+    return out
+
+
+def _code_in_steps(steps: list[str]) -> list[Finding]:
+    """
+    JavaScript typed into a step.
+
+    A test case is read by testers, not only by the runner. A step such as
+    `store javascript "(function(){…getBoundingClientRect()…})()"` cannot be
+    reviewed, edited from the form, or reused; the same check written as
+    `verify element icon is inside every photo` can. Rule (29-Sep-2026): steps
+    are plain language with named elements — code is a last resort, and a
+    finding every time it appears.
+    """
+    out: list[Finding] = []
+    for i, step in enumerate(steps, 1):
+        if not re.match(r"^\s*(store|run)\s+javascript\b", step, re.I):
+            continue
+        out.append(Finding(
+            kind="code_in_step", severity="high", step_index=i,
+            message="This step is JavaScript, not a plain step.",
+            why="Nobody can read or edit it without knowing the page's code, and "
+                "the runner cannot heal it. Say what is being checked instead: "
+                "'verify element X is visible', 'verify element icon is inside "
+                "every photo', 'store position of icon in photo as p', 'store text "
+                "of X as t', 'store count of X as n'. If no step exists for it, ask "
+                "for the step to be added rather than writing code here.", fix=""))
     return out
 
 
