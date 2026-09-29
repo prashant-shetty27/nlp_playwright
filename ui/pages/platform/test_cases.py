@@ -2177,6 +2177,8 @@ def _selector_from_record(rec: dict | str | None) -> str:
         return rec["custom_xpath"]
     if rec.get("xpath"):
         return rec["xpath"]
+    if isinstance(rec.get("value"), str) and rec["value"]:   # plain-string element via the API
+        return rec["value"]
     sels = rec.get("selectors")
     if isinstance(sels, list) and sels and isinstance(sels[0], dict):
         return sels[0].get("value", "")

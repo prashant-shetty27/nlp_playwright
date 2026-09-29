@@ -217,7 +217,15 @@ def add_locator(body: LocatorBody):
     from locators.validation import as_dicts, check_locator
 
     conflicts = check_locator(name, page, body.xpath, platform="website")
-    blocking = [c for c in conflicts if c.severity == "blocking"]
+    # Editing the element that lives at exactly this group/name in the
+    # writable database is an UPDATE, not a duplicate: the "already exists
+    # with a DIFFERENT selector" refusal was blocking every selector fix on
+    # the Elements page.
+    current = load_locators().get(page, {})
+    in_place = name in current
+    blocking = [c for c in conflicts if c.severity == "blocking"
+                and not (in_place and c.kind == "duplicate_name"
+                         and f":{page}" in (c.message or ""))]
     if blocking and not body.force:
         raise HTTPException(
             status_code=409,
@@ -228,10 +236,21 @@ def add_locator(body: LocatorBody):
                             "save anyway."})
 
     data = load_locators()
-    data.setdefault(page, {})[name] = {
-        "xpath": body.xpath,
-        "dna": body.dna,
-    }
+    prev = data.setdefault(page, {}).get(name)
+    if isinstance(prev, dict):
+        # Keep what the record already carries (alternates, healing history,
+        # notes) and change only the selector.
+        prev = dict(prev)
+        for k in ("custom_xpath", "xpath"):
+            if k in prev:
+                prev[k] = body.xpath
+        if "custom_xpath" not in prev and "xpath" not in prev:
+            prev["xpath"] = body.xpath
+        if body.dna:
+            prev["dna"] = body.dna
+        data[page][name] = prev
+    else:
+        data[page][name] = {"xpath": body.xpath, "dna": body.dna}
     _write_manual(data)
 
     # A new name that already exists elsewhere will not win resolution, and the
