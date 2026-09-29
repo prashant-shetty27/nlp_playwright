@@ -304,3 +304,52 @@ def device_catalogue(curated_only: bool = True):
     from nlp.platforms import devices
 
     return {"devices": devices(curated_only=curated_only)}
+
+
+# ── Step forms ─────────────────────────────────────────────────────────────────
+class FormRequest(BaseModel):
+    step: str
+
+
+class ComposeRequest(BaseModel):
+    type: str
+    values: dict
+
+
+@router.post("/form")
+def step_form(body: FormRequest):
+    """
+    The editable parts of a step, for the pencil's form view.
+
+    {form: null} when the step does not parse or its type has no form — the
+    editor then falls back to the text box. Otherwise the spec (fields, in
+    reading order) and the step's current values for them.
+    """
+    from nlp.step_forms import form_for
+
+    try:
+        parsed = parse_step(body.step or "")
+    except Exception:  # noqa: BLE001 — a step that does not parse has no form
+        return {"form": None}
+    return {"form": form_for(parsed)}
+
+
+@router.post("/form/compose")
+def step_compose(body: ComposeRequest):
+    """Step text from form values — checked against the parser before it goes back."""
+    from nlp.step_forms import compose
+
+    try:
+        text = compose(body.type, body.values)
+    except KeyError:
+        raise HTTPException(status_code=404, detail=f"No form for '{body.type}'")
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    try:
+        parsed = parse_step(text)
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(status_code=422, detail=f"Composed step does not parse: {e}")
+    if parsed.type != body.type:
+        raise HTTPException(status_code=422,
+                            detail=f"Composed step parses as {parsed.type}, not {body.type}")
+    return {"step": text}

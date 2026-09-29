@@ -214,6 +214,17 @@ def step_row(index: int, nlp_text: str, *, action: str = "", target: str = "",
         if status:
             mapping_chip(status, note=note)
 
+        async def start_edit_form() -> None:
+            """Pencil: the form when the step type has one, else the text box."""
+            if editing["on"] or not on_edit:
+                return
+            from ui.components.step_form_dialog import open_step_form
+            opened = await open_step_form(
+                nlp_text, platform or "website", index,
+                on_save=lambda text: on_edit(index, (text or "").strip()))
+            if not opened:
+                start_edit()
+
         def start_edit() -> None:
             if editing["on"] or not on_edit:
                 return
@@ -287,7 +298,8 @@ def step_row(index: int, nlp_text: str, *, action: str = "", target: str = "",
                     .tooltip("Insert a new step BELOW this one")
 
         if on_edit and not group_name:
-            ui.button(icon="edit").props("flat dense size=xs").on("click", start_edit) \
+            ui.button(icon="edit").props("flat dense size=xs") \
+                .on("click", lambda: start_edit_form()) \
                 .tooltip("Edit this step")
         if on_delete:
             ui.button(icon="delete_outline").props("flat dense size=xs color=negative") \

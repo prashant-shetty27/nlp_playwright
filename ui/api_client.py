@@ -119,6 +119,16 @@ async def parse_step(step: str) -> dict:
     return await _call("POST", "/nlp/parse", json={"step": step})
 
 
+async def step_form(step: str) -> dict:
+    """{form: spec+values} for the pencil's form view, or {form: None}."""
+    return await _call("POST", "/nlp/form", json={"step": step})
+
+
+async def step_compose(step_type: str, values: dict) -> dict:
+    """Step text composed from form values; 422 when a required part is missing."""
+    return await _call("POST", "/nlp/form/compose", json={"type": step_type, "values": values})
+
+
 #: Segmentation is a pure function of the step text, so a result is kept for
 #: the life of the process; the editor re-renders the same rows many times.
 _SEGMENT_CACHE: dict[str, dict] = {}
