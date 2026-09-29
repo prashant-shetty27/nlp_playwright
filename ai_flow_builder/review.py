@@ -87,6 +87,10 @@ class Finding:
     bucket_note: str = ""
     #: The alternative approaches worth knowing about, best first.
     options: list = field(default_factory=list)
+    #: A replacement with one blank — "{}" — for the element the reviewer could
+    #: not work out. The editor asks for the element and fills it in, so a
+    #: finding with a clear fix but an unknown target still gets a button.
+    fix_template: str = ""
 
 
 def _stored_values(environment: str = "") -> dict:
@@ -143,9 +147,16 @@ def _wait_for(element: str, appium: bool) -> str:
 #: the fixed-wait check and the race check need to answer "what is this step
 #: waiting for?" and a second copy would drift.
 _TARGETED = (
-    re.compile(r"^\s*(?:click|tap|fill|clear|scroll to)\s+([a-z_][a-z0-9_]*)\s*$", re.I),
-    re.compile(r"^\s*(?:type|enter)\s+\"[^\"]*\"\s+into\s+([a-z_][a-z0-9_]*)\s*$", re.I),
+    re.compile(r"^\s*(?:click|tap|fill|clear|scroll to|hover(?: over)?|double click)"
+               r"(?:\s+(?:if visible|element|on))*\s+([a-z_][a-z0-9_]*)\s*$", re.I),
+    re.compile(r"^\s*(?:type|enter)(?:\s+if visible)?\s+\"[^\"]*\"\s+into\s+"
+               r"([a-z_][a-z0-9_]*)\s*$", re.I),
+    re.compile(r"^\s*verify\s+(?:that\s+)?(?:element\s+)?([a-z_][a-z0-9_]*)\s+"
+               r"(?:is|has|contains|displays|text)\b", re.I),
     re.compile(r"^\s*verify\s+element\s+([a-z_][a-z0-9_]*)\b", re.I),
+    re.compile(r"^\s*verify\s+(?:the\s+)?text\s+of\s+([a-z_][a-z0-9_]*)\b", re.I),
+    re.compile(r"^\s*select\s+option\s+\"[^\"]*\"\s+in\s+([a-z_][a-z0-9_]*)\s*$", re.I),
+    re.compile(r"^\s*swipe\b.*\buntil\s+(?:element\s+)?([a-z_][a-z0-9_]*)\s+is\s+visible", re.I),
 )
 
 
@@ -291,7 +302,16 @@ def _fixed_waits(steps: list[str], appium: bool = False) -> list[Finding]:
 
         prev = steps[i - 2] if i >= 2 else ""
         nxt = steps[i] if i < len(steps) else ""
-        target = _target_of(nxt)
+        # The step straight after the wait is usually what it waits for, but
+        # a "click if visible" closer or a comment can sit in between — so
+        # look a few steps on before giving up on naming the element.
+        target = ""
+        for later in steps[i:i + 3]:
+            if re.match(r"^\s*wait\s+\d", later, re.I):
+                break
+            target = _target_of(later)
+            if target:
+                break
 
         # A negative check ("… is not visible", "page does not contain …")
         # is exactly the case where there is nothing to wait FOR: waiting
@@ -332,7 +352,8 @@ def _fixed_waits(steps: list[str], appium: bool = False) -> list[Finding]:
                 "one second, and it still fails on a slow day. Waiting for the "
                 "thing you actually need is faster AND steadier.",
             bucket="can", options=options,
-            fix=_wait_for(target, appium) if target else ""))
+            fix=_wait_for(target, appium) if target else "",
+            fix_template="" if target else _wait_for("{}", appium)))
     return out
 
 
@@ -512,7 +533,9 @@ def _raw_selectors(steps: list[str]) -> list[Finding]:
     """An XPath typed into a step instead of a named element."""
     out: list[Finding] = []
     for i, step in enumerate(steps, 1):
-        if re.search(r"(//|css=|xpath=)[^\s\"]+", step):
+        # A URL's "https://" is not an XPath — strip URLs before looking.
+        bare = re.sub(r"\b[a-z][a-z0-9+.-]*://\S+", "", step, flags=re.I)
+        if re.search(r"(//|css=|xpath=)[^\s\"]+", bare):
             out.append(Finding(
                 kind="raw_selector", severity="medium", step_index=i,
                 message="This step contains a selector rather than an element name.",

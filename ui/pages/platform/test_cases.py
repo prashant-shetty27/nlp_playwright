@@ -1246,6 +1246,22 @@ class TestCasesPage:
                 self._change_block(f"step {idx} becomes", f["fix"], "Apply", "done",
                                    lambda ff=f: self._apply_fix(ff),
                                    COLORS["primary"])
+            elif f.get("fix_template") and idx:
+                # The fix is known but its element is not — ask for the one
+                # blank instead of showing advice with no button.
+                with ui.row().classes("w-full items-center gap-2 no-wrap"):
+                    ui.label(f"step {idx} becomes").style(
+                        f"font-size:{TYPOGRAPHY['size_xs']};"
+                        f"color:{COLORS['text_muted']}; white-space:nowrap")
+                    ui.label(f["fix_template"].replace("{}", "<element>")) \
+                        .classes("flex-grow").style(
+                            f"font-family:{TYPOGRAPHY['mono']};"
+                            f"font-size:{TYPOGRAPHY['size_sm']};"
+                            f"color:{COLORS['primary']}")
+                    ui.button("Choose element & apply", icon="ads_click",
+                              on_click=lambda ff=f: self._fill_template(ff)) \
+                        .props("unelevated dense") \
+                        .style(f"background:{COLORS['primary']}; white-space:nowrap")
             if f.get("add_step"):
                 self._change_block(f"add as step {f.get('add_at') or idx}",
                                    f["add_step"], "Add", "add",
@@ -1437,6 +1453,31 @@ class TestCasesPage:
             ui.notify(f"Could not save the change: {e.detail}", type="negative")
             return
         await self._rerun_review()
+
+    async def _fill_template(self, f: dict) -> None:
+        """Pick the element a template fix needs, then apply it like any fix."""
+        try:
+            names = sorted(await api.locator_names())
+        except api.ApiError as e:
+            ui.notify(f"Could not load elements: {e.detail}", type="negative")
+            return
+        with ui.dialog() as dlg, ui.card().style("min-width:28rem"):
+            ui.label(f"Step {f.get('step_index')}: wait for which element?") \
+                .style(f"font-size:{TYPOGRAPHY['size_sm']}; font-weight:600")
+            pick = ui.select(names, with_input=True, label="Element") \
+                .props("dense outlined use-input input-debounce=0").classes("w-full")
+            with ui.row().classes("w-full justify-end gap-2"):
+                ui.button("Cancel", on_click=dlg.close).props("flat")
+
+                async def go() -> None:
+                    if not pick.value:
+                        ui.notify("Choose an element first", type="warning")
+                        return
+                    dlg.close()
+                    await self._apply_fix(
+                        {**f, "fix": f["fix_template"].replace("{}", pick.value)})
+                ui.button("Apply", icon="done", on_click=go).props("unelevated")
+        dlg.open()
 
     async def _rerun_review(self) -> None:
         await self.render_editor()
