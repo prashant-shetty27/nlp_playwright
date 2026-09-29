@@ -143,11 +143,25 @@ def _stabilize_page(page):
     """
     Architectural barrier: waits for SPA/React routing and network stabilization.
     """
+    # Condition-based: continue as soon as the network is quiet, and never
+    # wait longer than STEP_SETTLE_MS. The old fixed 1.5 s sleep cost a
+    # 30-step case ~45 s whether the page was busy or not.
+    budget = max(0, int(settings.STEP_SETTLE_MS))
+    started = time.perf_counter()
     try:
         page.wait_for_load_state("domcontentloaded", timeout=5000)
-        page.wait_for_timeout(1500)
-    except Exception:
+    except Exception:  # noqa: BLE001
         pass
+    if settings.STEP_SETTLE_FIXED:
+        # A value set by hand is a fixed wait, exactly as written.
+        page.wait_for_timeout(budget)
+        return
+    remaining = budget - int((time.perf_counter() - started) * 1000)
+    if remaining > 0:
+        try:
+            page.wait_for_load_state("networkidle", timeout=remaining)
+        except Exception:  # noqa: BLE001 — still busy at the budget: carry on
+            pass
 
 
 def _get_healed_element_locator(page, locator_name):
@@ -607,7 +621,7 @@ def create_custom_variable(value, variable_name):
 # ─────────────────────────────────────────────────────────────────────────────
 # MODAL DISMISSAL HELPER  (used by search and any future action that needs it)
 # ─────────────────────────────────────────────────────────────────────────────
-def _dismiss_modal(page_obj, wait_for_popup_ms: int = 6000):
+def _dismiss_modal(page_obj, wait_for_popup_ms: int | None = None):
     """
     Waits for a blocking modal (e.g. JustDial login popup) and dismisses it.
 
@@ -618,10 +632,34 @@ def _dismiss_modal(page_obj, wait_for_popup_ms: int = 6000):
       4. Force-hide via JavaScript
     """
     # Give the popup time to appear (JustDial fires it ~5 s after page load)
-    page_obj.wait_for_timeout(wait_for_popup_ms)
+    # — but only as long as it takes: poll for any known modal selector and
+    # stop waiting the moment one shows, up to SEARCH_MODAL_WAIT_MS.
+    budget = int(settings.SEARCH_MODAL_WAIT_MS if wait_for_popup_ms is None else wait_for_popup_ms)
+    MODAL_LOCATOR_NAMES = ["maybe_later_link"]
+    probe = [xp for xp in (get_locator_and_dna(n)[0] for n in MODAL_LOCATOR_NAMES) if xp] + \
+            ["#login-modal", "#loginPop", ".jd_modal", "//a[@aria-label='May be later']"]
+    deadline = time.perf_counter() + budget / 1000
+    appeared = False
+    if settings.SEARCH_MODAL_WAIT_FIXED and wait_for_popup_ms is None:
+        # A value set by hand is a fixed wait, exactly as written.
+        page_obj.wait_for_timeout(budget)
+        appeared = True          # then dismiss whatever is there, as before
+    while not appeared and time.perf_counter() < deadline:
+        for sel in probe:
+            try:
+                if page_obj.locator(sel).first.is_visible():
+                    appeared = True
+                    break
+            except Exception:  # noqa: BLE001
+                continue
+        if appeared:
+            break
+        page_obj.wait_for_timeout(250)
+    if not appeared:
+        logger.info("ℹ️  No login popup within %d ms — continuing.", budget)
+        return
 
     # ── 1. Try the manual locator ─────────────────────────────────────────────
-    MODAL_LOCATOR_NAMES = ["maybe_later_link"]
     for locator_name in MODAL_LOCATOR_NAMES:
         xpath, _ = get_locator_and_dna(locator_name)
         if xpath:
@@ -1016,7 +1054,11 @@ def wait_for_result_page_load(page):
 
 
 def wait_seconds(page, seconds: float):
-    page.wait_for_timeout(float(seconds) * 1000)
+    secs = float(seconds)
+    if secs > settings.MAX_WAIT_S:
+        raise ValueError(f"wait {seconds:g} seconds is above the limit of {settings.MAX_WAIT_S} s "
+                         f"— use 'wait until element … is visible' for long waits, or raise MAX_WAIT_S.")
+    page.wait_for_timeout(secs * 1000)
 
 
 def wait_page_load(page):

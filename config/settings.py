@@ -61,6 +61,17 @@ ACTION_TIMEOUT_MS: int = int(os.getenv("ACTION_TIMEOUT_MS", str(_ctrl("browser.a
 NAVIGATION_TIMEOUT_MS: int = int(os.getenv("NAVIGATION_TIMEOUT_MS", str(_ctrl("browser.navigation_timeout_ms", 30000))))
 DEFAULT_SCROLL_COUNT: int = int(os.getenv("DEFAULT_SCROLL_COUNT", str(_ctrl("browser.default_scroll_count", 20))))
 WAIT_TIMEOUT_MS: int = int(os.getenv("WAIT_TIMEOUT_MS", str(_ctrl("browser.wait_timeout_ms", 3000))))
+#: After a click / type, and before `search` looks for the login popup.
+#: NOT configured (the default): condition-based — continue the moment the
+#: page is quiet / the popup shows, never longer than the default budget.
+#: Configured (in .env or the control file): that exact value is used as a
+#: fixed wait — a number you set by hand is honoured as written.
+STEP_SETTLE_MS: int = int(os.getenv("STEP_SETTLE_MS", str(_ctrl("browser.step_settle_ms", 1500))))
+STEP_SETTLE_FIXED: bool = bool(os.getenv("STEP_SETTLE_MS")) or _ctrl("browser.step_settle_ms") is not None
+SEARCH_MODAL_WAIT_MS: int = int(os.getenv("SEARCH_MODAL_WAIT_MS", str(_ctrl("browser.search_modal_wait_ms", 6000))))
+SEARCH_MODAL_WAIT_FIXED: bool = bool(os.getenv("SEARCH_MODAL_WAIT_MS")) or _ctrl("browser.search_modal_wait_ms") is not None
+#: `wait N seconds` above this fails the step — a typo like `wait 3000` blocked runs for an hour.
+MAX_WAIT_S: int = int(os.getenv("MAX_WAIT_S", str(_ctrl("browser.max_wait_s", 300))))
 # Full-page captures stitch the entire scroll height, so they need more headroom than
 # a normal action. Falls back to a viewport capture if even this is exceeded.
 SCREENSHOT_TIMEOUT_MS: int = int(os.getenv("SCREENSHOT_TIMEOUT_MS", str(_ctrl("capture.screenshot_timeout_ms", 45000))))
