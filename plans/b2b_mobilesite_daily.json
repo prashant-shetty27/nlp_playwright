@@ -34,13 +34,13 @@
     "channel": "C0AAP4882H4",
     "when": "always"
   },
-  "next_run": "2026-09-29T06:15:00+00:00",
+  "next_run": "2026-09-30T06:15:00+00:00",
   "updated_by": "prashantshetty",
   "updated_at": "2026-09-25T21:03:34+00:00",
   "last_run": {
-    "id": "PR_20260928_061500_b2b_mobilesite_daily",
+    "id": "PR_20260929_061505_b2b_mobilesite_daily",
     "status": "failed",
-    "at": "2026-09-28T06:15:00+00:00",
+    "at": "2026-09-29T06:15:05+00:00",
     "trigger": "schedule"
   }
 }

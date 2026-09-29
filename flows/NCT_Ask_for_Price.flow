@@ -3,6 +3,7 @@
 # Tags: regression
 # OFF steps: every step that would send a REAL lead / enquiry / OTP is switched off,
 #   plus the checks that only pass after it. Switch them on only when a lead is wanted.
+# Params : mobile_9987
 
 call Live_Touch_Chrome_Navigate_to_Homepage_setup_Popup
 open https://www.justdial.com/Mumbai/Cranes-On-Rent-in-Link-Road-Malad-West/nct-10146502?fl=undefined&ismap=undefined&subpage=&searchCase=&term=crane&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Cranes%20On%20Rent&trkid=21263-mumbai
@@ -16,10 +17,10 @@ verify element prp_open_rfq_login_pop_jd_logo is visible
 verify element nct_login_text_ask_for_price is visible
 click touch_login_popup_may_be_later
 click nct_ask_for_price
-type "9987996046" into prp_login_mobile
-# OFF: js click nct_login_pop_continue_button
-# OFF: type "537393" into nct_login_otp_field
-# OFF: verify element nct_ask_for_price_acknowledgement_toast_msg is visible
+type "${mobile_9987}" into prp_login_mobile
+js click nct_login_pop_continue_button
+type "537393" into nct_login_otp_field
+verify element nct_ask_for_price_acknowledgement_toast_msg is visible
 delete all cookies
 open https://www.justdial.com/
 wait 2 seconds
@@ -28,8 +29,6 @@ click touch_signin_home_page
 wait 1 seconds
 click touch_home_english_tab
 wait until element touch_home_hindi_langauge is visible
-wait 1 seconds
-wait 1 seconds
 click touch_home_hindi_langauge
 wait 2 seconds
 open https://www.justdial.com/Mumbai/Cranes-On-Rent-in-Link-Road-Malad-West/nct-10146502?fl=undefined&ismap=undefined&subpage=&searchCase=&term=crane&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Cranes%20On%20Rent&trkid=21263-mumbai
