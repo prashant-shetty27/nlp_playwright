@@ -1135,14 +1135,35 @@ def swipe_until_element_visible(page, target: str, span: str = "bottom_top",
             raise Exception(f"Locator '{c}' not found")
         close_xpaths.append((c, cx))
 
+    # One page.evaluate answers "which closers are showing?" for ALL of them —
+    # a single browser round-trip per swipe however many popups are listed,
+    # instead of two locator calls per popup. Only a popup that is actually
+    # on screen costs anything more (the click).
+    _WHICH_VISIBLE = """(xps) => xps.map((xp, i) => {
+        try {
+            const r = document.evaluate(xp, document, null,
+                XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+            if (!r || !(r instanceof Element)) return -1;
+            const cs = getComputedStyle(r);
+            if (cs.display === 'none' || cs.visibility === 'hidden' || cs.opacity === '0') return -1;
+            const b = r.getBoundingClientRect();
+            return (b.width > 0 && b.height > 0 && b.bottom > 0 && b.top < innerHeight) ? i : -1;
+        } catch (e) { return -1; }
+    }).filter(i => i >= 0)"""
+
     def close_popups() -> None:
-        for name, cx in close_xpaths:
-            loc = page.locator(cx).first
+        if not close_xpaths:
+            return
+        try:
+            showing = page.evaluate(_WHICH_VISIBLE, [cx for _, cx in close_xpaths]) or []
+        except Exception:  # noqa: BLE001 — mid-navigation; try again next swipe
+            return
+        for i in showing:
+            name, cx = close_xpaths[i]
             try:
-                if loc.count() and loc.is_visible(timeout=200):
-                    loc.click(timeout=2000)
-                    logger.info("✖️ Closed '%s' while swiping", name)
-                    page.wait_for_timeout(300)
+                page.locator(cx).first.click(timeout=2000)
+                logger.info("✖️ Closed '%s' while swiping", name)
+                page.wait_for_timeout(300)
             except Exception:  # noqa: BLE001 — it went away on its own
                 pass
     size = page.viewport_size or {"width": 412, "height": 915}
