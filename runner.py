@@ -273,6 +273,12 @@ def _execute_step_from_command(cmd, page):
         "remove_text":               lambda: svc.remove_text((cmd.values or [""])[0], text, cmd.variable_name),
         # ── Visibility / condition-based wait / multi-input OTP ───────────────
         "verify_element_visible":    lambda: svc.verify_element_visible(ep, target),
+        # Layout checks (design changes): icon inside / same place / same size
+        "verify_inside":             lambda: svc.verify_inside(ep, target, (cmd.values or [""])[0]),
+        "verify_inside_every":       lambda: svc.verify_inside_every(ep, target, (cmd.values or [""])[0]),
+        "verify_same_place_every":   lambda: svc.verify_same_place_every(ep, target, (cmd.values or [""])[0]),
+        "verify_same_size":          lambda: svc.verify_same_size(ep, target, (cmd.values or [""])[0]),
+        "store_position":            lambda: svc.store_position(ep, target, (cmd.values or [""])[0], cmd.variable_name),
         "verify_element_not_exists": lambda: svc.verify_element_not_exists(ep, target),
         "verify_element_not_visible": lambda: svc.verify_element_not_visible(ep, target),
         "wait_until_visible":        lambda: svc.wait_until_element_visible(

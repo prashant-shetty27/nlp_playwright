@@ -34,6 +34,7 @@ TARGET_IS_LOCATOR = {
     "wait_for_element", "scroll_to", "scroll_until_element_visible", "clear",
     "verify_element_visible", "verify_element_not_visible", "wait_until_visible",
     "wait_until_text_not", "enter_otp",
+    "verify_inside", "verify_inside_every", "verify_same_place_every", "verify_same_size", "store_position",
     "js_click", "js_scroll_to", "js_type", "js_set_value", "js_focus", "js_submit",
     "js_dispatch",
     "swipe_until_visible", "wait_until_not_visible", "select_option",
@@ -95,7 +96,9 @@ class Segment:
 #: Commands whose values[] holds element names after a fixed prefix:
 #: {command type: index of the first element name}. swipe_until_visible keeps
 #: the swipe span at values[0] and the closers after it.
-EXTRA_LOCATORS = {"swipe_until_visible": 1}
+EXTRA_LOCATORS = {"swipe_until_visible": 1,
+                  "verify_inside": 0, "verify_inside_every": 0, "verify_same_place_every": 0,
+                  "verify_same_size": 0, "store_position": 0}
 
 
 def _role_for_target(command_type: str) -> str:

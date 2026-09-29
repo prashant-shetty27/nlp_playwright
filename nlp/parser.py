@@ -392,6 +392,32 @@ def parse_step(step: str) -> Command:
         return Command(type="fill_if_exists", text=text_to_type, target=target.strip())
 
     # =============================
+    # LAYOUT CHECKS — where an element sits on / inside another one.
+    # Written for design changes ("the 360° icon must sit at the top-right of
+    # every photo"): plain words in the step, the geometry lives in the runner.
+    #   verify element <icon> is inside <image>
+    #   verify element <icon> is inside every <image>
+    #   verify element <icon> is at the same place in every <image>
+    #   verify element <icon> is the same size as <other>
+    #   store position of <icon> in <image> as <var>
+    # =============================
+    m = re.match(r'^verify\s+element\s+(\S+)\s+is\s+inside\s+every\s+(?:element\s+)?(\S+)$', s, re.I)
+    if m:
+        return Command(type="verify_inside_every", target=m.group(1), values=[m.group(2)])
+    m = re.match(r'^verify\s+element\s+(\S+)\s+is\s+inside\s+(?:element\s+)?(\S+)$', s, re.I)
+    if m:
+        return Command(type="verify_inside", target=m.group(1), values=[m.group(2)])
+    m = re.match(r'^verify\s+element\s+(\S+)\s+is\s+(?:at|in)\s+the\s+same\s+(?:place|position)\s+(?:in|on)\s+every\s+(?:element\s+)?(\S+)$', s, re.I)
+    if m:
+        return Command(type="verify_same_place_every", target=m.group(1), values=[m.group(2)])
+    m = re.match(r'^verify\s+element\s+(\S+)\s+is\s+the\s+same\s+size\s+as\s+(?:element\s+)?(\S+)$', s, re.I)
+    if m:
+        return Command(type="verify_same_size", target=m.group(1), values=[m.group(2)])
+    m = re.match(r'^store\s+position\s+of\s+(\S+)\s+(?:in|on)\s+(?:element\s+)?(\S+)\s+as\s+(\S+)$', s, re.I)
+    if m:
+        return Command(type="store_position", target=m.group(1), values=[m.group(2)], variable_name=m.group(3))
+
+    # =============================
     # CLICK COMMAND
     # =============================
     # TAP TEXT COMMAND — tap by visible label/text without needing a pre-recorded locator

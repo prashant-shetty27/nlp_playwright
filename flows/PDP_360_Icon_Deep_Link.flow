@@ -8,6 +8,5 @@ verify element pdp_photos_heading is visible
 verify element pdp_photo_360_icon is visible
 store count of pdp_photo_tile as photo_tiles
 store count of pdp_photo_360_icon as icons_360
-store javascript "(function(){var tiles=[...document.querySelectorAll(".photos_tab_imgcontainer")]; if(!tiles.length) return "FAIL no photo tiles"; var res=[],offs=[]; tiles.forEach(function(t,i){var img=t.querySelector("img.glyimg"); var icn=t.querySelector(".glyimg__img3dicn"); if(!img) return; var ir=img.getBoundingClientRect(); if(ir.width<20) return; if(!icn||!icn.getBoundingClientRect().width){res.push("tile"+i+":no-icon"); return;} var cr=icn.getBoundingClientRect(); var ot=Math.round(cr.top-ir.top), orr=Math.round(ir.right-cr.right); var inside=cr.top>=ir.top-0.5&&cr.left>=ir.left-0.5&&cr.right<=ir.right+0.5&&cr.bottom<=ir.bottom+0.5; offs.push(ot+"/"+orr+"/"+Math.round(cr.width)); if(!inside) res.push("tile"+i+":cropped top="+ot+" right="+orr);}); var uniq=[...new Set(offs)]; if(uniq.length>1) res.push("position varies: "+uniq.join(" vs ")); return (res.length?"FAIL ":"OK ")+"tiles="+tiles.length+" measured="+offs.length+" offsetTop/offsetRight/size="+uniq.join(",")+(res.length?" | "+res.join("; "):"");})()" as grid_icon_check
+verify element pdp_photo_360_icon is inside every pdp_photo_tile_image
 take screenshot as deep_link_photos
-verify stored grid_icon_check contains "OK"

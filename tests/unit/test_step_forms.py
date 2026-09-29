@@ -6,9 +6,9 @@ import pytest
 from nlp.parser import parse_step
 from nlp.step_forms import FORMS, compose, decompose, form_for
 
-SAMPLE = {"target": "some_el", "text": "hello", "closers": ["pop_a", "pop_b"],
+SAMPLE = {"target": "some_el", "text": "hello", "closers": ["pop_a", "pop_b"], "container": "photo_el",
           "span": "top to bottom", "count": 7, "wait": 2, "pixels": 300, "timeout": 40,
-          "variable_name": "my_var", "direction": "up"}
+          "variable_name": "my_var", "variable": "my_var", "direction": "up"}
 
 
 @pytest.mark.parametrize("step_type", sorted(FORMS))

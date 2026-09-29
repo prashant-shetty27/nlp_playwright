@@ -193,6 +193,38 @@ FORMS: dict[str, dict] = {
         "fields": [{"key": "target", "label": "Element", "kind": LOC, "required": True}],
         "compose": lambda v: f"verify element {v['target']} is visible",
     },
+    "verify_inside": {
+        "title": "Check an element sits inside another (icon on a photo)",
+        "fields": [{"key": "target", "label": "Element (e.g. the icon)", "kind": LOC, "required": True},
+                   {"key": "container", "label": "Inside (e.g. the photo)", "kind": LOC, "required": True,
+                    "help": "For a picture the check uses the photo as drawn, not its frame."}],
+        "compose": lambda v: f"verify element {v['target']} is inside {v['container']}",
+    },
+    "verify_inside_every": {
+        "title": "Check an element sits inside EVERY one of another (icon on every photo)",
+        "fields": [{"key": "target", "label": "Element (e.g. the icon)", "kind": LOC, "required": True},
+                   {"key": "container", "label": "Inside every (e.g. photo tile)", "kind": LOC, "required": True}],
+        "compose": lambda v: f"verify element {v['target']} is inside every {v['container']}",
+    },
+    "verify_same_place_every": {
+        "title": "Check an element is at the same place on every one of another",
+        "fields": [{"key": "target", "label": "Element (e.g. the icon)", "kind": LOC, "required": True},
+                   {"key": "container", "label": "On every (e.g. photo tile)", "kind": LOC, "required": True}],
+        "compose": lambda v: f"verify element {v['target']} is at the same place in every {v['container']}",
+    },
+    "verify_same_size": {
+        "title": "Check two elements are the same size",
+        "fields": [{"key": "target", "label": "Element", "kind": LOC, "required": True},
+                   {"key": "container", "label": "Same size as", "kind": LOC, "required": True}],
+        "compose": lambda v: f"verify element {v['target']} is the same size as {v['container']}",
+    },
+    "store_position": {
+        "title": "Store where an element sits on another (size and offsets)",
+        "fields": [{"key": "target", "label": "Element (e.g. the icon)", "kind": LOC, "required": True},
+                   {"key": "container", "label": "On (e.g. the photo)", "kind": LOC, "required": True},
+                   {"key": "variable", "label": "Store as", "kind": "variable", "required": True}],
+        "compose": lambda v: f"store position of {v['target']} in {v['container']} as {v['variable']}",
+    },
     "verify_element_not_visible": {
         "title": "Check an element is NOT visible",
         "fields": [{"key": "target", "label": "Element", "kind": LOC, "required": True}],
@@ -309,6 +341,7 @@ FORM_ORDER = [
     "press_key", "scroll", "scroll_to", "scroll_until_element_visible", "swipe_screen",
     "swipe_until_visible", "wait", "wait_until_visible", "wait_until_not_visible",
     "wait_page_load", "verify_element_visible", "verify_element_not_visible",
+    "verify_inside", "verify_inside_every", "verify_same_place_every", "verify_same_size", "store_position",
     "verify_element_contains", "verify_element_exact", "verify_text", "extract_text",
     "verify_var_equals", "verify_var_contains", "call_reusable", "js_click",
     "run_javascript", "refresh", "delete_all_cookies", "tap",
@@ -339,6 +372,10 @@ def decompose(parsed: Any) -> dict:
         n = int(d.get("count") or 500)
         out["direction"] = "up" if n < 0 else "down"
         out["pixels"] = abs(n)
+    if t in ("verify_inside", "verify_inside_every", "verify_same_place_every",
+             "verify_same_size", "store_position"):
+        out["container"] = vals[0] if vals else ""
+        out["variable"] = d.get("variable_name") or ""
     out["variable_name"] = d.get("variable_name") or ""
     return out
 

@@ -2627,6 +2627,171 @@ def _resolve_locator_or_raise(locator_name: str, page=None) -> str:
     return resolve_variables(xpath)
 
 
+# ── Layout checks ─────────────────────────────────────────────────────────────
+# Boxes are measured on the page as drawn. For an <img> the box is the PICTURE
+# (object-fit: contain leaves letterbox bands inside the element's own box), so
+# "inside the image" means inside the photo the person sees, not its frame.
+_RECTS_JS = """
+(els) => els.map(el => {
+  const r = el.getBoundingClientRect();
+  let box = {left: r.left, top: r.top, right: r.right, bottom: r.bottom};
+  if (el.tagName === 'IMG' && el.naturalWidth && el.naturalHeight) {
+    const fit = getComputedStyle(el).objectFit;
+    if (fit === 'contain' || fit === 'scale-down' || fit === 'none') {
+      const sc = Math.min(r.width / el.naturalWidth, r.height / el.naturalHeight);
+      const w = el.naturalWidth * sc, h = el.naturalHeight * sc;
+      box = {left: r.left + (r.width - w) / 2, top: r.top + (r.height - h) / 2};
+      box.right = box.left + w; box.bottom = box.top + h;
+    }
+  }
+  const cs = getComputedStyle(el);
+  const visible = r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none'
+                  && r.bottom > 0 && r.right > 0 && r.top < innerHeight && r.left < innerWidth;
+  const laid_out = r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none';
+  return {box, visible, laid_out, width: Math.round(r.width), height: Math.round(r.height)};
+})
+"""
+
+
+def _boxes(page, locator_name: str, *, visible_only: bool = True) -> list[dict]:
+    selector = _resolve_locator_or_raise(locator_name, page)
+    rects = _get_locator_root(page).locator(selector).evaluate_all(_RECTS_JS)
+    return [r for r in rects if (r["visible"] if visible_only else r["laid_out"])]
+
+
+def _inside(inner: dict, outer: dict, tol: float = 1.0) -> bool:
+    a, b = inner["box"], outer["box"]
+    return (a["left"] >= b["left"] - tol and a["top"] >= b["top"] - tol
+            and a["right"] <= b["right"] + tol and a["bottom"] <= b["bottom"] + tol)
+
+
+def _offsets(inner: dict, outer: dict) -> tuple[int, int]:
+    """(top, right) distance in px from the outer box's top-right corner."""
+    a, b = inner["box"], outer["box"]
+    return round(a["top"] - b["top"]), round(b["right"] - a["right"])
+
+
+def _describe(inner: dict, outer: dict) -> str:
+    t, r = _offsets(inner, outer)
+    return f"{inner['width']}x{inner['height']}px, {t}px from the top and {r}px from the right edge"
+
+
+def _pair_up(inners: list[dict], outers: list[dict]) -> list[tuple[dict, dict | None]]:
+    """
+    Each outer box with "its" inner box, or None when it has none.
+
+    An inner belongs to the outer whose box contains its centre; if none does
+    (an icon pushed just outside its photo) the nearest outer within 40px takes
+    it. Each inner is used once, and when two compete for one outer the one
+    closest to the outer's top-right corner wins — where such icons sit.
+    """
+    pool = list(inners)
+    out = []
+    for o in outers:
+        b = o["box"]
+        best, best_d = None, None
+        for i in pool:
+            cx = (i["box"]["left"] + i["box"]["right"]) / 2
+            cy = (i["box"]["top"] + i["box"]["bottom"]) / 2
+            inside = b["left"] <= cx <= b["right"] and b["top"] <= cy <= b["bottom"]
+            near = b["left"] - 40 <= cx <= b["right"] + 40 and b["top"] - 40 <= cy <= b["bottom"] + 40
+            if not (inside or near):
+                continue
+            d = ((b["right"] - cx) ** 2 + (cy - b["top"]) ** 2) ** 0.5 + (0 if inside else 10_000)
+            if best is None or d < best_d:
+                best, best_d = i, d
+        if best is not None:
+            pool.remove(best)
+        out.append((o, best))
+    return out
+
+
+def verify_inside(page, inner_name: str, outer_name: str):
+    """verify element <icon> is inside <image> — the visible pair on screen."""
+    inners, outers = _boxes(page, inner_name), _boxes(page, outer_name)
+    if not outers:
+        raise Exception(f"No visible '{outer_name}' on the screen to check against.")
+    if not inners:
+        # Not in the viewport — but if it is laid out somewhere, say WHERE it
+        # ended up relative to the picture; that is the finding.
+        inners = _boxes(page, inner_name, visible_only=False)
+    if not inners:
+        raise Exception(f"'{inner_name}' is not on the page — nothing to find inside '{outer_name}'.")
+    outer = max(outers, key=lambda o: o["width"] * o["height"])       # the one being looked at
+    pair = _pair_up(inners, [outer])[0][1] or inners[0]
+    if not _inside(pair, outer):
+        t, r = _offsets(pair, outer)
+        where = (f"{-t}px above the top" if t < 0 else f"{t}px from the top") + ", " + \
+                (f"{-r}px past the right edge" if r < 0 else f"{r}px from the right edge")
+        raise Exception(f"'{inner_name}' is NOT inside '{outer_name}': it sits {where} "
+                        f"(image {outer['width']}x{outer['height']}px) — cropped or off the picture.")
+    logger.info("✅ '%s' is inside '%s': %s", inner_name, outer_name, _describe(pair, outer))
+
+
+def verify_inside_every(page, inner_name: str, outer_name: str):
+    """Every <image> on the page (below the fold too) has an <icon> inside it."""
+    inners, outers = _boxes(page, inner_name, visible_only=False), _boxes(page, outer_name, visible_only=False)
+    if not outers:
+        raise Exception(f"No visible '{outer_name}' on the screen.")
+    missing, cropped = [], []
+    for n, (o, i) in enumerate(_pair_up(inners, outers), 1):
+        if i is None:
+            missing.append(n)
+        elif not _inside(i, o):
+            cropped.append(f"#{n} ({_describe(i, o)})")
+    if missing or cropped:
+        parts = []
+        if missing:
+            parts.append(f"no '{inner_name}' on {len(missing)} of {len(outers)}: #" + ", #".join(map(str, missing)))
+        if cropped:
+            parts.append(f"'{inner_name}' outside the picture on: " + "; ".join(cropped))
+        raise Exception(f"Checked {len(outers)} '{outer_name}' — " + " | ".join(parts))
+    logger.info("✅ '%s' is inside every '%s' (%d checked, first: %s)", inner_name, outer_name,
+                len(outers), _describe(_pair_up(inners, outers)[0][1], outers[0]))
+
+
+def verify_same_place_every(page, inner_name: str, outer_name: str, tolerance_px: int = 2):
+    """The <icon> sits at the same top/right offset on every <image> on the page."""
+    inners, outers = _boxes(page, inner_name, visible_only=False), _boxes(page, outer_name, visible_only=False)
+    pairs = [(o, i) for o, i in _pair_up(inners, outers) if i is not None]
+    if len(pairs) < 2:
+        raise Exception(f"Need at least two '{outer_name}' with a '{inner_name}' to compare; found {len(pairs)}.")
+    offs = [_offsets(i, o) for o, i in pairs]
+    ref = offs[0]
+    odd = [f"#{n} at top {t}px / right {r}px" for n, (t, r) in enumerate(offs, 1)
+           if abs(t - ref[0]) > tolerance_px or abs(r - ref[1]) > tolerance_px]
+    if odd:
+        raise Exception(f"'{inner_name}' is not at the same place on every '{outer_name}': "
+                        f"#1 is at top {ref[0]}px / right {ref[1]}px, but " + ", ".join(odd))
+    logger.info("✅ '%s' sits at top %dpx / right %dpx on all %d '%s'", inner_name, ref[0], ref[1],
+                len(pairs), outer_name)
+
+
+def verify_same_size(page, a_name: str, b_name: str, tolerance_px: int = 2):
+    a, b = _boxes(page, a_name), _boxes(page, b_name)
+    if not a or not b:
+        raise Exception(f"'{a_name if not a else b_name}' is not on the screen.")
+    da, db = abs(a[0]["width"] - b[0]["width"]), abs(a[0]["height"] - b[0]["height"])
+    if da > tolerance_px or db > tolerance_px:
+        raise Exception(f"'{a_name}' is {a[0]['width']}x{a[0]['height']}px but '{b_name}' is "
+                        f"{b[0]['width']}x{b[0]['height']}px.")
+    logger.info("✅ '%s' and '%s' are the same size (%dx%d px)", a_name, b_name, a[0]["width"], a[0]["height"])
+
+
+def store_position(page, inner_name: str, outer_name: str, variable_name: str):
+    """store position of <icon> in <image> as <var> → '24x24px, 8px from the top and 8px from the right edge'."""
+    inners, outers = _boxes(page, inner_name), _boxes(page, outer_name)
+    if not inners:
+        inners = _boxes(page, inner_name, visible_only=False)
+    if not outers or not inners:
+        raise Exception(f"'{inner_name if not inners else outer_name}' is not on the screen.")
+    outer = max(outers, key=lambda o: o["width"] * o["height"])
+    pair = _pair_up(inners, [outer])[0][1] or inners[0]
+    text = _describe(pair, outer) + ("" if _inside(pair, outer) else " — outside the picture")
+    RUNTIME_VARIABLES[variable_name] = text
+    logger.info("💾 POSITION: %s -> Stored as '$%s'", text, variable_name)
+
+
 def verify_element_visible(page, locator_name):
     """Assert the resolved element is visible (proper Playwright assertion)."""
     selector = _resolve_locator_or_raise(locator_name, page)

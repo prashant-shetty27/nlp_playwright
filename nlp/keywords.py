@@ -266,6 +266,32 @@ KEYWORD_MAP = {
         "template": "verify element {locator} is visible"
     },
 
+    "verify_inside": {
+        "phrases": ["verify element is inside", "icon is inside the image", "check element sits inside",
+                    "element inside another element"],
+        "action": "verify_inside",
+        "template": "verify element {locator} is inside {locator}"
+    },
+    "verify_inside_every": {
+        "phrases": ["verify element is inside every", "icon on every photo", "check element on every tile"],
+        "action": "verify_inside_every",
+        "template": "verify element {locator} is inside every {locator}"
+    },
+    "verify_same_place_every": {
+        "phrases": ["same place on every", "same position on every", "icon at the same place"],
+        "action": "verify_same_place_every",
+        "template": "verify element {locator} is at the same place in every {locator}"
+    },
+    "verify_same_size": {
+        "phrases": ["same size as", "verify element is the same size"],
+        "action": "verify_same_size",
+        "template": "verify element {locator} is the same size as {locator}"
+    },
+    "store_position": {
+        "phrases": ["store position of", "where the icon sits", "store offsets"],
+        "action": "store_position",
+        "template": "store position of {locator} in {locator} as {variable}"
+    },
     "verify_element_not_visible": {
         "phrases": [
             "verify element is not visible", "check element is not visible",
