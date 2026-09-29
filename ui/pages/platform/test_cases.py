@@ -1992,7 +1992,13 @@ class TestCasesPage:
         ui.notify(f"Inserted at step {pos + 1} — Save to keep it", type="positive")
         ui.timer(0.01, self.render_editor, once=True)
 
-    def edit_step(self, index: int, text: str) -> None:
+    def edit_step(self, index: int, text: str, persist: bool = False) -> None:
+        """
+        `persist`: write the file right away (the step dialog's "Save step").
+        As in Testsigma, saving a step IS saving — it used to only mark the
+        test case unsaved, so leaving the page raised "Leave site?" and the
+        change could be lost.
+        """
         if not text:
             ui.timer(0.01, self.render_editor, once=True)
             return
@@ -2007,7 +2013,22 @@ class TestCasesPage:
         elif text != self.steps[index - 1]:
             self.steps[index - 1] = text
             self.dirty = True
+            if persist:
+                ui.timer(0.01, self._save_step_now, once=True)
+                return
         ui.timer(0.01, self.render_editor, once=True)
+
+    async def _save_step_now(self) -> None:
+        """Write the whole test case after a step dialog save; falls back to
+        the unsaved state (badge + Save button) if the write is refused."""
+        try:
+            await self._persist()
+            self.dirty = False
+            ui.notify("Step saved", type="positive")
+        except api.ApiError as e:
+            if e.status != 409:
+                ui.notify(f"Not saved: {e.detail} — press Save to retry", type="negative")
+        await self.render_editor()
 
     @staticmethod
     def _call_target(step: str) -> str:

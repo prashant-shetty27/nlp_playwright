@@ -52,6 +52,14 @@ async def _handle_drop(target_index: int, on_drop: Callable[[int, int], None]) -
 from ui.theme import COLORS, TYPOGRAPHY, action_color
 
 
+def _commit_edit(on_edit, index: int, text: str) -> None:
+    """The step dialog's save writes the file at once when the callback allows it."""
+    try:
+        on_edit(index, text, persist=True)
+    except TypeError:                       # a caller without the persist flag
+        on_edit(index, text)
+
+
 def step_row(index: int, nlp_text: str, *, action: str = "", target: str = "",
              platform: str = "website",
              on_edit: Callable[[int, str], None] | None = None,
@@ -221,7 +229,7 @@ def step_row(index: int, nlp_text: str, *, action: str = "", target: str = "",
             from ui.components.step_form_dialog import open_step_form
             opened = await open_step_form(
                 nlp_text, platform or "website", index,
-                on_save=lambda text: on_edit(index, (text or "").strip()))
+                on_save=lambda text: _commit_edit(on_edit, index, (text or "").strip()))
             if not opened:
                 start_edit()
 
