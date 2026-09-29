@@ -641,6 +641,15 @@ def _auth_domain_for(flow_path: str) -> str:
             return ""
         with open(flow_path, "r", encoding="utf-8") as f:
             text = f.read()
+        # `open ${prot3_pdp}` names its URL through Test Data; look there too,
+        # otherwise a flow written the recommended way never gets the suggestion.
+        try:
+            from execution.test_data import resolved
+            values = resolved("")
+            text = re.sub(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}",
+                          lambda m: str(values.get(m.group(1), m.group(0))), text)
+        except Exception:  # noqa: BLE001
+            pass
         for raw in re.findall(r"https?://[^\s\"']+", text):
             host = urlparse(raw).netloc.split("@")[-1]
             if host in registry:

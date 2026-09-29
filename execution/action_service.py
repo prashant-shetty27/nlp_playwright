@@ -1134,6 +1134,8 @@ _SWIPE_SPAN = {
     "bottom_middle": (0.80, 0.50), "middle_top": (0.50, 0.20),
     "top_middle": (0.20, 0.50), "middle_bottom": (0.50, 0.80),
 }
+#: Horizontal swipes (carousels, galleries): fractions of the viewport WIDTH.
+_SWIPE_SPAN_X = {"right_left": (0.85, 0.15), "left_right": (0.15, 0.85)}
 
 
 def swipe_screen(page, span: str = "bottom_top", duration_s: float | None = None) -> None:
@@ -1147,22 +1149,28 @@ def swipe_screen(page, span: str = "bottom_top", duration_s: float | None = None
     then the page's own momentum), so the page receives what a phone sends.
     On a desktop page (no touch) it falls back to the same gesture with a mouse.
     """
-    y0, y1 = _SWIPE_SPAN.get(span, _SWIPE_SPAN["bottom_top"])
     size = page.viewport_size or page.evaluate("() => ({width: innerWidth, height: innerHeight})")
     w, h = int(size["width"]), int(size["height"])
     secs = float(duration_s) if duration_s else 0.35
     touch = bool(page.evaluate("() => navigator.maxTouchPoints > 0 || 'ontouchstart' in window"))
-    x, ya, yb = int(w / 2), int(y0 * h), int(y1 * h)
+    horizontal = span in _SWIPE_SPAN_X
+    if horizontal:
+        x0, x1 = _SWIPE_SPAN_X[span]
+        xa, xb, ya, yb = int(x0 * w), int(x1 * w), int(h / 2), int(h / 2)
+    else:
+        y0, y1 = _SWIPE_SPAN.get(span, _SWIPE_SPAN["bottom_top"])
+        xa, xb, ya, yb = int(w / 2), int(w / 2), int(y0 * h), int(y1 * h)
     steps = max(8, min(120, int(secs / 0.016)))
     if touch:
         # touchstart -> touchmoves -> touchend, as a finger does; the browser
         # then scrolls the page itself, momentum included.
         cdp = page.context.new_cdp_session(page)
         try:
-            cdp.send("Input.dispatchTouchEvent", {"type": "touchStart", "touchPoints": [{"x": x, "y": ya}]})
+            cdp.send("Input.dispatchTouchEvent", {"type": "touchStart", "touchPoints": [{"x": xa, "y": ya}]})
             for i in range(1, steps + 1):
                 cdp.send("Input.dispatchTouchEvent", {
-                    "type": "touchMove", "touchPoints": [{"x": x, "y": ya + (yb - ya) * i / steps}]})
+                    "type": "touchMove", "touchPoints": [{"x": xa + (xb - xa) * i / steps,
+                                                          "y": ya + (yb - ya) * i / steps}]})
                 page.wait_for_timeout(int(secs * 1000 / steps))
             cdp.send("Input.dispatchTouchEvent", {"type": "touchEnd", "touchPoints": []})
         finally:
@@ -1170,6 +1178,14 @@ def swipe_screen(page, span: str = "bottom_top", duration_s: float | None = None
                 cdp.detach()
             except Exception:  # noqa: BLE001
                 pass
+    elif horizontal:
+        # Desktop page: drag with the mouse, which is what a carousel listens for.
+        page.mouse.move(xa, ya)
+        page.mouse.down()
+        for i in range(1, steps + 1):
+            page.mouse.move(xa + (xb - xa) * i / steps, ya, steps=1)
+            page.wait_for_timeout(int(secs * 1000 / steps))
+        page.mouse.up()
     else:
         # Desktop page: the same movement as small wheel steps.
         for _ in range(steps):
@@ -2778,8 +2794,9 @@ def store_javascript(page, script, variable_name):
     RUNTIME_VARIABLES[variable_name] = "" if val is None else str(val)
     # A page's resource list echoes URL-embedded logins (user:pass@host); never log those.
     import re as _re
-    shown = _re.sub(r"(?<=/)[^/\s@]+:[^/\s@]+@", "***@", RUNTIME_VARIABLES[variable_name][:2000])
-    shown = _re.sub(r"(?<![A-Za-z0-9/])[^\s@/|]+:[^\s@/|]+@(?=[A-Za-z0-9.-]+\.)", "***@", shown)
+    # Mask BEFORE truncating, and match any "user:pass@" run (URL userinfo has no
+    # spaces, slashes or pipes) so a login never reaches the log in any form.
+    shown = _re.sub(r"[^\s/|@:]+:[^\s/|@]+@", "***@", RUNTIME_VARIABLES[variable_name])[:2000]
     logger.info("💾 EXTRACTED (js): %s -> Stored as '$%s'", shown, variable_name)
 
 

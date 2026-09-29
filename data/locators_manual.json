@@ -761,5 +761,16 @@
     "filter_div_brand_filter": "//li[contains(text(),'Brand')]",
     "filter_div_brand_filter_1st_option_check": "(//i[contains(@class,'fltrgt bluchk')])[2]",
     "filter_div_apply_button": "//button[text()[normalize-space() = \"Apply\"]]"
+  },
+  "pdp_360": {
+    "pdp_tab_photos": "//h2[contains(@class,'transparenttabs__link')]/a[normalize-space()='Photos']",
+    "pdp_photos_heading": "//h1[contains(@class,'dtlpg_tabh1')]",
+    "pdp_photo_tile": "//div[contains(@class,'photos_tab_imgcontainer')]",
+    "pdp_photo_tile_image": "//div[contains(@class,'photos_tab_imgcontainer')]//img[contains(@class,'glyimg')]",
+    "pdp_photo_360_icon": "//div[contains(@class,'photos_tab_imgcontainer')]//div[contains(@class,'glyimg__img3dicn')]",
+    "pdp_first_photo": "//span[@data-at='photos_tab_image_0']//img",
+    "gallery_slide_image": "//div[contains(@class,'swiper-slide')]//img",
+    "gallery_360_icon": "//div[contains(@class,'glyprvw__img3dicn')]",
+    "gallery_back_button": "//div[contains(@class,'iconbox') and contains(@class,'hdrMnuback')]"
   }
 }

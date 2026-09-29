@@ -1,0 +1,19 @@
+# Platform: mobilesite
+# Story: GJDT-22417 — after opening a photo and coming back from the gallery, the Photos section still shows the 360° icons (AC3)
+# Tags: b2b, pdp, 360, GJDT-22417
+open ${prot3_pdp_360_photos}
+wait for page to load
+wait 4 seconds
+store count of pdp_photo_360_icon as icons_before
+click pdp_first_photo
+wait 3 seconds
+verify element gallery_360_icon is visible
+go back
+wait 3 seconds
+verify element pdp_photos_heading is visible
+verify element pdp_photo_360_icon is visible
+store count of pdp_photo_360_icon as icons_after
+verify stored icons_after equals "${icons_before}"
+store javascript "(function(){var tiles=[...document.querySelectorAll(".photos_tab_imgcontainer")]; if(!tiles.length) return "FAIL no photo tiles"; var res=[],offs=[]; tiles.forEach(function(t,i){var img=t.querySelector("img.glyimg"); var icn=t.querySelector(".glyimg__img3dicn"); if(!img) return; var ir=img.getBoundingClientRect(); if(ir.width<20) return; if(!icn||!icn.getBoundingClientRect().width){res.push("tile"+i+":no-icon"); return;} var cr=icn.getBoundingClientRect(); var ot=Math.round(cr.top-ir.top), orr=Math.round(ir.right-cr.right); var inside=cr.top>=ir.top-0.5&&cr.left>=ir.left-0.5&&cr.right<=ir.right+0.5&&cr.bottom<=ir.bottom+0.5; offs.push(ot+"/"+orr+"/"+Math.round(cr.width)); if(!inside) res.push("tile"+i+":cropped top="+ot+" right="+orr);}); var uniq=[...new Set(offs)]; if(uniq.length>1) res.push("position varies: "+uniq.join(" vs ")); return (res.length?"FAIL ":"OK ")+"tiles="+tiles.length+" measured="+offs.length+" offsetTop/offsetRight/size="+uniq.join(",")+(res.length?" | "+res.join("; "):"");})()" as grid_icon_check_after_back
+take screenshot as photos_section_after_back
+verify stored grid_icon_check_after_back contains "OK"

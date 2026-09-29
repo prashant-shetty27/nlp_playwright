@@ -161,6 +161,30 @@ CURATED_DEVICES: tuple = (
 )
 
 
+_DEVICE_CATALOGUE: dict | None = None
+
+
+def _device_catalogue() -> dict:
+    """
+    Playwright's device registry, read once per process.
+
+    Reading it starts a Playwright driver (a node process) and takes 1-3 s;
+    Run Center asked for it on every page load, which blocked the UI's event
+    loop long enough for the page to time out and reload itself in a loop.
+    The registry is a constant of the installed Playwright, so cache it.
+    """
+    global _DEVICE_CATALOGUE
+    if _DEVICE_CATALOGUE is None:
+        try:
+            from playwright.sync_api import sync_playwright
+        except ImportError:
+            _DEVICE_CATALOGUE = {}
+        else:
+            with sync_playwright() as pw:
+                _DEVICE_CATALOGUE = {k: dict(v) for k, v in pw.devices.items()}
+    return _DEVICE_CATALOGUE
+
+
 def devices(curated_only: bool = True) -> list[dict]:
     """
     Device profiles a mobile-web run can emulate.
@@ -168,24 +192,21 @@ def devices(curated_only: bool = True) -> list[dict]:
     Each entry carries the engine the device expects, so the caller can see WHY
     an iPhone run launches WebKit rather than having to know the pairing.
     """
-    try:
-        from playwright.sync_api import sync_playwright
-    except ImportError:
+    catalogue = _device_catalogue()
+    if not catalogue:
         return []
     out = []
-    with sync_playwright() as pw:
-        catalogue = pw.devices
-        names = [n for n in CURATED_DEVICES if n in catalogue] if curated_only else list(catalogue)
-        for n in names:
-            d = catalogue[n]
-            vp = d.get("viewport") or {}
-            out.append({
-                "name": n,
-                "browser": d.get("default_browser_type", "chromium"),
-                "viewport": f"{vp.get('width')}x{vp.get('height')}",
-                "mobile": bool(d.get("is_mobile")),
-                "curated": n in CURATED_DEVICES,
-            })
+    names = [n for n in CURATED_DEVICES if n in catalogue] if curated_only else list(catalogue)
+    for n in names:
+        d = catalogue[n]
+        vp = d.get("viewport") or {}
+        out.append({
+            "name": n,
+            "browser": d.get("default_browser_type", "chromium"),
+            "viewport": f"{vp.get('width')}x{vp.get('height')}",
+            "mobile": bool(d.get("is_mobile")),
+            "curated": n in CURATED_DEVICES,
+        })
     return out
 
 
@@ -214,8 +235,5 @@ def browser_for_device(device_name: str | None, explicit: str | None = None,
         d = device_catalogue.get(name)
         return d.get("default_browser_type", "chromium") if d else "chromium"
 
-    from playwright.sync_api import sync_playwright
-
-    with sync_playwright() as pw:          # deliberately NOT guarded — a failure
-        d = pw.devices.get(name)           # here must surface, not default to
-        return d.get("default_browser_type", "chromium") if d else "chromium"
+    d = _device_catalogue().get(name)      # cached registry (see _device_catalogue)
+    return d.get("default_browser_type", "chromium") if d else "chromium"

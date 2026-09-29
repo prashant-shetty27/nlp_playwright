@@ -5,7 +5,8 @@
     "Prashant/B2B/PRP",
     "Prashant/Core",
     "Prashant/Core/NCT",
-    "Trails"
+    "Trails",
+    "Prashant/B2B/PDP"
   ],
   "assign": {
     "NCT_Ask_for_Price": "Prashant/Core/NCT",
@@ -24,6 +25,11 @@
     "Recommended_Product_Carousel_Logic_Live": "Trails",
     "Recommended_Product_City_Preference": "Trails",
     "_Report_Smoke_Fail": "Trails",
-    "_Report_Smoke_Pass": "Trails"
+    "_Report_Smoke_Pass": "Trails",
+    "PDP_360_Icon_Photos_Section": "Prashant/B2B/PDP",
+    "PDP_360_Icon_Gallery_Single": "Prashant/B2B/PDP",
+    "PDP_360_Icon_After_Back": "Prashant/B2B/PDP",
+    "PDP_360_Icon_Deep_Link": "Prashant/B2B/PDP",
+    "PDP_360_Icon_Both_Surfaces": "Prashant/B2B/PDP"
   }
 }

@@ -270,13 +270,20 @@ class RunCenter:
         hosts = info.get("hosts") or []
         opts = {"": "Not needed / use URL login"}
         opts.update({h: f"Attach saved login for {h}" for h in hosts})
-        sel.set_options(opts, value="")
+        sug = info.get("suggested") or ""
+        # Preselect the host the flow opens first. Credentials embedded in the
+        # URL leave "user:pass@" in the page's own URL, and a page that builds
+        # requests from it then fails with "Request cannot be constructed from a
+        # URL that includes credentials" — the touch site stays on its spinner
+        # for ever. Context-level login has none of that. It can still be
+        # switched off here for a site that needs the URL form.
+        sel.set_options(opts, value=sug if sug in opts else "")
         sel.set_visibility(bool(hosts))
         self.auth_hint.set_visibility(bool(hosts))
-        sug = info.get("suggested") or ""
         self.auth_hint.set_text(
-            f"This flow opens {sug}, which has a saved login. Leave as is unless the "
-            f"page stays blank or a login box appears — then pick it here."
+            f"This flow opens {sug}, which has a saved login; it is attached to the "
+            f"browser session so the page's own requests carry it too. Choose "
+            f"'Not needed' only if this site loads better with the login in the URL."
             if sug else "Logins come from AUTH_<NAME>_DOMAIN / _USERNAME / _PASSWORD in .env.")
 
     async def _load_inputs(self, flow: str) -> None:

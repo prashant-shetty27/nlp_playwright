@@ -9,7 +9,10 @@ from nlp.command import Command
 
 def _swipe_span(words: str) -> str:
     w = " ".join(words.lower().split())
-    return {"up": "bottom_top", "down": "top_bottom"}.get(w, w.replace(" to ", "_"))
+    # "swipe left" is the gesture that moves a carousel to the NEXT slide
+    # (finger travels right→left), as on a phone.
+    return {"up": "bottom_top", "down": "top_bottom",
+            "left": "right_left", "right": "left_right"}.get(w, w.replace(" to ", "_"))
 
 
 def parse_step(step: str) -> Command:
@@ -770,7 +773,7 @@ def parse_step(step: str) -> Command:
     #   swipe up | swipe down | swipe bottom to middle | swipe middle to top …
     #   swipe bottom to top until element <loc> is visible[, max 15 times][, wait 1]
     _SW = r'(bottom\s+to\s+top|top\s+to\s+bottom|bottom\s+to\s+middle|middle\s+to\s+top|' \
-          r'top\s+to\s+middle|middle\s+to\s+bottom|up|down)'
+          r'top\s+to\s+middle|middle\s+to\s+bottom|right\s+to\s+left|left\s+to\s+right|up|down|left|right)'
     #   … , closing <loc> [and|or|, <loc>] [, closing <loc>]  — popups that MAY open
     #   while swiping; each is closed only if it shows, so the list is "any of".
     _CL = r'[A-Za-z_][A-Za-z0-9_]*'
