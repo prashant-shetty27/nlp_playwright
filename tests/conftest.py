@@ -30,3 +30,7 @@ def _script_style(path: str) -> bool:
 collect_ignore = [n for n in os.listdir(_HERE)
                   if n.startswith("test_") and n.endswith(".py")
                   and _script_style(os.path.join(_HERE, n))]
+# Script checks with no sys.exit() that still launch real browsers / hit the
+# network at import time — collecting them under plain `pytest` opened
+# Chromium against justdial.com and contributed no test.
+collect_ignore += ["test_platforms.py", "test_mobile_web.py"]

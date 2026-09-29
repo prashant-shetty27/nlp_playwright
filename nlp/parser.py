@@ -297,7 +297,12 @@ def parse_step(step: str) -> Command:
             raise ValueError("Verify requires quoted text")
 
         # verify text "X" in element_name  →  element-level contains check
-        in_el = re.search(r'\bin\s+(\w+)\s*$', s, re.I)
+        # "in element foo" and "in page" were both mis-read: the first fell
+        # through to a page-level check (silently ignoring the element), the
+        # second looked for an element called "page".
+        in_el = re.search(r'"\s+in\s+(?:element\s+)?(\w+)\s*$', s, re.I)
+        if in_el and in_el.group(1).lower() in ("page", "screen"):
+            in_el = None
         if in_el:
             return Command(
                 type="verify_element_contains",
@@ -386,15 +391,21 @@ def parse_step(step: str) -> Command:
     # =============================
     # CLICK COMMAND
     # =============================
-    if s.lower().startswith("click "):
-        target = re.sub(r"^click\s+(on\s+)?(element\s+)?", "", s, flags=re.IGNORECASE).strip()
-        return Command(type="click", target=target)
-
     # TAP TEXT COMMAND — tap by visible label/text without needing a pre-recorded locator
-    # tap text "Search"  |  click text "Go"
+    # tap text "Search"  |  click text "Go"   (before plain click, which swallowed it)
     m = re.match(r'^(?:tap|click)\s+text\s+"(.*?)"$', s, re.I)
     if m:
         return Command(type="tap_text", text=m.group(1))
+
+    if re.match(r'^click\s+if\s+', s, re.I):
+        # "click if visible a b" / "click if visible x wait 2" fell through to a
+        # plain click with the whole tail as the element name.
+        raise ValueError("'click if visible' takes one element name, e.g. "
+                         "click if visible close_popup [wait 2 seconds]")
+
+    if s.lower().startswith("click "):
+        target = re.sub(r"^click\s+(on\s+)?(element\s+)?", "", s, flags=re.IGNORECASE).strip()
+        return Command(type="click", target=target)
 
     # DOUBLE TAP COMMAND — must be before plain "tap" rule
     # double tap <element>  |  double click <element>

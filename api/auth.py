@@ -41,10 +41,10 @@ def acting_user(request: Request,
                 authorization: str = Header(default="")) -> str:
     """The person (or 'system') this request acts as; '' when unauthenticated."""
     trusted = bool(x_internal_token) and hmac.compare_digest(x_internal_token, INTERNAL_TOKEN)
-    # Starlette's TestClient (the repo's own API tests, in-process) reports the
-    # client as "testclient" — never a real network peer, which is an IP.
-    if not trusted and request.client is not None and request.client.host == "testclient":
-        trusted = True
+    # The old "client host == testclient" shortcut for the in-process tests is
+    # gone: uvicorn's proxy-headers middleware trusts X-Forwarded-For from
+    # 127.0.0.1, so any local process could claim to be "testclient" and act
+    # as an admin. Tests send the internal token instead (tests/conftest.py).
     if trusted:
         return (x_user or "").strip().lower() or SYSTEM
     token = _api_token()

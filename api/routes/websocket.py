@@ -46,12 +46,22 @@ def _run_flow_streaming(flow_path: str, headless: bool, send_fn):
     from execution.session import TestSession
     from runner import _interpret
 
-    sanitize_database()
-    session = TestSession()
-    page = open_browser(session)
+    # One browser run at a time in this process — the same lock Run Center
+    # and plans take. Without it this stream ran alongside a plan, both
+    # sharing the process-wide session state and HEADLESS flag.
+    from api.routes.tests import _EXEC_LOCK
+    if not _EXEC_LOCK.acquire(blocking=False):
+        send_fn({"type": "error", "message": "Another run is in progress — wait for it to finish."})
+        send_fn({"type": "done"})
+        return
+    page = None
+    session = None
     passed = failed = 0
 
     try:
+        sanitize_database()
+        session = TestSession()
+        page = open_browser(session)
         with open(flow_path, "r", encoding="utf-8") as f:
             lines = f.readlines()
 
@@ -82,10 +92,12 @@ def _run_flow_streaming(flow_path: str, headless: bool, send_fn):
 
     finally:
         try:
-            project_name = os.path.basename(flow_path).replace(".flow", "")
-            close_browser(page, project_name, session)
+            if page is not None:
+                project_name = os.path.basename(flow_path).replace(".flow", "")
+                close_browser(page, project_name, session)
         except Exception:
             pass
+        _EXEC_LOCK.release()
 
     send_fn({"type": "summary", "total": passed + failed, "passed": passed, "failed": failed})
     send_fn({"type": "done"})

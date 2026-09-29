@@ -56,8 +56,22 @@ def new_test_case_dialog(platform: str, on_created: Callable) -> None:
                     if not n:
                         ui.notify("Give it a name", type="warning")
                         return
+                    # The same check Rename uses: an existing name used to
+                    # open an empty editor over the old test case, and the
+                    # first Save silently replaced it.
+                    try:
+                        chk = await api.check_flow_name(n)
+                    except api.ApiError:
+                        chk = {"ok": True, "saved_as": n}
+                    if not chk.get("ok"):
+                        ui.notify(chk.get("reason") or "That name cannot be used", type="warning")
+                        return
+                    if chk.get("exists"):
+                        ui.notify(f"'{chk.get('saved_as')}' already exists — open it from the "
+                                  f"list, or pick another name", type="warning", timeout=6000)
+                        return
                     dialog.close()
-                    await on_created(n, [], {})
+                    await on_created(chk.get("saved_as") or n, [], {})
 
                 ui.button("Create empty", on_click=make_blank).props("unelevated")
 

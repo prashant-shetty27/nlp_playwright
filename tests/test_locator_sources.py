@@ -42,6 +42,7 @@ sys.path.insert(0, os.path.join(BASE_DIR, "tools"))
 
 from config import settings  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
+from api.auth import INTERNAL_TOKEN  # noqa: E402
 
 from api.app import app  # noqa: E402
 from locators import sources as S  # noqa: E402
@@ -90,7 +91,7 @@ def _tolerates_absent_attr() -> bool:
         S.unregister("ghost")
 
 
-c = TestClient(app)
+c = TestClient(app, headers={"X-Internal-Token": INTERNAL_TOKEN})
 
 # ═══════════════════════════════════════════════════════════════════════════
 print("\n[1] THE REGISTRY IS THE ONLY DECLARATION")

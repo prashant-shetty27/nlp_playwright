@@ -827,7 +827,9 @@ def list_results():
     """
     saved = []
     for fname in sorted(os.listdir(LOGS_DIR), reverse=True):
-        if fname.endswith(".json"):
+        # Only run reports; _run_index.json / _last_run_setup.json are
+        # bookkeeping files that showed up as phantom runs.
+        if fname.endswith(".json") and fname.startswith("report"):
             saved.append(fname.replace(".json", ""))
 
     in_memory = []
@@ -913,7 +915,8 @@ def run_history(limit: int = 50):
         # Reports for fixture flows (a leading underscore) come from the tool's
         # own test suite. They are not runs the author made and burying real
         # runs under dozens of them makes the screen useless.
-        if fname.startswith("report___") or fname.startswith("report__"):
+        if fname.startswith("report___") or fname.startswith("report__") \
+                or not fname.startswith("report"):
             continue
         run_id = fname[:-len(".json")]
         try:

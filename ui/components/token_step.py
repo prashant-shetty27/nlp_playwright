@@ -83,6 +83,9 @@ class TokenStep:
         #: else is a value the operator will be asked for, which is exactly the
         #: state amber is for.
         self.known_values = known_values or set()
+        #: Was accepted but never stored, so the variable picker crashed with
+        #: AttributeError on its first keystroke.
+        self.variables = variables or []
         self.container = ui.row().classes("items-center gap-0 flex-wrap") \
             .style("min-height:1.6rem")
 

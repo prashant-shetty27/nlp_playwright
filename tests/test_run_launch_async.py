@@ -4,6 +4,7 @@ import time
 import uuid
 
 from fastapi.testclient import TestClient
+from api.auth import INTERNAL_TOKEN  # noqa: E402
 
 from api.app import app
 from api.routes import tests as tests_route
@@ -19,7 +20,7 @@ def test_run_launch_returns_before_execution_finishes(monkeypatch) -> None:
     started = threading.Event()
     release = threading.Event()
     original_runner = tests_route._run_flow_sync
-    client = TestClient(app)
+    client = TestClient(app, headers={"X-Internal-Token": INTERNAL_TOKEN})
 
     def fake_run_flow_sync(run_id: str, flow_path: str, headless: bool, **kwargs) -> dict:
         started.set()

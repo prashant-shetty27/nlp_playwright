@@ -112,7 +112,7 @@ def _resolve_live(page, locator_name):
         return primary, dna
 
     try:
-        if page.locator(primary).count() > 0:
+        if _get_locator_root(page).locator(primary).count() > 0:
             return primary, dna
     except Exception:
         pass   # malformed/stale selector counts as a miss — fall through to alternates
@@ -120,10 +120,16 @@ def _resolve_live(page, locator_name):
     for alt in alts:
         candidate = resolve_variables(alt["value"])
         try:
-            if page.locator(candidate).count() > 0:
+            if _get_locator_root(page).locator(candidate).count() > 0:
                 logger.warning("🔁 Primary selector for '%s' matched nothing; using recorded "
                                "alternate %r", locator_name, candidate)
-                promote_selector(locator_name, candidate, alt.get("type") or "css")
+                # Writing the alternate back as primary is a change to the
+                # locator database — it follows the same HEAL_MEMORY switch as
+                # every other write-back (TODO.md §1). Off: the alternate is
+                # used for this step only.
+                from locators import healing_memory as _hm
+                if _hm.enabled():
+                    promote_selector(locator_name, candidate, alt.get("type") or "css")
                 return candidate, dna
         except Exception:
             continue
@@ -304,7 +310,7 @@ def click_element(page, locator_name):
 
     try:
         logger.info(f"🖱️ Attempting click on: {locator_name}")
-        target = page.locator(primary_xpath).first
+        target = _get_locator_root(page).locator(primary_xpath).first
         try:
             is_select = target.evaluate("el => el.tagName === 'SELECT'", timeout=2000)
         except (PlaywrightTimeoutError, PlaywrightError, TypeError):
@@ -345,7 +351,7 @@ def click_element(page, locator_name):
             raise Exception(f"Self-healing match failed: {ml_err}")
 
         if healed_xpath:
-            page.locator(healed_xpath).first.click(timeout=5000)
+            _get_locator_root(page).locator(healed_xpath).first.click(timeout=5000)
             logger.info(f"🏥 Successfully healed and clicked '{locator_name}'!")
             _stabilize_page(page)
         else:
@@ -369,7 +375,7 @@ def fill_element(page, text, locator_name):
         anyone knew was the site's own "enter mobile number" alert several steps
         later, blamed on the wrong step.
         """
-        loc = page.locator(xpath).first
+        loc = _get_locator_root(page).locator(xpath).first
         want = str(text)
 
         def landed() -> bool:
@@ -387,7 +393,8 @@ def fill_element(page, text, locator_name):
             if landed():
                 return True
             logger.warning("⚠️  fill() left '%s' holding %r — retyping as keystrokes.",
-                           locator_name, loc.input_value(timeout=1000))
+                           locator_name, "<hidden>" if settings.is_secret_name(locator_name)
+                           else loc.input_value(timeout=1000))
         except PlaywrightTimeoutError:
             if loc.count() == 0:
                 raise
@@ -422,12 +429,16 @@ def fill_element(page, text, locator_name):
         if landed():
             return True
         raise AssertionError(
-            f"❌ Could not put {want!r} into '{locator_name}'. The field is "
+            f"❌ Could not put {'<hidden>' if settings.is_secret_name(locator_name) else repr(want)} "
+            f"into '{locator_name}'. The field is "
             f"present but its value did not change — it may be read-only, "
             f"covered by an overlay, or reset by the page as fast as it is set.")
 
+    # An OTP / mobile / password typed into a field named like one is never
+    # written to the log — the same rule the reports already apply.
+    shown = "<hidden>" if settings.is_secret_name(locator_name) else text
     try:
-        logger.info(f"⌨️ Attempting to type '{text}' into: {locator_name}")
+        logger.info(f"⌨️ Attempting to type '{shown}' into: {locator_name}")
         execute_robust_fill(primary_xpath)
         logger.info("✅ Fill successful.")
         _stabilize_page(page)
@@ -455,7 +466,7 @@ def extract_element_text(page, locator_name, variable_name):
     primary_xpath, dna = _resolve_live(page, locator_name)
 
     def execute_extraction(xpath):
-        loc = page.locator(xpath).first
+        loc = _get_locator_root(page).locator(xpath).first
         extracted_text = loc.inner_text(timeout=5000).strip()
         RUNTIME_VARIABLES[variable_name] = extracted_text
         logger.info(f"💾 EXTRACTED: '{extracted_text}' -> Stored as '${variable_name}'")
@@ -495,7 +506,7 @@ def extract_input_value(page, locator_name, variable_name):
 
 def extract_element_count(page, locator_name, variable_name):
     primary_xpath, _ = _resolve_live(page, locator_name)
-    count = page.locator(primary_xpath).count()
+    count = _get_locator_root(page).locator(primary_xpath).count()
     RUNTIME_VARIABLES[variable_name] = str(count)
     logger.info(f"💾 EXTRACTED COUNT: {count} elements found -> Stored as '${variable_name}'")
 
@@ -1023,7 +1034,7 @@ def scroll_to_element(page, target: str) -> None:
     xpath, _ = get_locator_and_dna(target)
     if not xpath:
         raise Exception(f"Locator '{target}' not found for scroll_to")
-    page.locator(xpath).first.scroll_into_view_if_needed(timeout=8000)
+    _get_locator_root(page).locator(xpath).first.scroll_into_view_if_needed(timeout=8000)
     logger.info("📜 Scrolled to element: %s", target)
 
 
@@ -1045,7 +1056,7 @@ def scroll_until_text_visible(page, text, max_scrolls=None, scroll_wait=2):
         page.mouse.wheel(0, 500)
         scrolls += 1
         if scroll_wait:
-            page.wait_for_timeout(float(scroll_wait) * 1500)
+            page.wait_for_timeout(float(scroll_wait) * 1000)   # seconds -> ms (was 1500: "wait 1" slept 1.5 s)
     # Scrolling to the limit without ever seeing the text used to "pass" — the
     # step then only cost time and hid the fact that the text was not there.
     raise Exception(f"❌ Text '{target_text}' not visible after {max_scrolls} scroll(s).")
@@ -1372,6 +1383,10 @@ def switch_window_title(page, title: str) -> None:
         try:
             if title.strip().lower() in (candidate.title() or "").lower():
                 candidate.bring_to_front()
+                # The next steps must run on this window — bring_to_front
+                # alone left every later click on the old tab.
+                _TEST_SESSION.active_page = candidate
+                _TEST_SESSION.active_frame = None
                 logger.info("🪟 Switched to window %r", candidate.title())
                 return candidate
         except Exception:  # noqa: BLE001 — a page can close mid-iteration
@@ -1387,9 +1402,9 @@ def switch_window_title(page, title: str) -> None:
 
 def parent_frame(page) -> None:
     """Leave the current iframe for the one containing it."""
-    from execution import action_service as _self
-
-    setattr(_self, "_ACTIVE_FRAME", None)
+    # The live frame state is _TEST_SESSION.active_frame (the old module
+    # attribute was never read, so this step did nothing).
+    _TEST_SESSION.active_frame = None
     logger.info("🖼️  Returned to the parent frame")
 
 
@@ -2538,7 +2553,7 @@ def verify_element_visible(page, locator_name):
     selector = _resolve_locator_or_raise(locator_name, page)
     logger.info("🔎 Verifying element '%s' is visible", locator_name)
     try:
-        expect(page.locator(selector).first).to_be_visible(timeout=settings.ACTION_TIMEOUT_MS)
+        expect(_get_locator_root(page).locator(selector).first).to_be_visible(timeout=settings.ACTION_TIMEOUT_MS)
     except AssertionError as e:
         raise Exception(
             f"Visibility assertion failed for '{locator_name}' ({selector}): {e}"
@@ -2581,6 +2596,26 @@ def fetch_otp_from_portal(page, mobile, variable_name, after: str = "",
     return code
 
 
+def verify_element_exists(page, locator_name, timeout_ms: int | None = None):
+    """
+    Assert the element is PRESENT IN THE DOM (visible or not).
+
+    The positive twin of verify_element_not_exists. Waits up to the action
+    timeout for the node to be attached, so a check straight after a click
+    does not fail because the page has not rendered yet.
+    """
+    selector = _resolve_locator_or_raise(locator_name, page)
+    ms = int(timeout_ms if timeout_ms is not None else settings.ACTION_TIMEOUT_MS)
+    logger.info("🔎 Verifying element '%s' exists in the DOM", locator_name)
+    try:
+        _get_locator_root(page).locator(selector).first.wait_for(state="attached", timeout=ms)
+    except PlaywrightTimeoutError:
+        raise Exception(
+            f"Element '{locator_name}' ({selector}) is not present in the DOM "
+            f"after {ms // 1000}s.")
+    logger.info("✅ Element '%s' exists.", locator_name)
+
+
 def verify_element_not_exists(page, locator_name, settle_ms: int | None = None):
     """
     Assert the element is ABSENT FROM THE DOM.
@@ -2596,7 +2631,7 @@ def verify_element_not_exists(page, locator_name, settle_ms: int | None = None):
     logger.info("🔎 Verifying element '%s' is absent from the DOM (settling %dms)",
                 locator_name, settle)
     page.wait_for_timeout(settle)
-    count = page.locator(selector).count()
+    count = _get_locator_root(page).locator(selector).count()
     if count:
         raise Exception(
             f"Element '{locator_name}' ({selector}) should be absent from the DOM "
@@ -2619,7 +2654,7 @@ def verify_element_not_visible(page, locator_name, settle_ms: int | None = None)
     logger.info("🔎 Verifying element '%s' is not visible (settling %dms)",
                 locator_name, settle)
     page.wait_for_timeout(settle)
-    loc = page.locator(selector)
+    loc = _get_locator_root(page).locator(selector)
     if loc.count() and loc.first.is_visible():
         raise Exception(
             f"Element '{locator_name}' ({selector}) is visible but should not be."
@@ -2633,7 +2668,7 @@ def wait_until_element_visible(page, locator_name, timeout_ms: int | None = None
     timeout = int(timeout_ms or settings.ACTION_TIMEOUT_MS)
     logger.info("⏳ Waiting up to %dms for '%s' to become visible", timeout, locator_name)
     try:
-        page.locator(selector).first.wait_for(state="visible", timeout=timeout)
+        _get_locator_root(page).locator(selector).first.wait_for(state="visible", timeout=timeout)
     except PlaywrightTimeoutError as e:
         raise Exception(
             f"'{locator_name}' ({selector}) did not become visible within {timeout}ms"
@@ -2647,7 +2682,7 @@ def wait_until_element_not_visible(page, locator_name, timeout_ms: int | None = 
     timeout = int(timeout_ms or settings.ACTION_TIMEOUT_MS)
     logger.info("⏳ Waiting up to %dms for '%s' to disappear", timeout, locator_name)
     try:
-        page.locator(selector).first.wait_for(state="hidden", timeout=timeout)
+        _get_locator_root(page).locator(selector).first.wait_for(state="hidden", timeout=timeout)
     except PlaywrightTimeoutError as e:
         raise Exception(f"'{locator_name}' ({selector}) was still visible after {timeout}ms") from e
     logger.info("✅ Element '%s' is not visible.", locator_name)
@@ -2719,7 +2754,7 @@ def enter_otp(page, otp_value, locator_name):
             f"(received {len(code)} characters; value withheld)."
         )
 
-    inputs = page.locator(selector)
+    inputs = _get_locator_root(page).locator(selector)
     count = inputs.count()
     if count == 0:
         raise Exception(f"OTP locator '{locator_name}' ({selector}) matched no inputs.")
@@ -3218,7 +3253,7 @@ def wait_until_element_text_not(page, locator_name, unexpected_text, timeout_ms:
     logger.info("⏳ Waiting up to %dms for '%s' text to differ from '%s'",
                 timeout, locator_name, unexpected_text)
     try:
-        expect(page.locator(selector).first).not_to_have_text(str(unexpected_text), timeout=timeout)
+        expect(_get_locator_root(page).locator(selector).first).not_to_have_text(str(unexpected_text), timeout=timeout)
     except AssertionError as e:
         raise Exception(
             f"'{locator_name}' text still equals '{unexpected_text}' after {timeout}ms"

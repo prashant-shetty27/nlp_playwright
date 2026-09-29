@@ -43,7 +43,9 @@ def test_levels_are_supersets():
 def test_off_lines_never_selected():
     for rt in ("smoke", "sanity", "regression"):
         lines = runs(rt)[0]
-        assert 14 not in lines          # the '# OFF:' line
+        assert 12 not in lines          # the '# OFF:' line (line 14 never existed)
+    # "full" selects nothing (run everything) — the OFF line is then the
+    # runner's job, checked in the runner's own tests.
 
 
 def test_variable_from_skipped_band_warns():

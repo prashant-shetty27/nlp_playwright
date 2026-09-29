@@ -159,15 +159,42 @@ def rename_flow(old: str, new: str, *, apply: bool = False) -> dict:
     if os.path.exists(sidecar):
         os.rename(sidecar, os.path.join(os.path.dirname(dst), new_name + ".map.json"))
 
-    pattern = _word_re(old)
     for ref in refs:
         path = os.path.join(BASE_DIR, ref["file"])
         try:
-            text = open(path, "r", encoding="utf-8").read()
-            open(path, "w", encoding="utf-8").write(pattern.sub(new_name, text))
-        except OSError:
+            _rewrite_flow_refs(path, old, new_name)
+        except (OSError, ValueError):
             continue
     return {"applied": True, "new_name": new_name, "changes": changes}
+
+
+def _rewrite_flow_refs(path: str, old: str, new: str) -> None:
+    """
+    Rename the flow inside one suite/plan JSON — structurally.
+
+    A word-regex over the raw text also renamed JSON KEYS: a test case called
+    `status`, `enabled`, `time` or `date` (all valid names) rewrote the plan's
+    own fields and silently disabled its schedule. Only string VALUES that
+    name the flow change: "flows/<old>.flow", "<old>.flow" or exactly "<old>".
+    """
+    import json
+
+    with open(path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    forms = {f"flows/{old}.flow": f"flows/{new}.flow", f"{old}.flow": f"{new}.flow", old: new}
+
+    def walk(o):
+        if isinstance(o, dict):
+            return {k: walk(v) for k, v in o.items()}
+        if isinstance(o, list):
+            return [walk(v) for v in o]
+        if isinstance(o, str):
+            return forms.get(o, o)
+        return o
+
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(walk(data), f, indent=2, ensure_ascii=False)
+        f.write("\n")
 
 
 def rename_locator(page: str, old: str, new: str, *, apply: bool = False) -> dict:

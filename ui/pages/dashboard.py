@@ -86,12 +86,17 @@ async def render() -> None:
                 for r in history[:10]:
                     with ui.row().classes("w-full items-center gap-3").style(
                             f"padding:6px 10px; border-bottom:1px solid {COLORS['border']}"):
-                        ui.label(str(r.get("project", "—"))).style(
+                        # /tests/history rows carry flow + summary{passed,failed,total};
+                        # the old keys (project/failed/passed) never existed, so
+                        # every run showed "—", PASSED and 0/0.
+                        summ = r.get("summary") or {}
+                        ui.label(str(r.get("flow") or r.get("project") or "—")).style(
                             f"font-family:{TYPOGRAPHY['mono']};"
                             f"font-size:{TYPOGRAPHY['size_sm']}; min-width:12rem")
-                        failed = r.get("failed", 0)
-                        status_chip("failed" if failed else "passed", size="sm")
-                        ui.label(f"{r.get('passed',0)}/{r.get('total',0)} steps").style(
+                        failed = int(summ.get("failed", r.get("failed", 0)) or 0)
+                        status_chip(r.get("status") or ("failed" if failed else "passed"), size="sm")
+                        ui.label(f"{summ.get('passed', r.get('passed', 0))}/"
+                                 f"{summ.get('total', r.get('total', 0))} steps").style(
                             f"font-size:{TYPOGRAPHY['size_xs']};"
                             f"color:{COLORS['text_muted']}")
                         ui.space()

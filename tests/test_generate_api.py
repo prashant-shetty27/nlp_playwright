@@ -19,6 +19,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fastapi.testclient import TestClient  # noqa: E402
+from api.auth import INTERNAL_TOKEN  # noqa: E402
 
 from api.app import app  # noqa: E402
 
@@ -35,7 +36,7 @@ def check(label, cond, detail=""):
         print(f"  FAIL  {label}   {detail}")
 
 
-c = TestClient(app)
+c = TestClient(app, headers={"X-Internal-Token": INTERNAL_TOKEN})
 XLSX = os.path.expanduser("~/Downloads/GJDT-21944_Ask_For_Photos_AI_Products_Testcases.xlsx")
 DRAFTS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                       "data", "drafts")

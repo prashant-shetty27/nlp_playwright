@@ -38,11 +38,14 @@ TARGET_IS_LOCATOR = {
     "js_dispatch",
     "swipe_until_visible", "wait_until_not_visible", "select_option",
     "clear_field", "scroll_element_x",
+    "verify_element_starts", "verify_element_ends", "verify_element_matches",
+    "verify_element_not_contains", "upload_file", "switch_iframe", "tap",
+    "double_tap", "long_press", "wait_for_element", "verify_element_exists",
 }
 
 #: Command types whose `target` is a variable name, not a locator.
 TARGET_IS_VARIABLE = {"create_variable", "verify_var_contains", "verify_var_not_equals", "verify_var_equals",
-                      "fetch_otp", "math", "extract_json",
+                      "extract_json",
                       "verify_recommended_order_api", "extract_regex",
                       "verify_var_compare"}
 
@@ -106,7 +109,7 @@ def _role_for_target(command_type: str) -> str:
 
 
 def _find(haystack: str, needle: str, taken: list[tuple[int, int]],
-          whole_number: bool = False) -> tuple[int, int] | None:
+          whole_number: bool = False, whole_word: bool = False) -> tuple[int, int] | None:
     """
     Locate `needle` in `haystack`, skipping regions already claimed.
 
@@ -125,7 +128,14 @@ def _find(haystack: str, needle: str, taken: list[tuple[int, int]],
         inside_digits = whole_number and (
             (i > 0 and haystack[i - 1].isdigit())
             or (j < len(haystack) and (haystack[j].isdigit() or haystack[j] == ".")))
-        if not inside_digits and not any(i < e and s < j for s, e in taken):
+        # A short name must not be found inside another word: "s" in
+        # "string", "up" in "upload", "a" in "as".
+        def _wordch(c: str) -> bool:
+            return c.isalnum() or c == "_"
+        inside_word = whole_word and (
+            (i > 0 and _wordch(haystack[i - 1]))
+            or (j < len(haystack) and _wordch(haystack[j])))
+        if not inside_digits and not inside_word and not any(i < e and s < j for s, e in taken):
             return i, j
         start = i + 1
 
@@ -174,7 +184,7 @@ def segment(step: str, parsed: dict | None = None) -> list[Segment]:
                             ("variable_name", "variable")):
             val = parsed.get(field)
             if isinstance(val, str) and val:
-                span = _find(step, val, taken)
+                span = _find(step, val, taken, whole_word=role in ("locator", "variable"))
                 if span:
                     marks.append((span[0], span[1], "value", role, ""))
                     taken.append(span)
@@ -187,7 +197,7 @@ def segment(step: str, parsed: dict | None = None) -> list[Segment]:
             vals = parsed.get("values")
             for v in (vals[EXTRA_LOCATORS[ctype]:] if isinstance(vals, list) else []):
                 if isinstance(v, str) and re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", v):
-                    span = _find(step, v, taken)
+                    span = _find(step, v, taken, whole_word=True)
                     if span:
                         marks.append((span[0], span[1], "value", "locator", ""))
                         taken.append(span)

@@ -107,16 +107,32 @@ class TestCasesPage:
 
     def open_project_guarded(self, name: str) -> None:
         """Opening another testcase discards unsaved steps — so it asks first."""
-        if not self.dirty or name == self.selected:
+        if self.dirty and name == self.selected:
+            # Clicking the test case that is already open used to re-read the
+            # file and throw the unsaved steps away with no question asked.
+            ui.notify("This test case is already open — press Save to keep your changes",
+                      type="info")
+            return
+        if not self.dirty:
             ui.timer(0.01, lambda: self.open_project(name), once=True)
             return
+        self._ask_unsaved(lambda: self.open_project(name))
+
+    def _ask_unsaved(self, then) -> None:
+        """Save / discard / cancel before `then()` replaces the editor's steps."""
+        import inspect
         current = self.selected
+
+        async def go() -> None:
+            r = then()
+            if inspect.isawaitable(r):
+                await r
         dialog = ui.dialog().props("persistent")
         with dialog, ui.card().style("width:30rem"):
             ui.label(f"{current} has unsaved steps").style(
                 f"font-weight:{TYPOGRAPHY['weight_bold']}")
-            ui.label("Opening another test case discards them. They are not "
-                     "written to a file until you save.").style(
+            ui.label("Going on discards them. They are not written to a file "
+                     "until you save.").style(
                 f"font-size:{TYPOGRAPHY['size_sm']}; color:{COLORS['text_muted']}")
 
             async def save_then() -> None:
@@ -124,12 +140,12 @@ class TestCasesPage:
                 # Only move on if the save really happened — a refused save
                 # (viewer, bad name, conflict) used to lose the edits here.
                 if await self.save():
-                    await self.open_project(name)
+                    await go()
 
             async def discard() -> None:
                 dialog.close()
                 self.dirty = False
-                await self.open_project(name)
+                await go()
 
             with ui.row().classes("w-full justify-end gap-2"):
                 ui.button("Cancel", on_click=dialog.close).props("flat")
@@ -157,11 +173,14 @@ class TestCasesPage:
         # kept: a purpose band, and a step switched off. Stripping every "#" line
         # meant both vanished the moment a test case was reopened — the file
         # still held them and the editor did not.
-        self.steps = [
-            s for s in data.get("steps", [])
-            if s.strip() and (not s.strip().startswith("#")
-                              or s.strip().startswith((self.DISABLED, self.PURPOSE)))
-        ]
+        raw_steps = data.get("steps", [])
+        raw_lines = list(data.get("lines") or [])
+        keep = [i for i, s in enumerate(raw_steps)
+                if s.strip() and (not s.strip().startswith("#")
+                                  or s.strip().startswith((self.DISABLED, self.PURPOSE)))]
+        self.steps = [raw_steps[i] for i in keep]
+        # Parallel to self.steps, when the API gave file lines.
+        self.file_lines = [raw_lines[i] for i in keep] if len(raw_lines) == len(raw_steps) else []
         self.step_meta = {}
         self.dirty = False
         self.compose_at = None
@@ -366,6 +385,11 @@ class TestCasesPage:
 
     def _new_and_collapse(self) -> None:
         """Open the create dialog and fold the list away behind its chevron."""
+        if self.dirty:
+            # Creating a new test case replaces the editor's steps just as
+            # opening another one does — same question first.
+            self._ask_unsaved(self._new_and_collapse)
+            return
         self.list_open = False
         self.render_list()
         self.new_dialog()
@@ -1374,6 +1398,7 @@ class TestCasesPage:
             m = _re.search(r"'([^']+)'", f.get("message", ""))
             if m and m.group(1) != saved:
                 self.steps[idx - 1] = self.steps[idx - 1].replace(m.group(1), saved)
+                self.dirty = True          # the step text changed; Save keeps it
         ui.timer(0.01, self._rerun_review, once=True)
 
     async def _propose_for(self, f: dict) -> None:
@@ -1486,6 +1511,11 @@ class TestCasesPage:
             self.dirty = False
             ui.notify(f"Step {idx} updated and saved", type="positive")
         except api.ApiError as e:
+            if e.status == 409:
+                # The conflict dialog is open with Reload / Overwrite: the
+                # fix must stay applied so "Overwrite with mine" keeps it.
+                self.dirty = True
+                return
             self.steps[idx - 1] = before
             ui.notify(f"Could not save the change: {e.detail}", type="negative")
             return
@@ -1800,9 +1830,11 @@ class TestCasesPage:
         THIS test case and it is saved — what the review's "make a step group"
         promises.
         """
-        chosen = [self.steps[i - 1] for i in sorted(self.selection)]
-        chosen = [c.strip()[len(self.DISABLED):] if c.strip().startswith(self.DISABLED)
-                  else c for c in chosen]
+        # "# OFF:" is kept: a switched-off step (a lead submission, say) must
+        # stay off inside the group too — the runner skips "#" lines in a
+        # group exactly as it does in a flow. Purpose bands are not steps.
+        chosen = [self.steps[i - 1] for i in sorted(self.selection)
+                  if not self.steps[i - 1].strip().startswith(self.PURPOSE)]
         if not chosen:
             ui.notify("Tick the steps first", type="warning")
             return
@@ -1972,7 +2004,7 @@ class TestCasesPage:
             ui.notify("Step groups are renamed on the Step Groups page (use the edit "
                       "icon on this row) — every test case is updated there",
                       type="warning", timeout=6000)
-        else:
+        elif text != self.steps[index - 1]:
             self.steps[index - 1] = text
             self.dirty = True
         ui.timer(0.01, self.render_editor, once=True)
@@ -2123,7 +2155,11 @@ async def render(platform: str, flow: str = "", line: int = 0) -> None:
     if flow and flow in page.projects:
         await page.open_project(flow)
         if line:
-            _focus_line(line)
+            # Reports name the FILE line; the editor numbers steps. Map it,
+            # else "line 26" flashed step 26 — a different step, or nothing.
+            lines = getattr(page, "file_lines", []) or []
+            idx = lines.index(int(line)) + 1 if int(line) in lines else int(line)
+            _focus_line(idx)
     else:
         # Nothing named in the URL: reopen what was last open rather than
         # showing an empty pane. Deferred by a tick because reading browser

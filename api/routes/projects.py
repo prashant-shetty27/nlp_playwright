@@ -68,17 +68,22 @@ PURPOSE_PREFIX = "# --- Purpose: "
 
 
 def _read_steps(path: str) -> list[str]:
-    out: list[str] = []
+    return [st for st, _ in _read_steps_with_lines(path)]
+
+
+def _read_steps_with_lines(path: str) -> list[tuple[str, int]]:
+    """(step, file line number) — the editor numbers steps, reports number lines."""
+    out: list[tuple[str, int]] = []
     with open(path, "r", encoding="utf-8") as f:
-        for raw in f:
+        for n, raw in enumerate(f, 1):
             line = raw.rstrip("\n")
             stripped = line.strip()
             if not stripped:
                 continue
             if stripped.startswith((DISABLED_PREFIX, PURPOSE_PREFIX)):
-                out.append(stripped)          # kept and marked, never executed
+                out.append((stripped, n))     # kept and marked, never executed
             elif not stripped.startswith("#"):
-                out.append(line)
+                out.append((line, n))
     return out
 
 
@@ -246,7 +251,13 @@ def get_project(name: str):
     path = _flow_path_or_422(name)
     if not os.path.exists(path):
         raise HTTPException(status_code=404, detail=f"Project '{name}' not found.")
-    return {"name": name, "steps": _read_steps(path), "meta": audit.get(name),
+    pairs = _read_steps_with_lines(path)
+    return {"name": name, "steps": [st for st, _ in pairs],
+            # File line of each step, so a "line 26" from a report can be
+            # turned into the editor's step number (comments and blank
+            # lines in the file make the two differ).
+            "lines": [n for _, n in pairs],
+            "meta": audit.get(name),
             "mtime": os.path.getmtime(path)}
 
 

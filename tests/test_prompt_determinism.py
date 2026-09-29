@@ -36,6 +36,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fastapi.testclient import TestClient  # noqa: E402
+from api.auth import INTERNAL_TOKEN  # noqa: E402
 
 import ai_flow_builder.prompt_source as PS  # noqa: E402
 from ai_flow_builder.storage import prompt_source_id  # noqa: E402
@@ -55,7 +56,7 @@ def check(label: str, cond: bool, detail: str = "") -> None:
         print(f"  FAIL  {label}   {detail}")
 
 
-c = TestClient(app)
+c = TestClient(app, headers={"X-Internal-Token": INTERNAL_TOKEN})
 
 
 def draft_of(*steps, values=None, inputs=None):

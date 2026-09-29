@@ -9,6 +9,7 @@ import os
 import uuid
 
 from fastapi.testclient import TestClient
+from api.auth import INTERNAL_TOKEN  # noqa: E402
 
 from api.app import app
 from api.routes import tests as tests_route
@@ -36,7 +37,7 @@ def _launch(monkeypatch, header: str | None, requested: str | None) -> tuple[dic
         body = {"project": flow_name, "headless": True}
         if requested is not None:
             body["platform"] = requested
-        r = TestClient(app).post("/tests/run", json=body)
+        r = TestClient(app, headers={"X-Internal-Token": INTERNAL_TOKEN}).post("/tests/run", json=body)
         assert r.status_code == 200, r.text
         return r.json(), seen
     finally:

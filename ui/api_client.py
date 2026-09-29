@@ -34,8 +34,8 @@ DEFAULT_TIMEOUT_S = float(os.getenv("UI_API_TIMEOUT_S", "420"))
 class ApiError(RuntimeError):
     """A request failed. `detail` is what the API said, fit to show a person."""
 
-    def __init__(self, status: int, detail: str) -> None:
-        super().__init__(f"HTTP {status}: {detail}")
+    def __init__(self, status: int, detail) -> None:
+        super().__init__(f"HTTP {status}: {detail.get('message', detail) if isinstance(detail, dict) else detail}")
         self.status = status
         self.detail = detail
 
@@ -93,6 +93,12 @@ async def _call(method: str, path: str, **kw):
                 f"{'.'.join(str(x) for x in d.get('loc', [])[1:])}: {d.get('msg')}"
                 for d in detail
             )
+        # A dict detail (the 409 conflict payloads: message / why / other
+        # name) is kept as a dict — every "Save anyway" / "Use ${other}"
+        # branch in the UI tests isinstance(detail, dict), and str() had made
+        # all of them unreachable.
+        if isinstance(detail, dict):
+            raise ApiError(r.status_code, detail)
         raise ApiError(r.status_code, str(detail or r.text[:300]))
     return r.json() if r.content else {}
 

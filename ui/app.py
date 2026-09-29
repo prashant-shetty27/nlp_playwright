@@ -314,7 +314,8 @@ def main() -> None:
     ui.run_with(fastapi_app, title="Codeless Automation", favicon="🧪",
                 storage_secret=_session_secret(), reconnect_timeout=120)
     import uvicorn
-    uvicorn.run(fastapi_app, host=args.host, port=args.port, log_level="info")
+    uvicorn.run(fastapi_app, host=args.host, port=args.port, log_level="info",
+                proxy_headers=False)
 
 
 if __name__ == "__main__":

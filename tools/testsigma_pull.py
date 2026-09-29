@@ -605,6 +605,7 @@ def convert(bundle: dict, *, platform: str = "mobilesite") -> dict:
     """Bundle -> {"flow": text, "groups": {name: [lines]}, "elements": {...}, "todo": [...], "off": [...]}"""
     ctx = _Ctx(bundle)
     groups_out: dict[str, list[str]] = {}
+    gid_names: dict = {}                    # Testsigma stepGroupId -> group name used here
     todo: list[str] = []
     off: list[str] = []
     group_src = {int(k): v for k, v in (bundle.get("groups") or {}).items()}
@@ -639,6 +640,7 @@ def convert(bundle: dict, *, platform: str = "mobilesite") -> dict:
             action = " ".join(str(s.get("action") or "").split())
             disabled = bool(s.get("disabled"))
             emitted: list[str] | None
+            src_actions: list[str] | None = None   # per-line source text, when it differs from `action`
             consumed = 1
             if s.get("type") == "BLOCK":
                 # A named block in Testsigma is only a heading over its steps.
@@ -649,8 +651,16 @@ def convert(bundle: dict, *, platform: str = "mobilesite") -> dict:
                 continue
             if s.get("type") == "STEP_GROUP":
                 # Step group names here are at most 50 characters.
-                gname = (slug(action) if action else f"group_{s.get('stepGroupId')}")[:50].rstrip("_")
-                g = group_src.get(s.get("stepGroupId"))
+                gid = s.get("stepGroupId")
+                gname = (slug(action) if action else f"group_{gid}")[:50].rstrip("_")
+                # Two Testsigma groups whose names agree on the first 50
+                # characters must not silently become one group.
+                if gid in gid_names:
+                    gname = gid_names[gid]
+                elif gname in groups_out and gid not in gid_names:
+                    gname = f"{slug(action)[:40].rstrip('_')}_{gid}"
+                gid_names[gid] = gname
+                g = group_src.get(gid)
                 if g is not None and gname not in groups_out:
                     groups_out[gname] = []          # placeholder: recursion guard
                     groups_out[gname] = lines_for(g.get("steps") or [], f"step group {action}")
@@ -698,9 +708,15 @@ def convert(bundle: dict, *, platform: str = "mobilesite") -> dict:
             elif _IF_VISIBLE.match(action) and s["_children"] and all(
                     _TAP.match(" ".join(str(c.get("action") or "").split())) for c in s["_children"]):
                 emitted = []
+                src_actions = []
                 for c in s["_children"]:
                     ctx.cur = c
-                    emitted.append(f"click if visible {ctx.loc(_TAP.match(' '.join(str(c.get('action')).split()))['el'])}")
+                    c_action = " ".join(str(c.get("action") or "").split())
+                    emitted.append(f"click if visible {ctx.loc(_TAP.match(c_action)['el'])}")
+                    # The lead / sign-in checks below must look at the TAP
+                    # ("Tap on Submit"), not at the If condition wrapping it —
+                    # otherwise a lead inside "If X is visible" was imported ON.
+                    src_actions.append(c_action)
             elif (_TAP.match(action) and i + 1 < len(flat)
                   and _ENTER_FOCUSED.match(" ".join(str(flat[i + 1].get("action") or "").split()))):
                 v = _ENTER_FOCUSED.match(" ".join(str(flat[i + 1].get("action")).split()))["v"]
@@ -730,7 +746,9 @@ def convert(bundle: dict, *, platform: str = "mobilesite") -> dict:
                 todo_tree(s, where, out)
                 i += consumed
                 continue
-            for ln in emitted:
+            if not src_actions or len(src_actions) != len(emitted):
+                src_actions = [action] * len(emitted)
+            for ln, action in zip(emitted, src_actions):
                 if ln.startswith(("open ", "delete all cookies", "refresh page")):
                     st["lead_sent"] = False      # a fresh page: nothing below depends on the lead any more
                 # A scroll loop only names the element it scrolls to ("While Request
@@ -872,8 +890,11 @@ def import_case(run_id: str, test_case_id: int, *, platform: str = "mobilesite",
         if lname in known:
             # A locator this importer saved earlier (group ts_…) follows the
             # converter's latest reading of Testsigma; hand-made ones are kept.
+            # …but only when the import is an explicit overwrite: a hand-fixed
+            # (or self-healed) XPath under a ts_ group was being reverted by
+            # the next import of ANY case that shared the element name.
             g = owner.get(lname, "")
-            if g.startswith("ts_") and existing[g].get(lname) != meta["xpath"] and meta["found"]:
+            if overwrite and g.startswith("ts_") and existing[g].get(lname) != meta["xpath"] and meta["found"]:
                 existing[g][lname] = meta["xpath"]
                 fixed += 1
             continue

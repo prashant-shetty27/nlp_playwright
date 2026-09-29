@@ -29,6 +29,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 from fastapi.testclient import TestClient  # noqa: E402
+from api.auth import INTERNAL_TOKEN  # noqa: E402
 
 from api.app import app  # noqa: E402
 
@@ -46,7 +47,7 @@ def check(label: str, cond: bool, detail: str = "") -> None:
         print(f"  FAIL  {label}   {detail}")
 
 
-c = TestClient(app)
+c = TestClient(app, headers={"X-Internal-Token": INTERNAL_TOKEN})
 FLOWS = os.path.join(BASE_DIR, "flows")
 SUITES = os.path.join(BASE_DIR, "suites")
 FLOW = os.path.join(FLOWS, "_rn_a.flow")

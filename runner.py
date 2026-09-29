@@ -133,6 +133,15 @@ _VARIABLE_NAME_TARGETS = {"verify_var_contains", "verify_var_not_equals", "verif
                           "verify_var_compare"}
 
 
+#: Playwright key names are case-sensitive ("PageDown", not "Pagedown").
+_KEY_NAMES = {
+    "pagedown": "PageDown", "pageup": "PageUp", "arrowdown": "ArrowDown",
+    "arrowup": "ArrowUp", "arrowleft": "ArrowLeft", "arrowright": "ArrowRight",
+    "backspace": "Backspace", "enter": "Enter", "tab": "Tab", "escape": "Escape",
+    "space": "Space", "delete": "Delete", "home": "Home", "end": "End",
+}
+
+
 def _execute_step_from_command(cmd, page):
     """Routes a parsed Command to the appropriate action function."""
     import execution.action_service as svc
@@ -234,7 +243,19 @@ def _execute_step_from_command(cmd, page):
                                          ep, target, (cmd.values or ["bottom_top"])[0],
                                          int(cmd.count or 15), cmd.wait if cmd.wait is not None else 1,
                                          closers=(cmd.values or [])[1:]),
-        "press_key":                 lambda: ep.keyboard.press(cmd.text),
+        "press_key":                 lambda: ep.keyboard.press(_KEY_NAMES.get(
+                                         (cmd.text or "").lower(), cmd.text)),
+        # ── Parseable web-capable types that had NO entry (they failed with
+        #    "Unknown command type" on every website/mobilesite run). App-only
+        #    types (tap text, long press, hide keyboard…) stay absent on
+        #    purpose: the platform catalogue reads this table to decide what
+        #    to offer, and an entry here would offer them on web. ──────────
+        "press_enter":               lambda: ep.keyboard.press("Enter"),
+        "tap":                       lambda: svc.click_element(ep, target),
+        "type_text":                 lambda: svc.type_into_focused(ep, text),
+        "fill_if_exists":            lambda: svc.fill_if_visible(ep, target, text, float(cmd.wait or 0)),
+        "wait_for_element":          lambda: svc.wait_until_element_visible(ep, target, None),
+        "verify_element_exists":     lambda: svc.verify_element_exists(ep, target),
         "clear_field":               lambda: svc.clear_field(ep, target),
         "run_javascript":            lambda: svc.run_javascript(ep, cmd.text),
         "scroll_element_x":          lambda: svc.scroll_element_horizontally(ep, target, text),
@@ -337,6 +358,11 @@ def _expand_reusable(name: str, page) -> None:
     try:
         logger.info("▶ Expanding reusable '%s' (%d steps)", name, len(steps))
         for sub_step in steps:
+            # Same rule as a flow file: blank lines, comments and "# OFF:"
+            # steps are skipped, never executed. A group saved with an OFF'd
+            # lead step must not fire it.
+            if not sub_step.strip() or sub_step.strip().startswith("#"):
+                continue
             _interpret(sub_step, page)
     finally:
         call_stack.discard(name_lower)

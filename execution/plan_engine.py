@@ -383,11 +383,27 @@ def _run(rec: dict) -> None:
                                             for e in summary.get("log", [])
                                             if e.get("status") == "failed"), ""))
             ok = summary.get("failed", 0) == 0 and summary.get("passed", 0) > 0
-            item["status"] = "passed" if ok else "failed"
+            stopped = rec["id"] in _abort or bool(summary.get("stopped_early"))
+            if ok and stopped:
+                # "Stop now" cut the run short with no failure yet. That is
+                # not a pass — 3 of 10 steps ran — and it is not a defect.
+                item["status"] = "not_run"
+                item["reason"] = (f"stopped by user after step "
+                                  f"{summary.get('passed', 0)}")
+                ok = False
+            elif summary.get("total", 0) == 0:
+                # Nothing runnable (every line is "# OFF:" or a comment) —
+                # not a failure, and nothing a retry could change.
+                item.update(status="not_run", out_of_scope=True,
+                            reason="no runnable step (all lines are # OFF / comments)")
+                _save(rec)
+                break
+            else:
+                item["status"] = "passed" if ok else "failed"
             if ok and attempt > 1:
                 item["note"] = "passed on retry"
             _save(rec)
-            if ok or rec["id"] in _abort:
+            if ok or stopped:
                 break
             if attempt < attempts and retry_mode != "always" and not _looks_flaky(summary):
                 # A check that ran and found wrong data fails the same way on a
