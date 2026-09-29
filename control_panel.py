@@ -25,7 +25,7 @@ from nicegui import app, ui
 # ── Paths ───────────────────────────────────────────────────────────────────
 
 BASE_DIR = Path(__file__).parent
-_venv_py = BASE_DIR / ".venv" / "bin" / "python"
+_venv_py = BASE_DIR / ".venv" / ("Scripts/python.exe" if sys.platform == "win32" else "bin/python")
 PYTHON = str(_venv_py) if _venv_py.exists() else sys.executable
 
 LOG_DIR = BASE_DIR / "data" / "logs"

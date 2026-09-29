@@ -14,6 +14,15 @@ This project provides a modular, NLP-driven automation framework using Playwrigh
 .venv/bin/python plan_runner.py plans/android_plan.json
 ```
 
+## Setup on Windows (PowerShell)
+```powershell
+git clone https://github.com/prashant-shetty27/nlp_playwright.git
+cd nlp_playwright
+.\setup.ps1          # one time: .venv, packages, Chromium, .env from .env.example
+.\start_portal.ps1   # every day: portal on http://localhost:8100
+```
+Fill in `.env` with the values your team lead gives you (it is never committed).
+
 ## Setup
 1. **Clone the repository**
 2. **Install dependencies (recommended):**
