@@ -271,10 +271,7 @@ def step_row(index: int, nlp_text: str, *, action: str = "", target: str = "",
 
                         ui.button(icon="check", on_click=_save_line) \
                             .props("flat dense size=sm color=positive") \
-                            .tooltip("Save this step (Enter)")
-                        ui.button(icon="close", on_click=cancel) \
-                            .props("flat dense size=sm") \
-                            .tooltip("Cancel — keep the step as it was (Esc)")
+                            .tooltip("Save this step (Enter) — Esc cancels")
 
                 async def _load() -> None:
                     await editor.load()

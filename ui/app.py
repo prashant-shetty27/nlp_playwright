@@ -259,7 +259,7 @@ async def draft_page(platform: str, extend: str = "") -> None:
 
 
 @ui.page("/platform/{platform}/elements")
-async def elements_page(platform: str, edit: str = "") -> None:
+async def elements_page(platform: str, edit: str = "", back: str = "") -> None:
     if not _page_shell():
         return
     from nlp.platforms import UnknownPlatform, normalise
@@ -271,7 +271,7 @@ async def elements_page(platform: str, edit: str = "") -> None:
     from ui.pages.platform.elements import render
     # ?edit=<name> opens straight into that element — how the step editor sends
     # you here from a locator token.
-    await render(canonical, edit)
+    await render(canonical, edit, back=back)
 
 
 @ui.page("/settings")

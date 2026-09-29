@@ -334,6 +334,13 @@ def step_form(body: FormRequest):
     return {"form": form_for(parsed)}
 
 
+@router.get("/forms")
+def step_forms_catalogue():
+    """Every step form (type, title, fields) — the editor's Action dropdown."""
+    from nlp.step_forms import catalogue
+    return {"forms": catalogue()}
+
+
 @router.post("/form/compose")
 def step_compose(body: ComposeRequest):
     """Step text from form values — checked against the parser before it goes back."""

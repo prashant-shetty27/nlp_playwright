@@ -7,7 +7,8 @@ from nlp.parser import parse_step
 from nlp.step_forms import FORMS, compose, decompose, form_for
 
 SAMPLE = {"target": "some_el", "text": "hello", "closers": ["pop_a", "pop_b"],
-          "span": "top to bottom", "count": 7, "wait": 2, "pixels": 300, "timeout": 40}
+          "span": "top to bottom", "count": 7, "wait": 2, "pixels": 300, "timeout": 40,
+          "variable_name": "my_var", "direction": "up"}
 
 
 @pytest.mark.parametrize("step_type", sorted(FORMS))
@@ -15,9 +16,10 @@ def test_round_trip(step_type):
     text = compose(step_type, SAMPLE)
     cmd = parse_step(text)
     assert cmd.type == step_type, text
-    # Composing again from the parsed values gives the same line.
+    # Composing again from the parsed values gives the same line (the parser
+    # may normalise a value's case, e.g. key names).
     again = compose(step_type, decompose(cmd))
-    assert again == text
+    assert again.lower() == text.lower()
 
 
 def test_swipe_closers_and_span():
@@ -34,4 +36,4 @@ def test_required_field():
 
 
 def test_no_form_for_unknown_type():
-    assert form_for({"type": "refresh"}) is None
+    assert form_for({"type": "go_forward"}) is None

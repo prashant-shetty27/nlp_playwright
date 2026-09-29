@@ -227,7 +227,98 @@ FORMS: dict[str, dict] = {
         "fields": [{"key": "target", "label": "URL", "kind": "url", "required": True}],
         "compose": lambda v: f"open {v['target']}",
     },
+    "verify_text": {
+        "title": "Check the page shows text",
+        "fields": [{"key": "text", "label": "Text that must be on the page", "kind": "text",
+                    "required": True}],
+        "compose": lambda v: f'verify text "{v.get("text", "")}" on page',
+    },
+    "scroll": {
+        "title": "Scroll the page",
+        "fields": [
+            {"key": "direction", "label": "Direction", "kind": "choice", "choices": ["down", "up"],
+             "default": "down"},
+            {"key": "pixels", "label": "Pixels", "kind": "number", "default": 500},
+        ],
+        "compose": lambda v: f"scroll {v.get('direction') or 'down'} {_num(v.get('pixels'), 500)}",
+    },
+    "refresh": {"title": "Refresh the page", "fields": [], "compose": lambda v: "refresh page"},
+    "wait_page_load": {"title": "Wait for the page to load", "fields": [],
+                       "compose": lambda v: "wait for page to load"},
+    "delete_all_cookies": {"title": "Delete all cookies", "fields": [],
+                           "compose": lambda v: "delete all cookies"},
+    "extract_text": {
+        "title": "Store an element's text in a variable",
+        "fields": [
+            {"key": "target", "label": "Element", "kind": LOC, "required": True},
+            {"key": "variable_name", "label": "Variable name", "kind": "variable", "required": True,
+             "help": "Use it later as ${name}"},
+        ],
+        "compose": lambda v: f"store text of {v['target']} as {v['variable_name']}",
+    },
+    "verify_var_equals": {
+        "title": "Check a stored variable equals",
+        "fields": [
+            {"key": "target", "label": "Variable name", "kind": "variable", "required": True},
+            {"key": "text", "label": "Expected value", "kind": "text", "required": True},
+        ],
+        "compose": lambda v: f'verify stored {v["target"]} equals "{v.get("text", "")}"',
+    },
+    "verify_var_contains": {
+        "title": "Check a stored variable contains",
+        "fields": [
+            {"key": "target", "label": "Variable name", "kind": "variable", "required": True},
+            {"key": "text", "label": "Text it should contain", "kind": "text", "required": True},
+        ],
+        "compose": lambda v: f'verify stored {v["target"]} contains "{v.get("text", "")}"',
+    },
+    "run_javascript": {
+        "title": "Run JavaScript on the page",
+        "fields": [{"key": "text", "label": "JavaScript", "kind": "text", "required": True}],
+        "compose": lambda v: f'run javascript "{v.get("text", "")}"',
+    },
+    "js_click": {
+        "title": "Click an element via JavaScript",
+        "fields": [{"key": "target", "label": "Element", "kind": LOC, "required": True,
+                    "help": "For elements a normal click cannot reach (covered, off-screen)"}],
+        "compose": lambda v: f"js click {v['target']}",
+    },
+    "press_key": {
+        "title": "Press a keyboard key",
+        "fields": [{"key": "text", "label": "Key", "kind": "choice",
+                    "choices": ["Enter", "Tab", "Escape", "Space", "Backspace", "ArrowDown",
+                                "ArrowUp", "ArrowLeft", "ArrowRight", "PageDown", "PageUp"],
+                    "default": "Enter"}],
+        "compose": lambda v: f"press key {v.get('text') or 'Enter'}",
+    },
+    "type_focused": {
+        "title": "Type into whatever has focus",
+        "fields": [{"key": "text", "label": "Text to type", "kind": "text", "required": True}],
+        "compose": lambda v: f'type "{v.get("text", "")}" into focused field',
+    },
+    "call_reusable": {
+        "title": "Call a step group",
+        "fields": [{"key": "target", "label": "Step group", "kind": "group", "required": True}],
+        "compose": lambda v: f"call {v['target']}",
+    },
 }
+
+#: Reading order for the Action dropdown: what a tester reaches for most.
+FORM_ORDER = [
+    "open", "click", "tap_if_visible", "fill", "type_focused", "select_option", "clear_field",
+    "press_key", "scroll", "scroll_to", "scroll_until_element_visible", "swipe_screen",
+    "swipe_until_visible", "wait", "wait_until_visible", "wait_until_not_visible",
+    "wait_page_load", "verify_element_visible", "verify_element_not_visible",
+    "verify_element_contains", "verify_element_exact", "verify_text", "extract_text",
+    "verify_var_equals", "verify_var_contains", "call_reusable", "js_click",
+    "run_javascript", "refresh", "delete_all_cookies", "tap",
+]
+
+
+def catalogue() -> list[dict]:
+    """Every form, in reading order — for the editor's Action dropdown."""
+    order = [t for t in FORM_ORDER if t in FORMS] + [t for t in FORMS if t not in FORM_ORDER]
+    return [{"type": t, "title": FORMS[t]["title"], "fields": FORMS[t]["fields"]} for t in order]
 
 
 def decompose(parsed: Any) -> dict:
@@ -244,6 +335,11 @@ def decompose(parsed: Any) -> dict:
         out["pixels"] = vals[0] if vals else 500
     if t == "wait_until_visible":
         out["timeout"] = d.get("wait")
+    if t == "scroll":
+        n = int(d.get("count") or 500)
+        out["direction"] = "up" if n < 0 else "down"
+        out["pixels"] = abs(n)
+    out["variable_name"] = d.get("variable_name") or ""
     return out
 
 
@@ -264,6 +360,6 @@ def compose(step_type: str, values: dict) -> str:
     for f in spec["fields"]:
         if f.get("required") and not str(v.get(f["key"]) or "").strip():
             raise ValueError(f"{f['label']} is required")
-        if f["kind"] in ("locator", "url", "text") and isinstance(v.get(f["key"]), str):
+        if f["kind"] in ("locator", "url", "text", "variable", "group") and isinstance(v.get(f["key"]), str):
             v[f["key"]] = v[f["key"]].strip()
     return spec["compose"](v)

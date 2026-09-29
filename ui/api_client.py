@@ -130,6 +130,11 @@ async def step_form(step: str) -> dict:
     return await _call("POST", "/nlp/form", json={"step": step})
 
 
+async def step_forms() -> list[dict]:
+    """All step forms, in reading order, for the Action dropdown."""
+    return (await _call("GET", "/nlp/forms")).get("forms", [])
+
+
 async def step_compose(step_type: str, values: dict) -> dict:
     """Step text composed from form values; 422 when a required part is missing."""
     return await _call("POST", "/nlp/form/compose", json={"type": step_type, "values": values})

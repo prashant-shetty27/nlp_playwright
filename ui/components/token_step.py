@@ -635,7 +635,11 @@ class TokenStep:
         """
         if not name:
             return
-        ui.navigate.to(f"/platform/{self.platform}/elements?edit={name}")
+        # Carry the current page along so Elements can offer "Back to the
+        # test case" — the editor's URL names the open test case.
+        ui.run_javascript(
+            f"location.href='/platform/{self.platform}/elements?edit={name}&back='"
+            f"+encodeURIComponent(location.pathname+location.search)")
 
     def _create_locator_from(self, current_name: str, seg: dict,
                              group: str, selector: str) -> None:

@@ -37,9 +37,11 @@ from ui.theme import COLORS, TYPOGRAPHY
 
 
 class ElementsPage:
-    def __init__(self, platform: str, focus: str = "") -> None:
+    def __init__(self, platform: str, focus: str = "", back: str = "") -> None:
         self.platform = platform
         self.focus = focus
+        # Where the pencil in a test case came from — a portal path only.
+        self.back = back if (back.startswith("/") and not back.startswith("//")) else ""
         self.groups: dict = {}
         self.conflicts: dict = {}
         self.platforms: list[dict] = []
@@ -66,6 +68,10 @@ class ElementsPage:
                platform=self.platform,
                on_platform_change=lambda p: ui.navigate.to(f"/platform/{p}/elements"))
         with ui.column().classes("w-full gap-2 p-4"):
+            if self.back:
+                ui.button("Back to the test case", icon="arrow_back",
+                          on_click=lambda: ui.navigate.to(self.back)).props("flat dense no-caps") \
+                    .style(f"color:{COLORS['primary']}; align-self:flex-start")
             self.body = ui.column().classes("w-full gap-2")
         self._draw()
         if self.focus:
@@ -523,7 +529,7 @@ def open_create_element_dialog(platform: str, *,
     dialog.open()
 
 
-async def render(platform: str = "website", focus: str = "") -> None:
-    page = ElementsPage(platform, focus)
+async def render(platform: str = "website", focus: str = "", back: str = "") -> None:
+    page = ElementsPage(platform, focus, back)
     await page.load()
     page.render()
