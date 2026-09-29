@@ -101,6 +101,29 @@ class TokenStep:
                     self._fixed(seg.get("text", ""))
                 else:
                     self._token(seg)
+            if info.get("parses") is False and self.step.strip() \
+                    and not self.step.lstrip().startswith("#"):
+                self._unparsed_hint(info.get("hint") or {})
+
+    def _unparsed_hint(self, hint: dict) -> None:
+        """
+        Under a line no rule matched: say so, and show the shape it was
+        probably going for. A step that silently renders as plain text looks
+        fine until it fails at run time.
+        """
+        with ui.column().classes("w-full gap-0").style("margin-top:2px"):
+            with ui.row().classes("items-center gap-1 no-wrap"):
+                ui.icon("error_outline", size="xs").style(f"color:{COLORS['danger']}")
+                ui.label("Not a step the runner understands — check the wording") \
+                    .style(f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['danger']}")
+            if hint.get("template"):
+                ui.label("expected: " + hint["template"]).style(
+                    f"font-family:{TYPOGRAPHY['mono']}; font-size:{TYPOGRAPHY['size_xs']};"
+                    f"color:{COLORS['text_muted']}; white-space:pre-wrap; word-break:break-word")
+            if hint.get("help"):
+                ui.label(hint["help"]).style(
+                    f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']};"
+                    f"white-space:pre-wrap")
 
     # ── pieces ────────────────────────────────────────────────────────────────
 
@@ -109,7 +132,7 @@ class TokenStep:
             return
         ui.label(text).style(
             f"font-family:{TYPOGRAPHY['mono']}; font-size:{TYPOGRAPHY['size_sm']};"
-            f"color:{COLORS['text']}; white-space:pre")
+            f"color:{COLORS['text']}; white-space:pre-wrap; word-break:break-word")
 
     def _token(self, seg: dict) -> None:
         """One editable value, drawn as a link until it is clicked."""

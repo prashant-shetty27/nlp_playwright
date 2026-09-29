@@ -667,10 +667,11 @@ KEYWORD_MAP = {
         "template": "swipe bottom to top {number} times"
     },
     "swipe_until_visible": {
-        "phrases": ["swipe until visible", "swipe until element", "keep swiping until"],
+        "phrases": ["swipe until visible", "swipe until element", "keep swiping until",
+                    "swipe bottom to top until", "swipe up until", "swipe top to bottom until", "swipe down until"],
         "action": "swipe_until_visible",
-        "help": "add ', closing <element>' to close a popup that opens while swiping",
-        "template": "swipe bottom to top until element {locator} is visible, max {number} times"
+        "help": "popups that may open on the way: ', closing <element> and <element>' — each is closed only if it shows (any of, not all)",
+        "template": "swipe bottom to top until element {locator} is visible, closing {locator} and {locator}, max {number} times, wait {number}"
     },
     "press_key": {
         "phrases": ["press key", "press space", "press tab", "press escape"],

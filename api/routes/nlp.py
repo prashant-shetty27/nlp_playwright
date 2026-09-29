@@ -169,12 +169,38 @@ def segment_step(body: SegmentRequest):
 
     from nlp.fields import segment
 
-    return {
+    out = {
         "step": step,
         "parses": parsed is not None,
         "action": (parsed or {}).get("type", ""),
         "segments": [dataclasses.asdict(seg) for seg in segment(step, parsed)],
     }
+    if parsed is None and step.strip() and not step.lstrip().startswith("#"):
+        out["hint"] = _closest_template(step)
+    return out
+
+
+def _closest_template(step: str) -> dict:
+    """
+    The step shape this line was probably going for — the longest keyword
+    phrase it starts with, and that keyword's template and help. Shown under a
+    line that does not parse, so the fix is a comparison rather than a guess.
+    """
+    low = step.strip().lower()
+    best: tuple[int, str, dict] | None = None
+    for name, kw in KEYWORD_MAP.items():
+        for ph in kw.get("phrases", []):
+            ph_l = ph.lower()
+            # Start-of-line matches win; a phrase found anywhere ("until
+            # element" inside a swipe) breaks the tie for the longer form.
+            score = (2 if low.startswith(ph_l) else 1 if ph_l in low else 0) * 100 + len(ph_l)
+            if score >= 100 and (best is None or score > best[0]):
+                best = (score, name, kw)
+    if not best:
+        return {}
+    _, name, kw = best
+    return {"keyword": name, "template": kw.get("template", ""),
+            "help": kw.get("help", "")}
 
 
 class SegmentBatchRequest(BaseModel):

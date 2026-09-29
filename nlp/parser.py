@@ -754,12 +754,15 @@ def parse_step(step: str) -> Command:
     #   swipe bottom to top until element <loc> is visible[, max 15 times][, wait 1]
     _SW = r'(bottom\s+to\s+top|top\s+to\s+bottom|bottom\s+to\s+middle|middle\s+to\s+top|' \
           r'top\s+to\s+middle|middle\s+to\s+bottom|up|down)'
-    #   … , closing <loc> [and <loc>]  — a popup that opens while swiping is closed if it shows
+    #   … , closing <loc> [and|or|, <loc>] [, closing <loc>]  — popups that MAY open
+    #   while swiping; each is closed only if it shows, so the list is "any of".
+    _CL = r'[A-Za-z_][A-Za-z0-9_]*'
     m = re.match(r'^swipe\s+' + _SW + r'(?:\s+in\s+the\s+screen)?\s+until\s+(?:element\s+)?(\S+)\s+is\s+visible'
-                 r'(?:,?\s*closing\s+([^\s,]+(?:\s+and\s+[^\s,]+)*))?'
-                 r'(?:,?\s*max\s+(\d+)\s+times?)?(?:,?\s*wait\s+(\d+(?:\.\d+)?))?$', s, re.I)
+                 r'((?:\s*,?\s*closing\s+' + _CL + r'(?:\s*(?:,|\s+and|\s+or)\s*(?!closing\b|max\b|wait\b)' + _CL + r')*)*)'
+                 r'(?:\s*,?\s*max\s+(\d+)\s+times?)?(?:\s*,?\s*wait\s+(\d+(?:\.\d+)?))?\s*$', s, re.I)
     if m:
-        closers = [c for c in re.split(r'\s+and\s+', m.group(3) or "") if c]
+        closers = [c for c in re.split(r'\s*,\s*|\s+and\s+|\s+or\s+|\s*closing\s+',
+                                       m.group(3) or "", flags=re.I) if c]
         return Command(type="swipe_until_visible", target=m.group(2), values=[_swipe_span(m.group(1))] + closers,
                        count=int(m.group(4) or 15), wait=float(m.group(5) or 1))
     m = re.match(r'^swipe\s+' + _SW + r'(?:\s+in\s+the\s+screen)?(?:\s+(\d+)\s+times?)?'
