@@ -69,12 +69,21 @@ def require(user: str, action: str) -> None:
             detail=f"'{user}' ({role}) cannot {action} here — ask an admin for the editor role.")
 
 
-def need(action: str):
-    """Router dependency: every non-GET request on the router needs `action`."""
+def need(action: str, *, reads: str = ""):
+    """
+    Router dependency: every non-GET request on the router needs `action`.
+
+    `reads`: an action GET requests need too — for routers whose reads
+    return values that must not be open to any local process (test data
+    holds mobile numbers and OTPs). As in Testsigma, there is no anonymous
+    read: the portal (internal token) or a script with API_TOKEN.
+    """
     from fastapi import Depends
 
     def _dep(request: Request, user: str = Depends(acting_user)) -> None:
         if request.method in ("GET", "HEAD", "OPTIONS"):
+            if reads:
+                require(user, reads)
             return
         require(user, action)
     return _dep

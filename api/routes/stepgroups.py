@@ -176,8 +176,57 @@ def edit_group(name: str, body: EditBody):
 
 @router.delete("/{name}")
 def delete_group(name: str):
+    try:
+        rs.get(name)
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    callers = _callers_of(name)
+    if callers:
+        where = ", ".join(callers[:8]) + (" …" if len(callers) > 8 else "")
+        raise HTTPException(
+            status_code=409,
+            detail=f"'{name}' is still called by: {where}. Replace those "
+                   f"'call {name}' steps first, then delete it.")
     rs.delete(name)
+    try:
+        from tools.testsigma_pull import forget
+        forget("groups", name)
+    except Exception:  # noqa: BLE001
+        pass
     return {"deleted": name}
+
+
+def _loose(n: str) -> str:
+    import re
+    n = re.sub(r"[\s\-\u2013\u2014_]+", "_", (n or "").strip().lower()).strip("_")
+    return re.sub(r"^sg_", "", n)
+
+
+def _callers_of(name: str) -> list[str]:
+    """Test cases and step groups with a live `call <name>` step."""
+    import os
+    import re
+
+    from config import settings
+
+    want = _loose(name)
+    pat = re.compile(r"^\s*call\s+(.+?)\s*$", re.I)
+    out: list[str] = []
+    for fn in sorted(os.listdir(settings.FLOWS_DIR)):
+        if not fn.endswith(".flow"):
+            continue
+        try:
+            with open(os.path.join(settings.FLOWS_DIR, fn), encoding="utf-8") as f:
+                if any((m := pat.match(ln)) and _loose(m.group(1)) == want for ln in f):
+                    out.append(f"test case {fn[:-5]}")
+        except OSError:
+            continue
+    for g in rs.describe():
+        if g["name"] == name:
+            continue
+        if any((m := pat.match(st)) and _loose(m.group(1)) == want for st in g.get("steps", [])):
+            out.append(f"step group {g['name']}")
+    return out
 
 
 @router.post("/{name}/rename")
@@ -197,7 +246,34 @@ def rename_group(name: str, body: GroupRename):
     # Every test case that calls the old name is rewritten, or the rename
     # would silently break them at run time ("Reusable steps … not found").
     updated = _rewrite_calls(name, body.new_name)
-    return {"renamed": name, "to": body.new_name, "flows_updated": updated}
+    # …and every OTHER group that calls it (groups can call groups).
+    groups_updated = _rewrite_group_calls(name, body.new_name)
+    try:
+        from tools.testsigma_pull import forget
+        forget("groups", name, body.new_name)
+    except Exception:  # noqa: BLE001
+        pass
+    return {"renamed": name, "to": body.new_name, "flows_updated": updated,
+            "groups_updated": groups_updated}
+
+
+def _rewrite_group_calls(old: str, new: str) -> list[str]:
+    import re
+    want = _loose(old)
+    pat = re.compile(r"^(\s*(?:#\s*OFF:\s*)?call\s+)(.+?)\s*$", re.I)
+    touched: list[str] = []
+    for g in rs.describe():
+        steps = list(g.get("steps", []))
+        changed = False
+        for i, st in enumerate(steps):
+            m = pat.match(st)
+            if m and _loose(m.group(2)) == want:
+                steps[i] = f"{m.group(1)}{new}"
+                changed = True
+        if changed:
+            rs.save(g["name"], steps, overwrite=True, platform=g.get("platform", ""))
+            touched.append(g["name"])
+    return touched
 
 
 def _rewrite_calls(old: str, new: str) -> list[str]:

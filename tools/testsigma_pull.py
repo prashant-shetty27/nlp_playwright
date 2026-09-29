@@ -851,6 +851,25 @@ def _registry() -> dict:
     return d
 
 
+def forget(kind: str, name: str, new_name: str | None = None) -> None:
+    """
+    Drop (or rename) an importer-created name in the registry.
+
+    Called when a test case / step group is deleted or renamed in the portal.
+    Without it a hand-built replacement with the same name still counted as
+    "mine" and a later re-import with Overwrite replaced it.
+    """
+    d = _registry()
+    names = d.get(kind) or []
+    if name not in names:
+        return
+    names = [n for n in names if n != name]
+    if new_name:
+        names.append(new_name)
+    d[kind] = names
+    _save_registry(d)
+
+
 def _save_registry(d: dict) -> None:
     os.makedirs(EXPORT_DIR, exist_ok=True)
     tmp = _REGISTRY + ".tmp"

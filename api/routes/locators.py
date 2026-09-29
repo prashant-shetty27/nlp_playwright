@@ -279,6 +279,14 @@ def delete_locator(page: str, name: str, platform: str = Query("website")):
     """
     data = load_locators()
     if page in data and name in data[page]:
+        from execution.refactor import references_to_locator
+        refs = references_to_locator(name)
+        if refs:
+            where = ", ".join(r["file"] for r in refs[:8]) + (" …" if len(refs) > 8 else "")
+            raise HTTPException(
+                status_code=409,
+                detail=f"'{name}' is still used by: {where}. Change those steps "
+                       f"first, then delete the element.")
         del data[page][name]
         if not data[page]:          # prune empty page bucket
             del data[page]

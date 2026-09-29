@@ -323,10 +323,15 @@ def rename_project(name: str, body: RenameBody, user: str = Depends(acting_user)
     try:
         res = rename_flow(name, body.new_name, apply=body.apply)
         if body.apply:
-            audit.rename(name, body.new_name)
-            audit.touch(body.new_name, user)
+            audit.rename(name, res.get("new_name") or body.new_name)
+            audit.touch(res.get("new_name") or body.new_name, user)
             from core import folders
             folders.on_rename(name, res.get("new_name") or body.new_name)
+            try:
+                from tools.testsigma_pull import forget
+                forget("flows", name, res.get("new_name") or body.new_name)
+            except Exception:  # noqa: BLE001
+                pass
         return res
     except RenameError as e:
         raise HTTPException(status_code=409, detail=str(e)) from e
@@ -339,7 +344,26 @@ def delete_project(name: str, user: str = Depends(acting_user)):
     path = _flow_path_or_422(name)
     if not os.path.exists(path):
         raise HTTPException(status_code=404, detail=f"Project '{name}' not found.")
+    # As in Testsigma: a test case still listed in a suite or plan cannot be
+    # deleted — remove it there first. The failure used to surface later, as
+    # a plan run failing on a missing file.
+    from execution.refactor import references_to_flow
+    refs = references_to_flow(os.path.basename(path)[:-len(".flow")])
+    if refs:
+        where = ", ".join(r["file"] for r in refs[:8]) + (" …" if len(refs) > 8 else "")
+        raise HTTPException(
+            status_code=409,
+            detail=f"'{name}' is still used by: {where}. Remove it from those "
+                   f"suites/plans first, then delete it.")
     os.remove(path)
+    sidecar = path[:-len(".flow")] + ".map.json"
+    if os.path.exists(sidecar):
+        os.remove(sidecar)
     from core import folders
     folders.on_delete(name)
+    try:
+        from tools.testsigma_pull import forget
+        forget("flows", name)
+    except Exception:  # noqa: BLE001 — the registry is bookkeeping, never a blocker
+        pass
     return {"message": f"Project '{name}' deleted."}
