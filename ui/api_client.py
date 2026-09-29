@@ -449,9 +449,11 @@ async def run(project: str, platform: str, *, headless: bool = True,
         screenshot_mode: str = "all",
         screenshot_context: int = 5,
         http_auth_domain: str = "",
-        record_video: bool = False) -> dict:
+        record_video: bool = False,
+        browser_identity: str = "") -> dict:
     return await _call("POST", "/tests/run", json={
         "record_video": bool(record_video),
+        "browser_identity": browser_identity or "",
         # Context-level HTTP Basic login for a staging host ("" = URL-embedded, the default)
         "http_auth_domain": http_auth_domain or "",
         "project": project, "platform": platform, "headless": headless,

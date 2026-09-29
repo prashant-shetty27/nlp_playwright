@@ -205,6 +205,21 @@ def recover_orphans() -> int:
 
 
 # ── start ───────────────────────────────────────────────────────────────────
+def _is_positive_case(path: str) -> bool:
+    """True when the flow's '# Tags:' line carries smoke or sanity."""
+    try:
+        with open(path, encoding="utf-8") as f:
+            for line in f:
+                if line.startswith("# Tags:"):
+                    tags = {t.strip().lower() for t in line[7:].split(",")}
+                    return bool(tags & {"smoke", "sanity", "positive"})
+                if line.strip() and not line.startswith("#"):
+                    break
+    except OSError:
+        pass
+    return False
+
+
 def start(plan_id: str, *, trigger: str = "manual", user: str = "", run_type: str = "") -> dict:
     """Create the run record and execute it on a worker thread.
 
@@ -231,11 +246,24 @@ def start(plan_id: str, *, trigger: str = "manual", user: str = "", run_type: st
             items.append({"suite": s["name"], "suite_id": s["id"], "test_case": "(missing suite)",
                           "status": "not_run", "reason": "suite no longer exists"})
             continue
+        # One item per test case per device profile ("devices" in the plan's
+        # execution settings); no profiles = the platform's default device.
+        profiles = [d for d in (execution.get("devices") or []) if isinstance(d, dict)] or [{}]
         for tc in suite["test_cases"]:
+          tc_platform = (tc.get("platform") or suite["platform"] or "website").lower()
+          for prof in (profiles if tc_platform == "mobilesite" else [{}]):
+            # A "positive only" browser runs just the smoke/sanity-tagged cases:
+            # the main browsers get the full suite, the rest a happy-path check.
+            if prof.get("coverage") == "positive" and not _is_positive_case(suites.script_path(tc["script"])):
+                continue
             item = {"suite": suite["name"], "suite_id": suite["id"],
                     "test_case": tc["name"], "script": tc["script"],
                     "platform": tc.get("platform") or suite["platform"],
                     "status": "pending"}
+            if prof:
+                item["device"] = {k: prof.get(k, "") for k in ("device_name", "browser", "browser_identity")}
+                item["device_label"] = prof.get("label") or " / ".join(
+                    x for x in (prof.get("device_name"), prof.get("browser_identity") or prof.get("browser")) if x)
             if rt != "full":
                 try:
                     pv = run_types.preview(suites.script_path(tc["script"]), rt)
@@ -360,10 +388,14 @@ def _run(rec: dict) -> None:
         attempts = 1 + (1 if ex.get("retry_failed") else 0)
         retry_mode = ex.get("retry_mode") or "flaky"      # flaky | always
         for attempt in range(1, attempts + 1):
+            dev = item.get("device") or {}
             body = T.RunRequest(project=item["test_case"], headless=bool(ex.get("headless", False)),
                                 platform=item.get("platform") or "website",
                                 stop_on_failure=bool(ex.get("stop_on_failure", False)),
-                                screenshot_mode=ex.get("screenshot_mode") or "all")
+                                screenshot_mode=ex.get("screenshot_mode") or "all",
+                                device_name=dev.get("device_name") or "",
+                                browser=dev.get("browser") or "",
+                                browser_identity=dev.get("browser_identity") or "")
             item.update(status="running", attempt=attempt, started_at=_now())
             _save(rec)
             try:

@@ -498,6 +498,7 @@ class PlanRunPage:
                         ui.icon("edit").style(f"font-size:0.85rem; color:{COLORS['text_muted']}")
                     att = it.get("attempts_s") or []
                     muted(f"Suite: {it.get('suite', '')} · {it.get('platform') or 'website'}"
+                          + (f" · {it['device_label']}" if it.get('device_label') else "")
                           + (f" · attempt {it.get('attempt')}" if (it.get("attempt") or 1) > 1 else "")
                           + (f" · {len(att)} attempts: " + " + ".join(mins(a) for a in att) if len(att) > 1 else "")
                           + (f" · {it['note']}" if it.get("note") else ""))

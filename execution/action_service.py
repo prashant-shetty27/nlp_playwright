@@ -1153,6 +1153,15 @@ def swipe_screen(page, span: str = "bottom_top", duration_s: float | None = None
     w, h = int(size["width"]), int(size["height"])
     secs = float(duration_s) if duration_s else 0.35
     touch = bool(page.evaluate("() => navigator.maxTouchPoints > 0 || 'ontouchstart' in window"))
+    # Real touch events go through CDP, which only Chromium has. On WebKit
+    # (iPhone Safari) and Firefox the gesture is a pointer drag instead — what
+    # a carousel's "simulateTouch" listens for — so the step works everywhere.
+    try:
+        engine = page.context.browser.browser_type.name
+    except Exception:  # noqa: BLE001
+        engine = "chromium"
+    if engine != "chromium":
+        touch = False
     horizontal = span in _SWIPE_SPAN_X
     if horizontal:
         x0, x1 = _SWIPE_SPAN_X[span]
@@ -1178,14 +1187,18 @@ def swipe_screen(page, span: str = "bottom_top", duration_s: float | None = None
                 cdp.detach()
             except Exception:  # noqa: BLE001
                 pass
-    elif horizontal:
-        # Desktop page: drag with the mouse, which is what a carousel listens for.
+    elif horizontal or engine != "chromium":
+        # Pointer drag: a carousel listens for it, and on a mobile WebKit page
+        # a vertical drag scrolls like a finger would.
         page.mouse.move(xa, ya)
         page.mouse.down()
         for i in range(1, steps + 1):
-            page.mouse.move(xa + (xb - xa) * i / steps, ya, steps=1)
+            page.mouse.move(xa + (xb - xa) * i / steps, ya + (yb - ya) * i / steps, steps=1)
             page.wait_for_timeout(int(secs * 1000 / steps))
         page.mouse.up()
+        if not horizontal:
+            # A drag on a plain page does not scroll it; add the wheel movement.
+            page.mouse.wheel(0, ya - yb)
     else:
         # Desktop page: the same movement as small wheel steps.
         for _ in range(steps):

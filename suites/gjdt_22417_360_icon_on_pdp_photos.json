@@ -1,0 +1,20 @@
+{
+  "created_by": "prashantshetty",
+  "created_at": "2026-09-29T20:32:55+00:00",
+  "_format": 2,
+  "suite_name": "GJDT-22417 360 icon on PDP photos",
+  "description": "Story GJDT-22417 — 360° icon across the Photos section and the image gallery (prot3, B2B details page).",
+  "platform": "mobilesite",
+  "scripts": [
+    "flows/PDP_360_Icon_Photos_Section.flow",
+    "flows/PDP_360_Icon_Gallery_Single.flow",
+    "flows/PDP_360_Icon_After_Back.flow",
+    "flows/PDP_360_Icon_Deep_Link.flow",
+    "flows/PDP_360_Icon_Both_Surfaces.flow"
+  ],
+  "updated_by": "prashantshetty",
+  "updated_at": "2026-09-29T20:32:55+00:00",
+  "execution": {
+    "stop_on_failure": false
+  }
+}

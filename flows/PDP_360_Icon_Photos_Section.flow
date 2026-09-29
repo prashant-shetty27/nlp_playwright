@@ -1,6 +1,6 @@
 # Platform: mobilesite
 # Story: GJDT-22417 — 360° icon on every 360° image in the details page Photos section (AC1, AC5, AC6 grid)
-# Tags: b2b, pdp, 360, GJDT-22417
+# Tags: smoke, b2b, pdp, 360, GJDT-22417
 open ${prot3_pdp_360}
 wait for page to load
 wait 3 seconds

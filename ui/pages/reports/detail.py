@@ -170,8 +170,13 @@ class ReportDetail:
                     .props("flat dense no-caps") \
                     .tooltip("Open the recording of this run (.webm) — save it to attach to a ticket")
             if flow and flow != self.run_id:
+                dev = self.report.get("device") or {}
+                from urllib.parse import urlencode
+                q = urlencode({k: v for k, v in {"flow": flow, "device": dev.get("device_name", ""),
+                                                 "browser": dev.get("browser", ""),
+                                                 "identity": dev.get("browser_identity", "")}.items() if v})
                 ui.button("Re-run", icon="replay",
-                          on_click=lambda f=flow: ui.navigate.to(f"/run?flow={f}")) \
+                          on_click=lambda q=q: ui.navigate.to(f"/run?{q}")) \
                     .props("unelevated dense")
 
     def _draw_steps(self) -> None:

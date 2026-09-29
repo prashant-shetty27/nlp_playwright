@@ -1,0 +1,67 @@
+{
+  "created_by": "prashantshetty",
+  "created_at": "2026-09-29T20:32:55+00:00",
+  "_format": 2,
+  "plan_name": "GJDT-22417 360 icon — cross-browser",
+  "description": "Design check for the 360° icon: full suite on Chrome Android and Safari iPhone; positive case on Samsung Internet and Chrome iPhone.",
+  "platform": "mobilesite",
+  "selected_suites": [
+    "suites/gjdt_22417_360_icon_on_pdp_photos.json"
+  ],
+  "execution": {
+    "headless": true,
+    "retry_failed": true,
+    "retry_mode": "flaky",
+    "run_type": "full",
+    "screenshot_mode": "all",
+    "stop_on_failure": true,
+    "stop_on_first_failure": false,
+    "devices": [
+      {
+        "label": "Chrome on Android (Pixel 7) — full suite",
+        "device_name": "Pixel 7",
+        "browser": "chromium",
+        "browser_identity": "android_chrome",
+        "coverage": "full"
+      },
+      {
+        "label": "Safari on iPhone (iPhone 15, WebKit) — full suite",
+        "device_name": "iPhone 15",
+        "browser": "webkit",
+        "browser_identity": "ios_safari",
+        "coverage": "full"
+      },
+      {
+        "label": "Samsung Internet (Galaxy S9+) — positive cases only",
+        "device_name": "Galaxy S9+",
+        "browser": "chromium",
+        "browser_identity": "samsung_internet",
+        "coverage": "positive"
+      },
+      {
+        "label": "Chrome on iPhone (iPhone 15) — positive cases only",
+        "device_name": "iPhone 15",
+        "browser": "webkit",
+        "browser_identity": "ios_chrome",
+        "coverage": "positive"
+      }
+    ]
+  },
+  "schedule": {
+    "enabled": false
+  },
+  "notify": {
+    "slack": false,
+    "channel": "",
+    "when": "always"
+  },
+  "next_run": "",
+  "updated_by": "prashantshetty",
+  "updated_at": "2026-09-29T20:34:40+00:00",
+  "last_run": {
+    "id": "PR_20260929_204201_gjdt_22417_360_icon_cross_brow",
+    "status": "failed",
+    "at": "2026-09-29T20:42:01+00:00",
+    "trigger": "manual"
+  }
+}

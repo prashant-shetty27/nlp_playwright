@@ -161,6 +161,36 @@ CURATED_DEVICES: tuple = (
 )
 
 
+#: Browser identities a mobile-web run can present. Samsung Internet and the
+#: stock browsers are Chromium underneath; what differs for the site is the
+#: user agent it sees (feature flags, layout branches, "download the app" bars),
+#: so the emulation is the device profile plus this user agent.
+BROWSER_IDENTITIES: dict[str, dict] = {
+    "": {"label": "Device default (Chrome on Android / Safari on iPhone)", "user_agent": ""},
+    "samsung_internet": {
+        "label": "Samsung Internet (Chromium)",
+        "user_agent": ("Mozilla/5.0 (Linux; Android 14; SAMSUNG SM-S918B) AppleWebKit/537.36 "
+                       "(KHTML, like Gecko) SamsungBrowser/26.0 Chrome/122.0.0.0 Mobile Safari/537.36"),
+        "browser": "chromium", "device": "Galaxy S9+"},
+    "android_chrome": {
+        "label": "Chrome on Android",
+        "user_agent": "", "browser": "chromium", "device": "Pixel 7"},
+    "ios_safari": {
+        "label": "Safari on iPhone (WebKit)",
+        "user_agent": "", "browser": "webkit", "device": "iPhone 15"},
+    "ios_chrome": {
+        "label": "Chrome on iPhone (WebKit engine, Chrome identity)",
+        "user_agent": ("Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 "
+                       "(KHTML, like Gecko) CriOS/126.0.6478.108 Mobile/15E148 Safari/604.1"),
+        "browser": "webkit", "device": "iPhone 15"},
+}
+
+
+def browser_identity(key: str) -> dict:
+    """The preset for `key` ('' = device default); unknown keys fall back to default."""
+    return BROWSER_IDENTITIES.get((key or "").strip().lower(), BROWSER_IDENTITIES[""])
+
+
 _DEVICE_CATALOGUE: dict | None = None
 
 

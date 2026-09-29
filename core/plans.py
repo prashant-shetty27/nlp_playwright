@@ -146,7 +146,10 @@ def _view(plan_id: str, d: dict) -> dict:
                           "retry_failed": bool(ex.get("retry_failed", ex.get("retry_on_failure", False))),
                           "retry_mode": ex.get("retry_mode") or "flaky",
                           "run_type": ex.get("run_type") or "full",
-                          "screenshot_mode": ex.get("screenshot_mode") or "all"},
+                          "screenshot_mode": ex.get("screenshot_mode") or "all",
+                          # Device / browser matrix: every test case runs once per
+                          # entry. [] = the platform's default device only.
+                          "devices": [d for d in (ex.get("devices") or []) if isinstance(d, dict)]},
             "schedule": sched, "schedule_text": describe_schedule(sched),
             "next_run": d.get("next_run", ""),
             "notify": d.get("notify") or {"slack": False, "channel": DEFAULT_CHANNEL, "when": "always"},

@@ -244,6 +244,30 @@ async def render_edit(plan_id: str = "") -> None:
                 .props("outlined dense").style("min-width:22rem")
             muted("Steps switched off in a test case (# OFF, e.g. lead submission) never run in a plan.")
 
+            # Device / browser matrix — a design change has to be seen on the
+            # browsers people actually use, not only on the platform default.
+            # Each ticked profile runs every test case once more.
+            DEVICE_PROFILES = {
+                "android_chrome":   {"label": "Chrome on Android (Pixel 7) — full suite", "device_name": "Pixel 7",
+                                     "browser": "chromium", "browser_identity": "android_chrome", "coverage": "full"},
+                "ios_safari":       {"label": "Safari on iPhone (iPhone 15, WebKit) — full suite", "device_name": "iPhone 15",
+                                     "browser": "webkit", "browser_identity": "ios_safari", "coverage": "full"},
+                "samsung_internet": {"label": "Samsung Internet (Galaxy S9+) — positive cases only",
+                                     "device_name": "Galaxy S9+", "browser": "chromium",
+                                     "browser_identity": "samsung_internet", "coverage": "positive"},
+                "ios_chrome":       {"label": "Chrome on iPhone (iPhone 15) — positive cases only",
+                                     "device_name": "iPhone 15", "browser": "webkit",
+                                     "browser_identity": "ios_chrome", "coverage": "positive"},
+            }
+            devices = ui.select({k: v["label"] for k, v in DEVICE_PROFILES.items()}, multiple=True,
+                                value=[d.get("browser_identity") for d in (ex.get("devices") or [])
+                                       if isinstance(d, dict) and d.get("browser_identity") in DEVICE_PROFILES],
+                                label="Browsers / devices (Mobile Site test cases)") \
+                .props("outlined dense use-chips").classes("w-full")
+            muted("Nothing ticked = the platform's default device (Pixel 7 / Chrome). Chrome Android and "
+                  "Safari iPhone run the whole suite; 'positive cases only' browsers run just the test "
+                  "cases tagged smoke / sanity (their '# Tags:' line). Website test cases ignore this.")
+
             def on_type(e) -> None:
                 d = RUN_TYPE_DEFAULTS.get(e.value) or {}
                 type_help.set_text(RUN_TYPE_HELP[e.value][1])
@@ -337,7 +361,8 @@ async def render_edit(plan_id: str = "") -> None:
                          "run_type": run_type.value or "full",
                          "screenshot_mode": shots.value or "all",
                          "stop_on_failure": bool(stop_step.value),
-                         "stop_on_first_failure": bool(stop_plan.value)}
+                         "stop_on_first_failure": bool(stop_plan.value),
+                         "devices": [DEVICE_PROFILES[k] for k in (devices.value or []) if k in DEVICE_PROFILES]}
             notify = {"slack": bool(slack.value), "channel": (channel.value or "").strip(),
                       "when": when.value, "email": bool(email_on.value),
                       "email_to": (email_to.value or "").strip()}

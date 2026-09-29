@@ -146,6 +146,10 @@ class RunRequest(BaseModel):
     #: Off by default — a video per run is heavy; switch it on for a re-run that
     #: is meant to be attached to a ticket.
     record_video: bool = False
+    #: A browser identity preset (nlp.platforms.BROWSER_IDENTITIES): samsung_internet,
+    #: ios_safari, android_chrome, ios_chrome. Sets the user agent (and, when the
+    #: preset names them, the device and engine unless given explicitly).
+    browser_identity: str = ""
     # Names within `parameters` whose values must never be logged or echoed back.
     secret_parameters: list[str] = []
 
@@ -234,6 +238,10 @@ def _run_flow_sync_unlocked(run_id: str, flow_path: str, headless: bool,
     report.meta["triggered_by"] = triggered_by or "api"
     if plan_run:
         report.meta["plan_run"] = plan_run
+    if capabilities:
+        # Which browser this ran as — a design check is meaningless without it.
+        report.meta["device"] = {k: capabilities.get(k, "") for k in
+                                 ("device_name", "browser", "browser_identity", "headless")}
 
     session = TestSession()
     # Bind the session's own variable store BEFORE injecting, so values land where
@@ -766,16 +774,32 @@ def _prepare_run(body: "RunRequest", flow_path: str = ""):
     # been loading fine on the URL-embedded path. A theoretical improvement is
     # not worth a working run, so the old path stays the default and this is
     # asked for explicitly, per run.
+    # …until the touch site showed the other side of it: credentials embedded in
+    # the URL leave "user:pass@" in the page's own address, and a page that builds
+    # requests from it fails with "Request cannot be constructed from a URL that
+    # includes credentials" — it never renders. So the default is now: attach the
+    # saved login for the host the flow opens. "none" keeps the URL form for a
+    # site that needs it; Run Center offers that as "Not needed / use URL login".
     auth_domain = (body.http_auth_domain or "").strip()
+    if auth_domain.lower() == "none":
+        auth_domain = ""
+    elif not auth_domain:
+        auth_domain = _auth_domain_for(flow_path)
 
-    device = body.device_name or platform.default_device or ""
+    from nlp.platforms import browser_identity
+    ident = browser_identity(getattr(body, "browser_identity", ""))
+    device = body.device_name or ident.get("device") or platform.default_device or ""
     caps = {
         "headless": body.headless,
         "mobile_web": bool(device),
         "device_name": device,
-        "browser": body.browser or "",
+        "browser": body.browser or ident.get("browser") or "",
         "browser_permissions": body.browser_permissions or "",
     }
+    if ident.get("user_agent"):
+        caps["user_agent"] = ident["user_agent"]
+    if getattr(body, "browser_identity", ""):
+        caps["browser_identity"] = body.browser_identity
     if auth_domain:
         caps["http_auth_domain"] = auth_domain
     if getattr(body, "record_video", False):

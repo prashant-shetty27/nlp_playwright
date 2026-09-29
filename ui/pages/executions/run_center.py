@@ -231,13 +231,26 @@ class RunCenter:
                      "under your test's control.").style(
                 f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}")
 
+            # Which browser the site should see. Samsung Internet and the stock
+            # browsers are Chromium; the site tells them apart by user agent.
+            self.identity = ui.select(
+                {"": "Device default (Chrome on Android / Safari on iPhone)",
+                 "samsung_internet": "Samsung Internet (Galaxy S9+, Chromium)",
+                 "ios_safari": "Safari on iPhone (iPhone 15, WebKit)",
+                 "ios_chrome": "Chrome on iPhone (iPhone 15, WebKit engine)",
+                 "android_chrome": "Chrome on Android (Pixel 7)"},
+                value="", label="Browser identity") \
+                .props("outlined dense").classes("w-full") \
+                .tooltip("Sets the user agent (and the matching device/engine unless you chose "
+                         "them above). Use it to check a design change on Safari or Samsung Internet.")
+
             # HTTP Basic login for a staging host (prot3, devx…). Off by default:
             # the browser then answers the server's challenge with the URL-embedded
             # credentials, which is what every existing flow relies on. "On"
             # attaches the saved login to the browser context instead, so XHR
             # calls the page makes after loading carry it too.
-            self.auth_select = ui.select({"": "Not needed / use URL login"},
-                                         value="", label="Staging site login (HTTP Basic)") \
+            self.auth_select = ui.select({"none": "Not needed / use URL login"},
+                                         value="none", label="Staging site login (HTTP Basic)") \
                 .props("outlined dense").classes("w-full")
             self.auth_select.set_visibility(False)
             self.auth_hint = ui.label("").style(
@@ -268,7 +281,7 @@ class RunCenter:
         except api.ApiError:
             info = {}
         hosts = info.get("hosts") or []
-        opts = {"": "Not needed / use URL login"}
+        opts = {"none": "Not needed / use URL login"}
         opts.update({h: f"Attach saved login for {h}" for h in hosts})
         sug = info.get("suggested") or ""
         # Preselect the host the flow opens first. Credentials embedded in the
@@ -277,7 +290,7 @@ class RunCenter:
         # URL that includes credentials" — the touch site stays on its spinner
         # for ever. Context-level login has none of that. It can still be
         # switched off here for a site that needs the URL form.
-        sel.set_options(opts, value=sug if sug in opts else "")
+        sel.set_options(opts, value=sug if sug in opts else "none")
         sel.set_visibility(bool(hosts))
         self.auth_hint.set_visibility(bool(hosts))
         self.auth_hint.set_text(
@@ -391,6 +404,7 @@ class RunCenter:
                 screenshot_context=int(self.shot_context.value or 5),
                 http_auth_domain=(getattr(self, "auth_select", None) and self.auth_select.value) or "",
                 record_video=bool(getattr(self, "record_video", None) and self.record_video.value),
+                browser_identity=(getattr(self, "identity", None) and self.identity.value) or "",
             )
         except api.ApiError as e:
             ui.notify(f"Could not start: {e.detail}", type="negative")
@@ -399,10 +413,17 @@ class RunCenter:
                        f"&platform={self.platform}")
 
 
-async def render(flow: str = "", platform: str = "website") -> None:
+async def render(flow: str = "", platform: str = "website", *,
+                 device: str = "", browser: str = "", identity: str = "") -> None:
     page = RunCenter(flow, platform)
     await page.load()
     page.render()
+    if device and getattr(page, "device_select", None) is not None:
+        page.device_select.set_value(device)
+    if browser and getattr(page, "browser_select", None) is not None:
+        page.browser_select.set_value(browser)
+    if identity and getattr(page, "identity", None) is not None:
+        page.identity.set_value(identity)
     # Setting a select's initial `value` does not fire its on_change, so a flow
     # arriving in the URL — which is how the editor's Run button gets here —
     # filled the dropdown and nothing else. The panel kept saying "Pick a flow
