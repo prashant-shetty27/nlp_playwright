@@ -142,6 +142,9 @@ _KEY_NAMES = {
 }
 
 
+from nlp.fields import TARGET_IS_LOCATOR as _LOCATOR_TARGETS  # noqa: E402
+
+
 def _execute_step_from_command(cmd, page):
     """Routes a parsed Command to the appropriate action function."""
     import execution.action_service as svc
@@ -155,6 +158,13 @@ def _execute_step_from_command(cmd, page):
     # these hands the action the stored value where it expects the key — and the lookup
     # that follows can then never succeed.
     if cmd.type in _VARIABLE_NAME_TARGETS:
+        target = cmd.target
+    # An ELEMENT name is never a variable lookup. The whole line was already
+    # ${}-resolved in _interpret; the bare-name fallback here turned
+    # `click price` into a click on the stored VALUE of a variable that
+    # happened to be called price. Quoted values keep the fallback
+    # (`enter otp "fetchedOTP"`, `calculate base_count + 5` rely on it).
+    if cmd.type in _LOCATOR_TARGETS:
         target = cmd.target
     text = resolve_variables(cmd.text) if isinstance(getattr(cmd, "text", None), str) else getattr(cmd, "text", None)
     attribute = resolve_variables(cmd.attribute) if isinstance(getattr(cmd, "attribute", None), str) else getattr(cmd, "attribute", None)
