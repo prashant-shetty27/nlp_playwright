@@ -109,6 +109,10 @@ class LiveView:
                 self.chip_holder = ui.row()
                 with self.chip_holder:
                     status_chip("running")
+                self.stop_btn = ui.button("Stop", icon="stop_circle", on_click=self._stop) \
+                    .props("outline dense color=negative") \
+                    .tooltip("Stop after the current step — done steps keep their "
+                             "result, the rest are marked not run, the report is saved")
 
             with ui.row().classes("w-full no-wrap gap-4"):
                 with ui.column().classes("flex-grow gap-1"):
@@ -218,8 +222,13 @@ class LiveView:
             self.done = True
             self.chip_holder.clear()
             with self.chip_holder:
-                status_chip("failed" if failed else "passed")
-            self.log.push(f"finished: {passed} passed, {failed} failed")
+                # A stopped run is neither: done steps kept their result,
+                # the rest never ran.
+                status_chip("stopped" if res.get("stopped_early") and not failed
+                            else "failed" if failed else "passed")
+            self.stop_btn.set_visibility(False)
+            self.log.push(f"finished: {passed} passed, {failed} failed"
+                          + (f", {skipped} not run" if skipped else ""))
             self._render_footer(res)
 
     def _render_shots(self, log: list[dict]) -> None:
@@ -366,6 +375,19 @@ class LiveView:
                       on_click=lambda: ui.navigate.to(
                           f"/run?flow={self.flow}&platform={self.platform}")) \
                 .props("unelevated dense")
+
+
+    async def _stop(self) -> None:
+        try:
+            res = await api.stop_run(self.run_id)
+        except api.ApiError as e:
+            ui.notify(f"Could not stop: {e.detail}", type="negative")
+            return
+        if res.get("stopped"):
+            self.stop_btn.props("disable loading")
+            ui.notify("Stopping after the current step…", type="warning")
+        else:
+            ui.notify(res.get("message") or "Already finished", type="info")
 
 
 async def render(run_id: str, flow: str = "", platform: str = "website") -> None:

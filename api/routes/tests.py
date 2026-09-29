@@ -42,6 +42,27 @@ def cancel(run_id: str) -> None:
     _cancelled.add(run_id)
 
 
+@router.post("/{run_id}/stop")
+def stop_run(run_id: str, user: str = Depends(acting_user)):
+    """
+    Stop a Run Center run at the next step boundary.
+
+    Steps already done keep their result; the rest are recorded as
+    "not run — execution stopped by user", the browser closes and the report
+    is saved — the same as a plan's Stop now.
+    """
+    require(user, "run")
+    with _runs_lock:
+        info = _runs.get(run_id)
+    if not info:
+        raise HTTPException(status_code=404, detail=f"No run {run_id} in this server session.")
+    if info.get("status") != "running":
+        return {"run_id": run_id, "status": info.get("status"), "stopped": False,
+                "message": "That run has already finished."}
+    cancel(run_id)
+    return {"run_id": run_id, "status": "stopping", "stopped": True}
+
+
 def progress_of(run_id: str) -> dict | None:
     """Live progress of a running run (None when not running in this process)."""
     with _runs_lock:
@@ -785,25 +806,31 @@ def run_test(body: RunRequest, user: str = Depends(acting_user)):
     GET /tests/results/{run_id} to poll.
     """
     require(user, "run")
-    if run_in_progress():
-        try:
-            from execution import plan_engine
-            active = plan_engine.active_run()
-        except Exception:  # noqa: BLE001
-            active = ""
-        raise HTTPException(status_code=409, detail=(
-            f"Another run is using the browser right now ({'test plan run ' + active if active else 'a Run Center run'}). "
-            "Wait for it to finish, or stop it from its page, then run again."))
     flow_path, caps, platform, platform_source, device = _prepare_run(body)
+
+    # Check-and-register under one lock: two Runs pressed together both
+    # passed a plain "locked?" check and the second sat invisibly queued,
+    # showing "running" with no steps. The second is now refused outright.
+    run_id = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S_%f")
+    with _runs_lock:
+        busy = next((f"test case {i['flow']}" for i in _runs.values()
+                     if i.get("status") == "running" and i.get("flow")), "")
+        if busy or run_in_progress():
+            try:
+                from execution import plan_engine
+                active = plan_engine.active_run()
+            except Exception:  # noqa: BLE001
+                active = ""
+            raise HTTPException(status_code=409, detail=(
+                f"Another run is in progress ({'test plan run ' + active if active else (busy or 'a Run Center run')}). "
+                "Stop it from its page or wait for it to finish, then run again."))
+        _runs[run_id] = {"status": "running", "result": None,
+                         "flow": os.path.basename(flow_path)[:-5]}
 
     # Remember how this flow was launched so it can be repeated without
     # re-answering every question. Secret VALUES are never written — only the
     # names, so Quick Run knows what to ask for again rather than storing it.
     _remember_setup(body)
-
-    run_id = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S_%f")
-
-    _remember(run_id, {"status": "running", "result": None})
 
     _start_run_thread(run_id, flow_path, body, caps, triggered_by=user)
 

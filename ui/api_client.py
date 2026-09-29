@@ -446,6 +446,11 @@ async def last_setup(flow: str) -> dict:
     return await _call("GET", f"/tests/last-setup/{flow}")
 
 
+async def stop_run(run_id: str) -> dict:
+    """Stop a Run Center run at its next step; the rest is recorded as not run."""
+    return await _call("POST", f"/tests/{run_id}/stop")
+
+
 async def run_result(run_id: str) -> dict:
     return await _call("GET", f"/tests/results/{run_id}")
 
