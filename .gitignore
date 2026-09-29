@@ -45,3 +45,8 @@ data/common/variables.json
 data/common/variables.json.bak
 config/environments.json
 data/testsigma_exports/
+
+# backups of secret files — never commit
+.env.bak*
+.env.*.bak
+config/environments.json.bak*

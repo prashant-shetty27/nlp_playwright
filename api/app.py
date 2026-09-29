@@ -145,6 +145,11 @@ def _mount_screenshots() -> None:
     os.makedirs(SCREENSHOTS_DIR, exist_ok=True)
     app.mount("/screenshots", StaticFiles(directory=SCREENSHOTS_DIR),
               name="screenshots")
+    # Run videos (Run Center "Record video"): report.meta["video"] is relative
+    # to the data directory, e.g. videos/completed/run_<flow>_<ts>.webm.
+    from config.settings import VIDEOS_DIR
+    os.makedirs(os.path.join(VIDEOS_DIR, "completed"), exist_ok=True)
+    app.mount("/videos", StaticFiles(directory=VIDEOS_DIR), name="videos")
 
 
 _mount_screenshots()

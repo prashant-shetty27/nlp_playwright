@@ -447,8 +447,13 @@ async def run(project: str, platform: str, *, headless: bool = True,
         browser_permissions: str = "",
         stop_on_failure: bool = True,
         screenshot_mode: str = "all",
-        screenshot_context: int = 5) -> dict:
+        screenshot_context: int = 5,
+        http_auth_domain: str = "",
+        record_video: bool = False) -> dict:
     return await _call("POST", "/tests/run", json={
+        "record_video": bool(record_video),
+        # Context-level HTTP Basic login for a staging host ("" = URL-embedded, the default)
+        "http_auth_domain": http_auth_domain or "",
         "project": project, "platform": platform, "headless": headless,
         "device_name": device_name, "browser": browser,
         "parameters": parameters or {},
@@ -459,6 +464,11 @@ async def run(project: str, platform: str, *, headless: bool = True,
         "screenshot_mode": screenshot_mode,
         "screenshot_context": screenshot_context,
     })
+
+
+async def auth_domains(flow: str) -> dict:
+    """Hosts with saved HTTP Basic login, and the one this flow opens first."""
+    return await _call("GET", f"/tests/auth-domains/{flow}")
 
 
 async def last_setup(flow: str) -> dict:

@@ -689,6 +689,12 @@ KEYWORD_MAP = {
         "action": "run_javascript",
         "template": "run javascript \"{text}\""
     },
+    "store_javascript": {
+        "phrases": ["store javascript", "store js", "store the value returned by javascript"],
+        "action": "store_javascript",
+        "help": "the expression's result (text, number or JSON) is stored as ${variable}",
+        "template": "store javascript \"{text}\" as {variable}"
+    },
     "scroll_element_horizontally": {
         "phrases": ["scroll element horizontally", "scroll carousel sideways", "scroll tabs right"],
         "action": "scroll_element_x",

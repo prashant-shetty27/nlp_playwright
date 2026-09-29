@@ -209,6 +209,14 @@ class RunCenter:
                  "firefox": "Firefox", "webkit": "WebKit / Safari"},
                 value="", label="Browser engine").props("outlined dense").classes("w-full")
 
+            # A .webm of the whole session, for attaching to a ticket. Off by
+            # default: it is a few MB per minute and slows the browser slightly,
+            # so it is switched on for the confirming re-run, not every run.
+            self.record_video = ui.switch("Record video", value=False).props("dense")
+            ui.label("Saves a .webm of the run under Reports → Video. Turn on for a "
+                     "re-run whose recording you want to attach to a ticket.").style(
+                f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}")
+
             # Browser permission prompts (geolocation, notifications, camera…)
             # are drawn by the BROWSER, so no locator can reach them and a run
             # simply stalls behind one. Decided here, before the browser opens.
@@ -223,6 +231,19 @@ class RunCenter:
                      "under your test's control.").style(
                 f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}")
 
+            # HTTP Basic login for a staging host (prot3, devx…). Off by default:
+            # the browser then answers the server's challenge with the URL-embedded
+            # credentials, which is what every existing flow relies on. "On"
+            # attaches the saved login to the browser context instead, so XHR
+            # calls the page makes after loading carry it too.
+            self.auth_select = ui.select({"": "Not needed / use URL login"},
+                                         value="", label="Staging site login (HTTP Basic)") \
+                .props("outlined dense").classes("w-full")
+            self.auth_select.set_visibility(False)
+            self.auth_hint = ui.label("").style(
+                f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}")
+            self.auth_hint.set_visibility(False)
+
             ui.button("Run Now", icon="play_arrow", on_click=self.launch) \
                 .props("unelevated").classes("w-full") \
                 .style(f"background:{COLORS['success']}; margin-top:8px")
@@ -236,6 +257,27 @@ class RunCenter:
             with self.inputs_area:
                 ui.label("Pick a flow to see what it asks for.").style(
                     f"font-size:{TYPOGRAPHY['size_sm']}; color:{COLORS['text_muted']}")
+
+    async def _load_auth_options(self, flow: str) -> None:
+        """Offer the saved staging logins; preselect nothing (URL login stays default)."""
+        sel = getattr(self, "auth_select", None)
+        if sel is None:
+            return
+        try:
+            info = await api.auth_domains(flow)
+        except api.ApiError:
+            info = {}
+        hosts = info.get("hosts") or []
+        opts = {"": "Not needed / use URL login"}
+        opts.update({h: f"Attach saved login for {h}" for h in hosts})
+        sel.set_options(opts, value="")
+        sel.set_visibility(bool(hosts))
+        self.auth_hint.set_visibility(bool(hosts))
+        sug = info.get("suggested") or ""
+        self.auth_hint.set_text(
+            f"This flow opens {sug}, which has a saved login. Leave as is unless the "
+            f"page stays blank or a login box appears — then pick it here."
+            if sug else "Logins come from AUTH_<NAME>_DOMAIN / _USERNAME / _PASSWORD in .env.")
 
     async def _load_inputs(self, flow: str) -> None:
         """Read the flow and ask for every ${variable} it references."""
@@ -257,6 +299,7 @@ class RunCenter:
             self.provided = store.get("values", {}) or {}
         except api.ApiError:
             self.provided = {}
+        await self._load_auth_options(flow)
 
         # Only what the flow needs from OUTSIDE: every ${var} referenced minus
         # the ones an earlier step of the same flow produces (`store … as x`,
@@ -339,6 +382,8 @@ class RunCenter:
                 stop_on_failure=bool(self.stop_on_failure.value),
                 screenshot_mode=self.shot_mode.value or "all",
                 screenshot_context=int(self.shot_context.value or 5),
+                http_auth_domain=(getattr(self, "auth_select", None) and self.auth_select.value) or "",
+                record_video=bool(getattr(self, "record_video", None) and self.record_video.value),
             )
         except api.ApiError as e:
             ui.notify(f"Could not start: {e.detail}", type="negative")

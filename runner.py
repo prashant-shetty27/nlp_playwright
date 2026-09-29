@@ -268,6 +268,7 @@ def _execute_step_from_command(cmd, page):
         "verify_element_exists":     lambda: svc.verify_element_exists(ep, target),
         "clear_field":               lambda: svc.clear_field(ep, target),
         "run_javascript":            lambda: svc.run_javascript(ep, cmd.text),
+        "store_javascript":          lambda: svc.store_javascript(ep, cmd.text, cmd.variable_name),
         "scroll_element_x":          lambda: svc.scroll_element_horizontally(ep, target, text),
         "remove_text":               lambda: svc.remove_text((cmd.values or [""])[0], text, cmd.variable_name),
         # ── Visibility / condition-based wait / multi-input OTP ───────────────

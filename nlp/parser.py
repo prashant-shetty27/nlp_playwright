@@ -711,6 +711,12 @@ def parse_step(step: str) -> Command:
     m = re.match(r'^clear\s+(?:text\s+(?:in|of)\s+)?(?!alerts?$)(\S+)$', s, re.I)
     if m:
         return Command(type="clear_field", target=m.group(1))
+    # store javascript "<expression>" as <var>  — Testsigma "Store the value
+    # returned by JavaScript". The expression's result (string/number/JSON)
+    # lands in the variable.
+    m = re.match(r'^store\s+(?:javascript|js)\s+"(.+)"\s+as\s+(\S+)$', s, re.I)
+    if m:
+        return Command(type="store_javascript", text=m.group(1), variable_name=m.group(2))
     m = re.match(r'^run\s+javascript\s+"(.+)"$', s, re.I)
     if m:
         return Command(type="run_javascript", text=m.group(1))

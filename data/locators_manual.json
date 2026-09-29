@@ -525,7 +525,6 @@
     }
   },
   "ts_nct_job_related_questions": {
-    "consent_button": "//*[normalize-space()='Consent']",
     "consent_text": "//*[normalize-space()='Consent']",
     "send_enquiry_button_1st": "(//button[contains(@class,'resultlist--btn-second')][.//span[contains(@class,'transactionbutton-text')][normalize-space()='Send Enquiry']])[1]",
     "heading_send_enquiry_ps": "//header//h1[normalize-space()='Send Enquiry']",

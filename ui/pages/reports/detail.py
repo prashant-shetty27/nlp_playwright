@@ -160,6 +160,15 @@ class ReportDetail:
                     f"font-family:{TYPOGRAPHY['mono']}") \
                     .tooltip("This run did not photograph every step, so some "
                              "steps have no image.")
+            video = self.report.get("video") or ""
+            if video:
+                # meta["video"] is relative to data/ (videos/completed/…); the
+                # /videos mount serves data/videos.
+                href = "/" + video.lstrip("/")
+                ui.button("Video", icon="videocam",
+                          on_click=lambda h=href: ui.navigate.to(h, new_tab=True)) \
+                    .props("flat dense no-caps") \
+                    .tooltip("Open the recording of this run (.webm) — save it to attach to a ticket")
             if flow and flow != self.run_id:
                 ui.button("Re-run", icon="replay",
                           on_click=lambda f=flow: ui.navigate.to(f"/run?flow={f}")) \

@@ -414,6 +414,8 @@ def open_browser(session: TestSession | None = None, record_video: bool = False,
                 f"  (engine chosen by device '{_setting('device_name')}')"
                 if _setting("device_name") and not _setting("browser") else "")
 
+    if not record_video and (capabilities or {}).get("record_video"):
+        record_video = True     # asked for per run (Run Center "Record video")
     if record_video:
         raw_dir = os.path.join(settings.VIDEOS_DIR, "raw")
         _ensure_dir(raw_dir)
@@ -485,3 +487,5 @@ def close_browser(page, test_name: str = "test_run", session: TestSession | None
         new_path = os.path.join(completed_dir, f"run_{test_name}_{_timestamp()}.webm")
         os.rename(video_path, new_path)
         logger.info("🎥 Final Video: %s", new_path)
+        return new_path
+    return None

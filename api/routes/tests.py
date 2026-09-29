@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, field_validator
 
-from config.settings import LOGS_DIR
+from config.settings import LOGS_DIR, DATA_DIR
 from api.auth import acting_user, require
 
 import logging
@@ -142,6 +142,10 @@ class RunRequest(BaseModel):
     screenshot_mode: str = "all"
     #: For screenshot_mode="failure": how many steps BEFORE the failure to keep.
     screenshot_context: int = 5
+    #: Record the whole browser session as a .webm (data/videos/completed/).
+    #: Off by default — a video per run is heavy; switch it on for a re-run that
+    #: is meant to be attached to a ticket.
+    record_video: bool = False
     # Names within `parameters` whose values must never be logged or echoed back.
     secret_parameters: list[str] = []
 
@@ -421,7 +425,9 @@ def _run_flow_sync_unlocked(run_id: str, flow_path: str, headless: bool,
         shots.finish()
         if page is not None:
             try:
-                close_browser(page, project_name, session)
+                video = close_browser(page, project_name, session)
+                if video:
+                    report.meta["video"] = os.path.relpath(video, DATA_DIR).replace(os.sep, "/")
             except Exception as e:  # noqa: BLE001
                 # Not fatal to the run's result, but a browser that would not
                 # close leaks a process — record it rather than losing it.
@@ -763,6 +769,8 @@ def _prepare_run(body: "RunRequest", flow_path: str = ""):
     }
     if auth_domain:
         caps["http_auth_domain"] = auth_domain
+    if getattr(body, "record_video", False):
+        caps["record_video"] = True
 
     # A flow that needs values must not be launched without them. Starting anyway
     # produced one cryptic "Variable '${x}' is not stored in memory!" per step —
@@ -900,6 +908,25 @@ def _remember_setup(body) -> None:
         os.replace(tmp, LAST_SETUP_PATH)
     except Exception as e:  # noqa: BLE001 — never fail a run over bookkeeping
         logger.debug("Could not record last-run setup: %s", e)
+
+
+@router.get("/auth-domains/{flow}")
+def auth_domains(flow: str):
+    """
+    Hosts this portal holds HTTP Basic credentials for (from AUTH_<NAME>_DOMAIN
+    in .env), plus the one this flow opens first, if any — so Run Center can
+    offer "Staging site login" without anyone typing a password. Only host
+    names travel; never the credentials.
+    """
+    from config.settings import get_auth_registry
+
+    hosts = sorted(get_auth_registry().keys())
+    suggested = ""
+    try:
+        suggested = _auth_domain_for(_flow_path(flow))
+    except Exception:  # noqa: BLE001
+        suggested = ""
+    return {"hosts": hosts, "suggested": suggested}
 
 
 @router.get("/last-setup/{flow}")

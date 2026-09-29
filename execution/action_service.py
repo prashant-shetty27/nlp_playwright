@@ -2763,6 +2763,26 @@ def clear_field(page, locator_name):
     logger.info("🧹 Cleared '%s'", locator_name)
 
 
+def store_javascript(page, script, variable_name):
+    """Evaluate a JavaScript expression and store its result as a variable.
+    Objects/arrays are stored as JSON text so later steps can verify them."""
+    import json as _json
+    logger.info("🧩 Storing result of JavaScript: %s", str(script)[:120])
+    try:
+        val = page.evaluate(f"() => ({script})")
+    except Exception:
+        # A statement rather than an expression: run it and take `return`.
+        val = page.evaluate(f"() => {{ {script} }}")
+    if isinstance(val, (dict, list)):
+        val = _json.dumps(val, ensure_ascii=False)
+    RUNTIME_VARIABLES[variable_name] = "" if val is None else str(val)
+    # A page's resource list echoes URL-embedded logins (user:pass@host); never log those.
+    import re as _re
+    shown = _re.sub(r"(?<=/)[^/\s@]+:[^/\s@]+@", "***@", RUNTIME_VARIABLES[variable_name][:2000])
+    shown = _re.sub(r"(?<![A-Za-z0-9/])[^\s@/|]+:[^\s@/|]+@(?=[A-Za-z0-9.-]+\.)", "***@", shown)
+    logger.info("💾 EXTRACTED (js): %s -> Stored as '$%s'", shown, variable_name)
+
+
 def run_javascript(page, script):
     """Run a line of JavaScript in the page — the Testsigma 'Execute javascript' step."""
     logger.info("🧩 Running JavaScript: %s", str(script)[:120])
