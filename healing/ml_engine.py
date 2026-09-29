@@ -12,6 +12,7 @@ Upgrade summary over v1:
 """
 
 import logging
+import threading
 import numpy as np  # noqa: F401 — kept for scikit-learn compatibility
 from sklearn.feature_extraction import DictVectorizer
 from sklearn.neighbors import NearestNeighbors
@@ -72,6 +73,7 @@ class LocatorHealer:
     _CLASS_BLOCKLIST = ("font", "animate", "transition", "hover", "active", "focus", "visited")
 
     def __init__(self):
+        self._fit_lock = threading.RLock()
         self.vectorizer = DictVectorizer(sparse=False)
         # brute-force required for cosine metric in sklearn NearestNeighbors
         self.nn_model = NearestNeighbors(n_neighbors=1, metric="cosine", algorithm="brute")
@@ -224,6 +226,13 @@ class LocatorHealer:
     # MAIN ENTRY POINT
     # ──────────────────────────────────────────────────────────────────────────
     def train_and_predict(self, target_dna: dict, current_page_elements: list):
+        # One healer instance is shared by every run; fitting mutates it, so
+        # two heals at once interleaved fit/kneighbors (feature-size errors,
+        # or a winner index from the other run's candidate list).
+        with self._fit_lock:
+            return self._train_and_predict(target_dna, current_page_elements)
+
+    def _train_and_predict(self, target_dna: dict, current_page_elements: list):
         """
         Executes the full healing pipeline.
         Returns the winner element DNA dict, or None if it's not safe to heal.

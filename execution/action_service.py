@@ -22,7 +22,7 @@ from execution.session import TestSession
 from nlp.variable_manager import RUNTIME_VARIABLES, resolve_variables
 from locators.manager import (get_alternate_selectors, get_locator_and_dna,
                               promote_selector)
-from core.healer import ml_heal_element
+from core.healer import ml_heal_element, confirm_heal
 from core.registry import codeless_snippet
 from config.settings import SITES
 from config import settings
@@ -167,10 +167,15 @@ def _get_healed_element_locator(page, locator_name):
         logger.warning("Verification element not visible after 3 s. Attempting ML heal...")
         if dna:
             try:
-                healed_xpath = ml_heal_element(page, dna, locator_name)  # scans the real DOM; a confident heal is remembered
+                healed_xpath = ml_heal_element(page, dna, locator_name)  # scans the real DOM
                 if healed_xpath:
-                    logger.info("Healed verification element successfully!")
-                    return root.locator(healed_xpath).first
+                    healed_loc = root.locator(healed_xpath).first
+                    # Proven only once the healed node is actually there and
+                    # visible; the caller's own check then runs against it.
+                    healed_loc.wait_for(state="visible", timeout=3000)
+                    confirm_heal(locator_name)
+                    logger.info("🏥 Healed verification element '%s' via %s", locator_name, healed_xpath)
+                    return healed_loc
             except Exception:
                 pass
     return loc
@@ -352,7 +357,8 @@ def click_element(page, locator_name):
 
         if healed_xpath:
             _get_locator_root(page).locator(healed_xpath).first.click(timeout=5000)
-            logger.info(f"🏥 Successfully healed and clicked '{locator_name}'!")
+            confirm_heal(locator_name)
+            logger.info(f"🏥 Successfully healed and clicked '{locator_name}' via {healed_xpath}")
             _stabilize_page(page)
         else:
             raise Exception(f"Self-healing failed for: {locator_name}")
@@ -453,7 +459,8 @@ def fill_element(page, text, locator_name):
 
         if healed_xpath:
             execute_robust_fill(healed_xpath)
-            logger.info(f"Successfully healed and filled '{locator_name}'!")
+            confirm_heal(locator_name)
+            logger.info(f"🏥 Successfully healed and filled '{locator_name}' via {healed_xpath}")
             _stabilize_page(page)
         else:
             raise Exception(f"Self-healing failed for: {locator_name}")
@@ -482,7 +489,8 @@ def extract_element_text(page, locator_name, variable_name):
         healed_xpath = ml_heal_element(page, dna, locator_name)
         if healed_xpath:
             execute_extraction(healed_xpath)
-            logger.info(f"🏥 Successfully healed and extracted text from '{locator_name}'!")
+            confirm_heal(locator_name)
+            logger.info(f"🏥 Successfully healed and extracted text from '{locator_name}' via {healed_xpath}")
         else:
             raise Exception(f"Self-healing failed for: {locator_name}")
 

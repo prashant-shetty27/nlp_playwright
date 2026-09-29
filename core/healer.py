@@ -120,21 +120,98 @@ def ml_heal_element(page, target_dna: dict, locator_name: str = "") -> str | Non
         logger.error("❌ ML Engine could not confidently match an element.")
         return None
 
-    healed = build_locator_from_dna(winner_dna)
-    if healed and locator_name:
-        from locators.healing_memory import record_heal
+    # A different tag is a different kind of control (a <select> healed to
+    # an <input>, an <a> to a <span>): accepted only when a strong identity
+    # attribute matched exactly.
+    t_tag = str(target_dna.get("tagName") or "").lower()
+    w_tag = str(winner_dna.get("tagName") or "").lower()
+    if t_tag and w_tag and t_tag != w_tag:
+        t_attrs = target_dna.get("attributes") or {}
+        w_attrs = winner_dna.get("attributes") or {}
+        strong = any(t_attrs.get(k) and t_attrs.get(k) == w_attrs.get(k)
+                     for k in ("id", "data-testid", "name", "aria-label"))
+        if not strong:
+            logger.warning("⚠️  Heal rejected: winner is <%s>, the saved element is <%s> "
+                           "and no id/name/testid matched.", w_tag, t_tag)
+            return None
 
+    healed = build_locator_from_dna(winner_dna)
+    if not healed:
+        return None
+    healed = _pin_to_winner(page, healed, winner_dna)
+    if not healed:
+        return None
+    if locator_name:
+        # Not written to the locator database yet: the caller confirms the
+        # heal once the click / fill / check actually succeeded with it
+        # (confirm_heal). Recording first meant two failing attempts could
+        # promote a selector that never worked.
+        _PENDING_HEALS[locator_name] = (healed, winner_dna)
+    return healed
+
+
+#: Heals produced this run that have not yet been proven by a successful action.
+_PENDING_HEALS: dict[str, tuple[str, dict]] = {}
+
+
+def confirm_heal(locator_name: str) -> None:
+    """The healed selector just worked — now it may be remembered."""
+    pending = _PENDING_HEALS.pop(locator_name, None)
+    if not pending:
+        return
+    healed, winner_dna = pending
+    try:
+        from locators.healing_memory import record_heal
         report = record_heal(locator_name, healed,
                              score=float(winner_dna.get("_heal_score", 0.0)),
                              original_failed=True, dna=winner_dna)
-        if report.get("promoted"):
-            logger.info("🏥 %r now resolves to the healed selector by default.",
-                        locator_name)
-        elif report.get("stored"):
-            logger.info("🏥 Remembered healed selector for %r (use %d/%d before "
-                        "it becomes primary).", locator_name, report["uses"],
-                        __import__("locators.healing_memory", fromlist=["x"]).PROMOTE_AFTER)
-    return healed
+    except Exception as e:  # noqa: BLE001 — remembering is a bonus, never a failure
+        logger.warning("Could not record heal for %r: %s", locator_name, e)
+        return
+    if report.get("promoted"):
+        logger.info("🏥 %r now resolves to the healed selector by default.", locator_name)
+    elif report.get("stored"):
+        from locators.healing_memory import PROMOTE_AFTER
+        logger.info("🏥 Remembered healed selector for %r (use %d/%d before it "
+                    "becomes primary).", locator_name, report["uses"], PROMOTE_AFTER)
+
+
+def _pin_to_winner(page, healed: str, winner_dna: dict) -> str | None:
+    """
+    Make sure `healed` points at the element the ML picked, not merely at
+    the first node with the same tag or class.
+
+    build_locator_from_dna can fall back to `//div[contains(@class,'a')]`
+    or even `//button`; `.first` on that clicked a different element and the
+    step still reported "healed". When the XPath matches several nodes, the
+    one whose box matches the winner's is picked by index; when it matches
+    none, the heal is rejected.
+    """
+    rect = winner_dna.get("rect") or {}
+    try:
+        boxes = page.evaluate(
+            """(xp) => { const out = []; const r = document.evaluate(xp, document, null,
+                 XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+                 for (let i = 0; i < r.snapshotLength; i++) {
+                   const b = r.snapshotItem(i).getBoundingClientRect();
+                   out.push([Math.round(b.x), Math.round(b.y), Math.round(b.width), Math.round(b.height)]);
+                 } return out; }""", healed)
+    except Exception as e:  # noqa: BLE001 — a bad XPath is a rejected heal
+        logger.warning("⚠️  Heal rejected: healed XPath could not be evaluated (%s)", e)
+        return None
+    if not boxes:
+        logger.warning("⚠️  Heal rejected: %s matches nothing on the page", healed)
+        return None
+    if len(boxes) == 1:
+        return healed
+    want = (rect.get("x"), rect.get("y"), rect.get("width"), rect.get("height"))
+    for i, b in enumerate(boxes, 1):
+        if all(v is not None for v in want) and all(abs(int(b[k]) - int(want[k])) <= 2 for k in range(4)):
+            logger.info("🏥 Healed XPath matched %d nodes; pinned to #%d by position.", len(boxes), i)
+            return f"({healed})[{i}]"
+    logger.warning("⚠️  Heal rejected: %s matches %d nodes and none sits where the "
+                   "ML winner was.", healed, len(boxes))
+    return None
 
 
 def ml_heal_element_appium(driver, target_dna: dict) -> str | None:
