@@ -31,7 +31,7 @@ async def open_step_form(step: str, platform: str, index: int,
     if not form:
         return False
     try:
-        names = sorted(await api.locator_names())
+        names = sorted((await api.locator_labels(platform)).keys())   # this platform only
     except api.ApiError:
         names = []
 

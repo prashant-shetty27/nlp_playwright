@@ -210,6 +210,14 @@ def get_locator_and_dna(locator_name: str) -> tuple:
     Master dispatcher: scans both ML database and manual database.
     Returns: (xpath_string, element_dna_dict | None)
     """
+    # Web runner only (Appium has _get_appium_locator): the android / ios /
+    # hybrid buckets are never candidates here — a web step used to resolve
+    # to a same-named app element and run an //android.widget XPath.
+    # A name defined in more than one web page is a warning, not a silent
+    # first-wins: the author cannot otherwise tell which one ran.
+    seen_in: list[str] = []
+    result: tuple = (None, None)
+
     # 1. ML database first
     ml_path = settings.RECORDED_ELEMENTS_FILE
     if os.path.exists(ml_path):
@@ -217,7 +225,12 @@ def get_locator_and_dna(locator_name: str) -> tuple:
             with file_lock(ml_path, exclusive=False):
                 ml_data = read_json(ml_path, retries=2)
             for page, elements in ml_data.items():
+                if page in _APPIUM_PLATFORM_KEYS or not isinstance(elements, dict):
+                    continue
                 if locator_name in elements:
+                    seen_in.append(f"recorded:{page}")
+                    if result[0]:
+                        continue
                     dna = elements[locator_name]
                     xpath = (
                         dna.get("custom_xpath")
@@ -230,7 +243,7 @@ def get_locator_and_dna(locator_name: str) -> tuple:
                         tag   = dna.get("tagName", "*")
                         if inner and len(inner) < 80 and "'" not in inner:
                             xpath = f"//{tag}[normalize-space(.)='{inner}']"
-                    return xpath, dna
+                    result = (xpath, dna)
         except Exception as e:
             logger.error("❌ Error reading recorded_elements.json: %s", e)
 
@@ -241,15 +254,25 @@ def get_locator_and_dna(locator_name: str) -> tuple:
             with file_lock(manual_path, exclusive=False):
                 manual_data = read_json(manual_path, retries=2)
             for page, elements in manual_data.items():
+                if page in _APPIUM_PLATFORM_KEYS or not isinstance(elements, dict):
+                    continue
                 if locator_name in elements:
+                    seen_in.append(f"manual:{page}")
+                    if result[0]:
+                        continue
                     entry = elements[locator_name]
                     if isinstance(entry, dict):
-                        return _resolve_selector(entry), entry
-                    return entry, None  # plain string
+                        result = (_resolve_selector(entry), entry)
+                    else:
+                        result = (entry, None)  # plain string
         except Exception as e:
             logger.error("❌ Error reading locators_manual.json: %s", e)
 
-    return None, None
+    if len(seen_in) > 1:
+        logger.warning("⚠️  Element '%s' is defined in %s — using %s. Rename or "
+                       "remove the others so the step is unambiguous.",
+                       locator_name, ", ".join(seen_in), seen_in[0])
+    return result
 
 
 def mark_locator_verified(locator_name: str, selector_type: str | None = None) -> bool:

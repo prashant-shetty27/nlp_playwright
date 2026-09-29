@@ -1524,7 +1524,7 @@ class TestCasesPage:
     async def _fill_template(self, f: dict) -> None:
         """Pick the element a template fix needs, then apply it like any fix."""
         try:
-            names = sorted(await api.locator_names())
+            names = sorted((await api.locator_labels(self.platform)).keys())
         except api.ApiError as e:
             ui.notify(f"Could not load elements: {e.detail}", type="negative")
             return

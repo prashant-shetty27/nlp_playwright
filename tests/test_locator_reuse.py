@@ -152,10 +152,22 @@ check("primary matches -> alternates are not probed",
 
 json.dump(FIXTURE, open(_tmp.name, "w"))
 page = StubPage(present=["div.backup"])
+_prev_hm = os.environ.get("HEAL_MEMORY")
+os.environ["HEAL_MEMORY"] = "off"
 sel, _dna = svc._resolve_live(page, "multi_selector_locator")
 check("primary misses -> first matching alternate is used", sel == "div.backup", sel)
+untouched = json.load(open(_tmp.name))["fixture_group"]["multi_selector_locator"]
+check("HEAL_MEMORY=off -> the alternate is used but NOT written back",
+      (untouched.get("custom_xpath") or untouched.get("selectors", [{}])[0].get("value")) == "div.primary"
+      if isinstance(untouched, dict) else True, str(untouched)[:120])
+os.environ["HEAL_MEMORY"] = "on"
+sel, _dna = svc._resolve_live(page, "multi_selector_locator")
+if _prev_hm is None:
+    os.environ.pop("HEAL_MEMORY", None)
+else:
+    os.environ["HEAL_MEMORY"] = _prev_hm
 promoted = json.load(open(_tmp.name))["fixture_group"]["multi_selector_locator"]
-check("a winning alternate is promoted for next time",
+check("HEAL_MEMORY=on -> a winning alternate is promoted for next time",
       promoted["custom_xpath"] == "div.backup", promoted["custom_xpath"])
 
 json.dump(FIXTURE, open(_tmp.name, "w"))
