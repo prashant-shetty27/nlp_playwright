@@ -75,9 +75,12 @@ def list_runs(plan_id: str = "", limit: int = 50) -> list[dict]:
 
 
 def active_run() -> str:
-    for r in list_runs(limit=20):
-        if r["status"] in ("running", "queued"):
-            return r["id"]
+    """The run that is actually executing; a queued one only when nothing runs."""
+    runs = list_runs(limit=20)
+    for status in ("running", "queued"):
+        for r in runs:
+            if r["status"] == status:
+                return r["id"]
     return ""
 
 
@@ -290,6 +293,18 @@ def _execute(rec: dict) -> None:
             rec["status"] = "error"
             rec["error"] = str(e)[:500]
             rec["finished_at"] = _now()
+            # Close every item too, or the report counts 'running' items as
+            # neither passed, failed nor not run.
+            for it in rec.get("items") or []:
+                if it.get("status") in ("running", "pending"):
+                    it["status"] = "not_run"
+                    it["reason"] = "the plan run crashed before this test case finished"
+                    it.setdefault("finished_at", _now())
+            items = rec.get("items") or []
+            t = rec.setdefault("totals", {})
+            t["passed"] = sum(1 for i in items if i["status"] == "passed")
+            t["failed"] = sum(1 for i in items if i["status"] == "failed")
+            t["not_run"] = sum(1 for i in items if i["status"] == "not_run" and not i.get("out_of_scope"))
             _save(rec)
         finally:
             _abort.discard(rec["id"])
@@ -376,6 +391,14 @@ def _run(rec: dict) -> None:
             except (KeyError, ValueError):
                 pass
             T._cancelled.discard(run_id)
+            # Keep every attempt: the row shows the last one, but the first
+            # attempt's report and failure are not lost to a retry.
+            item.setdefault("attempts", []).append({
+                "attempt": attempt, "run_id": run_id,
+                "passed": summary.get("passed", 0), "failed": summary.get("failed", 0),
+                "report_file": os.path.basename(summary.get("report_file") or ""),
+                "first_failure": next((f"line {e.get('line')}: {e.get('step')} — {e.get('error', '')}"[:400]
+                                       for e in summary.get("log", []) if e.get("status") == "failed"), "")})
             item.update(passed_steps=summary.get("passed", 0), failed_steps=summary.get("failed", 0),
                         skipped_steps=summary.get("skipped", 0), finished_at=_now(),
                         report_file=os.path.basename(summary.get("report_file") or ""),

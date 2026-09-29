@@ -81,18 +81,29 @@ def tick(now: datetime | None = None) -> None:
             continue
         if due > now:
             continue
-        plans.roll_forward(p["id"])            # claim the slot first
-        if now - due > GRACE:
+        # One bad plan (file removed between list and start, a PlanError)
+        # must not abort the tick for the plans after it, and a slot that was
+        # claimed but failed to start is recorded as missed, not lost.
+        try:
+            plans.roll_forward(p["id"])            # claim the slot first
+            if now - due > GRACE:
+                _state["missed"] += 1
+                _record_missed(p, due, now)
+                continue
+            _state["fired"] += 1
+            logger.info("⏰ Firing scheduled plan '%s' (due %s)", p["name"], p["next_run"])
+            owner = p.get("updated_by") or p.get("created_by") or "scheduler"
+            plan_engine.start(p["id"], trigger="schedule", user=f"scheduler ({owner})")
+        except Exception as e:  # noqa: BLE001
+            logger.exception("Scheduled plan '%s' could not be started", p.get("name"))
             _state["missed"] += 1
-            _record_missed(p, due, now)
-            continue
-        _state["fired"] += 1
-        logger.info("⏰ Firing scheduled plan '%s' (due %s)", p["name"], p["next_run"])
-        owner = p.get("updated_by") or p.get("created_by") or "scheduler"
-        plan_engine.start(p["id"], trigger="schedule", user=f"scheduler ({owner})")
+            try:
+                _record_missed(p, due, now, reason=f"start failed: {e}")
+            except Exception:  # noqa: BLE001
+                pass
 
 
-def _record_missed(p: dict, due: datetime, now: datetime) -> None:
+def _record_missed(p: dict, due: datetime, now: datetime, reason: str = "") -> None:
     from execution import plan_engine
 
     rid = due.strftime("PR_%Y%m%d_%H%M%S_") + p["id"][:30]
@@ -100,8 +111,8 @@ def _record_missed(p: dict, due: datetime, now: datetime) -> None:
            "triggered_by": "scheduler", "status": "missed", "queued_at": due.isoformat(timespec="seconds"),
            "started_at": "", "finished_at": now.isoformat(timespec="seconds"), "items": [],
            "totals": {"test_cases": 0, "passed": 0, "failed": 0, "not_run": 0},
-           "reason": (f"Due at {due.isoformat(timespec='minutes')} but the server was not running "
-                      f"or the machine was asleep; skipped rather than run late.")}
+           "reason": reason or (f"Due at {due.isoformat(timespec='minutes')} but the server was not running "
+                                f"or the machine was asleep; skipped rather than run late.")}
     plan_engine._save(rec)
     logger.warning("⏰ Plan '%s' missed its %s slot", p["name"], due.isoformat(timespec="minutes"))
     try:

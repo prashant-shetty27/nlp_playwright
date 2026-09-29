@@ -104,15 +104,18 @@ def describe_schedule(s: dict) -> str:
         return "Not scheduled"
     t = s.get("time") or "09:00"
     f = s.get("frequency", "daily")
+    # The stored timezone is honoured by next_run(); say the same one here.
+    tzname = s.get("timezone") or DEFAULT_TZ
+    z = {"Asia/Kolkata": "IST", "UTC": "UTC"}.get(tzname, tzname)
     if f == "once":
-        return f"Once on {s.get('date')} at {t} IST"
+        return f"Once on {s.get('date')} at {t} {z}"
     if f == "daily":
-        return f"Every day at {t} IST"
+        return f"Every day at {t} {z}"
     if f == "weekdays":
-        return f"Mon–Fri at {t} IST"
+        return f"Mon–Fri at {t} {z}"
     if f == "weekly":
-        return f"{', '.join(d.title() for d in s.get('days') or [])} at {t} IST"
-    return f"Every {s.get('every_hours') or 1} h from {t} IST"
+        return f"{', '.join(d.title() for d in s.get('days') or [])} at {t} {z}"
+    return f"Every {s.get('every_hours') or 1} h from {t} {z}"
 
 
 # ── views ───────────────────────────────────────────────────────────────────
@@ -197,6 +200,10 @@ def save(name: str, suite_ids: list[str], *, description: str = "", user: str = 
     if sched.get("enabled"):
         if sched.get("frequency") not in FREQUENCIES:
             raise PlanError(f"Schedule frequency must be one of {', '.join(FREQUENCIES)}.")
+        bad = [d for d in (sched.get("days") or []) if d not in DAYS]
+        if bad:
+            # next_run() silently fell back to EVERY day for unknown names.
+            raise PlanError(f"Unknown day name(s) {', '.join(map(str, bad))}; use {', '.join(DAYS)}.")
         m = re.match(r"^(\d{1,2}):(\d{2})$", sched.get("time") or "")
         if not m or int(m.group(1)) > 23 or int(m.group(2)) > 59:
             raise PlanError("Schedule time must be a real 24-hour time like 09:00 (IST).")
@@ -268,6 +275,10 @@ def roll_forward(plan_id: str) -> None:
         d = _read(_path(plan_id))
         nxt = next_run(d.get("schedule") or {})
         d["next_run"] = nxt.isoformat(timespec="seconds") if nxt else ""
+        # A 'once' plan whose slot has passed is over — missed or fired. It
+        # used to stay "scheduled, enabled" forever after a missed slot.
+        if (d.get("schedule") or {}).get("frequency") == "once" and not nxt:
+            d["schedule"]["enabled"] = False
         _write(plan_id, d)
 
 
