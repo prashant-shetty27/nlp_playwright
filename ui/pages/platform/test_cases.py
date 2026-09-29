@@ -1038,6 +1038,43 @@ class TestCasesPage:
             box = NlpInput(self.platform, self.add_step,
                            known_variables=self._variables(), autofocus=False)
             await box.load()
+            self._to_top_button()
+
+    def _to_top_button(self) -> None:
+        """
+        A small floating "back to top" in the bottom-right corner.
+
+        Two things scroll in this editor — the page (which takes the header with
+        it) and the step list — so at step 100 the Save/Run row is two scrolls
+        away. This one button resets both. It sits in the empty strip under the
+        "Add a step" box, clear of the row icons, and only shows once either
+        scroll has moved.
+        """
+        ui.button(icon="arrow_upward", on_click=lambda: ui.run_javascript(
+            "window.scrollTo({top:0,behavior:'smooth'});"
+            "var el=document.getElementById('steps-scroll');"
+            "if(el){el.scrollTo({top:0,behavior:'smooth'});}")) \
+            .props('round dense unelevated id="to-top-btn"') \
+            .style(f"position:fixed; right:14px; bottom:10px; z-index:60;"
+                   f"width:32px; height:32px; min-height:0; font-size:0.8rem;"
+                   f"background:{COLORS['primary']}; color:white; opacity:0;"
+                   f"pointer-events:none; transition:opacity .2s;"
+                   f"box-shadow:0 2px 6px rgba(0,0,0,.25)") \
+            .tooltip("Back to top")
+        ui.run_javascript(
+            "(function(){"
+            "var b=document.getElementById('to-top-btn');"
+            "var el=document.getElementById('steps-scroll'); if(!b)return;"
+            "function upd(){var on=(window.scrollY>60)||(el&&el.scrollTop>60);"
+            "b.style.opacity=on?'0.9':'0'; b.style.pointerEvents=on?'auto':'none';}"
+            "if(!window.__toTopBound){window.addEventListener('scroll',function(){"
+            "var x=document.getElementById('to-top-btn');"
+            "var e=document.getElementById('steps-scroll');"
+            "if(!x)return; var on=(window.scrollY>60)||(e&&e.scrollTop>60);"
+            "x.style.opacity=on?'0.9':'0'; x.style.pointerEvents=on?'auto':'none';},"
+            "{passive:true}); window.__toTopBound=true;}"
+            "if(el&&!el.__toTop){el.addEventListener('scroll',upd,{passive:true});"
+            "el.__toTop=true;} upd();})();")
 
     async def _compose_row(self) -> None:
         """
