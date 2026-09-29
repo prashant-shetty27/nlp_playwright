@@ -98,19 +98,26 @@ class ElementsPage:
         total = sum(len(v) for v in self.groups.values())
         with self.body:
             with ui.row().classes("w-full items-center gap-3"):
-                ui.input(placeholder="Search elements or selectors",
-                         value=self.filter,
-                         on_change=lambda e: self._set_filter(e.value)) \
+                self.search_input = ui.input(placeholder="Search elements or selectors",
+                                             value=self.filter,
+                                             on_change=lambda e: self._set_filter(e.value)) \
                     .props("outlined dense clearable").style("width:22rem")
                 ui.label(f"{total} element(s) in {len(self.groups)} group(s)").style(
                     f"color:{COLORS['text_muted']}; font-size:{TYPOGRAPHY['size_sm']}")
                 ui.space()
+                ui.button("Review", icon="auto_awesome", on_click=self._review) \
+                    .props("flat").style(f"color:{COLORS['primary']}") \
+                    .tooltip("Duplicate names or selectors, blank or position-only "
+                             "selectors, auto-generated names, unused elements")
                 ui.button("Add element", icon="add",
                           on_click=lambda: open_create_element_dialog(
                               self.platform,
                               on_saved=lambda _saved: self._reload(),
                           )) \
                     .props("unelevated")
+
+            # Review findings go here, above the list, so they are seen.
+            self.review_box = ui.column().classes("w-full gap-1")
 
             if self.conflicts:
                 with ui.row().classes("w-full items-center gap-2").style(
@@ -363,6 +370,112 @@ class ElementsPage:
                 ui.button("Cancel", on_click=dialog.close).props("flat")
                 ui.button("Rename and update", on_click=go).props("unelevated")
         dialog.open()
+
+    # ── review ───────────────────────────────────────────────────────────────
+    _KIND_TITLES = {
+        "duplicate_name": "Same name defined more than once",
+        "duplicate_selector": "Same selector under different names",
+        "blank_selector": "No selector",
+        "junk_name": "Auto-generated or meaningless names",
+        "bad_name": "Not in the naming convention",
+        "fragile_selector": "Position-only selectors",
+        "unused": "Not used by any test case or step group",
+    }
+
+    async def _review(self) -> None:
+        """Run the element review and draw the findings, grouped by kind."""
+        box = getattr(self, "review_box", None)
+        if box is None:
+            return
+        box.clear()
+        with box:
+            ui.spinner(size="sm")
+        try:
+            findings = await api.review_elements(self.platform)
+        except api.ApiError as e:
+            box.clear()
+            ui.notify(f"Review failed: {e.detail}", type="negative")
+            return
+        box.clear()
+        with box:
+            with ui.row().classes("w-full items-center gap-2"):
+                ui.label(f"Element review — {len(findings)} finding(s)").style(
+                    f"font-weight:{TYPOGRAPHY['weight_bold']}")
+                ui.space()
+                ui.button(icon="close", on_click=box.clear).props("flat dense size=sm") \
+                    .tooltip("Hide the review")
+            if not findings:
+                ui.label("Nothing to fix — every element has a unique name and a selector, "
+                         "and all are in use.").style(
+                    f"color:{COLORS['success']}; font-size:{TYPOGRAPHY['size_sm']}")
+                return
+            by_kind: dict[str, list[dict]] = {}
+            for f in findings:
+                by_kind.setdefault(f["kind"], []).append(f)
+            for kind in self._KIND_TITLES:
+                rows = by_kind.get(kind)
+                if not rows:
+                    continue
+                sev = rows[0]["severity"]
+                colour = {"high": COLORS["danger"], "medium": COLORS["warning"]}.get(
+                    sev, COLORS["text_muted"])
+                with ui.expansion(f"{self._KIND_TITLES[kind]} ({len(rows)})",
+                                  value=sev == "high").classes("w-full").style(
+                        f"border-left:3px solid {colour}; border-radius:4px;"
+                        f"background:{colour}0D"):
+                    ui.label(rows[0]["why"]).style(
+                        f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']};"
+                        f"padding:0 8px 6px")
+                    seen: set[tuple] = set()
+                    for f in rows:
+                        key = (f["group"], f["name"])
+                        if key in seen:
+                            continue
+                        seen.add(key)
+                        self._review_row(f)
+
+    def _review_row(self, f: dict) -> None:
+        group, name = f["group"], f["name"]
+        rec = (self.groups.get(group) or {}).get(name)
+        with ui.row().classes("w-full items-center gap-2 no-wrap").style("padding:2px 8px"):
+            ui.label(name).style(f"font-family:{TYPOGRAPHY['mono']};"
+                                 f"font-size:{TYPOGRAPHY['size_sm']}; min-width:16rem")
+            ui.label(group).style(f"font-size:{TYPOGRAPHY['size_xs']};"
+                                  f"color:{COLORS['text_muted']}; min-width:12rem")
+            detail = f.get("selector") or ""
+            if f["kind"] == "duplicate_selector":
+                detail = "also: " + ", ".join(f.get("others") or [])
+            elif f["kind"] == "duplicate_name":
+                detail = "also in: " + ", ".join(f"{o['source']}:{o['group']}"
+                                                  for o in (f.get("others") or []))
+            ui.label(detail[:70]).classes("flex-grow").style(
+                f"font-family:{TYPOGRAPHY['mono']}; font-size:{TYPOGRAPHY['size_xs']};"
+                f"color:{COLORS['text_muted']}; overflow:hidden; text-overflow:ellipsis;"
+                f"white-space:nowrap")
+            used = f.get("used_by")
+            if used is not None:
+                ui.label(f"used {used}×").style(
+                    f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']};"
+                    f"white-space:nowrap")
+            ui.button(icon="search", on_click=lambda n=name: self._show(n)) \
+                .props("flat dense size=xs").tooltip("Show it in the list")
+            if rec is not None and (rec.get("_source") in (None, "manual")):
+                ui.button("Edit", icon="edit",
+                          on_click=lambda g=group, n=name, r=rec: self._edit_dialog(g, n, r)) \
+                    .props("flat dense size=sm no-caps") \
+                    .tooltip("Rename it or fix the selector — every step is rewritten")
+                if f["kind"] in ("unused", "duplicate_selector", "duplicate_name"):
+                    ui.button("Delete", icon="delete_outline",
+                              on_click=lambda g=group, n=name: self._delete(g, n)) \
+                        .props("flat dense size=sm no-caps color=negative")
+
+    def _show(self, name: str) -> None:
+        """Filter the list to this element; the review panel stays open."""
+        self.filter = name.lower()
+        inp = getattr(self, "search_input", None)
+        if inp is not None:
+            inp.set_value(name)
+        self._draw_results()
 
     def _delete(self, group: str, name: str) -> None:
         dialog = ui.dialog().props("persistent")

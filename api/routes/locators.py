@@ -72,6 +72,18 @@ def list_sources():
     return {"sources": describe(), "problems": problems()}
 
 
+@router.get("/review")
+def review_elements_route(platform: str = Query("website")):
+    """
+    Everything that makes the element list untrustworthy: duplicate names,
+    duplicate selectors, blank or position-only selectors, auto-generated
+    names, elements nothing uses. Same checks the test-case review runs on
+    the elements a test case uses.
+    """
+    from locators.review import review_elements
+    return {"platform": platform, "findings": review_elements(platform)}
+
+
 @router.get("/conflicts")
 def list_conflicts(platform: str = Query("website")):
     """

@@ -208,6 +208,7 @@ def review(steps: list[str], *, platform: str = "website",
     out += _no_assertion(live)
     out += _duplicate_steps(live)
     out += _unknown_locators(live, platform)
+    out += _element_quality(live, platform)
     # ── the senior-reviewer passes ───────────────────────────────────────────
     out += _race_after_navigation(live, appium)
     out += _redundant_waits(live)
@@ -456,6 +457,51 @@ def _unknown_locators(steps: list[str], platform: str) -> list[Finding]:
                 why="This step will fail at run time. Record it with the spy, or "
                     "add it from the editor by clicking the element name.",
                 fix=""))
+    return out
+
+
+def _element_quality(steps: list[str], platform: str) -> list[Finding]:
+    """
+    The elements this test case uses, judged by the element review: a junk
+    name, a name defined twice, a blank or position-only selector. One
+    finding per element, at the first step that uses it, with the same
+    wording as the Elements page so the two screens agree.
+    """
+    out: list[Finding] = []
+    try:
+        from locators.review import review_elements
+        from nlp.fields import TARGET_IS_LOCATOR
+        from nlp.parser import parse_step
+        by_name: dict[str, list[dict]] = {}
+        for f in review_elements(platform, with_usage=False):
+            by_name.setdefault(f["name"], []).append(f)
+    except Exception:  # noqa: BLE001
+        return out
+    seen: set[str] = set()
+    for i, step in enumerate(steps, 1):
+        try:
+            cmd = parse_step(step)
+        except Exception:  # noqa: BLE001
+            continue
+        names = []
+        if cmd.type in TARGET_IS_LOCATOR and isinstance(cmd.target, str):
+            names.append(cmd.target)
+        if cmd.type == "swipe_until_visible":
+            names += [v for v in (cmd.values or [])[1:] if isinstance(v, str)]
+        for name in names:
+            if name in seen or name not in by_name:
+                continue
+            seen.add(name)
+            for f in by_name[name]:
+                if f["kind"] in ("junk_name", "bad_name", "duplicate_name", "blank_selector",
+                                 "fragile_selector"):
+                    out.append(Finding(
+                        kind=f"element_{f['kind']}",
+                        severity=f["severity"], step_index=i,
+                        message=f["message"], why=f["why"],
+                        bucket="must" if f["severity"] == "high" else "can",
+                        fix="", extra=[]))
+                    break          # one line per element is enough here
     return out
 
 

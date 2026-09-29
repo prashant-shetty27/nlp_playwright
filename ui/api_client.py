@@ -190,6 +190,11 @@ async def locators_for(platform: str = "website") -> dict:
     return await _call("GET", "/locators", params={"platform": platform})
 
 
+async def review_elements(platform: str = "website") -> list[dict]:
+    """Element review findings (duplicates, blank/junk names, unused…)."""
+    return (await _call("GET", "/locators/review", params={"platform": platform})).get("findings", [])
+
+
 async def locator_conflicts(platform: str = "website") -> dict:
     r = await _call("GET", "/locators/conflicts", params={"platform": platform})
     return r.get("conflicts", {})

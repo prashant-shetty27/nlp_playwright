@@ -1273,6 +1273,19 @@ class TestCasesPage:
                     ui.button("Save as test data", icon="dataset",
                               on_click=lambda ff=f: ui.navigate.to("/data/variables")) \
                         .props("flat dense").style(f"color:{COLORS['primary']}")
+                if str(f.get("kind", "")).startswith("element_"):
+                    # A problem with the element itself (junk name, defined
+                    # twice, no selector): fixed on the Elements page, which
+                    # rewrites every step for a rename. Back link included.
+                    import re as _re
+                    m = _re.search(r"'([^']+)'", f.get("message", ""))
+                    ename = m.group(1) if m else ""
+                    if ename:
+                        ui.button("Open element", icon="edit_location_alt",
+                                  on_click=lambda n=ename: ui.run_javascript(
+                                      f"location.href='/platform/{self.platform}/elements?edit={n}&back='"
+                                      f"+encodeURIComponent(location.pathname+location.search)")) \
+                            .props("flat dense").style(f"color:{COLORS['primary']}")
                 if f.get("kind") == "no_assertion":
                     # A judgement, not a rule — this is where a model earns a turn.
                     ui.button("Suggest checks", icon="auto_awesome",
