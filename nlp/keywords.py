@@ -770,6 +770,43 @@ KEYWORD_MAP = {
     },
 
     # --- MOUSE (Website + Mobile Site) ------------------------------------------
+    "select_date": {
+        "phrases": ["select date", "pick date", "choose date", "calendar", "date picker", "check in date",
+                    "next day", "next week", "next month", "next working day", "weekend", "saturday", "sunday"],
+        "action": "select_date",
+        "help": "today, tomorrow, next week, next month, next working day, next weekend, next saturday, "
+                "in 3 days, ${date} + 2 days, 15/10/2026",
+        "template": 'select date "next working day" in {locator}'
+    },
+    "select_date_open_calendar": {
+        "phrases": ["click date in calendar", "calendar already open", "pick day"],
+        "action": "select_date", "template": 'click date "next saturday" in calendar'
+    },
+    "store_date": {
+        "phrases": ["store date", "save date", "today", "tomorrow", "future date", "date variable", "date format"],
+        "action": "store_date", "help": 'DD/MM/YYYY unless you add in "DD MMM YYYY"',
+        "template": 'store date "next working day" as {variable}'
+    },
+    "store_date_from": {
+        "phrases": ["fetch date", "read date", "selected date", "get date from field"],
+        "action": "store_date_from", "template": "store date from {locator} as {variable}"
+    },
+    "date_add": {
+        "phrases": ["add days", "add working days", "add months", "subtract days", "date plus"],
+        "action": "date_add", "template": "add 2 working days to ${date} as {variable}"
+    },
+    "date_diff": {
+        "phrases": ["days between", "working days between", "date difference", "nights"],
+        "action": "date_diff", "template": "calculate days between ${checkin} and ${checkout} as {variable}"
+    },
+    "verify_date_in": {
+        "phrases": ["verify date", "check selected date", "date shown", "verify calendar date"],
+        "action": "verify_date_in", "template": "verify date in {locator} is next working day"
+    },
+    "verify_date_value": {
+        "phrases": ["is weekend", "is working day", "is after", "is before", "verify date value"],
+        "action": "verify_date_value", "template": "verify date ${date} is a working day"
+    },
     "hover": {
         "phrases": ["hover", "hover over", "mouse over", "move mouse to", "show tooltip", "open menu on hover"],
         "action": "hover", "template": "hover over {locator}"

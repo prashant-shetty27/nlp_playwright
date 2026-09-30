@@ -253,11 +253,16 @@ def adjust(variable: str, by: str) -> str:
 #: Steps read BEFORE ${…} is replaced in the step text: the engine looks the
 #: values up itself, so "New Delhi" or "₹1,200" never breaks the step apart.
 RAW_TYPES = {"compare_values", "calc_expr", "round_value", "percent_of", "adjust_var",
-             "store_length", "verify_var_compare", "math"}
+             "store_length", "verify_var_compare", "math",
+             # dates (execution/date_ops.py)
+             "store_date", "date_add", "date_diff", "verify_date_value"}
 
 
 def execute(cmd) -> str:
     t = cmd.type
+    if t in ("store_date", "date_add", "date_diff", "verify_date_value"):
+        from execution import date_ops
+        return date_ops.execute(cmd)
     if t == "compare_values":
         return compare(cmd.target, cmd.text, (cmd.values or [""])[0],
                        ignore_case=len(cmd.values or []) > 1 and cmd.values[1] == "ignore_case")

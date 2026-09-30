@@ -149,6 +149,8 @@ def _execute_step_from_command(cmd, page):
     """Routes a parsed Command to the appropriate action function."""
     import execution.action_service as svc
     from execution import value_ops as _vo
+    from execution import date_ops as _do
+    from execution import date_picker_web as _dpw
 
     # Resolve active tab: if user ran "switch to tab N", actions run on that tab
     ep = svc.get_active_page(page)
@@ -357,6 +359,14 @@ def _execute_step_from_command(cmd, page):
         "switch_iframe":             lambda: svc.switch_iframe(page, target),
         "switch_iframe_index":       lambda: svc.switch_iframe_index(page, cmd.count),
         # ── Mouse, form state, URL, attributes, counts (Website + Mobile Site) ─
+        # ── Calendar / dates ─────────────────────────────────────────────────
+        "select_date":               lambda: _dpw.select_date(ep, target, text, first_value or None),
+        "store_date_from":           lambda: _dpw.store_date_from(ep, target, cmd.variable_name, first_value or None),
+        "verify_date_in":            lambda: _dpw.verify_date_in(ep, target, *_do.split_check(cmd.values[0])),
+        "store_date":                lambda: _vo.execute(cmd),
+        "date_add":                  lambda: _vo.execute(cmd),
+        "date_diff":                 lambda: _vo.execute(cmd),
+        "verify_date_value":         lambda: _vo.execute(cmd),
         "hover":                     lambda: svc.hover_element(ep, target),
         "right_click":               lambda: svc.right_click_element(ep, target),
         "double_tap":                lambda: svc.double_click_element(ep, target),

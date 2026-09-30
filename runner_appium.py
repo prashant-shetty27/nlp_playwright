@@ -641,6 +641,8 @@ def _execute_step(cmd, driver, platform: str):
     """Route a parsed Command to the correct appium_action_service function."""
     import execution.appium_action_service as svc
     from execution import value_ops as _vo
+    from execution import date_ops as _do
+    from execution import date_picker_app as _dpa
 
     # Resolve any ${variables} in text/target fields
     target = resolve_variables(cmd.target or "")
@@ -685,6 +687,14 @@ def _execute_step(cmd, driver, platform: str):
         "click":                     lambda: svc.tap_element(driver, target, platform),
         "tap":                       lambda: svc.tap_element(driver, target, platform),
         "tap_text":                  lambda: svc.tap_by_text(driver, text, platform),
+        # ── Calendar / dates ──────────────────────────────────────────────
+        "select_date":               lambda: _dpa.select_date(driver, target, text, platform, first_value or None),
+        "store_date_from":           lambda: _dpa.store_date_from(driver, target, platform, cmd.variable_name, first_value or None),
+        "verify_date_in":            lambda: _dpa.verify_date_in(driver, target, platform, *_do.split_check(cmd.values[0])),
+        "store_date":                lambda: _vo.execute(cmd),
+        "date_add":                  lambda: _vo.execute(cmd),
+        "date_diff":                 lambda: _vo.execute(cmd),
+        "verify_date_value":         lambda: _vo.execute(cmd),
         "dismiss_alerts":            lambda: svc.dismiss_alerts(driver, platform),
         "dismiss_play_rating":       lambda: svc.dismiss_play_rating(driver, platform),
         "click_if_exists":           lambda: _tap_if_exists(svc, driver, target, platform),

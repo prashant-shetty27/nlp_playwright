@@ -28,6 +28,13 @@ def parse_step(step: str) -> Command:
         return Command(type="block", text=_blk[0],
                        values=[a for a in _blk[1] if a])
 
+    # Calendar / date steps — select date "next working day" in checkin_date,
+    # store date next weekend as d, verify date in checkin is a weekend …
+    from nlp.date_rules import match as _match_date
+    _dt = _match_date(s)
+    if _dt is not None:
+        return _dt
+
     # =============================
     # EVERYDAY WEB ACTIONS & CHECKS (hover, right click, drag, checkboxes, URL,
     # attributes, counts, key combinations). Early, because several of these

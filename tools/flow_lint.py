@@ -365,7 +365,8 @@ def validate_flow(
         if cmd.type in _TARGET_IS_LOCATOR and isinstance(target, str) and target:
             base = _INDEX_SUFFIX_RE.sub("", target).strip()
             looks_like_selector = base.startswith(("//", "(", "#", ".", "role=", "css=", "xpath=", "~"))
-            if not looks_like_selector and "VAR" not in base and base not in locators:
+            open_calendar = cmd.type == "select_date" and base.lower() == "calendar"
+            if not looks_like_selector and not open_calendar and "VAR" not in base and base not in locators:
                 scope = (f"the '{plat}' section of" if _PLATFORM_RUNNER.get(plat, "web") == "appium"
                          else "")
                 report.add("error", "E003", path, line_no, step,

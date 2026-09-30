@@ -44,6 +44,7 @@ TARGET_IS_LOCATOR = {
     "double_tap", "long_press", "wait_for_element", "verify_element_exists",
     "double_tap_if_visible", "long_press_if_visible", "store_text_if_visible",
     "hover", "right_click", "drag_drop", "check", "uncheck", "verify_state",
+    "select_date", "store_date_from", "verify_date_in",
     "verify_attribute", "verify_count",
 }
 

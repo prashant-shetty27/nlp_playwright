@@ -113,7 +113,7 @@ def _step_locator(step: str) -> tuple[str, str]:
         if cmd.type not in TARGET_IS_LOCATOR:
             return "", ""
         name = str(getattr(cmd, "target", "") or "").strip()
-        if not name:
+        if not name or (cmd.type == "select_date" and name.lower() == "calendar"):
             return "", ""
         from execution.action_service import _resolve_to_selector
 
