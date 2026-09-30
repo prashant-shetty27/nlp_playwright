@@ -425,6 +425,11 @@ class PlanRunPage:
                 ex = r.get("execution") or {}
                 plats = sorted({i.get("platform") or "website" for i in items})
                 muted(f"Platform: {', '.join(plats) or '—'}")
+                # Which site the run used — the question "why did it open prot3?"
+                # must be answerable from this page.
+                se = ex.get("site_env") or ""
+                muted("Site: " + ({"live": "live — www.justdial.com"}.get(se, se)
+                                  if se else "as written in the test (no change)"))
                 muted(f"Browser: {'headless' if ex.get('headless') else 'visible (headed)'}")
                 muted(f"Retry failed: {'once' if ex.get('retry_failed') else 'no'} · "
                       f"stop on first failure: {'yes' if ex.get('stop_on_first_failure') else 'no'}")
