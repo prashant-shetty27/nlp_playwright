@@ -1,0 +1,46 @@
+{
+  "created_by": "prashantshetty",
+  "created_at": "2026-09-30T16:23:24+00:00",
+  "_format": 2,
+  "plan_name": "catalogue",
+  "description": "",
+  "platform": "mobilesite",
+  "selected_suites": [
+    "suites/gjdt_22417_360_icon_on_pdp_photos.json"
+  ],
+  "execution": {
+    "headless": false,
+    "retry_failed": true,
+    "retry_mode": "flaky",
+    "run_type": "full",
+    "screenshot_mode": "all",
+    "stop_on_failure": false,
+    "stop_on_first_failure": false,
+    "devices": [],
+    "site_env": ""
+  },
+  "schedule": {
+    "enabled": false,
+    "frequency": "weekdays",
+    "time": "09:00",
+    "days": [
+      "mon",
+      "tue",
+      "wed",
+      "thu",
+      "fri"
+    ],
+    "every_hours": 4,
+    "date": "",
+    "timezone": "Asia/Kolkata"
+  },
+  "notify": {
+    "slack": true,
+    "channel": "C0AAP4882H4",
+    "when": "always",
+    "email": false,
+    "email_to": ""
+  },
+  "updated_by": "prashantshetty",
+  "updated_at": "2026-09-30T16:23:24+00:00"
+}

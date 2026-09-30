@@ -269,4 +269,10 @@ def site_environments() -> list[dict]:
             continue
         out.append({"name": name, "host": host,
                     "needs_login": (env.get("auth_type") or "none").lower() == "basic"})
-    return sorted(out, key=lambda e: e["name"])
+    out = sorted(out, key=lambda e: e["name"])
+    # "live" is always offered and always means www.justdial.com: a test written
+    # with prot3 / staging addresses runs on the live site when it is chosen.
+    # (Choosing nothing keeps every address exactly as written in the test.)
+    if not any(e["host"].lower() == "www.justdial.com" for e in out):
+        out.insert(0, {"name": "live", "host": "www.justdial.com", "needs_login": False})
+    return out

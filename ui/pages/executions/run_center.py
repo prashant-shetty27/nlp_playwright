@@ -234,7 +234,7 @@ class RunCenter:
             # Environment: run the same test case on live or on a development /
             # pre-prod host. Every www.justdial.com URL it opens (typed or from
             # Test Data) moves to that host, and that host's saved login is attached.
-            self.site_env = ui.select({"": "Live — URLs as written (www.justdial.com)"},
+            self.site_env = ui.select({"": "As written in the test (no change)"},
                                       value="", label="Environment") \
                 .props("outlined dense").classes("w-full") \
                 .tooltip("Pick prot / prot3 / devx … to run this test there without editing any URL.")
@@ -289,7 +289,7 @@ class RunCenter:
             envs = await api.site_environments()
         except api.ApiError:
             envs = []
-        opts = {"": "Live — URLs as written (www.justdial.com)"}
+        opts = {"": "As written in the test (no change)"}
         for e in envs:
             note = "" if not e.get("needs_login") or e.get("login_saved") else "  (login not saved — ask admin)"
             opts[e["name"]] = f"{e['name']} — {e['host']}{note}"
@@ -298,9 +298,15 @@ class RunCenter:
 
         def hint(_=None) -> None:
             v = sel.value or ""
-            self.site_env_hint.set_text(
-                "" if not v else f"www.justdial.com links in this test open on {opts[v].split(' — ')[1].split()[0]}; "
-                                 "its login is attached automatically.")
+            if not v:
+                text = "Every address is used exactly as written in the test."
+            elif v == "live":
+                text = ("prot / prot3 / staging addresses in this test open on www.justdial.com "
+                        "(the live site, no login).")
+            else:
+                text = (f"www.justdial.com and other test-environment links open on "
+                        f"{opts[v].split(' — ')[1].split()[0]}; its login is attached automatically.")
+            self.site_env_hint.set_text(text)
         sel.on_value_change(hint)
         hint()
 
