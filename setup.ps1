@@ -1,4 +1,4 @@
-# setup.ps1 — one-time setup on Windows (run in PowerShell from the project folder)
+# setup.ps1 - one-time setup on Windows (run in PowerShell from the project folder)
 #   1. creates the .venv
 #   2. installs the Python packages
 #   3. downloads the Chromium browser Playwright drives
@@ -24,7 +24,7 @@ Write-Host "Downloading Chromium for Playwright ..."
 
 if (-not (Test-Path "$root\.env")) {
   Copy-Item "$root\.env.example" "$root\.env"
-  Write-Host ".env created from .env.example — open it in Notepad and fill in the values you were given."
+  Write-Host ".env created from .env.example - open it in Notepad and fill in the values you were given."
 }
 foreach ($d in @("data\logs", "data\screenshots\runs", "data\plan_runs", "data\plan_reports", "data\testsigma_exports")) {
   New-Item -ItemType Directory -Force -Path "$root\$d" | Out-Null

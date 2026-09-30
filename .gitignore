@@ -50,3 +50,5 @@ data/testsigma_exports/
 .env.bak*
 .env.*.bak
 config/environments.json.bak*
+# scheduler run state (next_run / last_run) — per machine, never shared
+data/plan_state.json

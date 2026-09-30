@@ -1,4 +1,4 @@
-# start_portal.ps1 — start the Codeless Automation portal on http://localhost:8100
+# start_portal.ps1 - start the Codeless Automation portal on http://localhost:8100
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $root
 $venvPy = "$root\.venv\Scripts\python.exe"

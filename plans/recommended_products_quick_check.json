@@ -27,13 +27,6 @@
     "email": false,
     "email_to": ""
   },
-  "next_run": "",
   "updated_by": "prashantshetty",
-  "updated_at": "2026-09-26T07:12:33+00:00",
-  "last_run": {
-    "id": "PR_20260926_080318_recommended_products_quick_che",
-    "status": "passed",
-    "at": "2026-09-26T08:03:18+00:00",
-    "trigger": "manual"
-  }
+  "updated_at": "2026-09-26T07:12:33+00:00"
 }

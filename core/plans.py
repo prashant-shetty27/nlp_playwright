@@ -52,8 +52,53 @@ def _read(path: str) -> dict:
         return json.load(f)
 
 
+# ── run state lives OUTSIDE git ───────────────────────────────────────────────
+# plans/*.json is the plan's DEFINITION and is tracked, so the team shares it.
+# next_run / last_run change on every run on every machine; keeping them in the
+# same file made each run a git modification and every `git pull` a conflict
+# (Manisha, 30-Sep-2026). They live in data/plan_state.json (git-ignored) and are
+# merged into the view. A plan file still carrying those keys is read once and
+# the keys are moved out on its next write.
+_STATE_KEYS = ("next_run", "last_run")
+from config.settings import DATA_DIR as _DATA_DIR  # noqa: E402
+_STATE_PATH = os.path.join(_DATA_DIR, "plan_state.json")
+
+
+def _state() -> dict:
+    try:
+        with open(_STATE_PATH, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def _write_state(plan_id: str, **fields) -> None:
+    st = _state()
+    cur = st.setdefault(plan_id, {})
+    cur.update(fields)
+    os.makedirs(os.path.dirname(_STATE_PATH), exist_ok=True)
+    tmp = _STATE_PATH + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(st, f, indent=2, ensure_ascii=False)
+    os.replace(tmp, _STATE_PATH)
+
+
+def _with_state(plan_id: str, d: dict) -> dict:
+    """The plan dict with its run state merged in (state file wins)."""
+    st = _state().get(plan_id) or {}
+    out = dict(d)
+    for k in _STATE_KEYS:
+        if k in st:
+            out[k] = st[k]
+    return out
+
+
 def _write(plan_id: str, d: dict) -> None:
     os.makedirs(PLANS_DIR, exist_ok=True)
+    d = dict(d)
+    state = {k: d.pop(k) for k in _STATE_KEYS if k in d}
+    if state:
+        _write_state(plan_id, **state)
     tmp = _path(plan_id) + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(d, f, indent=2, ensure_ascii=False)
@@ -165,7 +210,7 @@ def list_plans() -> list[dict]:
         if not fn.endswith(".json") or fn.startswith("_"):
             continue
         try:
-            out.append(_view(fn[:-5], _read(os.path.join(PLANS_DIR, fn))))
+            out.append(_view(fn[:-5], _with_state(fn[:-5], _read(os.path.join(PLANS_DIR, fn)))))
         except (ValueError, OSError):
             continue
     return out
@@ -175,11 +220,11 @@ def get(plan_id: str) -> dict:
     p = _path(plan_id)
     if not os.path.exists(p):
         raise PlanError(f"No plan '{plan_id}'.")
-    return _view(plan_id, _read(p))
+    return _view(plan_id, _with_state(plan_id, _read(p)))
 
 
 def raw(plan_id: str) -> dict:
-    return _read(_path(plan_id))
+    return _with_state(plan_id, _read(_path(plan_id)))
 
 
 def save(name: str, suite_ids: list[str], *, description: str = "", user: str = "",
@@ -263,7 +308,7 @@ def record_run(plan_id: str, run: dict) -> None:
     with _lock:
         if not os.path.exists(_path(plan_id)):
             return
-        d = _read(_path(plan_id))
+        d = _with_state(plan_id, _read(_path(plan_id)))
         d["last_run"] = {"id": run.get("id"), "status": run.get("status"),
                          "at": run.get("started_at"), "trigger": run.get("trigger")}
         nxt = next_run(d.get("schedule") or {})
@@ -275,7 +320,7 @@ def record_run(plan_id: str, run: dict) -> None:
 
 def roll_forward(plan_id: str) -> None:
     with _lock:
-        d = _read(_path(plan_id))
+        d = _with_state(plan_id, _read(_path(plan_id)))
         nxt = next_run(d.get("schedule") or {})
         d["next_run"] = nxt.isoformat(timespec="seconds") if nxt else ""
         # A 'once' plan whose slot has passed is over — missed or fired. It

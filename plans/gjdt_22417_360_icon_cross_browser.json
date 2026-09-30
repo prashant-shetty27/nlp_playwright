@@ -55,13 +55,6 @@
     "channel": "",
     "when": "always"
   },
-  "next_run": "",
   "updated_by": "prashantshetty",
-  "updated_at": "2026-09-29T20:34:40+00:00",
-  "last_run": {
-    "id": "PR_20260929_204201_gjdt_22417_360_icon_cross_brow",
-    "status": "failed",
-    "at": "2026-09-29T20:42:01+00:00",
-    "trigger": "manual"
-  }
+  "updated_at": "2026-09-29T20:34:40+00:00"
 }
