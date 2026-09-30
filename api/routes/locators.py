@@ -37,6 +37,10 @@ class LocatorBody(BaseModel):
     #: the point of the check is that duplicates are cheap to prevent and
     #: expensive to remove.
     force: bool = False
+    #: The platform this element is recorded for (website | mobilesite). A NEW
+    #: group is tagged with it so the other platform never lists the element;
+    #: an existing group keeps its tag.
+    platform: str = ""
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -57,7 +61,11 @@ def list_all_locators(platform: str = Query("website")):
     the spy and is not hand-editable, and saying so is better than offering an
     edit that fails.
     """
-    return grouped(platform)
+    out = grouped(platform)
+    # The group's platform tag travels as a "_platform" note on the group's
+    # first record is awkward; send it as a separate map instead.
+    from locators.sources import group_platform
+    return {**out, "_scope": {g: group_platform(g) for g in out}}
 
 
 @router.get("/sources")
@@ -261,6 +269,8 @@ def add_locator(body: LocatorBody):
                             "save anyway."})
 
     data = load_locators()
+    if page not in data and (body.platform or "").strip().lower() in ("website", "mobilesite"):
+        data[page] = {"_platform": body.platform.strip().lower()}
     prev = data.setdefault(page, {}).get(name)
     if isinstance(prev, dict):
         # Keep what the record already carries (alternates, healing history,

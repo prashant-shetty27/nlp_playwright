@@ -1,5 +1,6 @@
 {
   "home_page": {
+    "_platform": "website",
     "maybe_later_link": {
       "custom_xpath": "//a[@aria-label='May be later']"
     },
@@ -53,6 +54,7 @@
     }
   },
   "result_page": {
+    "_platform": "website",
     "first_result_img": {
       "custom_xpath": "(//div[contains(@class,'jsx-da112b0f0664a117 resultbox_info')]//a)[1]"
     },
@@ -489,12 +491,14 @@
     }
   },
   "jd_business_select_business": {
+    "_platform": "website",
     "zxy_md_papad": {
       "xpath": "//*[text()='Zxy Md Papad']",
       "dna": {}
     }
   },
   "qa_portal": {
+    "_platform": "website",
     "fetched_otp": {
       "xpath": "//*[@id=\"otpMessageText\"]/span[1]",
       "dna": {}
@@ -519,12 +523,14 @@
     }
   },
   "core_autosuggest": {
+    "_platform": "website",
     "first_autosuggest": {
       "xpath": "(//*[contains(@class,'search_text')])[1]",
       "dna": {}
     }
   },
   "ts_nct_job_related_questions": {
+    "_platform": "mobilesite",
     "consent_text": "//*[normalize-space()='Consent']",
     "send_enquiry_button_1st": "(//button[contains(@class,'resultlist--btn-second')][.//span[contains(@class,'transactionbutton-text')][normalize-space()='Send Enquiry']])[1]",
     "heading_send_enquiry_ps": "//header//h1[normalize-space()='Send Enquiry']",
@@ -562,6 +568,7 @@
     }
   },
   "rp_recommended_carousel_mobile": {
+    "_platform": "mobilesite",
     "rp_heading_h1": {
       "custom_xpath": "//h1[contains(@class,'result--h1')]"
     },
@@ -620,6 +627,7 @@
     }
   },
   "ts_nct_ask_for_price": {
+    "_platform": "mobilesite",
     "touch_login_popup_may_be_later": "//span[contains(text(),'Maybe Later')]",
     "nct_ask_for_price": "(//span[contains(text(),'Ask for Price')])[1]",
     "nct_login_ask_for_price": "//div[contains(@class,'newlogin lgnpopup')]",
@@ -640,6 +648,7 @@
     }
   },
   "ts_nct_recommended_open_rfq_all_logics": {
+    "_platform": "mobilesite",
     "recommeded_product_carousel_img": "//div[@class=\"carousel_scroll\"]",
     "nct_recommended_products_carousel_section": "//div[@class='carousel_scroll']",
     "nct_open_rfq_section": "//div[@class='rorfq__cnt']",
@@ -649,6 +658,7 @@
     "nct_recommended_product_view_all": "//span[contains(@class,'carousel_view-all-text')]"
   },
   "ts_prp_sanity_ball_bearing": {
+    "_platform": "mobilesite",
     "ps_touch_b2b_prp_searchbox_city": "//span[@class=\"hdrvendsub font12\"]",
     "ps_touch_b2b_city_filter": "//*[@id='5003-mh-change']",
     "ps_touch_b2b_prp_sller_type_filter": "//span[text()[normalize-space() = \"Seller Type\"]]",
@@ -702,6 +712,7 @@
     "rfq_continue_with_search_button": "//button[@aria-label=\"Continue with search\"]"
   },
   "ts_prp_open_rfq_seller_type_option_non_login": {
+    "_platform": "mobilesite",
     "prp_open_rfq_seller_type_section": "(//div[contains(@class,'rorfq__cnt')])[1]",
     "prp_open_rfq_seller_type_wholesaler": "//p[contains(text(),'Wholesalers')]",
     "prp_open_rfq_seller_type_submit": "//p[contains(text(),'Submit')]",
@@ -714,11 +725,13 @@
     "prp_bd5_banner_img": "//div[@class='bd7__cnt--categoryImage']/img"
   },
   "ts_prp_open_rfq_seller_type_option_login": {
+    "_platform": "mobilesite",
     "touch_contextual_signin": "//span[text()='Sign in']",
     "touch_home_otp_1stfield": "//input[@id=\"0\"]",
     "prp_what_are_you_looking_for_seller_type_banner": "//*[contains(text(),'What are you looking for')]"
   },
   "ts_prp_view_catalogue_and_request_catalogue": {
+    "_platform": "mobilesite",
     "prp_request_catalogue_1st": "(//*[contains(text(),'Request Catalogue')])[1]",
     "prp_request_catalogue_login_div_text": "//span[contains(text(),'Login to request seller catalogue')]",
     "prp_request_catalogue_toast_msg": "//*[contains(text(),'Your request has been sent to the seller')]",
@@ -733,6 +746,7 @@
     "prp_view_catalogue_inner_page": "//div[@class='pdf-left-content']/div[contains(normalize-space(), '1')]"
   },
   "ts_prp_all_india_city_popup_gvs_popup": {
+    "_platform": "mobilesite",
     "prp_bd7_banner_section": "//div[@class='bd7__wrp']",
     "prp_all_india_city_banner_section": "//div[@class='findsellercard__inner']",
     "prp_all_india_explore_related_catg_carousel": "(//div[contains(text(),'Explore Related Categories')]/following-sibling::div)[1]",
@@ -741,6 +755,7 @@
     "prp_all_india_people_also_search_carousel": "(//span[contains(text(),'People Also Search For')]//following::div)[1]"
   },
   "ts_prp_wa_removed_in_non_login": {
+    "_platform": "mobilesite",
     "whatsapp_button": "//span[text()='WhatsApp']",
     "b2b_prp": "//*[text()='WhatsApp']",
     "best_price_button_12th": "(//div[text()='Best Price'])[12]",
@@ -750,6 +765,7 @@
     }
   },
   "ts_prp_filter_combinations": {
+    "_platform": "mobilesite",
     "home_top_all_categories_section": "//div[contains(@class,'b2bH_cardcontainer')]",
     "b2b_search_field": "//input[@aria-label='search']",
     "ps_touch_b2b_1st_autosuggest": "(//span[@class='prdname font15'])[1]",
@@ -763,6 +779,7 @@
     "filter_div_apply_button": "//button[text()[normalize-space() = \"Apply\"]]"
   },
   "pdp_360": {
+    "_platform": "mobilesite",
     "pdp_tab_photos": "//h2[contains(@class,'transparenttabs__link')]/a[normalize-space()='Photos']",
     "pdp_photos_heading": "//h1[contains(@class,'dtlpg_tabh1')]",
     "pdp_photo_tile": "//div[contains(@class,'photos_tab_imgcontainer')]",

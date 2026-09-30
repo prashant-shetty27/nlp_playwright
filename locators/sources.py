@@ -232,10 +232,26 @@ def entries(platform: str = "website") -> list[Entry]:
             for group, elements in data.items():
                 if group in appium_keys or _is_metadata(group) or not isinstance(elements, dict):
                     continue
+                # A group tagged "_platform": "mobilesite" belongs to that
+                # platform only — Website pickers, reviews and runs never see
+                # it, and vice versa. Untagged groups are shared (legacy).
+                scope = str(elements.get("_platform") or "").strip().lower()
+                if scope and scope != platform:
+                    continue
                 for name, rec in elements.items():
                     if not _is_metadata(name):
                         out.append(Entry(name, group, source.id, rec))
     return out
+
+
+def group_platform(group: str) -> str:
+    """The platform a web group is tagged with ('' = shared)."""
+    for source in sources("web"):
+        data = _read(source)
+        g = data.get(group)
+        if isinstance(g, dict) and g.get("_platform"):
+            return str(g["_platform"]).strip().lower()
+    return ""
 
 
 def names(platform: str = "website") -> set[str]:

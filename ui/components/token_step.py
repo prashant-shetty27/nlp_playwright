@@ -844,7 +844,7 @@ def _unknown_locator_dialog(name: str, platform: str, *,
             try:
                 res = await api.add_locator((group.value or "").strip(),
                                             (el_name.value or "").strip(),
-                                            sel, force=force)
+                                            sel, force=force, platform=self.platform)
             except api.ApiError as e:
                 detail = e.detail
                 if e.status == 409 and isinstance(detail, dict):

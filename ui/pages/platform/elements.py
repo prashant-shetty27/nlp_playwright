@@ -54,9 +54,11 @@ class ElementsPage:
             self.platforms = []
         try:
             self.groups = await api.locators_for(self.platform)
+            self.group_scope = self.groups.pop("_scope", {}) or {}
         except api.ApiError as e:
             ui.notify(f"Could not read elements: {e.detail}", type="negative")
             self.groups = {}
+            self.group_scope = {}
         try:
             self.conflicts = await api.locator_conflicts(self.platform)
         except api.ApiError:
@@ -173,6 +175,17 @@ class ElementsPage:
                     ui.label(f"{len(els)} element(s)").style(
                         f"color:{COLORS['text_muted']};"
                         f"font-size:{TYPOGRAPHY['size_xs']}")
+                    # Scope: a group tagged for one platform is listed there only.
+                    # "shared" = an untagged (older) group both platforms can see.
+                    scope = self.group_scope.get(group, "")
+                    ui.label(scope or "shared with Website & Mobile Site").style(
+                        f"font-size:{TYPOGRAPHY['size_xs']}; padding:1px 6px; border-radius:8px;"
+                        f"color:{COLORS['primary'] if scope else COLORS['text_muted']};"
+                        f"border:1px solid {COLORS['primary'] if scope else COLORS['border']}") \
+                        .tooltip("Only this platform's test cases and pickers see this group."
+                                 if scope else
+                                 "Recorded before groups were platform-scoped; both platforms see it. "
+                                 "New groups are tagged with the platform they are recorded on.")
             for name, rec in els.items():
                 self._row(group, name, rec)
 
@@ -286,7 +299,7 @@ class ElementsPage:
                     return
 
                 try:
-                    await api.add_locator(new_group, new_name, selector, force=force)
+                    await api.add_locator(new_group, new_name, selector, force=force, platform=self.platform)
                 except api.ApiError as e:
                     detail = e.detail
                     if e.status == 409 and isinstance(detail, dict):
@@ -738,7 +751,7 @@ def open_create_element_dialog(platform: str, *,
                 return
 
             try:
-                res = await api.add_locator(new_group, new_name, selector, force=force)
+                res = await api.add_locator(new_group, new_name, selector, force=force, platform=platform)
             except api.ApiError as e:
                 detail = e.detail
                 if e.status == 409 and isinstance(detail, dict):

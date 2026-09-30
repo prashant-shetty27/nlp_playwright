@@ -265,10 +265,10 @@ async def locator_labels(platform: str = "") -> dict[str, str]:
 
 
 async def add_locator(page: str, name: str, xpath: str, dna: dict | None = None,
-                      force: bool = False) -> dict:
+                      force: bool = False, platform: str = "") -> dict:
     return await _call("POST", "/locators",
                        json={"page": page, "name": name, "xpath": xpath,
-                             "dna": dna or {}, "force": force})
+                             "dna": dna or {}, "force": force, "platform": platform or ""})
 
 
 # ── Sources ──────────────────────────────────────────────────────────────────

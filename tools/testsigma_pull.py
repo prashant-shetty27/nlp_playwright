@@ -932,6 +932,16 @@ def import_case(run_id: str, test_case_id: int, *, platform: str = "mobilesite",
         if add_locator(group, lname, meta["xpath"]):
             added += 1
             by_xpath[meta["xpath"]] = lname
+    # The imported group belongs to the platform the test case was imported
+    # for: a Mobile Site element list never shows up in Website pickers.
+    try:
+        from locators.manager import save_locators as _save
+        cur0 = load_locators()
+        if isinstance(cur0.get(group), dict) and not cur0[group].get("_platform"):
+            cur0[group] = {"_platform": platform, **cur0[group]}
+            _save(cur0)
+    except Exception:  # noqa: BLE001 — tagging must never fail an import
+        pass
     if fixed:
         from locators.manager import save_locators
         cur = load_locators()

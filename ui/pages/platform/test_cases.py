@@ -893,8 +893,9 @@ class TestCasesPage:
         # in-process reads cost a few milliseconds against the per-row work.
         try:
             self._locator_labels = await api.locator_labels(self.platform)
-            self._locator_details = _locator_detail_index(
-                await api.locators_for(self.platform))
+            _groups = await api.locators_for(self.platform)
+            _groups.pop("_scope", None)
+            self._locator_details = _locator_detail_index(_groups)
             everywhere = await api.locator_labels()
             self._locators_elsewhere = {
                 n: label for n, label in everywhere.items()
