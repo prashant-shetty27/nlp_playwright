@@ -28,7 +28,10 @@ from ui import api_client as api
 from ui.theme import COLORS, TYPOGRAPHY
 
 
-def new_test_case_dialog(platform: str, on_created: Callable) -> None:
+async def new_test_case_dialog(platform: str, on_created: Callable, folder: str = "") -> None:
+    """on_created(name, steps, meta, folder, also_saved=[…]) — folder is always set."""
+    from ui.components.folder_picker import FolderPicker
+
     state: dict = {"source_id": None, "testcases": [], "chosen": set(),
                    "inputs": {}, "unclear": [], "assumptions": []}
 
@@ -40,6 +43,8 @@ def new_test_case_dialog(platform: str, on_created: Callable) -> None:
                                  " overflow-y:auto"):
         ui.label("New Test Case").style(
             f"font-size:{TYPOGRAPHY['size_lg']}; font-weight:{TYPOGRAPHY['weight_bold']}")
+        # Where it is saved — asked up front, for every way of creating one.
+        picker = FolderPicker(folder)
         with ui.tabs().classes("w-full") as tabs:
             t_blank = ui.tab("Blank", icon="edit")
             t_sheet = ui.tab("From spreadsheet", icon="table_view")
@@ -56,6 +61,9 @@ def new_test_case_dialog(platform: str, on_created: Callable) -> None:
                     if not n:
                         ui.notify("Give it a name", type="warning")
                         return
+                    where = picker.require()
+                    if where is None:
+                        return
                     # The same check Rename uses: an existing name used to
                     # open an empty editor over the old test case, and the
                     # first Save silently replaced it.
@@ -71,7 +79,7 @@ def new_test_case_dialog(platform: str, on_created: Callable) -> None:
                                   f"list, or pick another name", type="warning", timeout=6000)
                         return
                     dialog.close()
-                    await on_created(chk.get("saved_as") or n, [], {})
+                    await on_created(chk.get("saved_as") or n, [], {}, where)
 
                 ui.button("Create empty", on_click=make_blank).props("unelevated")
 
@@ -107,9 +115,15 @@ def new_test_case_dialog(platform: str, on_created: Callable) -> None:
                          "full and turned into end-to-end positive and negative cases, with "
                          "questions for you where the ticket is silent.").style(
                     f"font-size:{TYPOGRAPHY['size_sm']}; color:{COLORS['text_muted']}")
-                ui.button("Open the drafter", icon="auto_awesome",
-                          on_click=lambda: (dialog.close(),
-                                            ui.navigate.to(f"/platform/{platform}/draft"))) \
+                def open_drafter() -> None:
+                    where = picker.require()
+                    if where is None:
+                        return
+                    dialog.close()
+                    from urllib.parse import quote as _q
+                    ui.navigate.to(f"/platform/{platform}/draft?folder={_q(where, safe='')}")
+
+                ui.button("Open the drafter", icon="auto_awesome", on_click=open_drafter) \
                     .props("unelevated").style(f"background:{COLORS['accent']}")
 
         def _render_picker(container, show_notes: bool = False) -> None:
@@ -196,6 +210,9 @@ def new_test_case_dialog(platform: str, on_created: Callable) -> None:
                     if not chosen:
                         ui.notify("Pick at least one testcase", type="warning")
                         return
+                    where = picker.require()
+                    if where is None:
+                        return
                     gen_btn.set_enabled(False)
                     try:
                         if one_each.value:
@@ -221,7 +238,8 @@ def new_test_case_dialog(platform: str, on_created: Callable) -> None:
                                       type="positive", timeout=8000)
                             dialog.close()
                             await _collect_inputs(all_steps)
-                            await on_created(first[0], first[1], first[2])
+                            await on_created(first[0], first[1], first[2], where,
+                                             also_saved=saved)
                             return
                         name = (flow_name.value or "").strip() or chosen[0].lower()
                         g = await api.generate(state["source_id"], chosen, platform,
@@ -234,7 +252,7 @@ def new_test_case_dialog(platform: str, on_created: Callable) -> None:
                         # once, with what the prompt/ticket supplied already typed
                         # in — not one by one at run time.
                         await _collect_inputs(steps)
-                        await on_created(name, steps, meta)
+                        await on_created(name, steps, meta, where)
                     except api.ApiError as err:
                         ui.notify(f"Generation failed: {err.detail}", type="negative")
                     finally:
@@ -300,3 +318,4 @@ def new_test_case_dialog(platform: str, on_created: Callable) -> None:
         with ui.row().classes("w-full justify-end"):
             ui.button("Cancel", on_click=dialog.close).props("flat")
     dialog.open()
+    await picker.load()

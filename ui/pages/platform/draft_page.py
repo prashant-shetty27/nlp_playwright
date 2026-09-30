@@ -53,6 +53,9 @@ class DraftPage:
         self.extend_flow = ""
         self.flow_names: list[str] = []
         self.busy = False              # a model call is in flight
+        #: Folder the new test cases are filed in (from the New Test Case dialog).
+        self.folder = ""
+        self.picker = None
 
     async def load(self, extend: str = "") -> None:
         try:
@@ -319,6 +322,13 @@ class DraftPage:
                 for tc in cases:
                     self._case_row(tc, kept)
 
+            # where the new test cases are saved (not needed when extending one)
+            if not self.extend_flow:
+                from ui.components.folder_picker import FolderPicker
+                with ui.column().classes("w-full gap-0").style("margin-top:8px; max-width:40rem"):
+                    self.picker = FolderPicker(self.folder)
+                ui.timer(0.01, self.picker.load, once=True)
+
             # generate
             with ui.row().classes("w-full items-center gap-3").style("margin-top:8px"):
                 self.one_each = ui.switch("One test case per drafted case (recommended)", value=True)
@@ -393,6 +403,11 @@ class DraftPage:
         if not chosen:
             ui.notify("Tick at least one testcase", type="warning")
             return
+        where = ""
+        if not self.extend_flow and self.picker is not None:
+            where = self.picker.require()
+            if where is None:
+                return
         source_id = self.res.get("source_id")
         self.gen_btn.set_enabled(False)
         try:
@@ -452,7 +467,14 @@ class DraftPage:
                     steps = [_apply_renames(st, renames) for st in steps]
                 await api.save_project(name, steps, self.platform)
                 saved.append(name)
-            ui.notify(f"Saved {len(saved)} test case(s)", type="positive", timeout=8000)
+            if where:
+                try:
+                    await api.assign_folder(saved, where)
+                except api.ApiError as e:
+                    ui.notify(f"Saved, but could not file them in {where}: {e.detail}",
+                              type="warning")
+            ui.notify(f"Saved {len(saved)} test case(s)"
+                      + (f" in {where}" if where else ""), type="positive", timeout=8000)
             ui.navigate.to(f"/platform/{self.platform}?flow={quote(saved[0], safe='')}")
         except api.ApiError as err:
             ui.notify(f"Generation failed: {err.detail}", type="negative")
@@ -631,7 +653,8 @@ def _apply_renames(step: str, renames: dict[str, str]) -> str:
     return step
 
 
-async def render(platform: str, extend: str = "") -> None:
+async def render(platform: str, extend: str = "", folder: str = "") -> None:
     page = DraftPage(platform)
+    page.folder = folder
     await page.load(extend)
     page.render()

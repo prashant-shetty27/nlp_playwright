@@ -247,7 +247,7 @@ async def variables_page(tab: str = "") -> None:
 
 
 @ui.page("/platform/{platform}/draft")
-async def draft_page(platform: str, extend: str = "") -> None:
+async def draft_page(platform: str, extend: str = "", folder: str = "") -> None:
     """From prompt / from a Jira ticket, as a full page (it did not fit a dialog)."""
     if not _page_shell():
         return
@@ -258,7 +258,7 @@ async def draft_page(platform: str, extend: str = "") -> None:
         ui.navigate.to("/platform/website/draft")
         return
     from ui.pages.platform.draft_page import render
-    await render(canonical, extend)
+    await render(canonical, extend, folder)
 
 
 @ui.page("/platform/{platform}/elements")

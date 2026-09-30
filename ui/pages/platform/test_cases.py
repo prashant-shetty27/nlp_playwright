@@ -396,7 +396,7 @@ class TestCasesPage:
             return
         self.list_open = False
         self.render_list()
-        self.new_dialog()
+        ui.timer(0.01, self.new_dialog, once=True)
 
     def _toggle_list(self) -> None:
         self.list_open = not self.list_open
@@ -2266,12 +2266,14 @@ class TestCasesPage:
         if self.selected:
             ui.navigate.to(f"/run?flow={self.selected}&platform={self.platform}")
 
-    def new_dialog(self) -> None:
+    async def new_dialog(self) -> None:
         from ui.pages.platform.new_test_case import new_test_case_dialog
-        new_test_case_dialog(self.platform, on_created=self._after_create)
+        await new_test_case_dialog(self.platform, on_created=self._after_create,
+                                   folder=self.current_folder)
 
     async def _after_create(self, name: str, steps: list[str],
-                            meta: dict[int, dict] | None = None) -> None:
+                            meta: dict[int, dict] | None = None, folder: str = "",
+                            also_saved: list[str] | None = None) -> None:
         self.selected = name
         self.steps = steps
         self.step_meta = meta or {}
@@ -2284,11 +2286,18 @@ class TestCasesPage:
         # A whole drafted testcase was lost that way, with nothing on screen
         # saying it was at risk.
         self.dirty = bool(steps)
-        if self.current_folder:
+        # The folder chosen in the dialog (pre-filled with the one you are in).
+        folder = folder or self.current_folder
+        if folder:
             try:
-                await api.assign_folder([name], self.current_folder)
-            except api.ApiError:
-                pass
+                await api.assign_folder(sorted({name, *(also_saved or [])}), folder)
+                self.current_folder = folder
+                # Open the folder (and its parents) so the new test is in view.
+                parts = folder.split("/")
+                self.open_folders |= {"/".join(parts[:k]) for k in range(1, len(parts) + 1)}
+            except api.ApiError as e:
+                ui.notify(f"Created, but could not file it in {folder}: {e.detail}",
+                          type="warning")
         await self.load()
         self.render_list()
         await self.render_editor()

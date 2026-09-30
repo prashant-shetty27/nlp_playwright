@@ -246,7 +246,7 @@ def _reload_when_back(port) -> None:
     ui.run_javascript(_RESTART_OVERLAY_JS.replace("{port}", str(port)))
 
 
-def _restart_button() -> None:
+def _restart_button(show_button: bool = True):
     """
     Restart the server from the page it is serving.
 
@@ -322,8 +322,10 @@ def _restart_button() -> None:
                     .props("unelevated")
         dialog.open()
 
-    ui.button(icon="restart_alt", on_click=ask).props("flat dense") \
-        .tooltip("Restart the server — picks up code changes")
+    if show_button:
+        ui.button(icon="restart_alt", on_click=ask).props("flat dense") \
+            .tooltip("Restart the server — picks up code changes")
+    return ask
 
 
 def topbar(breadcrumb: list[str], *, platforms: list[dict] | None = None,
@@ -361,15 +363,15 @@ def topbar(breadcrumb: list[str], *, platforms: list[dict] | None = None,
                 _admin = _can("admin")
             except Exception:  # noqa: BLE001
                 _admin = False
-            if _admin:          # restarting stops everyone's runs — admins only
-                _restart_button()
             ui.button(icon="settings", on_click=lambda: ui.navigate.to("/settings")) \
                 .props("flat dense").tooltip("Settings")
-            _user_menu()
+            # Restart lives in the profile menu: it stops everyone's runs, so it
+            # should take a deliberate reach, not sit next to Run. Admins only.
+            _user_menu(restart=_restart_button(show_button=False) if _admin else None)
 
 
-def _user_menu() -> None:
-    """Who is signed in, their role, change password, sign out."""
+def _user_menu(restart: Callable | None = None) -> None:
+    """Who is signed in, their role, change password, restart (admins), sign out."""
     from ui.auth import current, sign_out
     u = current()
     if not u:
@@ -388,6 +390,12 @@ def _user_menu() -> None:
             ui.menu_item("Change password", on_click=_password_dialog)
             if u["role"] == "admin":
                 ui.menu_item("Manage users", on_click=lambda: ui.navigate.to("/users"))
+            if restart is not None:
+                with ui.menu_item(on_click=restart):
+                    with ui.row().classes("items-center gap-2 no-wrap"):
+                        ui.icon("restart_alt").style(f"color:{COLORS['text_muted']}")
+                        ui.label("Restart server")
+            ui.separator()
             ui.menu_item("Sign out", on_click=sign_out)
 
 
