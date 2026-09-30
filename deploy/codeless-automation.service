@@ -1,0 +1,27 @@
+# systemd unit for the Codeless Automation portal (QA portal)
+# Install:  sudo cp deploy/codeless-automation.service /etc/systemd/system/ && sudo systemctl daemon-reload
+#           sudo systemctl enable --now codeless-automation
+[Unit]
+Description=Justdial QA Codeless Automation portal
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=codeless
+Group=codeless
+WorkingDirectory=/opt/codeless-automation
+EnvironmentFile=/opt/codeless-automation/.env
+Environment=PLAYWRIGHT_BROWSERS_PATH=/opt/codeless-automation/.pw-browsers
+# 0.0.0.0 so the office network / VPN can reach it; put nginx in front for TLS if required.
+ExecStart=/opt/codeless-automation/.venv/bin/python -m ui.app --host 0.0.0.0 --port 8100
+Restart=always
+RestartSec=5
+# Headless browsers need a few GB; keep the unit from being OOM-killed first.
+OOMScoreAdjust=-500
+LimitNOFILE=65536
+StandardOutput=append:/opt/codeless-automation/data/logs/service.log
+StandardError=append:/opt/codeless-automation/data/logs/service.log
+
+[Install]
+WantedBy=multi-user.target

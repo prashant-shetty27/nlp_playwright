@@ -3,7 +3,7 @@
 # Run as root (sudo) from anywhere:  sudo bash deploy/server_setup.sh <git-clone-url>
 #
 # What it does:
-#   1. creates a service user `qaportal` and /opt/qa-portal
+#   1. creates a service user `codeless` and /opt/codeless-automation
 #   2. installs Python 3.11, git and the OS libraries Playwright's browsers need
 #   3. clones the repository (or updates it), creates .venv, installs Python packages
 #   4. downloads Chromium + WebKit for Playwright (headless runs on the server)
@@ -11,8 +11,8 @@
 #   6. installs and starts the systemd service on port 8100
 set -euo pipefail
 REPO_URL="${1:-}"
-APP_DIR=/opt/qa-portal
-SVC_USER=qaportal
+APP_DIR=/opt/codeless-automation
+SVC_USER=codeless
 
 if [[ -z "$REPO_URL" && ! -d "$APP_DIR/.git" ]]; then
   echo "usage: sudo bash deploy/server_setup.sh <git-clone-url>"; exit 1
@@ -63,12 +63,12 @@ sudo -u "$SVC_USER" bash -c "
 chmod 600 "$APP_DIR/.env"
 
 echo "== 6. service"
-cp "$APP_DIR/deploy/qa-portal.service" /etc/systemd/system/qa-portal.service
+cp "$APP_DIR/deploy/codeless-automation.service" /etc/systemd/system/codeless-automation.service
 systemctl daemon-reload
-systemctl enable --now qa-portal
+systemctl enable --now codeless-automation
 sleep 5
-systemctl --no-pager --lines=5 status qa-portal || true
+systemctl --no-pager --lines=5 status codeless-automation || true
 echo
 echo "Done. Portal: http://$(hostname -I | awk '{print $1}'):8100"
-echo "Next: edit $APP_DIR/.env (credentials — see deploy/DEPLOYMENT.md), then: sudo systemctl restart qa-portal"
-echo "Nightly backup: sudo cp deploy/backup.sh /etc/cron.daily/qa-portal-backup && sudo chmod +x /etc/cron.daily/qa-portal-backup"
+echo "Next: edit $APP_DIR/.env (credentials — see deploy/DEPLOYMENT.md), then: sudo systemctl restart codeless-automation"
+echo "Nightly backup: sudo cp deploy/backup.sh /etc/cron.daily/codeless-automation-backup && sudo chmod +x /etc/cron.daily/codeless-automation-backup"
