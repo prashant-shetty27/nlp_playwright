@@ -1,5 +1,5 @@
 {
-  "_comment": "Test Environments — define base URLs, domain overrides, and auth credentials per environment.",
+  "_comment": "Test Environments \u2014 define base URLs, domain overrides, and auth credentials per environment.",
   "active": "local",
   "envs": {
     "local": {
@@ -18,7 +18,7 @@
       "auth_type": "",
       "username": "",
       "password": "",
-      "notes": "Staging server — replaces www.example.com with staging.example.com"
+      "notes": "Staging server \u2014 replaces www.example.com with staging.example.com"
     },
     "staging_auth": {
       "base_url": "https://staging2.justdial.com",
@@ -27,7 +27,7 @@
       "auth_type": "",
       "username": "",
       "password": "",
-      "notes": "Staging with HTTP Basic auth — replaces justdial.com domain"
+      "notes": "Staging with HTTP Basic auth \u2014 replaces justdial.com domain"
     },
     "production": {
       "base_url": "https://www.example.com",
@@ -36,7 +36,25 @@
       "auth_type": "",
       "username": "",
       "password": "",
-      "notes": "Production — no domain replacement"
+      "notes": "Production \u2014 no domain replacement"
+    },
+    "staging2": {
+      "base_url": "https://staging2.justdial.com",
+      "domain_override": "staging2.justdial.com",
+      "domain_source": "www.justdial.com",
+      "auth_type": "basic",
+      "username": "",
+      "password": "",
+      "notes": "staging2.justdial.com \u2014 login from .env AUTH_*"
+    },
+    "stg": {
+      "base_url": "https://stg.justdial.com",
+      "domain_override": "stg.justdial.com",
+      "domain_source": "www.justdial.com",
+      "auth_type": "basic",
+      "username": "",
+      "password": "",
+      "notes": "stg.justdial.com \u2014 login from .env AUTH_*"
     }
   }
 }
