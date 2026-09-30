@@ -54,11 +54,43 @@ async def render_list() -> None:
                  "cases": ", ".join(c["name"] for c in s["test_cases"])[:120],
                  "updated": f"{ist(s.get('updated_at'))} by {s.get('updated_by') or '—'}"
                             if s.get("updated_at") else "—"} for s in items]
-        t = ui.table(columns=cols, rows=rows, row_key="id").classes("w-full")
+        t = ui.table(columns=cols, rows=rows, row_key="id",
+                     selection="multiple" if can("write") else None).classes("w-full")
         t.add_slot("body-cell-name", r'''
             <q-td :props="props"><a class="cursor-pointer text-primary"
               @click="$parent.$emit('open', props.row)">{{ props.row.name }}</a></q-td>''')
         t.on("open", lambda e: ui.navigate.to(f"/suites/edit?id={quote(e.args['id'])}"))
+        if can("write"):
+            bar = ui.row().classes("w-full items-center gap-2")
+
+            async def delete_picked() -> None:
+                done, refused = [], []
+                for r in list(t.selected):
+                    try:
+                        await api.delete_suite(r["id"])
+                        done.append(r["name"])
+                    except api.ApiError as e:
+                        refused.append(f"{r['name']}: {e.detail}")
+                if done:
+                    ui.notify(f"Deleted {len(done)} suite(s)", type="positive")
+                for msg in refused:
+                    ui.notify(msg, type="warning", timeout=9000)
+                ui.navigate.to("/suites")
+
+            def draw_bar() -> None:
+                bar.clear()
+                if not t.selected:
+                    return
+                with bar:
+                    muted(f"{len(t.selected)} selected")
+                    ui.button(f"Delete {len(t.selected)} suite(s)", icon="delete_outline",
+                              on_click=lambda: confirm(
+                                  f"Delete {len(t.selected)} suite(s)?",
+                                  "The test cases themselves are not touched. A suite used by a "
+                                  "plan is not deleted — remove it from the plan first.",
+                                  delete_picked)).props("flat dense color=negative")
+
+            t.on_select(lambda _: draw_bar())
 
 
 async def render_edit(suite_id: str = "") -> None:
@@ -73,7 +105,7 @@ async def render_edit(suite_id: str = "") -> None:
             ui.label(e.detail).style(f"color:{COLORS['danger']}")
             return
     writable = can("write")
-    state = {"cases": [c["name"] for c in data.get("test_cases", [])]}
+    state = {"cases": [c["name"] for c in data.get("test_cases", [])], "picked": set()}
 
     with ui.column().classes("w-full gap-3 p-4").style("max-width:60rem"):
         with ui.row().classes("w-full items-center"):
@@ -89,7 +121,10 @@ async def render_edit(suite_id: str = "") -> None:
         plat = ui.select(enabled, value=data.get("platform") or next(iter(enabled), None),
                          label="Platform").props("outlined dense").style("min-width:18rem")
 
-        ui.label("Test cases (run in this order)").style(f"font-weight:{TYPOGRAPHY['weight_bold']}")
+        with ui.row().classes("w-full items-center gap-2"):
+            ui.label("Test cases (run in this order)").style(f"font-weight:{TYPOGRAPHY['weight_bold']}")
+            ui.space()
+            bulk = ui.row().classes("items-center gap-2")
         box = ui.column().classes("w-full gap-0").style(
             f"border:1px solid {COLORS['border']}; border-radius:6px")
         with ui.row().classes("w-full items-center gap-2"):
@@ -105,7 +140,30 @@ async def render_edit(suite_id: str = "") -> None:
             names = [n for n in names if not n.startswith("_") and n not in state["cases"]]
             picker.set_options(names)
 
+        def draw_bulk() -> None:
+            bulk.clear()
+            if not writable or not state["cases"]:
+                return
+            with bulk:
+                every = bool(state["cases"]) and len(state["picked"]) == len(state["cases"])
+                ui.checkbox("Select all", value=every,
+                            on_change=lambda e: (state["picked"].clear() if not e.value
+                                                 else state["picked"].update(state["cases"]),
+                                                 draw())).props("dense")
+                ui.button(f"Remove {len(state['picked'])} selected", icon="playlist_remove",
+                          on_click=remove_picked) \
+                    .props("flat dense color=negative").set_enabled(bool(state["picked"]))
+
+        async def remove_picked() -> None:
+            state["cases"] = [c for c in state["cases"] if c not in state["picked"]]
+            n = len(state["picked"])
+            state["picked"].clear()
+            draw()
+            await load_choices()
+            ui.notify(f"Removed {n} — press Save suite to keep the change", type="info")
+
         def draw() -> None:
+            draw_bulk()
             box.clear()
             with box:
                 if not state["cases"]:
@@ -113,6 +171,11 @@ async def render_edit(suite_id: str = "") -> None:
                 for i, c in enumerate(state["cases"]):
                     with ui.row().classes("w-full items-center gap-2 no-wrap").style(
                             f"padding:4px 10px; border-bottom:1px solid {COLORS['border']}"):
+                        if writable:
+                            ui.checkbox(value=c in state["picked"],
+                                        on_change=lambda e, c=c: (state["picked"].add(c) if e.value
+                                                                  else state["picked"].discard(c),
+                                                                  draw_bulk())).props("dense")
                         ui.label(str(i + 1)).style(f"width:1.6rem; color:{COLORS['text_muted']}")
                         ui.label(c).style(f"font-family:{TYPOGRAPHY['mono']}; font-size:{TYPOGRAPHY['size_sm']}") \
                             .classes("flex-grow")
@@ -133,7 +196,7 @@ async def render_edit(suite_id: str = "") -> None:
             draw()
 
         async def remove(i: int) -> None:
-            state["cases"].pop(i)
+            state["picked"].discard(state["cases"].pop(i))
             draw()
             await load_choices()
 

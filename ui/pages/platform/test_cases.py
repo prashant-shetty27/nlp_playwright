@@ -585,6 +585,8 @@ class TestCasesPage:
                     with ui.menu():
                         ui.menu_item("Move to folder…",
                                      on_click=lambda n=name: self._move_dialog([n]))
+                        ui.menu_item("Add to suite…",
+                                     on_click=lambda n=name: self._suite_dialog([n]))
         if self.pick_mode:
             row.on("click", lambda n=name: self._pick(n, n not in self.picked))
         else:
@@ -762,9 +764,76 @@ class TestCasesPage:
             ui.space()
             ui.button("Move", icon="drive_file_move", on_click=lambda: self._move_dialog()) \
                 .props("flat dense").set_enabled(bool(self.picked))
+            ui.button("Add to suite", icon="playlist_add",
+                      on_click=lambda: self._suite_dialog(sorted(self.picked))) \
+                .props("flat dense").set_enabled(bool(self.picked))
             ui.button(f"Delete {len(self.picked)}", icon="delete_outline",
                       on_click=self._bulk_delete_dialog) \
                 .props("unelevated dense color=negative").set_enabled(bool(self.picked))
+
+    def _suite_dialog(self, names: list[str]) -> None:
+        """Put test cases into a NEW suite or add them to an existing one (this platform)."""
+        if not names:
+            return
+        with self.dialog_host:
+            dialog = ui.dialog()
+        with dialog, ui.card().style("width:32rem"):
+            ui.label(f"Add {len(names)} test case(s) to a suite").style(
+                f"font-weight:{TYPOGRAPHY['weight_bold']}")
+            ui.label(", ".join(names[:6]) + (" …" if len(names) > 6 else "")).style(
+                f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']};"
+                f"font-family:{TYPOGRAPHY['mono']}")
+            mode = ui.toggle({"new": "New suite", "existing": "Existing suite"}, value="new") \
+                .props("dense no-caps")
+            new_name = ui.input("Suite name", placeholder="B2B PDP regression") \
+                .props("outlined dense autofocus").classes("w-full")
+            existing = ui.select({}, label="Suite", with_input=True) \
+                .props("outlined dense").classes("w-full")
+            new_name.bind_visibility_from(mode, "value", backward=lambda v: v == "new")
+            existing.bind_visibility_from(mode, "value", backward=lambda v: v == "existing")
+            note = ui.label("").style(f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['danger']}")
+
+            async def load() -> None:
+                try:
+                    items = await api.suites(self.platform)
+                except api.ApiError:
+                    items = []
+                existing.set_options({s["id"]: f"{s['name']}  ({s['count']} cases)" for s in items})
+
+            async def go() -> None:
+                try:
+                    if mode.value == "new":
+                        res = await api.save_suite((new_name.value or "").strip(), self.platform, names)
+                        added = len(names)
+                    else:
+                        if not existing.value:
+                            note.set_text("Pick a suite.")
+                            return
+                        cur = await api.suite(existing.value)
+                        have = [c["name"] for c in cur.get("test_cases", [])]
+                        extra = [n for n in names if n not in have]
+                        if not extra:
+                            note.set_text("They are all in that suite already.")
+                            return
+                        res = await api.save_suite(cur["name"], cur.get("platform") or self.platform,
+                                                   have + extra, cur.get("description", ""),
+                                                   existing.value)
+                        added = len(extra)
+                except api.ApiError as e:
+                    note.set_text(str(e.detail))
+                    return
+                dialog.close()
+                ui.notify(f"Added {added} test case(s) to suite '{res.get('name')}' — "
+                          f"see Test Suites", type="positive", timeout=6000)
+                if self.pick_mode:
+                    self.picked.clear()
+                    self._toggle_pick()
+
+            with ui.row().classes("w-full justify-end gap-2"):
+                ui.button("Cancel", on_click=dialog.close).props("flat")
+                ui.button("Add", icon="playlist_add", on_click=go).props("unelevated")
+            ui.timer(0.01, load, once=True)
+        dialog.open()
 
     def _bulk_delete_dialog(self) -> None:
         victims = sorted(self.picked)
