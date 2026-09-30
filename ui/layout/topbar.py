@@ -195,6 +195,57 @@ def _plan_alert() -> None:
     ui.timer(20.0, check)
 
 
+_RESTART_OVERLAY_JS = """
+            (function () {
+              const o = document.createElement('div');
+              o.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;'
+                + 'align-items:center;justify-content:center;flex-direction:column;'
+                + 'gap:10px;background:rgba(15,23,42,.82);color:#fff;'
+                + 'font-family:system-ui,sans-serif';
+              o.innerHTML = '<div style="font-size:1.1rem">Restarting the server…</div>'
+                + '<div id="rs-msg" style="font-size:.85rem;opacity:.75">'
+                + 'waiting for it to come back on port {port}</div>';
+              document.body.appendChild(o);
+              const msg = o.querySelector('#rs-msg');
+              let tries = 0;
+              // The old process answers /health for about a second more, so the
+              // first successes are ignored — otherwise the page reloads into
+              // the process that is on its way out.
+              const startedAt = Date.now();
+              (function poll() {
+                tries++;
+                if (tries > 90) {
+                  msg.textContent = 'It has not come back. Start it from a terminal.';
+                  return;
+                }
+                fetch('/health', {cache: 'no-store'})
+                  .then(r => {
+                    if (r.ok && Date.now() - startedAt > 2500) {
+                      msg.textContent = 'back — reloading';
+                      setTimeout(() => location.reload(), 400);
+                    } else { setTimeout(poll, 700); }
+                  })
+                  .catch(() => setTimeout(poll, 700));
+              })();
+            })();
+"""
+
+
+async def restart_and_reload(force: bool = True) -> None:
+    """Restart the server and reload this page when it is back (used by Team sync)."""
+    from ui import api_client as api
+    try:
+        res = await api.restart_server(force=force)
+    except api.ApiError as e:
+        ui.notify(f"Could not restart: {e.detail}", type="negative")
+        return
+    _reload_when_back(res.get("port", ""))
+
+
+def _reload_when_back(port) -> None:
+    ui.run_javascript(_RESTART_OVERLAY_JS.replace("{port}", str(port)))
+
+
 def _restart_button() -> None:
     """
     Restart the server from the page it is serving.
@@ -224,40 +275,7 @@ def _restart_button() -> None:
                       type="warning")
         # From here the server is going away, so everything is done in the
         # browser: poll until something answers, then reload.
-        ui.run_javascript(f"""
-            (function () {{
-              const o = document.createElement('div');
-              o.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;'
-                + 'align-items:center;justify-content:center;flex-direction:column;'
-                + 'gap:10px;background:rgba(15,23,42,.82);color:#fff;'
-                + 'font-family:system-ui,sans-serif';
-              o.innerHTML = '<div style="font-size:1.1rem">Restarting the server…</div>'
-                + '<div id="rs-msg" style="font-size:.85rem;opacity:.75">'
-                + 'waiting for it to come back on port {port}</div>';
-              document.body.appendChild(o);
-              const msg = o.querySelector('#rs-msg');
-              let tries = 0;
-              // The old process answers /health for about a second more, so the
-              // first successes are ignored — otherwise the page reloads into
-              // the process that is on its way out.
-              const startedAt = Date.now();
-              (function poll() {{
-                tries++;
-                if (tries > 90) {{
-                  msg.textContent = 'It has not come back. Start it from a terminal.';
-                  return;
-                }}
-                fetch('/health', {{cache: 'no-store'}})
-                  .then(r => {{
-                    if (r.ok && Date.now() - startedAt > 2500) {{
-                      msg.textContent = 'back — reloading';
-                      setTimeout(() => location.reload(), 400);
-                    }} else {{ setTimeout(poll, 700); }}
-                  }})
-                  .catch(() => setTimeout(poll, 700));
-              }})();
-            }})();
-        """)
+        _reload_when_back(port)
 
     def _confirm_over_running(detail: str) -> None:
         dialog = ui.dialog().props("persistent")

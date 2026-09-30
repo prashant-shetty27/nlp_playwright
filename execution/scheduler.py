@@ -34,7 +34,14 @@ def status() -> dict:
 
 def start() -> None:
     global _started
-    if _started or os.getenv("DISABLE_SCHEDULER") == "1":
+    if _started:
+        return
+    # One machine owns the scheduled plans (SCHEDULER_OWNER=1). Every other
+    # portal keeps its scheduler off, otherwise the same nightly plan fires on
+    # each teammate's laptop at once (30-Sep-2026). start_portal writes
+    # DISABLE_SCHEDULER=1 into a non-owner's .env; the owner flag wins over it.
+    if os.getenv("SCHEDULER_OWNER") != "1" and os.getenv("DISABLE_SCHEDULER") == "1":
+        logger.info("⏰ Scheduler off on this machine (not the schedule owner).")
         return
     _started = True
     try:

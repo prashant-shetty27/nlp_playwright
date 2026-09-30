@@ -499,6 +499,18 @@ async def system_info() -> dict:
     return await _call("GET", "/system/info")
 
 
+async def sync_status() -> dict:
+    return await _call("GET", "/system/sync/status")
+
+
+async def sync_pull() -> dict:
+    return await _call("POST", "/system/sync/pull", json={})
+
+
+async def sync_share(message: str = "") -> dict:
+    return await _call("POST", "/system/sync/share", json={"message": message})
+
+
 async def restart_server(force: bool = False) -> dict:
     """
     Ask the server to replace itself.

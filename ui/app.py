@@ -281,7 +281,8 @@ async def elements_page(platform: str, edit: str = "", back: str = "") -> None:
 async def settings_page() -> None:
     if not _page_shell():
         return
-    _not_built("Settings", "ui/pages/settings/environments.py")
+    from ui.pages.settings.team_sync import render
+    await render()
 
 
 def _session_secret() -> str:

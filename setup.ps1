@@ -36,4 +36,4 @@ if (-not (Test-Path "$root\data\common\variables.json") -and (Test-Path "$root\d
   Copy-Item "$root\data\common\variables.example.json" "$root\data\common\variables.json"
 }
 Write-Host ""
-Write-Host "Setup done. Start the portal with:  .\start_portal.ps1"
+Write-Host "Setup done. Start the portal by double-clicking start_portal.cmd"

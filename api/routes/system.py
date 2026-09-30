@@ -30,8 +30,10 @@ import sys
 import threading
 import time
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+
+from api.auth import acting_user, require
 
 logger = logging.getLogger(__name__)
 
@@ -196,3 +198,34 @@ def restart(body: RestartRequest):
     return {"restarting": True, "host": host, "port": port,
             "relauncher_pid": pid, "interrupted_runs": running,
             "poll": "/health"}
+
+
+# ── Team sync (git without git) ──────────────────────────────────────────────
+class ShareRequest(BaseModel):
+    message: str = ""
+
+
+@router.get("/sync/status")
+def sync_status():
+    from core import teamsync
+    return teamsync.status()
+
+
+@router.post("/sync/pull")
+def sync_pull(user: str = Depends(acting_user)):
+    """Bring in what the team shared. Refused while a test is running."""
+    require(user, "run")
+    if _running_runs():
+        raise HTTPException(status_code=409, detail="A test is running — get the latest once it finishes.")
+    from core import teamsync
+    r = teamsync.get_latest()
+    return r.__dict__
+
+
+@router.post("/sync/share")
+def sync_share(body: ShareRequest, user: str = Depends(acting_user)):
+    """Send my test cases / elements / plans to the team."""
+    require(user, "write")
+    from core import teamsync
+    r = teamsync.share(user, body.message)
+    return r.__dict__
