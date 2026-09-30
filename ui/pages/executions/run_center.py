@@ -231,6 +231,16 @@ class RunCenter:
                      "under your test's control.").style(
                 f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}")
 
+            # Environment: run the same test case on live or on a development /
+            # pre-prod host. Every www.justdial.com URL it opens (typed or from
+            # Test Data) moves to that host, and that host's saved login is attached.
+            self.site_env = ui.select({"": "Live — URLs as written (www.justdial.com)"},
+                                      value="", label="Environment") \
+                .props("outlined dense").classes("w-full") \
+                .tooltip("Pick prot / prot3 / devx … to run this test there without editing any URL.")
+            self.site_env_hint = ui.label("").style(
+                f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}")
+
             # Which browser the site should see. Samsung Internet and the stock
             # browsers are Chromium; the site tells them apart by user agent.
             self.identity = ui.select(
@@ -271,6 +281,28 @@ class RunCenter:
                 ui.label("Pick a flow to see what it asks for.").style(
                     f"font-size:{TYPOGRAPHY['size_sm']}; color:{COLORS['text_muted']}")
 
+    async def _load_site_envs(self) -> None:
+        sel = getattr(self, "site_env", None)
+        if sel is None:
+            return
+        try:
+            envs = await api.site_environments()
+        except api.ApiError:
+            envs = []
+        opts = {"": "Live — URLs as written (www.justdial.com)"}
+        for e in envs:
+            note = "" if not e.get("needs_login") or e.get("login_saved") else "  (login not saved — ask admin)"
+            opts[e["name"]] = f"{e['name']} — {e['host']}{note}"
+        sel.set_options(opts, value=sel.value if sel.value in opts else "")
+
+        def hint(_=None) -> None:
+            v = sel.value or ""
+            self.site_env_hint.set_text(
+                "" if not v else f"www.justdial.com links in this test open on {opts[v].split(' — ')[1].split()[0]}; "
+                                 "its login is attached automatically.")
+        sel.on_value_change(hint)
+        hint()
+
     async def _load_auth_options(self, flow: str) -> None:
         """Offer the saved staging logins; preselect nothing (URL login stays default)."""
         sel = getattr(self, "auth_select", None)
@@ -290,7 +322,10 @@ class RunCenter:
         # URL that includes credentials" — the touch site stays on its spinner
         # for ever. Context-level login has none of that. It can still be
         # switched off here for a site that needs the URL form.
-        sel.set_options(opts, value=sug if sug in opts else "none")
+        # Default "" = let the server decide (the chosen Environment's login, or
+        # the flow's own host); an explicit pick still overrides.
+        opts = {"": "Automatic (recommended)", **opts}
+        sel.set_options(opts, value="")
         sel.set_visibility(bool(hosts))
         self.auth_hint.set_visibility(bool(hosts))
         self.auth_hint.set_text(
@@ -320,6 +355,7 @@ class RunCenter:
         except api.ApiError:
             self.provided = {}
         await self._load_auth_options(flow)
+        await self._load_site_envs()
 
         # Only what the flow needs from OUTSIDE: every ${var} referenced minus
         # the ones an earlier step of the same flow produces (`store … as x`,
@@ -405,6 +441,7 @@ class RunCenter:
                 http_auth_domain=(getattr(self, "auth_select", None) and self.auth_select.value) or "",
                 record_video=bool(getattr(self, "record_video", None) and self.record_video.value),
                 browser_identity=(getattr(self, "identity", None) and self.identity.value) or "",
+                site_env=(getattr(self, "site_env", None) and self.site_env.value) or "",
             )
         except api.ApiError as e:
             ui.notify(f"Could not start: {e.detail}", type="negative")
@@ -414,7 +451,7 @@ class RunCenter:
 
 
 async def render(flow: str = "", platform: str = "website", *,
-                 device: str = "", browser: str = "", identity: str = "") -> None:
+                 device: str = "", browser: str = "", identity: str = "", env: str = "") -> None:
     page = RunCenter(flow, platform)
     await page.load()
     page.render()
@@ -424,6 +461,8 @@ async def render(flow: str = "", platform: str = "website", *,
         page.browser_select.set_value(browser)
     if identity and getattr(page, "identity", None) is not None:
         page.identity.set_value(identity)
+    if env and getattr(page, "site_env", None) is not None:
+        page.site_env.set_value(env)
     # Setting a select's initial `value` does not fire its on_change, so a flow
     # arriving in the URL — which is how the editor's Run button gets here —
     # filled the dropdown and nothing else. The panel kept saying "Pick a flow

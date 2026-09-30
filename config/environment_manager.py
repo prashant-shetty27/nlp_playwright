@@ -250,3 +250,23 @@ def apply_to_flow_steps(steps: list, env: dict | None = None) -> list:
         else:
             out.append(step)
     return out
+
+
+def site_environments() -> list[dict]:
+    """
+    Environments a run can target: [{"name", "host", "needs_login"}], names only
+    — never credentials. From config/environments.json entries that replace
+    www.justdial.com with another host (prot, prot3, devx …).
+    """
+    from urllib.parse import urlparse
+    out = []
+    for name, env in (_load().get("envs") or {}).items():
+        host = (env.get("domain_override") or "").strip()
+        if not host and env.get("base_url") and env.get("domain_source"):
+            host = urlparse(env["base_url"]).hostname or ""
+        host = host.replace("https://", "").replace("http://", "").strip("/")
+        if not host or "example.com" in host:
+            continue
+        out.append({"name": name, "host": host,
+                    "needs_login": (env.get("auth_type") or "none").lower() == "basic"})
+    return sorted(out, key=lambda e: e["name"])

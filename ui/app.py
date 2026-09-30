@@ -178,13 +178,13 @@ async def platform_page(platform: str, flow: str = "", line: int = 0) -> None:
 
 @ui.page("/run")
 async def run_page(flow: str = "", platform: str = "website",
-                   device: str = "", browser: str = "", identity: str = "") -> None:
+                   device: str = "", browser: str = "", identity: str = "", env: str = "") -> None:
     if not _page_shell():
         return
     from ui.pages.executions.run_center import render
     # device / browser / identity preselect the run options — a report's
     # "Re-run" link uses them so a browser-specific failure is re-run as it ran.
-    await render(flow, platform, device=device, browser=browser, identity=identity)
+    await render(flow, platform, device=device, browser=browser, identity=identity, env=env)
 
 
 @ui.page("/run/live")

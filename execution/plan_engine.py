@@ -395,7 +395,8 @@ def _run(rec: dict) -> None:
                                 screenshot_mode=ex.get("screenshot_mode") or "all",
                                 device_name=dev.get("device_name") or "",
                                 browser=dev.get("browser") or "",
-                                browser_identity=dev.get("browser_identity") or "")
+                                browser_identity=dev.get("browser_identity") or "",
+                                site_env=ex.get("site_env") or "")
             item.update(status="running", attempt=attempt, started_at=_now())
             _save(rec)
             try:

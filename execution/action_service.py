@@ -231,6 +231,30 @@ def _reachability_hint(host: str) -> str:
     return ""
 
 
+#: The site environment this run targets (Run Center / Test Plan "Environment").
+#: {"name": "prot", "host": "prot.justdial.com"} rewrites every production
+#: justdial URL the test opens — typed in a step or coming from Test Data — to
+#: that host, so one test case runs on live or on prot3 / prot / devx … without
+#: editing a single URL. None = run the URLs exactly as written.
+SITE_ENV: dict | None = None
+_PROD_HOSTS = {"www.justdial.com", "justdial.com", "m.justdial.com"}
+
+
+def site_env_url(url: str) -> str:
+    """`url` moved onto the run's site environment (unchanged when none is set)."""
+    if not SITE_ENV or not SITE_ENV.get("host"):
+        return url
+    from urllib.parse import urlparse, urlunparse
+    try:
+        p = urlparse(url if "://" in url else "https://" + url)
+    except ValueError:
+        return url
+    host = (p.hostname or "").lower()
+    if host not in _PROD_HOSTS:
+        return url
+    return urlunparse((p.scheme or "https", SITE_ENV["host"], p.path, p.params, p.query, p.fragment))
+
+
 def open_site(page, url: str):
     from urllib.parse import urlparse
     from config.settings import get_auth_registry
@@ -251,6 +275,11 @@ def open_site(page, url: str):
         )
 
     sanitized_url = raw_url if raw_url.startswith(("http://", "https://")) else f"https://{raw_url}"
+    moved = site_env_url(sanitized_url)
+    if moved != sanitized_url:
+        logger.info("🌐 Environment %s: %s → %s", SITE_ENV.get("name"),
+                    urlparse(sanitized_url).hostname, SITE_ENV.get("host"))
+        sanitized_url = moved
     parsed_url = urlparse(sanitized_url)
     # hostname, NOT netloc. netloc carries any `user:password@` the author wrote
     # into the step, so using it as the domain meant three things went wrong at

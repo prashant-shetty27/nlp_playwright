@@ -450,8 +450,10 @@ async def run(project: str, platform: str, *, headless: bool = True,
         screenshot_context: int = 5,
         http_auth_domain: str = "",
         record_video: bool = False,
-        browser_identity: str = "") -> dict:
+        browser_identity: str = "",
+        site_env: str = "") -> dict:
     return await _call("POST", "/tests/run", json={
+        "site_env": site_env or "",
         "record_video": bool(record_video),
         "browser_identity": browser_identity or "",
         # Context-level HTTP Basic login for a staging host ("" = URL-embedded, the default)
@@ -466,6 +468,11 @@ async def run(project: str, platform: str, *, headless: bool = True,
         "screenshot_mode": screenshot_mode,
         "screenshot_context": screenshot_context,
     })
+
+
+async def site_environments() -> list[dict]:
+    """[{name, host, needs_login, login_saved}] — targets for the Environment picker."""
+    return await _call("GET", "/tests/site-environments")
 
 
 async def auth_domains(flow: str) -> dict:

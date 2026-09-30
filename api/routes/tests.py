@@ -150,6 +150,10 @@ class RunRequest(BaseModel):
     #: ios_safari, android_chrome, ios_chrome. Sets the user agent (and, when the
     #: preset names them, the device and engine unless given explicitly).
     browser_identity: str = ""
+    #: Site environment to run against (prot, prot3, devx … from
+    #: config/environments.json). Every www.justdial.com URL the test opens is
+    #: moved to that host and its saved login is attached. "" = URLs as written.
+    site_env: str = ""
     # Names within `parameters` whose values must never be logged or echoed back.
     secret_parameters: list[str] = []
 
@@ -232,6 +236,11 @@ def _run_flow_sync_unlocked(run_id: str, flow_path: str, headless: bool,
 
     sanitize_database()
 
+    # Site environment for this run (www → prot / prot3 / devx …). One run at a
+    # time, so a module-level setting in action_service is safe; cleared below.
+    import execution.action_service as _svc
+    _svc.SITE_ENV = (capabilities or {}).get("site_env") or None
+
     project_name = os.path.basename(flow_path).replace(".flow", "")
     report = TestReportManager(testplan_name=project_name,
                                executer_name=triggered_by or "api")
@@ -242,6 +251,8 @@ def _run_flow_sync_unlocked(run_id: str, flow_path: str, headless: bool,
         # Which browser this ran as — a design check is meaningless without it.
         report.meta["device"] = {k: capabilities.get(k, "") for k in
                                  ("device_name", "browser", "browser_identity", "headless")}
+        if capabilities.get("site_env"):
+            report.meta["site_env"] = capabilities["site_env"]
 
     session = TestSession()
     # Bind the session's own variable store BEFORE injecting, so values land where
@@ -346,6 +357,22 @@ def _run_flow_sync_unlocked(run_id: str, flow_path: str, headless: bool,
 
     try:
         page = open_browser(session, capabilities=capabilities or None)
+        if _svc.SITE_ENV:
+            # Links on the page that point at www.justdial.com (absolute hrefs,
+            # redirects) would carry the run back to live half-way through.
+            # Page navigations to a production host are redirected onto the
+            # chosen environment; images / scripts are left alone.
+            import re as _re
+            def _stay_on_env(route, request):
+                try:
+                    if request.resource_type == "document":
+                        moved = _svc.site_env_url(request.url)
+                        if moved != request.url:
+                            return route.fulfill(status=302, headers={"location": moved})
+                except Exception:  # noqa: BLE001
+                    pass
+                return route.continue_()
+            page.context.route(_re.compile(r"^https?://(www\.|m\.)?justdial\.com(/|$)"), _stay_on_env)
 
         if flow_lines is not None:
             lines = flow_lines
@@ -431,6 +458,7 @@ def _run_flow_sync_unlocked(run_id: str, flow_path: str, headless: bool,
         # Before the browser closes: in failure mode this deletes the rolling
         # window that no failure ever claimed.
         shots.finish()
+        _svc.SITE_ENV = None
         if page is not None:
             try:
                 video = close_browser(page, project_name, session)
@@ -781,8 +809,19 @@ def _prepare_run(body: "RunRequest", flow_path: str = ""):
     # saved login for the host the flow opens. "none" keeps the URL form for a
     # site that needs it; Run Center offers that as "Not needed / use URL login".
     auth_domain = (body.http_auth_domain or "").strip()
+    site_env = None
+    if (getattr(body, "site_env", "") or "").strip():
+        from config.environment_manager import site_environments
+        match = [e for e in site_environments() if e["name"] == body.site_env.strip()]
+        if not match:
+            raise HTTPException(status_code=422, detail=f"Unknown environment '{body.site_env}'.")
+        site_env = {"name": match[0]["name"], "host": match[0]["host"]}
     if auth_domain.lower() == "none":
         auth_domain = ""
+    elif not auth_domain and site_env:
+        # The run is moved onto this host, so its login is the one to attach.
+        from config.settings import get_auth_registry
+        auth_domain = site_env["host"] if site_env["host"] in get_auth_registry() else ""
     elif not auth_domain:
         auth_domain = _auth_domain_for(flow_path)
 
@@ -802,6 +841,8 @@ def _prepare_run(body: "RunRequest", flow_path: str = ""):
         caps["browser_identity"] = body.browser_identity
     if auth_domain:
         caps["http_auth_domain"] = auth_domain
+    if site_env:
+        caps["site_env"] = site_env
     if getattr(body, "record_video", False):
         caps["record_video"] = True
 
@@ -941,6 +982,15 @@ def _remember_setup(body) -> None:
         os.replace(tmp, LAST_SETUP_PATH)
     except Exception as e:  # noqa: BLE001 — never fail a run over bookkeeping
         logger.debug("Could not record last-run setup: %s", e)
+
+
+@router.get("/site-environments")
+def list_site_environments():
+    """Environments a run can target (name, host, needs_login) — never credentials."""
+    from config.environment_manager import site_environments
+    from config.settings import get_auth_registry
+    reg = get_auth_registry()
+    return [{**e, "login_saved": e["host"] in reg} for e in site_environments()]
 
 
 @router.get("/auth-domains/{flow}")

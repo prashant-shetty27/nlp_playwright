@@ -259,6 +259,22 @@ async def render_edit(plan_id: str = "") -> None:
                                      "device_name": "iPhone 15", "browser": "webkit",
                                      "browser_identity": "ios_chrome", "coverage": "positive"},
             }
+            site_env_sel = ui.select({"": "Live — URLs as written"}, value=ex.get("site_env") or "",
+                                     label="Environment (where the test cases run)") \
+                .props("outlined dense").style("min-width:22rem")
+            muted("Pick prot / prot3 / devx … to run the whole plan on that host: every www.justdial.com "
+                  "URL in its test cases moves there and the saved login is attached.")
+
+            async def _fill_envs() -> None:
+                try:
+                    envs = await api.site_environments()
+                except api.ApiError:
+                    envs = []
+                opts = {"": "Live — URLs as written"}
+                opts.update({e["name"]: f"{e['name']} — {e['host']}" for e in envs})
+                site_env_sel.set_options(opts, value=site_env_sel.value if site_env_sel.value in opts else "")
+            ui.timer(0.1, _fill_envs, once=True)
+
             devices = ui.select({k: v["label"] for k, v in DEVICE_PROFILES.items()}, multiple=True,
                                 value=[d.get("browser_identity") for d in (ex.get("devices") or [])
                                        if isinstance(d, dict) and d.get("browser_identity") in DEVICE_PROFILES],
@@ -362,7 +378,8 @@ async def render_edit(plan_id: str = "") -> None:
                          "screenshot_mode": shots.value or "all",
                          "stop_on_failure": bool(stop_step.value),
                          "stop_on_first_failure": bool(stop_plan.value),
-                         "devices": [DEVICE_PROFILES[k] for k in (devices.value or []) if k in DEVICE_PROFILES]}
+                         "devices": [DEVICE_PROFILES[k] for k in (devices.value or []) if k in DEVICE_PROFILES],
+                         "site_env": site_env_sel.value or ""}
             notify = {"slack": bool(slack.value), "channel": (channel.value or "").strip(),
                       "when": when.value, "email": bool(email_on.value),
                       "email_to": (email_to.value or "").strip()}

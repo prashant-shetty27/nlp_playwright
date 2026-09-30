@@ -174,7 +174,8 @@ class ReportDetail:
                 from urllib.parse import urlencode
                 q = urlencode({k: v for k, v in {"flow": flow, "device": dev.get("device_name", ""),
                                                  "browser": dev.get("browser", ""),
-                                                 "identity": dev.get("browser_identity", "")}.items() if v})
+                                                 "identity": dev.get("browser_identity", ""),
+                                                 "env": (self.report.get("site_env") or {}).get("name", "")}.items() if v})
                 ui.button("Re-run", icon="replay",
                           on_click=lambda q=q: ui.navigate.to(f"/run?{q}")) \
                     .props("unelevated dense")
