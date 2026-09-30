@@ -238,6 +238,15 @@ async def report_detail_page(run_id: str) -> None:
     await render(run_id)
 
 
+@ui.page("/issues")
+async def issues_page(run_id: str = "", plan_run: str = "") -> None:
+    """Failures of a run → review → raise on Jira (Bug / Defect / Concern)."""
+    if not _page_shell():
+        return
+    from ui.pages.issues import render
+    await render(run_id, plan_run)
+
+
 @ui.page("/data/variables")
 async def variables_page(tab: str = "") -> None:
     if not _page_shell():

@@ -711,3 +711,46 @@ async def delete_folder(path: str) -> dict:
 
 async def assign_folder(tests: list[str], folder: str) -> dict:
     return await _call("POST", "/folders/assign", json={"tests": tests, "folder": folder})
+
+
+# ── Issues → Jira ─────────────────────────────────────────────────────────────
+async def issue_draft(run_id: str = "", plan_run: str = "") -> dict:
+    return await _call("GET", "/issues/draft", params={"run_id": run_id, "plan_run": plan_run})
+
+
+async def jira_login() -> dict:
+    return await _call("GET", "/issues/login")
+
+
+async def save_jira_login(email: str, token: str) -> dict:
+    return await _call("PUT", "/issues/login", json={"email": email, "token": token})
+
+
+async def forget_jira_login() -> dict:
+    return await _call("DELETE", "/issues/login")
+
+
+async def save_issue_defaults(defaults: dict) -> dict:
+    return await _call("PUT", "/issues/defaults", json=defaults)
+
+
+async def jira_assignees(project: str, q: str = "") -> list[dict]:
+    return (await _call("GET", "/issues/assignees", params={"project": project, "q": q})).get("users", [])
+
+
+async def raise_issues(story: str, issues: list[dict]) -> list[dict]:
+    return (await _call("POST", "/issues/raise", json={"story": story, "issues": issues})).get("results", [])
+
+
+async def issue_prefill_links(story: str, issues: list[dict]) -> dict:
+    return (await _call("POST", "/issues/prefill", json={"story": story, "issues": issues})).get("links", {})
+
+
+async def issues_csv(story: str, issues: list[dict]) -> bytes:
+    import asyncio
+    async with _client() as c:
+        r = await asyncio.wait_for(c.post("/issues/csv", json={"story": story, "issues": issues}),
+                                   DEFAULT_TIMEOUT_S)
+    if r.status_code >= 400:
+        raise ApiError(r.status_code, r.text[:300])
+    return r.content

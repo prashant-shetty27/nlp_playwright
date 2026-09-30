@@ -292,6 +292,11 @@ class PlanRunPage:
                     with ui.menu():
                         ui.menu_item("Stop after the current test case", on_click=lambda: self.stop(False))
                         ui.menu_item("Stop now (at the next step)", on_click=lambda: self.stop(True))
+            n_failed = sum(1 for i in (r.get("items") or []) if i.get("status") == "failed")
+            if not running and n_failed:
+                ui.button(f"Review & raise issues ({n_failed})", icon="bug_report",
+                          on_click=lambda: ui.navigate.to(f"/issues?plan_run={quote(self.run_id)}")) \
+                    .props("unelevated dense").style(f"background:{COLORS['danger']}")
             if not running and r.get("items"):
                 rid = quote(self.run_id)
                 with ui.button("Report", icon="description").props("flat dense"):

@@ -116,6 +116,9 @@ app.include_router(tests.router, dependencies=[Depends(need("run"))])
 app.include_router(sources.router, dependencies=[Depends(need("write"))])
 app.include_router(generate.router, dependencies=[Depends(need("write"))])
 app.include_router(testdata.router, dependencies=[Depends(need("write", reads="read"))])
+from api.routes import issues as _issue_routes  # noqa: E402
+# Raising tickets writes to Jira under the tester's own token: editors and admins.
+app.include_router(_issue_routes.router, dependencies=[Depends(need("write", reads="read"))])
 app.include_router(stepgroups.router, dependencies=[Depends(need("write"))])
 app.include_router(review.router, dependencies=[Depends(need("write"))])
 app.include_router(assist.router, dependencies=[Depends(need("write"))])

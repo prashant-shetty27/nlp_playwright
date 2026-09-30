@@ -31,7 +31,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 NEVER_COMMIT = [
     r"^\.env$", r"^\.env\..*(?<!example)$", r"^data/users\.json$", r"^data/common/variables\.json$",
-    r"^config/environments\.json$", r"^data/plan_state\.json$", r"runtime_variables\.json$",
+    r"^config/environments\.json$", r"^data/plan_state\.json$", r"^data/jira_logins\.json$", r"^data/raised_issues\.json$", r"runtime_variables\.json$",
     r"\.lock$", r"^data/screenshots/", r"^screenshots/", r"^data/uploads/", r"\.zip$", r"^data/videos/", r"^data/logs/", r"^data/plan_runs/",
     r"^data/plan_reports/", r"^data/testsigma_exports/", r"^data/meta/", r"^data/\.session_secret$",
     r"^data/test_users\.(csv|xlsx)$", r"\.bak$", r"\.bak_\d+$",

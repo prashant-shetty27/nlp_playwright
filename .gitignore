@@ -62,3 +62,5 @@ core_logic_locator_finder.zip
 data/uploads/
 _handover/
 _samples/
+data/jira_logins.json
+data/raised_issues.json

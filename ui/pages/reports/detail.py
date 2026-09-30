@@ -152,6 +152,10 @@ class ReportDetail:
                     f"color:{COLORS['text_muted']}; font-size:{TYPOGRAPHY['size_sm']};"
                     f"font-family:{TYPOGRAPHY['mono']}")
             ui.space()
+            if failed:
+                ui.button("Review & raise issues", icon="bug_report",
+                          on_click=lambda: ui.navigate.to(f"/issues?run_id={self.run_id}")) \
+                    .props("unelevated dense").style(f"background:{COLORS['danger']}")
             # Says WHY images are missing before anyone has to wonder.
             shots = self.report.get("screenshots") or {}
             if shots and shots.get("mode") and shots.get("mode") != "all":

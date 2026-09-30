@@ -371,6 +371,10 @@ class LiveView:
                 ui.label(res["report_file"]).style(
                     f"font-family:{TYPOGRAPHY['mono']};"
                     f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}")
+            if failed:
+                ui.button("Review & raise issues", icon="bug_report",
+                          on_click=lambda: ui.navigate.to(f"/issues?run_id={self.run_id}")) \
+                    .props("unelevated dense").style(f"background:{COLORS['danger']}")
             ui.button("Run again", icon="replay",
                       on_click=lambda: ui.navigate.to(
                           f"/run?flow={self.flow}&platform={self.platform}")) \
