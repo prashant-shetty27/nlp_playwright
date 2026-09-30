@@ -53,6 +53,16 @@ def rename_folder(body: RenameBody):
     return {"path": _run(folders.rename, body.path, body.new_name)}
 
 
+class MoveBody(BaseModel):
+    path: str
+    new_parent: str = ""
+
+
+@router.post("/move")
+def move_folder(body: MoveBody):
+    return {"path": _run(folders.move, body.path, body.new_parent)}
+
+
 @router.post("/delete")
 def delete_folder(body: PathBody):
     return _run(folders.delete, body.path)

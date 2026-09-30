@@ -1,12 +1,13 @@
 {
   "folders": [
+    "Catalogue",
     "Prashant",
     "Prashant/B2B",
+    "Prashant/B2B/PDP",
     "Prashant/B2B/PRP",
     "Prashant/Core",
     "Prashant/Core/NCT",
-    "Trails",
-    "Prashant/B2B/PDP"
+    "Trails"
   ],
   "assign": {
     "NCT_Ask_for_Price": "Prashant/Core/NCT",
@@ -20,16 +21,16 @@
     "PRP_Sanity_Ball_Bearing": "Prashant/B2B/PRP",
     "PRP_View_Catalogue_and_Request_Catalogue": "Prashant/B2B/PRP",
     "PRP_WA_removed_in_Non_Login": "Prashant/B2B/PRP",
+    "Photos_360_Icon_After_Back": "Catalogue",
+    "Photos_360_Icon_Both_Surfaces": "Catalogue",
+    "Photos_360_Icon_Deep_Link": "Catalogue",
+    "Photos_360_Icon_Gallery_Single": "Catalogue",
+    "Photos_360_Icon_Photos_Section": "Catalogue",
     "RECOMMEDED_PRODUCT_CASES_VIA_JIRA": "Trails",
     "Recommended_Product_Carousel_Logic": "Trails",
     "Recommended_Product_Carousel_Logic_Live": "Trails",
     "Recommended_Product_City_Preference": "Trails",
     "_Report_Smoke_Fail": "Trails",
-    "_Report_Smoke_Pass": "Trails",
-    "PDP_360_Icon_Photos_Section": "Prashant/B2B/PDP",
-    "PDP_360_Icon_Gallery_Single": "Prashant/B2B/PDP",
-    "PDP_360_Icon_After_Back": "Prashant/B2B/PDP",
-    "PDP_360_Icon_Deep_Link": "Prashant/B2B/PDP",
-    "PDP_360_Icon_Both_Surfaces": "Prashant/B2B/PDP"
+    "_Report_Smoke_Pass": "Trails"
   }
 }

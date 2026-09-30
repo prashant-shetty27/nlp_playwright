@@ -122,6 +122,40 @@ def rename(old: str, new_name: str) -> str:
         return new
 
 
+def move(path: str, new_parent: str) -> str:
+    """Move a folder (with its sub-folders and test cases) under another folder
+    ('' = top level). Returns the new path."""
+    with _lock:
+        d = _load()
+        old = _find(d["folders"], clean_path(path)) or ""
+        if not old:
+            raise FolderError("That folder does not exist.")
+        parent = ""
+        if str(new_parent or "").strip():
+            parent = _find(d["folders"], clean_path(new_parent)) or ""
+            if not parent:
+                raise FolderError(f"'{new_parent}' does not exist.")
+        if parent == old or parent.startswith(old + "/"):
+            raise FolderError("A folder cannot be moved inside itself.")
+        name = old.split("/")[-1]
+        new = f"{parent}/{name}" if parent else name
+        if new == old:
+            return old
+        if _find(d["folders"], new):
+            raise FolderError(f"'{new}' already exists — rename one of them first.")
+        deepest = max(p.count("/") - old.count("/") for p in d["folders"]
+                      if p == old or p.startswith(old + "/"))
+        if new.count("/") + deepest + 1 > 5:
+            raise FolderError("That would make folders more than 5 levels deep.")
+
+        def swap(p: str) -> str:
+            return new + p[len(old):] if p == old or p.startswith(old + "/") else p
+        d["folders"] = [swap(p) for p in d["folders"]]
+        d["assign"] = {t: swap(p) for t, p in d["assign"].items()}
+        _save(d)
+        return new
+
+
 def delete(path: str) -> dict:
     """Delete a folder and its sub-folders. Their test cases are NOT deleted —
     they move to the parent folder (or Unfiled)."""

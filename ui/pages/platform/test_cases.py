@@ -513,6 +513,7 @@ class TestCasesPage:
                     with ui.menu():
                         ui.menu_item("New sub-folder", on_click=lambda p=path: self._folder_dialog("new", p))
                         ui.menu_item("Rename", on_click=lambda p=path: self._folder_dialog("rename", p))
+                        ui.menu_item("Move to…", on_click=lambda p=path: self._folder_move_dialog(p))
                         ui.menu_item("Delete folder", on_click=lambda p=path: self._folder_delete_dialog(p))
         row.on("click", lambda p=path: self._toggle_folder(p))
         # Drop target: drag a test case onto a folder (or onto Unfiled) to move it.
@@ -638,6 +639,54 @@ class TestCasesPage:
             with ui.row().classes("w-full justify-end gap-2"):
                 ui.button("Cancel", on_click=dialog.close).props("flat")
                 ui.button("Rename" if mode == "rename" else "Create", on_click=save).props("unelevated")
+        dialog.open()
+
+    def _folder_move_dialog(self, path: str) -> None:
+        """Move a folder — with its sub-folders and test cases — under another one."""
+        folders = self.folder_data.get("folders", [])
+        current_parent = "/".join(path.split("/")[:-1])
+        targets = {"": "— top level —"}
+        targets |= {f: f for f in folders
+                    if f != path and not f.startswith(path + "/") and f != current_parent}
+        if current_parent:
+            targets.pop(current_parent, None)
+        else:
+            targets.pop("", None)
+        dialog = ui.dialog()
+        with dialog, ui.card().style("width:28rem"):
+            ui.label(f"Move '{path.split('/')[-1]}'").style(
+                f"font-weight:{TYPOGRAPHY['weight_bold']}")
+            ui.label("Its sub-folders and test cases move with it.").style(
+                f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}")
+            dest = ui.select(targets, label="Move into", with_input=True) \
+                .props("outlined dense").classes("w-full")
+
+            async def go() -> None:
+                if dest.value is None:
+                    ui.notify("Pick where to move it", type="warning")
+                    return
+                try:
+                    res = await api.move_folder(path, dest.value)
+                except api.ApiError as e:
+                    ui.notify(str(e.detail), type="negative")
+                    return
+                new = res.get("path", "")
+                dialog.close()
+                # Keep it open and current in its new place.
+                parts = new.split("/")
+                self.open_folders = {("/".join(parts) + p[len(path):]) if
+                                     (p == path or p.startswith(path + "/")) else p
+                                     for p in self.open_folders}
+                self.open_folders |= {"/".join(parts[:k]) for k in range(1, len(parts) + 1)}
+                if self.current_folder == path or self.current_folder.startswith(path + "/"):
+                    self.current_folder = new + self.current_folder[len(path):]
+                ui.notify(f"Moved to {new}", type="positive")
+                await self.load()
+                self.render_rows()
+
+            with ui.row().classes("w-full justify-end gap-2"):
+                ui.button("Cancel", on_click=dialog.close).props("flat")
+                ui.button("Move", on_click=go).props("unelevated")
         dialog.open()
 
     def _folder_delete_dialog(self, path: str) -> None:

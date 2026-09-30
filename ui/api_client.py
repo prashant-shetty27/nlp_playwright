@@ -701,6 +701,10 @@ async def rename_folder(path: str, new_name: str) -> dict:
     return await _call("POST", "/folders/rename", json={"path": path, "new_name": new_name})
 
 
+async def move_folder(path: str, new_parent: str) -> dict:
+    return await _call("POST", "/folders/move", json={"path": path, "new_parent": new_parent})
+
+
 async def delete_folder(path: str) -> dict:
     return await _call("POST", "/folders/delete", json={"path": path})
 
