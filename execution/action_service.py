@@ -240,6 +240,15 @@ SITE_ENV: dict | None = None
 _PROD_HOSTS = {"www.justdial.com", "justdial.com", "m.justdial.com"}
 
 
+def _env_hosts() -> set[str]:
+    """Every environment host from config/environments.json (prot, prot3, devx …)."""
+    try:
+        from config.environment_manager import site_environments
+        return {e["host"].lower() for e in site_environments()}
+    except Exception:  # noqa: BLE001
+        return set()
+
+
 def site_env_url(url: str) -> str:
     """`url` moved onto the run's site environment (unchanged when none is set)."""
     if not SITE_ENV or not SITE_ENV.get("host"):
@@ -250,7 +259,9 @@ def site_env_url(url: str) -> str:
     except ValueError:
         return url
     host = (p.hostname or "").lower()
-    if host not in _PROD_HOSTS:
+    # Live URLs AND URLs written for another environment (a test recorded on
+    # prot3 run with Environment = prot) both move to the chosen host.
+    if host not in _PROD_HOSTS and host not in _env_hosts():
         return url
     return urlunparse((p.scheme or "https", SITE_ENV["host"], p.path, p.params, p.query, p.fragment))
 

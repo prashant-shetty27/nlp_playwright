@@ -372,7 +372,7 @@ def _run_flow_sync_unlocked(run_id: str, flow_path: str, headless: bool,
                 except Exception:  # noqa: BLE001
                     pass
                 return route.continue_()
-            page.context.route(_re.compile(r"^https?://(www\.|m\.)?justdial\.com(/|$)"), _stay_on_env)
+            page.context.route(_re.compile(r"^https?://([a-z0-9-]+\.)?justdial\.com(/|$)"), _stay_on_env)
 
         if flow_lines is not None:
             lines = flow_lines

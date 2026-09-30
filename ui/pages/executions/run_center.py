@@ -293,7 +293,8 @@ class RunCenter:
         for e in envs:
             note = "" if not e.get("needs_login") or e.get("login_saved") else "  (login not saved — ask admin)"
             opts[e["name"]] = f"{e['name']} — {e['host']}{note}"
-        sel.set_options(opts, value=sel.value if sel.value in opts else "")
+        want = getattr(self, "_wanted_env", "") or sel.value
+        sel.set_options(opts, value=want if want in opts else "")
 
         def hint(_=None) -> None:
             v = sel.value or ""
@@ -461,8 +462,7 @@ async def render(flow: str = "", platform: str = "website", *,
         page.browser_select.set_value(browser)
     if identity and getattr(page, "identity", None) is not None:
         page.identity.set_value(identity)
-    if env and getattr(page, "site_env", None) is not None:
-        page.site_env.set_value(env)
+    page._wanted_env = env or ""
     # Setting a select's initial `value` does not fire its on_change, so a flow
     # arriving in the URL — which is how the editor's Run button gets here —
     # filled the dropdown and nothing else. The panel kept saying "Pick a flow
