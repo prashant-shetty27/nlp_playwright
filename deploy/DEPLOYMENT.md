@@ -15,7 +15,7 @@ A web portal (Python, FastAPI + NiceGUI) where QA writes and runs codeless UI te
 | OS | Ubuntu 22.04 LTS or Debian 12 (x86_64); RHEL-family also works but `server_setup.sh` uses apt |
 | CPU / RAM / disk | 4 vCPU, **8 GB RAM** (portal ≈ 0.5 GB; each headless browser run ≈ 0.5–1 GB; 3–4 parallel runs), **30 GB disk** (20 GB minimum): app + Python packages + browsers ≈ 3 GB; screenshots ≈ 2.5 MB per run, kept **14 days** (≈ 5 GB at ~150 runs/day); reports, logs, backups ≈ 1–2 GB |
 | Python | 3.11 (script installs it via deadsnakes if missing) |
-| Network | On the office network; reachable from Mumbai + Bangalore offices and over VPN. **Outbound** to *.justdial.com (prod, prot*, devx, seo), jdjira.justdial.com, Slack API (hooks.slack.com / slack.com), PyPI + playwright CDN at install time, api.anthropic.com if the AI drafting feature is enabled |
+| Network | On the office network (no VPN needed on the server). Users reach it from the offices or over VPN. Internet access needed at install time only (pip packages, Playwright browser download) |
 | Inbound | TCP **8100** from office/VPN ranges (or 443 via nginx reverse proxy with an internal cert — optional) |
 | Whitelisting | The server's **IP must be added to the automation whitelist** the same way Testsigma's IPs were (justdial staging/prod bot protection, OTP portal) |
 | DNS | Please create `codeless-automation.justdial.internal` (or similar) → server IP |
