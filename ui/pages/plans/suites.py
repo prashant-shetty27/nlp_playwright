@@ -51,11 +51,17 @@ async def render_list() -> None:
             ("name", "Suite"), ("platform", "Platform"), ("count", "Test cases"),
             ("cases", "Contains"), ("updated", "Last changed"))]
         rows = [{"id": s["id"], "name": s["name"], "platform": s["platform"], "count": s["count"],
-                 "cases": ", ".join(c["name"] for c in s["test_cases"])[:120],
+                 "cases": ", ".join(c["name"] for c in s["test_cases"]),
                  "updated": f"{ist(s.get('updated_at'))} by {s.get('updated_by') or '—'}"
                             if s.get("updated_at") else "—"} for s in items]
+        # Search: matches suite name, platform, and the test cases inside it.
+        search = ui.input(placeholder="Search suites, platform or test case…") \
+            .props("outlined dense clearable").style("width:28rem")
+        with search.add_slot("prepend"):
+            ui.icon("search")
         t = ui.table(columns=cols, rows=rows, row_key="id",
                      selection="multiple" if can("write") else None).classes("w-full")
+        t.bind_filter_from(search, "value")
         t.add_slot("body-cell-name", r'''
             <q-td :props="props"><a class="cursor-pointer text-primary"
               @click="$parent.$emit('open', props.row)">{{ props.row.name }}</a></q-td>''')
