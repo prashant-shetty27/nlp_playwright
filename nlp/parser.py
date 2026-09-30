@@ -770,6 +770,35 @@ def parse_step(step: str) -> Command:
         num1, op, num2, var_name = m.groups()
         return Command(type="math", target=num1, text=op, values=[num2], variable_name=var_name)
 
+    # 18 percent of ${price} | 18% of price
+    m = re.match(r'^calculate\s+(\S+?)\s*(?:%|percent|per\s*cent)\s+of\s+(\S+)\s+as\s+(\S+)$', s, re.I)
+    if m:
+        return Command(type="percent_of", text=m.group(1), values=[m.group(2)], variable_name=m.group(3))
+    # Any sum: calculate (${a} + ${b}) * 2 as total | calculate ${price} % 7 as r | calculate a + b + c as d
+    m = re.match(r'^calculate\s+(.+?)\s+as\s+(\S+)$', s, re.I)
+    if m and re.search(r"[-+*/%^()]", m.group(1)):
+        return Command(type="calc_expr", text=m.group(1).strip(), variable_name=m.group(2))
+    # round ${price} to 2 decimals as p | round up price as p | round price down as p
+    m = re.match(r'^round\s+(?:(up|down)\s+)?(\S+)(?:\s+(up|down))?(?:\s+to\s+(\d+)\s+'
+                 r'(?:decimals?|decimal\s+places?|places?))?(?:\s+(up|down))?\s+as\s+(\S+)$', s, re.I)
+    if m:
+        mode = (m.group(1) or m.group(3) or m.group(5) or "").lower()
+        return Command(type="round_value", text=m.group(2), count=int(m.group(4) or 0),
+                       values=[mode], variable_name=m.group(6))
+    # increase counter by 1 | increment counter | decrease stock by 2
+    m = re.match(r'^(increase|increment|decrease|decrement|reduce)\s+(?:the\s+)?(?:value\s+of\s+)?'
+                 r'(\$\{[^}]+\}|[A-Za-z_]\w*)(?:\s+by\s+(\S+))?$', s, re.I)
+    if m:
+        var = re.sub(r"^\$\{|\}$", "", m.group(2))
+        amount = m.group(3) or "1"
+        if m.group(1).lower() in ("decrease", "decrement", "reduce"):
+            amount = amount[1:] if amount.startswith("-") else "-" + amount
+        return Command(type="adjust_var", target=var, text=amount)
+    # store length of "${name}" as n | store length of name as n
+    m = re.match(r'^store\s+(?:the\s+)?length\s+of\s+(.+?)\s+as\s+(\S+)$', s, re.I)
+    if m:
+        return Command(type="store_length", text=m.group(1).strip(), variable_name=m.group(2))
+
     # =============================
     # VERIFY STORED VARIABLE IS NOT  (negative exact-match on a stored value)
     # verify stored <var> is not "<value>"
@@ -1210,4 +1239,36 @@ def parse_step(step: str) -> Command:
     # =============================
     # TERMINAL FALLBACK
     # =============================
+    # =============================
+    # COMPARE ANY TWO VALUES (last, so every more specific "verify …" wins first)
+    #   verify ${testdata1} equals ${variabledata1}   | verify ${a} = ${b}
+    #   verify price is greater than 1000             | verify ${total} >= ${limit}
+    #   verify ${city} starts with "Mum" ignoring case| verify ${otp} is a number
+    #   verify ${note} is empty / is not empty        | verify ${id} matches "^\d+$"
+    # Each side: ${value}, a stored name, "text" or a number (₹1,200 reads as 1200).
+    # =============================
+    m = _match_compare(s)
+    if m:
+        return m
     raise ValueError(f"Unknown command: {step}")
+
+
+_OPND = r'("[^"]*"|\'[^\']*\'|\$\{[^}]+\}|[₹$]?-?\d[\d,]*(?:\.\d+)?%?|[A-Za-z_][\w.]*)'
+
+
+def _match_compare(s: str):
+    from execution.value_ops import OPS, _NO_RIGHT
+    ops = sorted(OPS, key=len, reverse=True)
+    alt = "|".join(re.escape(o).replace(r"\ ", r"\s+") for o in ops)
+    m = re.match(r'^verify\s+(?:that\s+)?(?:stored\s+)?(?:variable\s+|value\s+)?' + _OPND
+                 + r'\s*(' + alt + r')(?:\s*' + _OPND + r')?(\s+ignoring\s+case)?\s*$', s, re.I)
+    if not m:
+        return None
+    left, op, right, ic = m.group(1), re.sub(r"\s+", " ", m.group(2).lower()), m.group(3), m.group(4)
+    kind = OPS[op]
+    if kind in _NO_RIGHT and right:
+        return None
+    if kind not in _NO_RIGHT and not right:
+        return None
+    return Command(type="compare_values", target=left, text=op,
+                   values=[right or "", "ignore_case" if ic else ""])

@@ -411,7 +411,13 @@ class FlowProgram:
                 pc += 1
             else:
                 if self._next is None:
-                    raise RuntimeError(f"Line {it.line_no}: block line was not decided")
+                    # The condition could not be checked (its step failed and the
+                    # runner reported it). Skip the whole block rather than
+                    # abandoning every step after it.
+                    end = getattr(it, "end", None)
+                    pc = (end + 1) if isinstance(end, int) and end > pc else pc + 1
+                    self._arrived_by_jump = None
+                    continue
                 pc = self._next
 
     _arrived_by_jump: int | None = None

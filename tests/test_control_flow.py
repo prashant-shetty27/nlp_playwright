@@ -285,3 +285,19 @@ def test_evaluator_on_app_platforms():
     from execution.control_flow import make_evaluator
     ev = make_evaluator(variables={}, probe=FakeProbe(plat="android"))
     assert ev("platform is android")[0] and not ev("platform is ios")[0]
+
+
+def test_undecided_block_is_skipped_not_fatal():
+    """A condition whose check blew up (reported by the runner) skips its block only."""
+    prog = FlowProgram(["a", "if ${x} is more than 1", "b", "end if", "c"],
+                       evaluate=lambda text: (_ for _ in ()).throw(AssertionError("no x")))
+    ran = []
+    for it in prog.steps():
+        if it.kind is None:
+            ran.append(it.text)
+        else:
+            try:
+                prog.decide(it)
+            except AssertionError:
+                pass
+    assert ran == ["a", "c"]

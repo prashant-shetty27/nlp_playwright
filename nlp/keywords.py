@@ -582,6 +582,40 @@ KEYWORD_MAP = {
         "phrases": ["calculate", "compute", "math"],
         "action": "math", "template": "calculate {number} + {number} as {variable}"
     },
+    "calc_expr": {
+        "phrases": ["calculate expression", "sum", "total of", "brackets", "remainder", "modulo",
+                    "calculate with brackets", "multiply", "add values"],
+        "action": "calc_expr", "help": "+ - * / % ( ) ^ with numbers and ${values}",
+        "template": "calculate ({number} + {number}) * {number} as {variable}"
+    },
+    "percent_of": {
+        "phrases": ["percent", "percentage", "gst", "discount percent", "% of"],
+        "action": "percent_of", "template": "calculate {number} percent of {number} as {variable}"
+    },
+    "round_value": {
+        "phrases": ["round", "round off", "round up", "round down", "decimals"],
+        "action": "round_value", "help": "also: round up / round down",
+        "template": "round {number} to {number} decimals as {variable}"
+    },
+    "adjust_var": {
+        "phrases": ["increase", "increment", "decrease", "decrement", "counter +1", "add 1"],
+        "action": "adjust_var", "template": "increase {variable} by {number}"
+    },
+    "store_length": {
+        "phrases": ["length of", "number of characters", "string length"],
+        "action": "store_length", "template": "store length of \"{text}\" as {variable}"
+    },
+    "compare_values": {
+        "phrases": ["compare", "compare values", "verify equals", "verify two values", "test data equals",
+                    "verify variable", "verify greater than", "verify less than", "verify starts with",
+                    "verify ends with", "verify does not contain", "verify is empty", "verify is a number",
+                    "verify matches"],
+        "action": "compare_values",
+        "help": "each side: ${value}, \"text\" or a number — equals, is not, contains, does not contain, "
+                "starts with, ends with, matches, is greater than / less than / at least / at most, "
+                "is empty, is a number; add 'ignoring case' for text",
+        "template": "verify {variable} equals {variable}"
+    },
     "api_get": {
         "phrases": ["api get", "call api", "http get"],
         "action": "api_get", "template": "api get \"{text}\" as {variable}"

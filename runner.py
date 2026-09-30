@@ -148,6 +148,7 @@ from nlp.fields import TARGET_IS_LOCATOR as _LOCATOR_TARGETS  # noqa: E402
 def _execute_step_from_command(cmd, page):
     """Routes a parsed Command to the appropriate action function."""
     import execution.action_service as svc
+    from execution import value_ops as _vo
 
     # Resolve active tab: if user ran "switch to tab N", actions run on that tab
     ep = svc.get_active_page(page)
@@ -240,8 +241,8 @@ def _execute_step_from_command(cmd, page):
         # ── Verification — Variables ─────────────────────────────────────────
         "verify_var_contains":       lambda: svc.verify_stored_variable_contains(
                                          target, text, ignore_case="ignore_case" in (cmd.values or [])),
-        "verify_var_not_equals":     lambda: svc.verify_stored_variable_not_equals(target, text),
-        "verify_var_equals":         lambda: svc.verify_stored_variable_equals(
+        "verify_var_not_equals":     lambda: _vo.var_equals(target, text, negate=True),
+        "verify_var_equals":         lambda: _vo.var_equals(
                                          target, text, ignore_case="ignore_case" in (cmd.values or [])),
         # ── Plain Testsigma-style steps ──────────────────────────────────────
         "wait_until_not_visible":    lambda: svc.wait_until_element_not_visible(ep, target),
@@ -319,7 +320,14 @@ def _execute_step_from_command(cmd, page):
         "verify_recommended_order_page": lambda: svc.verify_recommended_order_page(ep, text),
         "verify_recommended_prefer_city": lambda: svc.verify_recommended_prefer_city(ep, text),
         "store_recommended_position":    lambda: svc.store_recommended_position(ep, text, cmd.variable_name),
-        "verify_var_compare":            lambda: svc.verify_stored_variable_compare(target, text, first_value),
+        "verify_var_compare":            lambda: _vo.var_compare(target, text, first_value),
+        # value steps (normally run by _interpret before ${…} is filled in)
+        "compare_values":            lambda: _vo.execute(cmd),
+        "calc_expr":                 lambda: _vo.execute(cmd),
+        "round_value":               lambda: _vo.execute(cmd),
+        "percent_of":                lambda: _vo.execute(cmd),
+        "adjust_var":                lambda: _vo.execute(cmd),
+        "store_length":              lambda: _vo.execute(cmd),
         # ── Excel / CSV ───────────────────────────────────────────────────────
         "read_excel_cell":           lambda: svc.read_excel_cell(text, int(target), first_value, cmd.variable_name),
         "read_excel_row":            lambda: svc.read_excel_row(text, int(target), cmd.variable_name),
@@ -418,6 +426,17 @@ def _interpret(step: str, page):
         normalized = apply_to_flow_steps([normalized])[0]
     except Exception:
         pass
+
+    # Comparisons and sums read the step BEFORE ${…} is filled in: the value
+    # engine looks the values up itself, so "New Delhi" or "₹1,200" stays one value.
+    from execution import value_ops as _vo
+    try:
+        _raw = parse_step(normalized)
+    except ValueError:
+        _raw = None
+    if _raw is not None and _raw.type in _vo.RAW_TYPES:
+        logger.info("🧮 %s", _vo.execute(_raw))
+        return
 
     # ${otp}: static OTP for a test number on this platform, or a live fetch
     # from the OTP portal for any other number — decided at the moment it is used.

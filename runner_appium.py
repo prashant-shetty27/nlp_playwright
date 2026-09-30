@@ -633,12 +633,14 @@ def _end_session(driver, label: str = "session"):
 # ─────────────────────────────────────────────────────────────────────────────
 
 # Command types whose `target` is a variable name to look up or create, not a value.
-_VARIABLE_NAME_TARGETS = {"verify_var_contains", "create_variable", "extract_json"}
+_VARIABLE_NAME_TARGETS = {"verify_var_contains", "create_variable", "extract_json",
+                          "verify_var_equals", "verify_var_not_equals", "verify_var_compare"}
 
 
 def _execute_step(cmd, driver, platform: str):
     """Route a parsed Command to the correct appium_action_service function."""
     import execution.appium_action_service as svc
+    from execution import value_ops as _vo
 
     # Resolve any ${variables} in text/target fields
     target = resolve_variables(cmd.target or "")
@@ -734,6 +736,16 @@ def _execute_step(cmd, driver, platform: str):
         "verify_element_exists":     lambda: svc.verify_element_exists(driver, target, platform, el_index),
         "verify_element_not_exists": lambda: svc.verify_element_not_exists(driver, target, platform, el_index),
         "verify_var_contains":       lambda: _verify_var_contains(target, text),
+        "verify_var_equals":         lambda: _vo.var_equals(target, text,
+                                                            ignore_case="ignore_case" in (cmd.values or [])),
+        "verify_var_not_equals":     lambda: _vo.var_equals(target, text, negate=True),
+        "verify_var_compare":        lambda: _vo.var_compare(target, text, first_value),
+        "compare_values":            lambda: _vo.execute(cmd),
+        "calc_expr":                 lambda: _vo.execute(cmd),
+        "round_value":               lambda: _vo.execute(cmd),
+        "percent_of":                lambda: _vo.execute(cmd),
+        "adjust_var":                lambda: _vo.execute(cmd),
+        "store_length":              lambda: _vo.execute(cmd),
         # ── Variable extraction ───────────────────────────────────────────
         "extract_text":              lambda: svc.store_element_text(driver, target, platform, cmd.variable_name, el_index),
         "store_text":                lambda: svc.store_element_text(driver, target, platform, cmd.variable_name, el_index),
@@ -1000,6 +1012,16 @@ def _interpret_step(step: str, driver, platform: str) -> None:
 
     logger.info("👉 Interpreting: %s", step)
     _touch_activity()
+
+    # Comparisons and sums: read before ${…} is filled in (same as the web runner).
+    from execution import value_ops as _vo
+    try:
+        _raw = parse_step(step)
+    except ValueError:
+        _raw = None
+    if _raw is not None and _raw.type in _vo.RAW_TYPES:
+        logger.info("🧮 %s", _vo.execute(_raw))
+        return
 
     try:
         resolved = resolve_variables(step)
