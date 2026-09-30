@@ -47,6 +47,10 @@ class TestCasesPage:
         self.picked: set[str] = set()
         self.pick_mode = False
         self.step_meta: dict[int, dict] = {}     # 1-based -> generation metadata
+        #: if / loop headers (1-based) whose steps are folded away in the editor.
+        self.block_folded: set[int] = set()
+        #: Uploaded data sets: name -> column step-names (for ${column} inside loops).
+        self._dataset_cols: dict[str, list[str]] = {}
         self.filter = ""
         #: Elements this platform's runner can resolve — what decides whether a
         #: step will run, and therefore how its element token is coloured.
@@ -910,6 +914,10 @@ class TestCasesPage:
             self._vars = {"defined": {}, "stored": [], "unresolved": []}
         # One request for every row's segmentation instead of one per row.
         await api.prefetch_segments([st for st in self.steps if not st.startswith("#")])
+        try:
+            self._dataset_cols = {d["name"]: d.get("columns", []) for d in await api.datasets()}
+        except api.ApiError:
+            self._dataset_cols = {}
         # Step groups, so a `call <name>` row can show what it expands to.
         try:
             self._groups = {g["name"]: g.get("steps", [])
@@ -977,6 +985,16 @@ class TestCasesPage:
                     ui.label(f"{len(blocked)} step(s) need attention before this will run") \
                         .style(f"font-size:{TYPOGRAPHY['size_sm']}")
 
+            # if / loop blocks: a block left open is flagged here, before Run.
+            from execution.control_flow import layout as _block_layout, structure_error
+            block_err = structure_error(self.steps)
+            if block_err:
+                with ui.row().classes("w-full items-center gap-2 no-wrap").style(
+                        f"background:{COLORS['danger']}10; border:1px solid {COLORS['danger']}55;"
+                        f"border-radius:6px; padding:6px 10px"):
+                    ui.icon("account_tree").style(f"color:{COLORS['danger']}")
+                    ui.label(block_err).style(f"font-size:{TYPOGRAPHY['size_sm']}")
+
             # ── selection toolbar ────────────────────────────────────────
             # Drawn by its own method so a single tick on a row can refresh
             # just this bar (count + action buttons) without redrawing rows.
@@ -1004,10 +1022,17 @@ class TestCasesPage:
                 stored = set(self._vars.get("stored", []))
                 made: dict = self._vars.get("defined", {}) or {}
                 token_queue: list = []
+                lay = _block_layout(self.steps)
+                has_blocks = any(d["kind"] for d in lay)
+                fold_until = -1
                 for i, text in enumerate(self.steps, 1):
                     known_here = stored | {n for n, at in made.items() if at < i}
+                    if has_blocks:
+                        known_here = known_here | self._loop_values(i - 1)
                     if self.compose_at == i - 1:
                         await self._compose_row()
+                    if i - 1 <= fold_until:
+                        continue
                     stripped = text.strip()
                     if stripped.startswith(self.PURPOSE):
                         hidden = i in self.collapsed
@@ -1019,6 +1044,10 @@ class TestCasesPage:
                     meta = self.step_meta.get(i, {})
                     off = stripped.startswith(self.DISABLED)
                     shown = stripped[len(self.DISABLED):] if off else text
+                    block = lay[i - 1] if has_blocks else None
+                    holder = self._block_holder(i, block) if block else None
+                    if holder is not None:
+                        holder.__enter__()
                     step_row(i, shown, action=meta.get("action", ""),
                              platform=self.platform,
                              target=meta.get("locator", ""), status=meta.get("status", ""),
@@ -1041,6 +1070,19 @@ class TestCasesPage:
                              token_queue=token_queue,
                              group_steps=getattr(self, "_groups", {}),
                              on_edit_group=self._edit_group)
+                    if holder is not None:
+                        holder.__exit__(None, None, None)
+                    if block and block["kind"] in ("if", "for", "times", "until", "while") \
+                            and i in self.block_folded and block["end"] is not None:
+                        inner = block["end"] - i
+                        fold_until = block["end"] - 1
+                        with ui.row().classes("w-full items-center gap-2").style(
+                                f"padding:2px 10px 2px {(block['depth'] + 1) * 20 + 30}px;"
+                                f"color:{COLORS['text_muted']}; font-size:{TYPOGRAPHY['size_xs']}"):
+                            ui.icon("unfold_more").style("font-size:1rem")
+                            ui.label(f"{inner} step(s) folded — click the arrow to show them")
+                        # the closing line itself stays visible
+                        fold_until = block["end"] - 1
                 if self.compose_at == len(self.steps):
                     await self._compose_row()
 
@@ -1061,7 +1103,8 @@ class TestCasesPage:
             # No autofocus here: this box sits at the foot of the editor, and
             # focusing it on open would scroll a long test case to the bottom.
             box = NlpInput(self.platform, self.add_step,
-                           known_variables=self._variables(), autofocus=False)
+                           known_variables=self._variables(), autofocus=False,
+                           context=self._block_context(len(self.steps)))
             await box.load()
             self._to_top_button()
 
@@ -1112,12 +1155,22 @@ class TestCasesPage:
         through the row buttons.
         """
         where = self.compose_at or 0
+        indent = len(self._block_context(where)) * 20
         with ui.column().classes("w-full gap-1").style(
+                f"margin-left:{indent}px; width:calc(100% - {indent}px);"
                 f"background:{COLORS['primary']}0D;"
                 f"border-top:1px solid {COLORS['primary']}44;"
                 f"border-bottom:1px solid {COLORS['primary']}44; padding:6px 10px"):
+            ctx = self._block_context(where)
             with ui.row().classes("w-full items-center gap-2"):
-                ui.label(f"New step — goes in at position {where + 1}").style(
+                inside = ""
+                if ctx:
+                    from execution.control_flow import open_blocks
+                    kind, args = open_blocks(self.steps, where)[-1]
+                    inside = " — inside '" + {"if": "if " + (args[0] if args else ""),
+                                              "for": "for each row in " + args[0]}.get(
+                        kind, "repeat") + "'"
+                ui.label(f"New step — goes in at position {where + 1}{inside}").style(
                     f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['primary']};"
                     f"font-weight:{TYPOGRAPHY['weight_medium']}")
                 ui.space()
@@ -1126,13 +1179,70 @@ class TestCasesPage:
             box = NlpInput(self.platform,
                            lambda text, at=where: self.insert_step(at, text),
                            placeholder="Type the step to insert here",
-                           known_variables=self._variables())
+                           known_variables=sorted(set(self._variables())
+                                                  | self._loop_values(where)),
+                           context=ctx)
             # Esc closes the composer, the same as Done. First press clears the
             # suggestion list (the box's own handler); on an empty box it closes.
             box.input.on("keydown.escape",
                          lambda _: self._close_composer()
                          if not (box.input.value or "").strip() else None)
             await box.load()
+
+    #: Colour of each kind of block in the editor.
+    _BLOCK_TINT = {"if": "warning", "elif": "warning", "else": "warning", "endif": "warning",
+                   "for": "accent", "times": "accent", "until": "accent", "while": "accent",
+                   "endloop": "accent", "break": "danger", "continue": "danger"}
+
+    def _block_holder(self, i: int, block: dict):
+        """
+        The row wrapper that shows nesting: steps inside an if / loop are
+        indented under it, with a guide line per level; the block's own lines
+        are tinted and its opener has a fold arrow.
+        """
+        depth, kind = block["depth"], block["kind"]
+        guide = COLORS["accent"]
+        tint = COLORS.get(self._BLOCK_TINT.get(kind, ""), "") if kind else ""
+        style = (f"padding-left:{depth * 20}px;"
+                 f"background-image:repeating-linear-gradient(90deg,{guide}44 0 2px,"
+                 f"transparent 2px 20px); background-size:{depth * 20}px 100%;"
+                 f"background-repeat:no-repeat; background-position:8px 0;")
+        if tint:
+            style += f"background-color:{tint}0F;"
+        outer = ui.row().classes("w-full items-center gap-0 no-wrap").style(style)
+        with outer:
+            if kind in ("if", "for", "times", "until", "while") and block["end"] is not None:
+                folded = i in self.block_folded
+                ui.button(icon="chevron_right" if folded else "expand_more",
+                          on_click=lambda n=i: self._toggle_fold(n)) \
+                    .props("flat dense round size=xs").style("width:26px; min-width:26px") \
+                    .tooltip("Show the steps inside" if folded else "Fold this block")
+            else:
+                ui.element("div").style("width:26px; min-width:26px")
+            inner = ui.column().classes("gap-0").style("flex:1; min-width:0")
+        return inner
+
+    def _toggle_fold(self, index: int) -> None:
+        if index in self.block_folded:
+            self.block_folded.discard(index)
+        else:
+            self.block_folded.add(index)
+        ui.timer(0.01, self.render_editor, once=True)
+
+    def _loop_values(self, position: int) -> set[str]:
+        """${…} names a loop makes available at 0-based `position` (columns, row_number, round)."""
+        from execution.control_flow import open_blocks
+        names: set[str] = set()
+        for kind, args in open_blocks(self.steps, position):
+            if kind == "for":
+                names |= set(self._dataset_cols.get(args[0], [])) | {"row_number"}
+            elif kind in ("times", "until", "while"):
+                names.add("round")
+        return names
+
+    def _block_context(self, position: int) -> list[str]:
+        from execution.control_flow import open_blocks
+        return [k for k, _ in open_blocks(self.steps, position)]
 
     def _open_composer(self, index: int, where: str) -> None:
         """Open the composer above or below the 1-based step `index`."""
@@ -1969,8 +2079,23 @@ class TestCasesPage:
         ui.timer(0.01, self.render_editor, once=True)
 
     # ── step mutation ───────────────────────────────────────────────────────
+    @staticmethod
+    def _closer_for(text: str) -> str:
+        """'end if' / 'end for' / 'end repeat' when `text` opens a block, else ''."""
+        from execution.control_flow import CLOSER, classify
+        c = classify(text or "")
+        return CLOSER.get(c[0], "") if c else ""
+
     def add_step(self, text: str) -> None:
         self.steps.append(text)
+        closer = self._closer_for(text)
+        if closer:
+            # A block is written as a unit: its end line goes in with it and the
+            # step box opens INSIDE it, offering what belongs there.
+            self.steps.append(closer)
+            self.compose_at = len(self.steps) - 1
+            ui.notify(f"Added the block with '{closer}' — type the steps that go inside it",
+                      type="positive")
         self.dirty = True
         ui.timer(0.01, self.render_editor, once=True)
 
@@ -2000,6 +2125,10 @@ class TestCasesPage:
         pos = self._insert_at(at, text)
         if pos < 0:
             return
+        closer = self._closer_for(text)
+        if closer:
+            # The block's end line goes in with it; the composer stays INSIDE.
+            self._insert_at(pos + 1, closer)
         # Left open one place further down, so a run of steps can be typed
         # straight through without reaching for the row buttons again.
         self.compose_at = pos + 1

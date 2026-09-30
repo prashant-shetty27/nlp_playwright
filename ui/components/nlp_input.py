@@ -107,10 +107,16 @@ class NlpInput:
                  initial_value: str = "",
                  known_variables: list[str] | None = None,
                  autofocus: bool = True,
-                 clearable: bool = True) -> None:
+                 clearable: bool = True,
+                 context: list[str] | None = None) -> None:
         self.platform = platform
         self.on_submit = on_submit
         self.known_variables = known_variables or []
+        #: Blocks open where this step goes, outer first ("if", "for" …). Inside
+        #: an if the list offers else / else if / end if; inside a loop, stop loop
+        #: and skip to next row — shown as soon as the box is focused.
+        self.context = list(context or [])
+        self._datasets: dict[str, list[str]] = {}
         self._locators: list[str] = []
         self._labels: dict[str, str] = {}
         #: Index of the highlighted suggestion. -1 means "none", so Enter submits
@@ -143,6 +149,9 @@ class NlpInput:
             # Placeholder handling that lives in the browser (see the JS above).
             self.input.on("click", js_handler=_SLOT_ON_CLICK_JS)
             self.input.on("focus", js_handler=_SLOT_ON_FOCUS_JS)
+            if self.context:
+                self.input.on("focus", lambda _: self._refresh()
+                              if not (self.input.value or "").strip() else None)
             self.input.on_value_change(lambda _: self._refresh())
 
             self.hint = ui.label().style(
@@ -165,6 +174,12 @@ class NlpInput:
             self._locators = sorted(self._labels)
         except api.ApiError as e:
             self.hint.set_text(f"Locator list unavailable: {e.detail[:60]}")
+        try:
+            self._datasets = {d["name"]: d.get("columns", []) for d in await api.datasets()}
+        except api.ApiError:
+            self._datasets = {}
+        if self.context:
+            await self._refresh()
 
     def _clear(self) -> None:
         self.panel.clear()
@@ -238,6 +253,8 @@ class NlpInput:
         if len(partial) < 1:
             self._clear()
             self.hint.set_text("")
+            if self.context:
+                await self._context_rows()
             return
 
         # A step is validated as typed, so the operator learns immediately rather
@@ -262,7 +279,8 @@ class NlpInput:
 
         rows: list[dict] = []
         try:
-            for s in await api.suggest(partial, self.platform, limit=8):
+            for s in await api.suggest(partial, self.platform, limit=8,
+                                       context=self.context):
                 tmpl = s.get("template") or s.get("phrase", "")
                 rows.append({"insert": tmpl, "display": tmpl,
                              "kind": s.get("action", ""),
@@ -284,6 +302,15 @@ class NlpInput:
         self._edit_idx = self._slot_index(tokens)
         word = tokens[self._edit_idx].lower() if self._edit_idx is not None else ""
         untouched_slot = word == "{locator}"
+        special = self._special_slot(tokens, partial)
+        if special is not None:
+            idx, extra = special
+            self._edit_idx = idx
+            rows += extra
+            self._rows = rows[:24]
+            self._active = -1
+            self._paint()
+            return
         for name in self._locators:
             if (untouched_slot or (word and word in name)) and len(rows) < 20:
                 rows.append({"insert": name, "kind": "locator",
@@ -302,6 +329,59 @@ class NlpInput:
         # whatever happened to match, and the step was silently lost.
         self._active = -1
         self._paint()
+
+    async def _context_rows(self) -> None:
+        """What can come next inside the open block — shown on an empty box."""
+        try:
+            found = await api.suggest("", self.platform, limit=12, context=self.context)
+        except api.ApiError:
+            return
+        self._rows = [{"insert": s.get("template", ""), "display": s.get("template", ""),
+                       "kind": "block", "detail": s.get("detail", ""), "tag": "",
+                       "steps": []} for s in found]
+        where = {"if": "an 'if' block", "for": "a 'for each row' loop"}.get(
+            self.context[-1], "a 'repeat' loop")
+        self.hint.set_text(f"Inside {where} — pick what comes next, or type any step")
+        self.hint.style(f"color:{COLORS['primary']}")
+        self._active = -1
+        self._paint()
+
+    def _special_slot(self, tokens: list[str], partial: str):
+        """{dataset} / {value} / {column} slots — and a data set name being typed."""
+        def pos(tok):
+            return tokens.index(tok) if tok in tokens else None
+        loc = pos("{locator}")
+        for tok in ("{dataset}", "{value}", "{column}"):
+            i = pos(tok)
+            if i is None or (loc is not None and loc < i):
+                continue
+            if tok == "{dataset}":
+                return i, [{"insert": n, "display": n, "kind": "dataset",
+                            "detail": f"{len(c)} columns: {', '.join(c[:4])}",
+                            "tag": "", "steps": []} for n, c in sorted(self._datasets.items())] \
+                    or [{"insert": "{dataset}", "display": "No data sets uploaded yet — "
+                         "Test Data → Data sets", "kind": "dataset", "detail": "",
+                         "tag": "", "steps": []}]
+            if tok == "{value}":
+                return i, [{"insert": "${" + v + "}", "display": "${" + v + "}",
+                            "kind": "variable", "detail": "", "tag": "", "steps": []}
+                           for v in self.known_variables][:20]
+            import re as _re
+            m = _re.search(r"row\s+(?:in|of|from)\s+(\w+)", partial, _re.I)
+            cols = self._datasets.get(m.group(1), []) if m else []
+            return i, [{"insert": c, "display": c, "kind": "column", "detail": "",
+                        "tag": "", "steps": []} for c in cols]
+        import re as _re
+        m = _re.match(r"^for\s+each\s+row\s+(?:in|of|from)\s+(\w*)$", partial, _re.I)
+        if m and tokens:
+            typed = m.group(1).lower()
+            hits = [n for n in sorted(self._datasets) if typed in n]
+            if hits:
+                return len(tokens) - 1 if typed else len(tokens), [
+                    {"insert": n, "display": n, "kind": "dataset",
+                     "detail": ", ".join(self._datasets[n][:4]), "tag": "", "steps": []}
+                    for n in hits]
+        return None
 
     #: Words that belong to the step grammar itself. They can never be the
     #: element being typed, even when one happens to be a substring of an
@@ -383,7 +463,7 @@ class NlpInput:
         leaves nothing to fill in is submitted straight away; one that still has
         a {slot} stays in the box, because there is genuinely more to say.
         """
-        if kind in ("locator", "variable"):
+        if kind in ("locator", "variable", "dataset", "column"):
             parts = (self.input.value or "").split()
             idx = getattr(self, "_edit_idx", None)
             if idx is None or idx >= len(parts):
@@ -401,7 +481,7 @@ class NlpInput:
         if _SLOT.search(text):
             # A locator just went into one slot: move to the slot AFTER it. A
             # fresh template: start at its first slot.
-            self._select_slot(after_caret=kind in ("locator", "variable"))
+            self._select_slot(after_caret=kind in ("locator", "variable", "dataset", "column"))
             self.hint.set_text("type or paste the value over the highlighted "
                                "placeholder — Tab jumps to the next one, Enter adds the step")
             self.hint.style(f"color:{COLORS['warning']}")
@@ -449,7 +529,8 @@ class NlpInput:
                         f"font-size:{TYPOGRAPHY['size_xs']};"
                         f"font-family:{TYPOGRAPHY['mono']}; font-weight:600")
                 else:
-                    ui.label({"locator": "◆", "variable": "$"}.get(kind, "▸")).style(
+                    ui.label({"locator": "◆", "variable": "$", "dataset": "▦",
+                              "column": "▥", "block": "⤷"}.get(kind, "▸")).style(
                         f"color:{COLORS['text_muted']}; width:1rem")
 
                 lbl = ui.label(row["display"]).classes("cursor-pointer").style(

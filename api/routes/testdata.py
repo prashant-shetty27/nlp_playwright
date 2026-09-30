@@ -104,3 +104,58 @@ def delete_value(name: str, scope: str = Query("global"), environment: str = Que
     if not test_data.delete_value(name, scope=scope, environment=environment):
         raise HTTPException(status_code=404, detail=f"No value named {name!r}.")
     return {"deleted": name, "scope": scope}
+
+
+# ── Data sets: uploaded tables that `for each row in <name>` loops over ───────
+from fastapi import Depends, File, UploadFile  # noqa: E402
+
+from api.auth import acting_user  # noqa: E402
+from core import datasets  # noqa: E402
+
+
+@router.get("/datasets")
+def list_datasets():
+    """Every uploaded table: name, column step-names, row count, creator / last editor."""
+    return {"datasets": datasets.all_info()}
+
+
+@router.get("/datasets/{name}")
+def get_dataset(name: str, limit: int = Query(200, ge=1, le=datasets.MAX_ROWS)):
+    try:
+        headings, body = datasets.table(name)
+    except datasets.DatasetError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    return {**datasets.info(name), "rows": body[:limit]}
+
+
+@router.post("/datasets/upload")
+async def upload_dataset(file: UploadFile = File(...), replace: bool = Query(False),
+                         user: str = Depends(acting_user)):
+    """
+    A .xlsx / .csv file → one data set per sheet. An existing name is only
+    overwritten with replace=true, so two people cannot silently replace each
+    other's table.
+    """
+    content = await file.read()
+    try:
+        tables = datasets.parse_upload(file.filename or "", content)
+    except datasets.DatasetError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
+    except Exception as e:  # noqa: BLE001 — a corrupt workbook
+        raise HTTPException(status_code=422, detail=f"Could not read the file: {e}") from e
+    clashes = [n for n in tables if datasets.exists(n)]
+    if clashes and not replace:
+        raise HTTPException(status_code=409, detail={
+            "message": f"A data set called {', '.join(clashes)} already exists.",
+            "why": "Uploading again replaces its rows for every test that uses it.",
+            "names": clashes})
+    saved = [datasets.save(n, h, r, user=user) for n, (h, r) in tables.items()]
+    return {"saved": saved}
+
+
+@router.delete("/datasets/{name}")
+def delete_dataset(name: str):
+    if not datasets.exists(name):
+        raise HTTPException(status_code=404, detail=f"No data set called '{name}'.")
+    datasets.delete(name)
+    return {"deleted": name}

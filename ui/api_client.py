@@ -113,12 +113,15 @@ async def devices(curated_only: bool = True) -> list[dict]:
     return (await _call("GET", "/nlp/devices", params={"curated_only": curated_only}))["devices"]
 
 
-async def suggest(partial: str, platform: str, limit: int = 12) -> list[dict]:
-    """Type-ahead. Returns {phrase, action, template} filtered to this platform."""
-    if not partial.strip():
+async def suggest(partial: str, platform: str, limit: int = 12,
+                  context: list[str] | None = None) -> list[dict]:
+    """Type-ahead. Returns {phrase, action, template} filtered to this platform.
+    context = blocks open at the cursor (outer first) for if / loop suggestions."""
+    if not partial.strip() and not context:
         return []
     return await _call("POST", "/nlp/suggest",
-                 json={"partial": partial, "platform": platform, "limit": limit})
+                 json={"partial": partial, "platform": platform, "limit": limit,
+                       "context": context or []})
 
 
 async def parse_step(step: str) -> dict:
@@ -304,6 +307,23 @@ async def rename_testdata(name: str, new_name: str, scope: str = "global",
     return await _call("POST", f"/testdata/{name}/rename",
                        json={"new_name": new_name, "scope": scope,
                              "environment": environment, "apply": apply})
+
+
+async def datasets() -> list[dict]:
+    return (await _call("GET", "/testdata/datasets")).get("datasets", [])
+
+
+async def dataset(name: str, limit: int = 200) -> dict:
+    return await _call("GET", f"/testdata/datasets/{name}", params={"limit": limit})
+
+
+async def upload_dataset(filename: str, data: bytes, replace: bool = False) -> dict:
+    return await _call("POST", "/testdata/datasets/upload", files={"file": (filename, data)},
+                       params={"replace": replace})
+
+
+async def delete_dataset(name: str) -> dict:
+    return await _call("DELETE", f"/testdata/datasets/{name}")
 
 
 async def testdata(environment: str = "") -> dict:

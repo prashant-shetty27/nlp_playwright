@@ -47,8 +47,13 @@ class TestDataPage:
         self.values: dict = {}
         self.rows: list[dict] = []
         self.platforms: list[dict] = []
+        self.dataset_items: list[dict] = []
 
     async def load(self) -> None:
+        try:
+            self.dataset_items = await api.datasets()
+        except api.ApiError:
+            self.dataset_items = []
         try:
             self.platforms = await api.platforms()
         except api.ApiError:
@@ -63,11 +68,24 @@ class TestDataPage:
             self.values = {}
             self.rows = []
 
-    def render(self) -> None:
+    def render(self, tab: str = "") -> None:
+        from ui.pages.data.datasets_panel import DatasetsPanel
+
         sidebar(active="/data/variables", platforms=self.platforms)
         topbar(["Manage", "Test Data"], platforms=self.platforms)
         with ui.column().classes("w-full gap-3 p-4"):
-            self.body = ui.column().classes("w-full gap-3")
+            with ui.tabs().props("dense align=left no-caps") as tabs:
+                t_values = ui.tab("values", label="Values", icon="data_object")
+                t_sets = ui.tab("datasets", label="Data sets (Excel / CSV)",
+                                icon="table_view")
+            with ui.tab_panels(tabs, value=t_sets if tab == "datasets" else t_values) \
+                    .classes("w-full"):
+                with ui.tab_panel(t_values).style("padding:8px 0"):
+                    self.body = ui.column().classes("w-full gap-3")
+                with ui.tab_panel(t_sets).style("padding:8px 0"):
+                    self.sets = DatasetsPanel()
+                    self.sets.items = self.dataset_items
+                    self.sets.render()
         self._draw()
 
     def _draw(self) -> None:
@@ -384,7 +402,7 @@ class TestDataPage:
         dialog.open()
 
 
-async def render() -> None:
+async def render(tab: str = "") -> None:
     page = TestDataPage()
     await page.load()
-    page.render()
+    page.render(tab)

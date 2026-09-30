@@ -18,6 +18,16 @@ def _swipe_span(words: str) -> str:
 def parse_step(step: str) -> Command:
     s = step.strip()
 
+    # Block lines — if / else if / else / end if, for each row, repeat …,
+    # stop loop, skip to next row. They are decided by execution/control_flow,
+    # never dispatched as actions; parsing them here lets the editor, the
+    # linter and the step check accept them like any other step.
+    from execution.control_flow import classify as _classify_block
+    _blk = _classify_block(s)
+    if _blk:
+        return Command(type="block", text=_blk[0],
+                       values=[a for a in _blk[1] if a])
+
     # =============================
     # TEXT MATCHING — page level and element level
     #

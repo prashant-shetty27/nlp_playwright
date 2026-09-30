@@ -1,0 +1,22 @@
+# Platform: mobilesite
+# Tags: sample
+# Purpose: shows if / else, for each row (with a row range) and repeat, using the city_search data set
+open https://www.justdial.com
+wait for page to load
+for each row in city_search rows 1 to 3
+if ${platform} is mobilesite
+verify page contains "Justdial"
+else if ${city} is Delhi
+verify page title contains "Justdial"
+skip to next row
+else
+verify page title contains "Justdial"
+end if
+stop loop if ${city} is Pune
+end for
+repeat 2 times
+scroll down
+end repeat
+if platform is mobilesite
+verify page contains "Justdial"
+end if

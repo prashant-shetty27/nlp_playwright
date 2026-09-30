@@ -382,10 +382,16 @@ def _run_flow_sync_unlocked(run_id: str, flow_path: str, headless: bool,
             with open(flow_path, "r", encoding="utf-8") as f:
                 lines = f.readlines()
 
-        for line_num, raw in enumerate(lines, 1):
-            step = raw.strip()
-            if not step or step.startswith("#"):
-                continue
+        # if / else, for each row, repeat …: the program decides which line
+        # runs next. A flow without blocks yields its lines in order, as before.
+        from core import datasets as _datasets
+        from execution.control_flow import FlowProgram, make_evaluator
+        from nlp.variable_manager import RUNTIME_VARIABLES as _RV
+        program = FlowProgram(lines, evaluate=make_evaluator(page), variables=_RV,
+                              load_rows=_datasets.rows)
+
+        for item in program.steps():
+            line_num, step = item.line_no, item.text
 
             if run_id in _cancelled:
                 # "Stop now" from the plan page / a stuck-run alert: the rest
@@ -409,6 +415,20 @@ def _run_flow_sync_unlocked(run_id: str, flow_path: str, headless: bool,
                 # (Previously this also read runner._VARIABLES, which does not
                 # exist — the AttributeError failed EVERY step of every API run.)
                 from runner import _interpret
+
+                if item.kind is not None:
+                    # A block line: no browser action, no screenshot — the
+                    # report shows what was decided ("row 3 of 5 — city = Pune").
+                    said = program.decide(item)
+                    logger.info("🔀 %s → %s", step, said)
+                    entry.update(status="passed", block=item.kind, note=said,
+                                 duration_ms=round((time.perf_counter() - started) * 1000))
+                    passed += 1
+                    report.add_result(f"{step}  →  {said}", "passed",
+                                      duration_ms=entry["duration_ms"])
+                    log.append(entry)
+                    _publish()
+                    continue
 
                 _interpret(step, page)
                 entry["status"] = "passed"

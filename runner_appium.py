@@ -984,8 +984,10 @@ def _expand_reusable_appium(name: str, driver, platform: str) -> None:
     call_stack.add(name_lower)
     try:
         logger.info("▶ Expanding reusable '%s' (%d steps)", name, len(steps))
-        for sub_step in steps:
-            _interpret_step(sub_step, driver, platform)
+        # if / loops work inside a step group on the app too.
+        from execution.control_flow import AppProbe, run_lines
+        run_lines(steps, None, lambda sub: _interpret_step(sub, driver, platform),
+                  logger=logger, probe=AppProbe(driver, platform))
     finally:
         call_stack.discard(name_lower)
 
@@ -1054,8 +1056,20 @@ def _run_flow_core(file_path: str, driver, platform: str) -> dict:
     steps  = _load_flow_file(file_path)
     stats  = {"passed": 0, "failed": 0, "log": []}
 
-    for step in steps:
+    # if / else, for each row, repeat — the same blocks as Website / Mobile Site.
+    from core import datasets as _datasets
+    from execution.control_flow import AppProbe, FlowProgram, make_evaluator
+    program = FlowProgram(steps, evaluate=make_evaluator(probe=AppProbe(driver, platform)),
+                          variables=RUNTIME_VARIABLES, load_rows=_datasets.rows)
+
+    for item in program.steps():
+        step = item.text
         try:
+            if item.kind is not None:
+                said = program.decide(item)
+                logger.info("🔀 %s → %s", step, said)
+                stats["log"].append(f"🔀 {step} → {said}")
+                continue
             _interpret_step(step, driver, platform)
             stats["passed"] += 1
         except AssertionError as e:

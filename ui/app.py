@@ -239,11 +239,11 @@ async def report_detail_page(run_id: str) -> None:
 
 
 @ui.page("/data/variables")
-async def variables_page() -> None:
+async def variables_page(tab: str = "") -> None:
     if not _page_shell():
         return
     from ui.pages.data.variables import render
-    await render()
+    await render(tab)
 
 
 @ui.page("/platform/{platform}/draft")

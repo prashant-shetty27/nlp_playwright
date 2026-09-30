@@ -165,6 +165,21 @@ def segment(step: str, parsed: dict | None = None) -> list[Segment]:
                       SLOT_ROLE.get(mo.group(1).lower(), "text"), mo.group(1)))
         taken.append((mo.start(), mo.end()))
 
+    # 2a. if / else / loop lines: the keywords stay plain words; the element a
+    # condition checks is a locator chip and quoted text is editable text.
+    if parsed and parsed.get("type") == "block":
+        from execution.control_flow import element_names
+        for name in element_names(step):
+            span = _find(step, name, taken, whole_word=True)
+            if span:
+                marks.append((span[0], span[1], "value", "locator", ""))
+                taken.append(span)
+        for mo in re.finditer(r'"([^"]*)"', step):
+            if not any(a <= mo.start() < b for a, b in taken):
+                marks.append((mo.start(1), mo.end(1), "value", "text", ""))
+                taken.append((mo.start(), mo.end()))
+        parsed = None
+
     # 2. Values the parser identified.
     if parsed:
         ctype = str(parsed.get("type") or "")

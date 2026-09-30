@@ -153,6 +153,8 @@ class Mapper:
         except Exception:  # noqa: BLE001 — not native grammar; try the legacy shapes
             return None
         ctype = getattr(cmd, "type", "") or ""
+        if ctype == "block":                  # if / else / loops: decided by the runner itself
+            return StepMapping(ref, manual, "block line", "block", text, SUPPORTED)
         if ctype and not self.cat.supports(ctype):
             return None                       # let the legacy rules give an honest verdict
         statement, vs = self._bind(text)

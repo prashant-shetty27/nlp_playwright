@@ -40,6 +40,10 @@ PATH = os.path.join(settings.BASE_DIR, "data", "common", "variables.json")
 
 _LOCK = threading.Lock()
 
+#: Values the runner fills in by itself — never asked for, never stored.
+#:   otp  static OTP for a test number on this platform, else fetched from the OTP portal
+AUTOMATIC = {"otp"}
+
 _EMPTY = {"_comment": "Global runtime variables — managed via the Test Data screen",
           "global": {}, "env": {"local": {}, "staging": {}, "cloud": {}},
           "dataset_mappings": {}}

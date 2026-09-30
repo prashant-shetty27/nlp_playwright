@@ -65,14 +65,23 @@ def _run_flow_streaming(flow_path: str, headless: bool, send_fn):
         with open(flow_path, "r", encoding="utf-8") as f:
             lines = f.readlines()
 
-        for line_num, raw in enumerate(lines, 1):
-            step = raw.strip()
-            if not step or step.startswith("#"):
-                continue
+        from core import datasets as _datasets
+        from execution.control_flow import FlowProgram, make_evaluator
+        from nlp.variable_manager import RUNTIME_VARIABLES as _RV
+        program = FlowProgram(lines, evaluate=make_evaluator(page), variables=_RV,
+                              load_rows=_datasets.rows)
+        for item in program.steps():
+            line_num, step = item.line_no, item.text
 
             send_fn({"type": "step", "line": line_num, "step": step, "status": "running"})
 
             try:
+                if item.kind is not None:
+                    said = program.decide(item)
+                    send_fn({"type": "result", "line": line_num, "step": f"{step}  →  {said}",
+                             "status": "passed"})
+                    passed += 1
+                    continue
                 _interpret(step, page)
                 send_fn({"type": "result", "line": line_num, "step": step, "status": "passed"})
                 passed += 1

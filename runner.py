@@ -374,13 +374,11 @@ def _expand_reusable(name: str, page) -> None:
     call_stack.add(name_lower)
     try:
         logger.info("▶ Expanding reusable '%s' (%d steps)", name, len(steps))
-        for sub_step in steps:
-            # Same rule as a flow file: blank lines, comments and "# OFF:"
-            # steps are skipped, never executed. A group saved with an OFF'd
-            # lead step must not fire it.
-            if not sub_step.strip() or sub_step.strip().startswith("#"):
-                continue
-            _interpret(sub_step, page)
+        # Same rule as a flow file: blank lines, comments and "# OFF:" steps
+        # are skipped, never executed (a group saved with an OFF'd lead step
+        # must not fire it) — and if / loops work inside a group too.
+        from execution.control_flow import run_lines
+        run_lines(steps, page, lambda sub_step: _interpret(sub_step, page), logger=logger)
     finally:
         call_stack.discard(name_lower)
 
@@ -442,11 +440,16 @@ def _execute_nlp_flow_core(file_path: str, page) -> dict:
     with open(file_path, "r") as f:
         lines = f.readlines()
 
-    for line_num, line in enumerate(lines, 1):
-        step = line.strip()
-        if not step or step.startswith("#"):
-            continue
+    from core import datasets as _datasets
+    from execution.control_flow import FlowProgram, make_evaluator
+    program = FlowProgram(lines, evaluate=make_evaluator(page),
+                          variables=RUNTIME_VARIABLES, load_rows=_datasets.rows)
+    for item in program.steps():
+        line_num, step = item.line_no, item.text
         try:
+            if item.kind is not None:
+                logger.info("🔀 %s → %s", step, program.decide(item))
+                continue
             _interpret(step, page)
             stats["passed"] += 1
             stats["log"].append(f"Line {line_num}: ✅ {step}")

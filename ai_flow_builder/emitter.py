@@ -31,9 +31,14 @@ def run_parameters(statements: list[str]) -> list[str]:
     from ai_flow_builder.bundle import referenced_variables
     from nlp.parser import parse_step
 
-    produced: set[str] = set()
+    from execution.control_flow import names_defined_by
+    from execution.test_data import AUTOMATIC
+
+    produced: set[str] = set(AUTOMATIC)
     needed: list[str] = []
     for stmt in statements:
+        # 'for each row in x' supplies x's columns to the steps under it.
+        produced |= names_defined_by(stmt)
         for var in sorted(referenced_variables(stmt)):
             # The header is whitespace-separated, so a name containing a space
             # cannot be declared in it. Emitting one would split into two bogus

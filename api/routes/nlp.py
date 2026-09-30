@@ -30,6 +30,10 @@ class SuggestRequest(BaseModel):
     # as enter_otp while the operator was authoring a mobile flow.
     platform: str
     limit: int = 10
+    #: Blocks open where the step is being written, outer first ("if", "for",
+    #: "times" …) — so inside an if the list offers 'else if' / 'else' / 'end if',
+    #: inside a loop 'stop loop' / 'skip to next row'.
+    context: list[str] = []
 
 
 # ── Routes ─────────────────────────────────────────────────────────────────────
@@ -84,6 +88,14 @@ def suggest(body: SuggestRequest):
     # crowded out genuinely different commands. One row per distinct insertion;
     # the alternative phrasings ride along under "aliases" so nothing is lost.
     seen: dict[str, dict] = {}
+
+    # if / else / loops — not runner commands, so not in KEYWORD_MAP; offered
+    # first when what is typed points at one (or the block context calls for it).
+    from execution.control_flow import suggestions as _block_suggestions
+    for row in _block_suggestions(partial, body.context)[:8]:
+        results.append({**row, "platform": platform, "aliases": [], "kind": "block"})
+    if not partial:
+        return results            # empty box inside a block: only what can come next
 
     for _key, entry in KEYWORD_MAP.items():
         # Deprecated entries name an action no runner dispatches. Their phrasing
@@ -256,6 +268,9 @@ def variables(body: VariablesRequest):
             continue
         for name in _VAR_REF.findall(text):
             referenced.setdefault(name, i)
+        from execution.control_flow import names_defined_by
+        for name in names_defined_by(text):
+            defined.setdefault(name, i)
         try:
             cmd = dataclasses.asdict(parse_step(text))
         except Exception:  # noqa: BLE001 — a half-written step defines nothing
@@ -271,6 +286,8 @@ def variables(body: VariablesRequest):
     except Exception:  # noqa: BLE001
         stored = []
 
+    from execution.test_data import AUTOMATIC
+    stored = sorted(set(stored) | AUTOMATIC)
     known = set(defined) | set(stored)
     return {"defined": defined, "stored": stored,
             "unresolved": sorted(n for n in referenced if n not in known)}

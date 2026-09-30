@@ -282,6 +282,17 @@ def validate_flow(
     # A flow that declares nothing is unaffected, so genuinely undefined
     # variables are still reported.
     defined.update(_declared_params(lines))
+    from execution.test_data import AUTOMATIC
+    defined.update(AUTOMATIC)          # ${otp}: filled in by the runner
+
+    # if / loops: every block closed, else inside an if, stop loop inside a loop.
+    try:
+        from execution.control_flow import FlowProgram, FlowStructureError
+        FlowProgram(lines)
+    except FlowStructureError as e:
+        m = re.match(r"Line (\d+):", str(e))
+        report.add("error", "E006", path, int(m.group(1)) if m else 0, "",
+                   str(e), "Close each block with 'end if' / 'end for' / 'end repeat'.")
 
     for line_no, raw in enumerate(lines, 1):
         step = raw.strip()
@@ -304,6 +315,29 @@ def validate_flow(
             report.add("error", "E001", path, line_no, step,
                        f"Step does not parse: {e}",
                        "Run `python tools/flow_lint.py --catalog` for the supported grammar.")
+            continue
+
+        # ── Block lines: loops define their values for the lines below ───────
+        if cmd.type == "block":
+            if cmd.text == "for":
+                from execution.control_flow import classify as _cls
+                ds_name = _cls(step)[1][0]
+                defined.add("row_number")
+                try:
+                    from core import datasets as _ds
+                    defined.update(_ds.info(ds_name)["columns"])
+                except Exception:  # noqa: BLE001
+                    report.add("error", "E007", path, line_no, step,
+                               f"No data set called '{ds_name}'.",
+                               "Upload it on Test Data → Data Sets.")
+            elif cmd.text in ("times", "until", "while"):
+                defined.add("round")
+            from execution.control_flow import element_names
+            for name in element_names(step):
+                if name not in locators:
+                    report.add("error", "E003", path, line_no, step,
+                               f"Locator '{name}' is not defined in the locator database.",
+                               "A condition on a missing element is never true.")
             continue
 
         # ── Runner support for this platform ──────────────────────────────────

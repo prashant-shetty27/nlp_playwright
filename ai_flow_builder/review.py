@@ -217,6 +217,7 @@ def review(steps: list[str], *, platform: str = "website",
     out += _shadowed_elements(live, platform)
     out += _length_and_shape(live)
     out += _code_in_steps(live)
+    out += _block_structure(live)
 
     for f in out:
         if not f.bucket_note:
@@ -231,7 +232,7 @@ _MUST, _OPTIONAL = "must", "optional"
 
 #: Findings that mean the test is broken, or passes when it should not.
 _BROKEN = {"unknown_element", "no_assertion", "assertion_placement", "code_in_step",
-           "shadowed_element", "hardcoded_value"}
+           "shadowed_element", "hardcoded_value", "block_structure"}
 
 
 # ── individual checks ─────────────────────────────────────────────────────────
@@ -449,6 +450,17 @@ def _unknown_locators(steps: list[str], platform: str) -> list[Finding]:
         except Exception:  # noqa: BLE001
             continue
         target = getattr(cmd, "target", None)
+        if cmd.type == "block":
+            from execution.control_flow import element_names
+            for name in element_names(step):
+                if name not in known:
+                    out.append(Finding(
+                        kind="unknown_element", severity="high", step_index=i,
+                        message=f"'{name}' is not in your element list.",
+                        why="A condition on an element that does not exist is never "
+                            "true, so this block would silently never run (or never "
+                            "stop). Record it with the spy, or fix the name.", fix=""))
+            continue
         if (cmd.type in TARGET_IS_LOCATOR and isinstance(target, str)
                 and target and target not in known
                 and not target.startswith(("//", "(", "#", ".", "css=", "xpath="))):
@@ -685,3 +697,19 @@ def _length_and_shape(steps: list[str]) -> list[Finding]:
 
 def as_dicts(findings: list[Finding]) -> list[dict]:
     return [asdict(f) for f in findings]
+
+
+def _block_structure(steps: list[str]) -> list[Finding]:
+    """An if / loop that is not closed, or an 'else' / 'stop loop' in the wrong place."""
+    from execution.control_flow import FlowProgram, FlowStructureError
+    try:
+        FlowProgram(steps)
+    except FlowStructureError as e:
+        m = re.match(r"Line (\d+):\s*(.*)", str(e))
+        return [Finding(kind="block_structure", severity="high",
+                        step_index=int(m.group(1)) if m else 0,
+                        message=(m.group(2) if m else str(e)),
+                        why="The test cannot start until every block is closed: "
+                            "'if' → 'end if', 'for each row' → 'end for', "
+                            "'repeat' → 'end repeat'.", fix="")]
+    return []
