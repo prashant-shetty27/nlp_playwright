@@ -42,6 +42,9 @@ TARGET_IS_LOCATOR = {
     "verify_element_starts", "verify_element_ends", "verify_element_matches",
     "verify_element_not_contains", "upload_file", "switch_iframe", "tap",
     "double_tap", "long_press", "wait_for_element", "verify_element_exists",
+    "double_tap_if_visible", "long_press_if_visible", "store_text_if_visible",
+    "hover", "right_click", "drag_drop", "check", "uncheck", "verify_state",
+    "verify_attribute", "verify_count",
 }
 
 #: Command types whose `target` is a variable name, not a locator.
@@ -96,7 +99,7 @@ class Segment:
 #: Commands whose values[] holds element names after a fixed prefix:
 #: {command type: index of the first element name}. swipe_until_visible keeps
 #: the swipe span at values[0] and the closers after it.
-EXTRA_LOCATORS = {"swipe_until_visible": 1,
+EXTRA_LOCATORS = {"swipe_until_visible": 1, "drag_drop": 0,
                   "verify_inside": 0, "verify_inside_every": 0, "verify_same_place_every": 0,
                   "verify_same_size": 0, "store_position": 0}
 

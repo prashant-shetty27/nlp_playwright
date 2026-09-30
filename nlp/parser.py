@@ -29,6 +29,86 @@ def parse_step(step: str) -> Command:
                        values=[a for a in _blk[1] if a])
 
     # =============================
+    # EVERYDAY WEB ACTIONS & CHECKS (hover, right click, drag, checkboxes, URL,
+    # attributes, counts, key combinations). Early, because several of these
+    # were being swallowed by broader rules below — "verify url contains …"
+    # was read as a check on a variable called "url".
+    # =============================
+    _E = r'(?:the\s+)?(?:element\s+)?'
+    m = re.match(r'^(?:hover|mouse\s*over|move\s+(?:the\s+)?mouse\s+(?:to|over|on))\s+(?:over\s+|on\s+)?'
+                 + _E + r'(\S+)$', s, re.I)
+    if m:
+        return Command(type="hover", target=m.group(1))
+    m = re.match(r'^(?:right[\s-]*click|context\s+click)\s+(?:on\s+)?' + _E + r'(\S+)$', s, re.I)
+    if m:
+        return Command(type="right_click", target=m.group(1))
+    m = re.match(r'^drag\s+(?:and\s+drop\s+)?' + _E + r'(\S+)\s+(?:to|onto|on|into|over)\s+'
+                 + _E + r'(\S+)$', s, re.I)
+    if m:
+        return Command(type="drag_drop", target=m.group(1), values=[m.group(2)])
+    m = re.match(r'^(check|tick|uncheck|untick)\s+(?:the\s+)?(?:checkbox\s+|radio\s+(?:button\s+)?)?'
+                 r'(?:element\s+)?([A-Za-z_][\w.\-]*)$', s, re.I)
+    if m:
+        on = m.group(1).lower() in ("check", "tick")
+        return Command(type="check" if on else "uncheck", target=m.group(2))
+    m = re.match(r'^verify\s+(?:that\s+)?' + _E + r'(\S+)\s+is\s+(not\s+)?'
+                 r'(checked|ticked|selected|enabled|disabled|editable|read[\s-]?only)$', s, re.I)
+    if m:
+        return Command(type="verify_state", target=m.group(1),
+                       values=[m.group(3).lower().replace("-", " "), "not" if m.group(2) else ""])
+
+    _TOP = (r'(does\s+not\s+contain|doesn\'t\s+contain|contains|is\s+not|is|equals|'
+            r'starts\s+with|ends\s+with|matches)')
+    m = re.match(r'^verify\s+(?:that\s+)?(?:the\s+)?(?:current\s+|page\s+|browser\s+)?(?:url|address)\s+'
+                 + _TOP + r'\s+"(.*)"$', s, re.I)
+    if m:
+        return Command(type="verify_url", values=[re.sub(r"\s+", " ", m.group(1).lower())], text=m.group(2))
+    m = re.match(r'^wait\s+(?:for\s+|until\s+)?(?:the\s+)?(?:current\s+|page\s+)?(?:url|address)\s+'
+                 r'(?:to\s+)?(contains?|containing|is|to\s+be|be|starts\s+with|ends\s+with)\s+"(.*?)"'
+                 r'(?:\s+(?:within|for)\s+(\d+)\s*(?:s|sec|secs|seconds?))?$', s, re.I)
+    if m:
+        op = m.group(1).lower()
+        op = "contains" if op.startswith("contain") else ("is" if op in ("is", "to be", "be") else op)
+        return Command(type="wait_for_url", values=[op], text=m.group(2),
+                       wait=float(m.group(3)) if m.group(3) else None)
+    m = re.match(r'^store\s+(?:the\s+)?(?:current\s+|page\s+)?(?:url|address)\s+as\s+(\S+)$', s, re.I)
+    if m:
+        return Command(type="extract_url", variable_name=m.group(1))
+
+    _AOP = (r'(does\s+not\s+contain|doesn\'t\s+contain|contains|is\s+not\s+empty|is\s+empty|is\s+not|is|'
+            r'equals|starts\s+with|ends\s+with|matches)')
+    m = re.match(r'^verify\s+(?:the\s+)?(?:attribute\s+(\S+)|(value|placeholder|title\s+attribute|href|src|alt))'
+                 r'\s+of\s+' + _E + r'(\S+)\s+' + _AOP + r'(?:\s+"(.*)")?$', s, re.I)
+    if m:
+        attr = (m.group(1) or m.group(2)).lower().replace(" attribute", "")
+        op = re.sub(r"\s+", " ", m.group(4).lower())
+        if m.group(5) is None and op not in ("is empty", "is not empty"):
+            raise ValueError('Give the expected value in quotes, e.g. verify value of name_field is "Ravi"')
+        return Command(type="verify_attribute", target=m.group(3), attribute=attr,
+                       values=[op], text=m.group(5) or "")
+    m = re.match(r'^verify\s+' + _E + r'(\S+)\s+has\s+(?:the\s+)?(value|placeholder|attribute\s+(\S+))\s+"(.*)"$', s, re.I)
+    if m:
+        attr = (m.group(3) or m.group(2)).lower()
+        return Command(type="verify_attribute", target=m.group(1), attribute=attr, values=["is"], text=m.group(4))
+
+    _COP = r'(?:(is\s+not|is|more\s+than|greater\s+than|less\s+than|fewer\s+than|at\s+least|at\s+most)\s+)?'
+    m = (re.match(r'^verify\s+(?:the\s+)?(?:count|number)\s+of\s+' + _E + r'(\S+)\s+(?:is\s+)?' + _COP + r'(\d+)$', s, re.I)
+         or re.match(r'^verify\s+' + _E + r'(\S+)\s+count\s+(?:is\s+)?' + _COP + r'(\d+)$', s, re.I))
+    if m:
+        op = re.sub(r"\s+", " ", (m.group(2) or "is").lower())
+        if m.group(1).lower() in ("tab", "tabs", "window", "windows", "open_tabs"):
+            if op != "is":
+                raise ValueError("Tab count takes an exact number, e.g. verify 2 tabs are open")
+            return Command(type="verify_tab_count", count=int(m.group(3)))
+        return Command(type="verify_count", target=m.group(1), values=[op], count=int(m.group(3)))
+
+    # press key Control+A | press ctrl+a | press keys cmd+shift+k | press key F5
+    m = re.match(r'^press\s+(?:the\s+)?(?:keys?\s+)?((?:ctrl|control|cmd|command|meta|alt|option|shift|win|windows)'
+                 r'(?:\s*\+\s*\S+)+)$', s, re.I) or re.match(r'^press\s+keys?\s+(\S+(?:\s*\+\s*\S+)+|F\d{1,2})$', s, re.I)
+    if m:
+        return Command(type="press_key", text=m.group(1).replace(" ", ""))
+
+    # =============================
     # TEXT MATCHING — page level and element level
     #
     # "contains" and "exact" existed; the rest did not, on either this framework

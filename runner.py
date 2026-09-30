@@ -253,8 +253,8 @@ def _execute_step_from_command(cmd, page):
                                          ep, target, (cmd.values or ["bottom_top"])[0],
                                          int(cmd.count or 15), cmd.wait if cmd.wait is not None else 1,
                                          closers=(cmd.values or [])[1:]),
-        "press_key":                 lambda: ep.keyboard.press(_KEY_NAMES.get(
-                                         (cmd.text or "").lower(), cmd.text)),
+        # One key (Enter, Tab…) or a combination (ctrl+a → Control+a, cmd+shift+k).
+        "press_key":                 lambda: svc.press_keys(ep, cmd.text or ""),
         # ── Parseable web-capable types that had NO entry (they failed with
         #    "Unknown command type" on every website/mobilesite run). App-only
         #    types (tap text, long press, hide keyboard…) stay absent on
@@ -348,6 +348,26 @@ def _execute_step_from_command(cmd, page):
         # ── Iframes ──────────────────────────────────────────────────────────
         "switch_iframe":             lambda: svc.switch_iframe(page, target),
         "switch_iframe_index":       lambda: svc.switch_iframe_index(page, cmd.count),
+        # ── Mouse, form state, URL, attributes, counts (Website + Mobile Site) ─
+        "hover":                     lambda: svc.hover_element(ep, target),
+        "right_click":               lambda: svc.right_click_element(ep, target),
+        "double_tap":                lambda: svc.double_click_element(ep, target),
+        "double_tap_if_visible":     lambda: svc.double_click_if_visible(ep, target, float(cmd.wait or 0)),
+        "long_press":                lambda: svc.long_press_element(ep, target),
+        "long_press_if_visible":     lambda: svc.long_press_if_visible(ep, target, float(cmd.wait or 0)),
+        "tap_text":                  lambda: svc.click_text(ep, text),
+        "store_text_if_visible":     lambda: svc.store_text_if_visible(ep, target, cmd.variable_name,
+                                                                      float(cmd.wait or 0)),
+        "drag_drop":                 lambda: svc.drag_and_drop(ep, target, (cmd.values or [""])[0]),
+        "check":                     lambda: svc.set_checked(ep, target, True),
+        "uncheck":                   lambda: svc.set_checked(ep, target, False),
+        "verify_state":              lambda: svc.verify_element_state(ep, target, cmd.values[0],
+                                                                      negate=cmd.values[1] == "not"),
+        "verify_url":                lambda: svc.verify_url(ep, cmd.values[0], text),
+        "wait_for_url":              lambda: svc.wait_for_url(ep, cmd.values[0], text, float(cmd.wait or 15)),
+        "verify_attribute":          lambda: svc.verify_attribute(ep, target, cmd.attribute or "",
+                                                                  cmd.values[0], text or ""),
+        "verify_count":              lambda: svc.verify_count(ep, target, cmd.values[0], cmd.count),
         "switch_tab_url":            lambda: svc.switch_tab_url(page, text),
         "wait_new_tab":              lambda: svc.wait_new_tab(page, float(cmd.wait or 10)),
         "verify_tab_count":          lambda: svc.verify_tab_count(page, cmd.count),

@@ -725,8 +725,99 @@ KEYWORD_MAP = {
     "press_key": {
         "phrases": ["press key", "press space", "press tab", "press escape"],
         "action": "press_key",
-        "help": "one keyboard key: Space, Tab, Escape, Enter, Backspace",
+        "help": "a key (Space, Tab, Escape, Enter, F5) or a combination: ctrl+a, shift+tab, cmd+c",
         "template": "press key {text}"
+    },
+    "press_key_combo": {
+        "phrases": ["press ctrl", "keyboard shortcut", "key combination", "select all", "ctrl+a",
+                    "press shift+tab", "copy paste keys"],
+        "action": "press_key", "help": "ctrl / cmd / alt / shift + a key",
+        "template": "press key ctrl+a"
+    },
+
+    # --- MOUSE (Website + Mobile Site) ------------------------------------------
+    "hover": {
+        "phrases": ["hover", "hover over", "mouse over", "move mouse to", "show tooltip", "open menu on hover"],
+        "action": "hover", "template": "hover over {locator}"
+    },
+    "right_click": {
+        "phrases": ["right click", "context click", "open context menu"],
+        "action": "right_click", "template": "right click {locator}"
+    },
+    "double_click": {
+        "phrases": ["double click", "double tap", "dblclick"],
+        "action": "double_tap", "template": "double click {locator}"
+    },
+    "long_press": {
+        "phrases": ["long press", "press and hold", "hold"],
+        "action": "long_press", "template": "long press {locator}"
+    },
+    "drag_drop": {
+        "phrases": ["drag", "drag and drop", "drag to", "move element to"],
+        "action": "drag_drop", "template": "drag {locator} to {locator}"
+    },
+    "click_text": {
+        "phrases": ["click text", "tap text", "click on the text", "click label"],
+        "action": "tap_text", "help": "clicks whatever shows this text — no recorded element needed",
+        "template": "click text \"{text}\""
+    },
+
+    # --- CHECKBOXES / RADIO & ELEMENT STATE --------------------------------------
+    "check": {
+        "phrases": ["check", "tick", "tick checkbox", "select checkbox", "select radio", "choose radio"],
+        "action": "check", "template": "check {locator}"
+    },
+    "uncheck": {
+        "phrases": ["uncheck", "untick", "clear checkbox"],
+        "action": "uncheck", "template": "uncheck {locator}"
+    },
+    "verify_checked": {
+        "phrases": ["verify checked", "verify ticked", "verify checkbox is checked", "verify selected",
+                    "verify not checked"],
+        "action": "verify_state", "template": "verify element {locator} is checked"
+    },
+    "verify_enabled": {
+        "phrases": ["verify enabled", "verify button is enabled", "verify clickable"],
+        "action": "verify_state", "template": "verify element {locator} is enabled"
+    },
+    "verify_disabled": {
+        "phrases": ["verify disabled", "verify button is disabled", "verify greyed out"],
+        "action": "verify_state", "template": "verify element {locator} is disabled"
+    },
+
+    # --- URL ---------------------------------------------------------------------
+    "verify_url": {
+        "phrases": ["verify url", "verify url contains", "verify current url", "check page address",
+                    "verify redirected to"],
+        "action": "verify_url", "template": "verify url contains \"{text}\""
+    },
+    "wait_for_url": {
+        "phrases": ["wait for url", "wait until url", "wait for redirect", "wait for page address"],
+        "action": "wait_for_url", "template": "wait for url to contain \"{text}\""
+    },
+    "store_url": {
+        "phrases": ["store current url", "store url", "save page url"],
+        "action": "extract_url", "template": "store current url as {variable}"
+    },
+
+    # --- ATTRIBUTES / VALUES / COUNTS --------------------------------------------
+    "verify_attribute": {
+        "phrases": ["verify attribute", "verify href", "verify src", "verify alt", "verify link"],
+        "action": "verify_attribute", "template": "verify attribute href of {locator} contains \"{text}\""
+    },
+    "verify_value": {
+        "phrases": ["verify value", "verify input value", "verify field value", "verify typed text"],
+        "action": "verify_attribute", "template": "verify value of {locator} is \"{text}\""
+    },
+    "verify_placeholder": {
+        "phrases": ["verify placeholder", "verify hint text"],
+        "action": "verify_attribute", "template": "verify placeholder of {locator} is \"{text}\""
+    },
+    "verify_count": {
+        "phrases": ["verify count", "verify number of", "count elements", "verify how many",
+                    "verify results count"],
+        "action": "verify_count", "help": "also: is more than / less than / at least / at most",
+        "template": "verify count of {locator} is {number}"
     },
     "clear_field": {
         "phrases": ["clear field", "clear text", "empty the input"],

@@ -3874,3 +3874,303 @@ def reset_run_state() -> None:
     _NET_LOG.clear()            # captured network requests
     _NET_PAGES.clear()          # pages with a request listener attached
     _NET_TARGETS.clear()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# MOUSE · FORM STATE · URL · ATTRIBUTES · COUNTS  (Website + Mobile Site)
+# Everyday Testsigma / Playwright / Selenium actions that had no step yet.
+# ─────────────────────────────────────────────────────────────────────────────
+_POLL_S = 5          # checks re-read the page for up to 5 s before failing
+
+
+def _el(page, name: str):
+    """(locator of the first match, selector) for an element name from Elements."""
+    sel, _dna = _resolve_live(page, name)
+    return _get_locator_root(page).locator(sel).first, sel
+
+
+def _readable(name: str) -> str:
+    return str(name).replace("_", " ")
+
+
+def hover_element(page, name: str) -> None:
+    loc, _ = _el(page, name)
+    loc.scroll_into_view_if_needed(timeout=settings.ACTION_TIMEOUT_MS)
+    loc.hover(timeout=settings.ACTION_TIMEOUT_MS)
+    logger.info("🖱️ Hovered over '%s'", name)
+
+
+def right_click_element(page, name: str) -> None:
+    loc, _ = _el(page, name)
+    loc.click(button="right", timeout=settings.ACTION_TIMEOUT_MS)
+    logger.info("🖱️ Right-clicked '%s'", name)
+
+
+def double_click_element(page, name: str) -> None:
+    loc, _ = _el(page, name)
+    loc.dblclick(timeout=settings.ACTION_TIMEOUT_MS)
+    logger.info("🖱️ Double-clicked '%s'", name)
+
+
+def double_click_if_visible(page, name: str, timeout_s: float = 0) -> None:
+    loc = _visible_within(page, name, timeout_s)
+    if loc is None:
+        logger.info("ℹ️  double click if visible: '%s' not visible — skipped", name)
+        return
+    loc.dblclick(timeout=settings.ACTION_TIMEOUT_MS)
+    logger.info("🖱️ Double-clicked '%s'", name)
+
+
+def long_press_element(page, name: str, seconds: float = 1.0) -> None:
+    """Press and hold (mouse / finger down, wait, release) on the element's centre."""
+    loc, _ = _el(page, name)
+    loc.scroll_into_view_if_needed(timeout=settings.ACTION_TIMEOUT_MS)
+    box = loc.bounding_box()
+    if not box:
+        raise AssertionError(f"'{name}' has no size on screen — cannot press and hold it.")
+    ep = get_active_page(page)
+    ep.mouse.move(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
+    ep.mouse.down()
+    ep.wait_for_timeout(int(seconds * 1000))
+    ep.mouse.up()
+    logger.info("🖱️ Pressed and held '%s' for %.1fs", name, seconds)
+
+
+def long_press_if_visible(page, name: str, timeout_s: float = 0) -> None:
+    if _visible_within(page, name, timeout_s) is None:
+        logger.info("ℹ️  long press if visible: '%s' not visible — skipped", name)
+        return
+    long_press_element(page, name)
+
+
+def click_text(page, text: str) -> None:
+    """Click the first visible element showing this text (no recorded element needed)."""
+    root = _get_locator_root(page)
+    loc = root.get_by_text(text, exact=True)
+    if loc.count() == 0:
+        loc = root.get_by_text(text)
+    try:
+        loc.first.click(timeout=settings.ACTION_TIMEOUT_MS)
+    except Exception as e:  # noqa: BLE001
+        raise AssertionError(f"No clickable element with the text {text!r} on the page.") from e
+    logger.info("🖱️ Clicked the text %r", text)
+
+
+def store_text_if_visible(page, name: str, variable: str, timeout_s: float = 0) -> None:
+    loc = _visible_within(page, name, timeout_s)
+    if loc is None:
+        logger.info("ℹ️  store text if visible: '%s' not visible — %s left unchanged", name, variable)
+        return
+    RUNTIME_VARIABLES[variable] = re.sub(r"\s+", " ", loc.inner_text() or "").strip()
+    logger.info("💾 Stored text of '%s' as ${%s}", name, variable)
+
+
+def drag_and_drop(page, source: str, target: str) -> None:
+    src, _ = _el(page, source)
+    dst, _ = _el(page, target)
+    try:
+        src.drag_to(dst, timeout=settings.ACTION_TIMEOUT_MS)
+    except Exception:  # noqa: BLE001 — some widgets need a slow, real mouse drag
+        ep = get_active_page(page)
+        a, b = src.bounding_box(), dst.bounding_box()
+        if not a or not b:
+            raise AssertionError(f"Cannot drag '{source}' to '{target}' — one of them is not on screen.")
+        ep.mouse.move(a["x"] + a["width"] / 2, a["y"] + a["height"] / 2)
+        ep.mouse.down()
+        ep.mouse.move(b["x"] + b["width"] / 2, b["y"] + b["height"] / 2, steps=15)
+        ep.mouse.up()
+    logger.info("🖱️ Dragged '%s' onto '%s'", source, target)
+
+
+_STATE_JS = """(el) => {
+  const role = (el.getAttribute('role') || '').toLowerCase();
+  const aria = el.getAttribute('aria-checked');
+  const isInput = el.tagName === 'INPUT' && ['checkbox','radio'].includes((el.type||'').toLowerCase());
+  return {isInput, type: (el.type||'').toLowerCase(), role,
+          checked: isInput ? el.checked : (aria === null ? null : aria === 'true')};
+}"""
+
+
+def set_checked(page, name: str, on: bool) -> None:
+    """Tick / untick a checkbox or pick a radio button — real inputs and
+    custom ones (role=checkbox, aria-checked) alike. Does nothing if already so."""
+    loc, _ = _el(page, name)
+    st = loc.evaluate(_STATE_JS)
+    if st["isInput"]:
+        if not on and st["type"] == "radio":
+            raise AssertionError(f"'{name}' is a radio button — it can't be unticked; "
+                                 "tick another option in the group instead.")
+        loc.set_checked(on, timeout=settings.ACTION_TIMEOUT_MS)
+    else:
+        if st["checked"] is None:
+            # Not a checkbox as far as the page says: a click is the only thing to do.
+            loc.click(timeout=settings.ACTION_TIMEOUT_MS)
+        elif bool(st["checked"]) != on:
+            loc.click(timeout=settings.ACTION_TIMEOUT_MS)
+        after = loc.evaluate(_STATE_JS)["checked"]
+        if after is not None and bool(after) != on:
+            raise AssertionError(f"'{name}' is still {'unticked' if on else 'ticked'} after clicking it.")
+    logger.info("☑️ %s '%s'", "Ticked" if on else "Unticked", name)
+
+
+_STATES = {
+    "checked": ("to_be_checked", {}), "selected": ("to_be_checked", {}),
+    "ticked": ("to_be_checked", {}), "enabled": ("to_be_enabled", {}),
+    "disabled": ("to_be_disabled", {}), "editable": ("to_be_editable", {}),
+    "read only": ("to_be_editable", {"negate": True}),
+    "readonly": ("to_be_editable", {"negate": True}),
+}
+
+
+def verify_element_state(page, name: str, state: str, negate: bool = False) -> None:
+    """checked / enabled / disabled / editable / read only — or 'not' any of them."""
+    key = re.sub(r"[\s-]+", " ", state.strip().lower())
+    if key not in _STATES:
+        raise ValueError(f"Unknown state '{state}'. Use checked, enabled, disabled, editable or read only.")
+    method, opts = _STATES[key]
+    loc, _ = _el(page, name)
+    neg = negate != bool(opts.get("negate"))
+    try:
+        # expect(loc).to_be_checked(...) / expect(loc).not_to_be_checked(...)
+        getattr(expect(loc), ("not_" if neg else "") + method)(timeout=_POLL_S * 1000)
+    except AssertionError:
+        raise AssertionError(f"{_readable(name)} is {'' if neg else 'not '}{key} "
+                             f"(expected {'not ' if negate else ''}{key}).") from None
+    logger.info("✅ '%s' is %s%s", name, "not " if negate else "", key)
+
+
+def _compare_text(actual: str, op: str, expected: str) -> bool:
+    a, e, op = actual or "", expected or "", re.sub(r"\s+", " ", op.strip().lower())
+    return {"contains": e.lower() in a.lower(),
+            "does not contain": e.lower() not in a.lower(),
+            "doesn't contain": e.lower() not in a.lower(),
+            "is": a.strip() == e.strip(), "equals": a.strip() == e.strip(),
+            "is not": a.strip() != e.strip(),
+            "starts with": a.lower().startswith(e.lower()),
+            "ends with": a.lower().endswith(e.lower()),
+            "matches": re.search(e, a) is not None,
+            "is empty": not a.strip(), "is not empty": bool(a.strip())}[op]
+
+
+_SHOULD = {"contains": "contain", "does not contain": "not contain", "doesn't contain": "not contain",
+           "is": "be", "equals": "be", "is not": "not be", "starts with": "start with",
+           "ends with": "end with", "matches": "match", "is empty": "be empty",
+           "is not empty": "not be empty"}
+
+
+def _should(op: str, expected: str) -> str:
+    """'contains', 'x' → "should contain 'x'" (for failure messages)."""
+    op = re.sub(r"\s+", " ", op.strip().lower())
+    verb = _SHOULD.get(op, op)
+    return f"should {verb}" + ("" if op in ("is empty", "is not empty") else f" {expected!r}")
+
+
+def verify_url(page, op: str, expected: str) -> None:
+    """The address of the current tab (waits up to 5 s for a redirect to finish)."""
+    ep = get_active_page(page)
+    deadline = time.time() + _POLL_S
+    while True:
+        url = ep.url or ""
+        if _compare_text(url, op, expected):
+            logger.info("✅ URL %s %r", op, expected)
+            return
+        if time.time() > deadline:
+            raise AssertionError(f"The page address {_should(op, expected)}.\n"
+                                 f"  actual: {_strip_credentials(url)!r}")
+        _pw_pause(ep)
+
+
+def wait_for_url(page, op: str, expected: str, timeout_s: float = 15) -> None:
+    ep = get_active_page(page)
+    deadline = time.time() + timeout_s
+    while not _compare_text(ep.url or "", op, expected):
+        if time.time() > deadline:
+            raise AssertionError(f"Waited {int(timeout_s)} s — the page address {_should(op, expected)} "
+                                 f"but does not.\n  actual: {_strip_credentials(ep.url)!r}")
+        _pw_pause(ep)
+    logger.info("✅ URL now %s %r", op, expected)
+
+
+def verify_attribute(page, name: str, attribute: str, op: str, expected: str = "") -> None:
+    """An attribute of an element — or its current value (inputs) / placeholder."""
+    loc, _ = _el(page, name)
+    attr = attribute.strip().lower()
+    deadline = time.time() + _POLL_S
+    while True:
+        try:
+            if attr == "value":
+                actual = loc.input_value(timeout=2000)
+            else:
+                actual = loc.get_attribute(attr, timeout=2000)
+        except Exception:  # noqa: BLE001 — not an input / not attached yet
+            actual = None
+        if actual is not None and _compare_text(actual, op, expected):
+            logger.info("✅ %s of '%s' %s %r", attr, name, op, expected)
+            return
+        if time.time() > deadline:
+            shown = "no such attribute" if actual is None else repr(actual)
+            raise AssertionError(f"The {attr} of {_readable(name)} {_should(op, expected)}.\n"
+                                 f"  actual: {shown}")
+        _pw_pause(get_active_page(page))
+
+
+_COUNT_OPS = {"is": lambda a, b: a == b, "is not": lambda a, b: a != b,
+              "more than": lambda a, b: a > b, "greater than": lambda a, b: a > b,
+              "less than": lambda a, b: a < b, "fewer than": lambda a, b: a < b,
+              "at least": lambda a, b: a >= b, "at most": lambda a, b: a <= b}
+
+
+def verify_count(page, name: str, op: str, expected: int) -> None:
+    """How many elements match (waits up to 5 s for a list to finish loading)."""
+    sel, _ = _resolve_live(page, name)
+    op = re.sub(r"\s+", " ", (op or "is").strip().lower())
+    check = _COUNT_OPS[op]
+    root = _get_locator_root(page)
+    deadline = time.time() + _POLL_S
+    while True:
+        n = root.locator(sel).count()
+        if check(n, int(expected)):
+            logger.info("✅ %d × '%s' (%s %s)", n, name, op, expected)
+            return
+        if time.time() > deadline:
+            want = f"exactly {expected}" if op == "is" else f"{op} {expected}"
+            raise AssertionError(f"Found {n} × {_readable(name)} — expected {want}.")
+        _pw_pause(get_active_page(page))
+
+
+_MODIFIERS = {"ctrl": "Control", "control": "Control", "cmd": "Meta", "command": "Meta",
+              "meta": "Meta", "win": "Meta", "windows": "Meta", "alt": "Alt", "option": "Alt",
+              "shift": "Shift"}
+_KEYS = {"pagedown": "PageDown", "pageup": "PageUp", "arrowdown": "ArrowDown", "down": "ArrowDown",
+         "arrowup": "ArrowUp", "up": "ArrowUp", "arrowleft": "ArrowLeft", "left": "ArrowLeft",
+         "arrowright": "ArrowRight", "right": "ArrowRight", "backspace": "Backspace",
+         "enter": "Enter", "return": "Enter", "tab": "Tab", "escape": "Escape", "esc": "Escape",
+         "space": "Space", "delete": "Delete", "del": "Delete", "home": "Home", "end": "End",
+         "insert": "Insert"}
+
+
+def key_combo(text: str) -> str:
+    """'ctrl+a' → 'Control+a', 'cmd + shift + k' → 'Meta+Shift+k', 'F5' → 'F5'."""
+    parts = [p.strip() for p in re.split(r"\s*\+\s*", (text or "").strip()) if p.strip()]
+    out = []
+    for i, p in enumerate(parts):
+        low = p.lower()
+        if i < len(parts) - 1 and low in _MODIFIERS:
+            out.append(_MODIFIERS[low])
+        elif low in _MODIFIERS:
+            out.append(_MODIFIERS[low])
+        elif low in _KEYS:
+            out.append(_KEYS[low])
+        elif re.fullmatch(r"f\d{1,2}", low):
+            out.append(low.upper())
+        elif len(p) == 1:
+            out.append(p.lower() if len(parts) > 1 else p)
+        else:
+            out.append(p[:1].upper() + p[1:])
+    return "+".join(out)
+
+
+def press_keys(page, text: str) -> None:
+    combo = key_combo(text)
+    get_active_page(page).keyboard.press(combo)
+    logger.info("⌨️ Pressed %s", combo)
