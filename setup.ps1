@@ -35,5 +35,6 @@ if (-not (Test-Path "$root\config\environments.json") -and (Test-Path "$root\con
 if (-not (Test-Path "$root\data\common\variables.json") -and (Test-Path "$root\data\common\variables.example.json")) {
   Copy-Item "$root\data\common\variables.example.json" "$root\data\common\variables.json"
 }
+& $venvPy "$root\tools\check_commit.py" --install
 Write-Host ""
 Write-Host "Setup done. Start the portal by double-clicking start_portal.cmd"

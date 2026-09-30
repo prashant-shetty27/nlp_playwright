@@ -37,6 +37,7 @@ if [[ ! -f "$ROOT_DIR/data/common/variables.json" && -f "$ROOT_DIR/data/common/v
   cp "$ROOT_DIR/data/common/variables.example.json" "$ROOT_DIR/data/common/variables.json"
 fi
 
+"$VENV_DIR/bin/python" "$ROOT_DIR/tools/check_commit.py" --install || true
 echo "Setup complete."
 echo "Use: . .venv/bin/activate"
 echo "Start the portal: .venv/bin/python -m ui.app --port 8100 --show"

@@ -16,6 +16,7 @@ git output is kept for the "details" view only.
 """
 from __future__ import annotations
 
+import os
 import subprocess
 from dataclasses import dataclass, field
 
@@ -136,6 +137,21 @@ def share(user: str, message: str = "") -> SyncResult:
     rc, out = _git("add", "-A", "--", *SHARED_PATHS)
     if rc != 0:
         return SyncResult(False, "Could not prepare your changes.", out)
+    # The same guard as the pre-commit hook: no secrets, no literal test
+    # numbers, no per-machine files — explained in plain words.
+    try:
+        import sys as _sys
+        _sys.path.insert(0, os.path.join(BASE_DIR, "tools"))
+        from check_commit import staged as _staged, check_files as _check
+        names, contents = _staged()
+        problems = _check(names, contents)
+    except Exception:  # noqa: BLE001
+        problems = []
+    if problems:
+        _git("reset", "-q")
+        return SyncResult(False, "Not shared — something private is inside your changes. "
+                                 "Fix these lines and try again:\n" + "\n".join(problems[:8]),
+                          "\n".join(problems))
     who = (user or "portal").strip() or "portal"
     msg = (message or "").strip() or f"{who}: {what}"
     rc, out = _git("-c", f"user.name={who}", "-c", f"user.email={who}@portal.local",
