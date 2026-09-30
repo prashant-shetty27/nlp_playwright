@@ -31,8 +31,8 @@ numpy
 watchdog
 
 # Web API (Phase 2 — server.py)
-fastapi
-uvicorn[standard]
+fastapi==0.129.2
+uvicorn[standard]==0.41.0
 
 # Interactive reporting
 questionary
