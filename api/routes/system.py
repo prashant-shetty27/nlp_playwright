@@ -152,7 +152,7 @@ def info():
 
 
 @router.post("/restart")
-def restart(body: RestartRequest):
+def restart(body: RestartRequest, user: str = Depends(acting_user)):
     """
     Replace this process with a fresh one on the same host and port.
 
@@ -160,6 +160,8 @@ def restart(body: RestartRequest):
     while this process can still send it. The caller then polls /health until
     the successor answers.
     """
+    # The portal owner only — not every admin (core.users.can "restart").
+    require(user, "restart")
     running = _running_runs()
     try:
         from execution import plan_engine

@@ -135,9 +135,14 @@ def step_row(index: int, nlp_text: str, *, action: str = "", target: str = "",
             else:
                 down.props("disable")
 
+        # A badge in the normal UI font, not the step's code font — in the same
+        # font and colour it read as the first word of the step.
         ui.label(str(index)).style(
-            f"width:1.6rem; text-align:right; color:{COLORS['text_muted']};"
-            f"font-family:{TYPOGRAPHY['mono']}; font-size:{TYPOGRAPHY['size_sm']}")
+            f"min-width:1.7rem; text-align:center; flex:none; margin-right:6px;"
+            f"background:{COLORS['border']}; color:{COLORS['text_muted']};"
+            f"border-radius:10px; padding:1px 6px; font-family:{TYPOGRAPHY['family']};"
+            f"font-size:{TYPOGRAPHY['size_xs']}; font-weight:{TYPOGRAPHY['weight_medium']};"
+            f"line-height:1.4")
 
         if group_name:
             ui.label("step group").style(

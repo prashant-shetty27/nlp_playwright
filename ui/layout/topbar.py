@@ -360,14 +360,15 @@ def topbar(breadcrumb: list[str], *, platforms: list[dict] | None = None,
             _plan_alert()
             try:
                 from ui.auth import can as _can
-                _admin = _can("admin")
+                _owner = _can("restart")
             except Exception:  # noqa: BLE001
-                _admin = False
+                _owner = False
             ui.button(icon="settings", on_click=lambda: ui.navigate.to("/settings")) \
                 .props("flat dense").tooltip("Settings")
             # Restart lives in the profile menu: it stops everyone's runs, so it
-            # should take a deliberate reach, not sit next to Run. Admins only.
-            _user_menu(restart=_restart_button(show_button=False) if _admin else None)
+            # should take a deliberate reach, not sit next to Run. Portal owner
+            # only (see core.users.owners) — not every admin.
+            _user_menu(restart=_restart_button(show_button=False) if _owner else None)
 
 
 def _user_menu(restart: Callable | None = None) -> None:

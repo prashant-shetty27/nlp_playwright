@@ -88,11 +88,33 @@ def role_of(username: str) -> str:
     return u["role"] if u and u["active"] else ""
 
 
+def owners() -> set[str]:
+    """
+    The portal owner(s): PORTAL_OWNERS in .env (comma-separated usernames), or
+    — when that is not set — the admin who set the portal up (first created).
+    """
+    import os
+    listed = {n.strip().lower() for n in os.getenv("PORTAL_OWNERS", "").split(",") if n.strip()}
+    if listed:
+        return listed
+    data = _load()
+    admins = sorted((v.get("created_at", ""), k) for k, v in data.items()
+                    if v.get("role") == "admin")
+    return {admins[0][1]} if admins else set()
+
+
 def can(username: str, action: str) -> bool:
-    """action: 'read' | 'write' | 'run' | 'admin'."""
+    """action: 'read' | 'write' | 'run' | 'admin' | 'restart'.
+
+    'restart' (restart the server, which stops everyone's runs) is the OWNER's
+    alone for now — not every admin. Granting it to others by role/permission
+    is planned; until then it is decided by owners() only.
+    """
     role = role_of(username)
     if not role:
         return False
+    if action == "restart":
+        return (username or "").lower() in owners()
     if action == "read":
         return True
     if action in ("write", "run"):
