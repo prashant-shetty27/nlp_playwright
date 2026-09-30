@@ -17,7 +17,7 @@
     "stop_on_failure": false,
     "stop_on_first_failure": false,
     "devices": [],
-    "site_env": ""
+    "site_env": "live"
   },
   "schedule": {
     "enabled": false,
@@ -42,5 +42,5 @@
     "email_to": ""
   },
   "updated_by": "prashantshetty",
-  "updated_at": "2026-09-30T16:23:24+00:00"
+  "updated_at": "2026-09-30T16:33:03+00:00"
 }
