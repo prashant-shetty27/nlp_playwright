@@ -397,6 +397,12 @@ def _interpret(step: str, page):
     except Exception:
         pass
 
+    # ${otp}: static OTP for a test number on this platform, or a live fetch
+    # from the OTP portal for any other number — decided at the moment it is used.
+    if "${otp}" in normalized:
+        import execution.action_service as _svc
+        _svc.resolve_otp(page)
+
     # Variable injection: ${my_var} → value (shared RUNTIME_VARIABLES from action_service)
     try:
         resolved = resolve_variables(normalized)
@@ -412,6 +418,9 @@ def _interpret(step: str, page):
         _expand_reusable(cmd.target, page)
         return
 
+    if getattr(cmd, "text", None):
+        import execution.action_service as _svc
+        _svc.note_typed_value(cmd.text)
     _execute_step_from_command(cmd, page)
 
 

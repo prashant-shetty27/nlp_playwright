@@ -97,7 +97,7 @@
       "js click nct_login_pop_continue_button",
       "click nct_login_otp_field",
       "verify text \"Retry in 00:5\" on page",
-      "type \"${touch_otp}\" into focused field",
+      "type \"${otp}\" into focused field",
       "verify element nct_ask_for_price_acknowledgement_toast_msg is visible"
     ],
     "created_at": "2026-09-29T10:59:17.896458+00:00",
@@ -215,7 +215,7 @@
       "js click prp_login_submit",
       "wait 1 seconds",
       "wait until element prp_submit_login_otp is visible",
-      "type \"${touch_otp}\" into prp_login_otp",
+      "type \"${otp}\" into prp_login_otp",
       "wait 1 seconds"
     ],
     "created_at": "2026-09-28T20:01:27.985108+00:00",
@@ -292,7 +292,7 @@
       "type \"${mobile_9987}\" into rfq_mobile_number_input",
       "js click allpages_login_mobile_continue",
       "wait 3 seconds",
-      "type \"${touch_otp}\" into touch_home_otp_1stfield",
+      "type \"${otp}\" into touch_home_otp_1stfield",
       "wait 2 seconds"
     ],
     "created_at": "2026-09-29T09:58:28.320263+00:00",

@@ -2845,6 +2845,60 @@ def verify_element_visible(page, locator_name):
     logger.info("✅ Element '%s' is visible.", locator_name)
 
 
+# ── ${otp}: the right OTP without anyone typing one ───────────────────────────
+#: Set per run by the portal: "website" or "mobilesite" (decides the static OTP).
+RUN_PLATFORM: str = ""
+#: The last 10-digit mobile number a step typed in this run.
+LAST_MOBILE: str = ""
+_MOBILE_RX = re.compile(r"^[6-9]\d{9}$")
+
+
+def note_typed_value(value) -> None:
+    """Remember a mobile number when a step types one (for ${otp})."""
+    global LAST_MOBILE
+    v = str(value or "").strip()
+    if "${" in v:
+        try:
+            v = str(resolve_variables(v)).strip()
+        except Exception:  # noqa: BLE001
+            return
+    if _MOBILE_RX.match(v):
+        LAST_MOBILE = v
+
+
+def resolve_otp(page) -> str:
+    """
+    The OTP for the number this test just typed, stored as ${otp}.
+
+    - A blocked test number (TEST_MOBILES in .env — no vendor/client lead is
+      ever generated for them) uses the static OTP of the platform:
+      STATIC_OTP_WEB on Website, STATIC_OTP_TOUCH on Mobile Site.
+    - Any other number: the OTP is fetched live from the QA OTP portal.
+    The value is never logged.
+    """
+    tests = {n.strip() for n in os.getenv("TEST_MOBILES", "").split(",") if n.strip()}
+    mobile = LAST_MOBILE
+    if mobile and mobile not in tests:
+        logger.info("🔑 ${otp}: fetching from the OTP portal for the number typed earlier")
+        fetch_otp_from_portal(page, mobile, "otp")
+        return RUNTIME_VARIABLES.get("otp", "")
+    platform = RUN_PLATFORM
+    if not platform:
+        try:
+            platform = "mobilesite" if page.evaluate("() => navigator.maxTouchPoints > 0 && innerWidth < 900") else "website"
+        except Exception:  # noqa: BLE001
+            platform = "website"
+    key = "STATIC_OTP_TOUCH" if platform == "mobilesite" else "STATIC_OTP_WEB"
+    value = (os.getenv(key) or "").strip()
+    if not value:
+        raise Exception(f"${{otp}}: {key} is not set in .env (static OTP for "
+                        f"{'Mobile Site' if key.endswith('TOUCH') else 'Website'} test numbers).")
+    RUNTIME_VARIABLES["otp"] = value
+    logger.info("🔑 ${otp}: static %s OTP for test number%s", "Mobile Site" if key.endswith("TOUCH") else "Website",
+                "" if mobile else " (no number typed yet in this run)")
+    return value
+
+
 def fetch_otp_from_portal(page, mobile, variable_name, after: str = "",
                           timeout_s: int | None = None):
     """

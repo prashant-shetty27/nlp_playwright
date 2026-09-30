@@ -10,7 +10,7 @@ type "${mobile_9987}" into rfq_mobile_number_input
 wait 2 seconds
 js click allpages_login_mobile_continue
 wait until element touch_home_otp_1stfield is visible
-type if visible "${touch_otp}" into touch_home_otp_1stfield
+type if visible "${otp}" into touch_home_otp_1stfield
 wait 1 seconds
 wait 1 seconds
 open https://www.justdial.com/jdmart/Delhi/Scrap/jdm-1094774-ent-15-1094774?fl=undefined&ismap=undefined&subpage=&searchCase=&term=scrap&searchLocUpdate=0&stype=category_list&srcterm=Scrap

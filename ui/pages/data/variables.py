@@ -95,6 +95,13 @@ class TestDataPage:
                      "out of the test file, the report and the screenshot.").style(
                 f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']};"
                 f"max-width:56rem")
+            ui.label("OTP is automatic — write ${otp} in the step. For the "
+                     "common test numbers (TEST_MOBILES) it uses the static OTP "
+                     "for the platform (Website / Mobile Site); for any other "
+                     "number it fetches the OTP from the OTP portal. Nothing to "
+                     "store here.").style(
+                f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']};"
+                f"max-width:56rem")
 
             if not self.rows:
                 ui.label("Nothing stored yet.").style(
@@ -111,76 +118,69 @@ class TestDataPage:
                                                    e.get("environment", ""))):
                     self._row(entry["name"], entry)
 
-    #: One column layout, used by the header and every row, so the two cannot
-    #: drift apart — a header that no longer sits over its column is worse than
-    #: no header at all.
-    COLS = ("14rem", "7rem", "8rem")
+    #: One grid, used by the header and every row, so the columns cannot drift
+    #: apart. A flex row with fixed-width labels let a long name spill over the
+    #: Scope column (prod_Hotel_Equipment_Manufacturers ran into "global");
+    #: a grid cell clips its own content instead.
+    GRID = ("display:grid; grid-template-columns:"
+            "minmax(10rem,17rem) 5.5rem 7rem minmax(0,1fr) auto;"
+            "column-gap:12px; align-items:center; width:100%")
+
+    #: Clip to one line with an ellipsis; the full text is in the tooltip.
+    CLIP = "overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0"
 
     def _header(self) -> None:
-        with ui.row().classes("w-full items-center gap-3").style(
-                f"padding:6px 10px; border-bottom:1px solid {COLORS['border']};"
+        with ui.element("div").style(
+                f"{self.GRID}; padding:6px 10px;"
+                f"border-bottom:1px solid {COLORS['border']};"
                 f"background:{COLORS['surface_alt']}"):
-            for text, width in (("Name", self.COLS[0]), ("Scope", self.COLS[1]),
-                                ("Environment", self.COLS[2])):
+            for text in ("Name", "Scope", "Environment", "Value", ""):
                 ui.label(text).style(
-                    f"width:{width}; font-size:{TYPOGRAPHY['size_xs']};"
+                    f"font-size:{TYPOGRAPHY['size_xs']};"
                     f"color:{COLORS['text_muted']}; font-weight:"
                     f"{TYPOGRAPHY['weight_bold']}; text-transform:uppercase;"
                     f"letter-spacing:.04em")
-            ui.label("Value").style(
-                f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']};"
-                f"font-weight:{TYPOGRAPHY['weight_bold']};"
-                f"text-transform:uppercase; letter-spacing:.04em")
 
     def _row(self, name: str, entry: dict) -> None:
-        with ui.row().classes("w-full items-center gap-3 no-wrap").style(
-                f"padding:7px 10px; border-bottom:1px solid {COLORS['border']}"):
-            ui.label(name).style(
-                f"font-family:{TYPOGRAPHY['mono']};"
-                f"font-size:{TYPOGRAPHY['size_sm']}; width:{self.COLS[0]}")
+        mono = f"font-family:{TYPOGRAPHY['mono']}; font-size:{TYPOGRAPHY['size_sm']}"
+        with ui.element("div").style(
+                f"{self.GRID}; padding:7px 10px;"
+                f"border-bottom:1px solid {COLORS['border']}"):
+            # The name IS the reference: steps write ${name}. Shown once, with
+            # the ${...} form in the tooltip, instead of a second column that
+            # repeated it and squeezed the value.
+            ui.label(name).style(f"{mono}; {self.CLIP}") \
+                .tooltip("In a step: ${" + name + "}")
             scope = entry.get("scope", "global")
             colour = COLORS["primary"] if scope == "global" else COLORS["accent"]
-            with ui.element("div").style(f"width:{self.COLS[1]}"):
+            with ui.element("div"):
                 ui.label(scope).style(
                     f"background:{colour}1A; color:{colour}; border-radius:4px;"
                     f"padding:1px 7px; font-size:{TYPOGRAPHY['size_xs']};"
                     f"display:inline-block")
-            # Environment gets its own column rather than being folded into the
-            # scope chip: which environment a value belongs to is the thing you
-            # scan this list for, and it was only legible by reading the chip.
             env = entry.get("environment", "")
             ui.label(env or "—").style(
-                f"width:{self.COLS[2]}; font-size:{TYPOGRAPHY['size_sm']};"
-                f"font-family:{TYPOGRAPHY['mono']};"
+                f"{mono}; {self.CLIP};"
                 f"color:{COLORS['text'] if env else COLORS['text_muted']}")
             if entry.get("is_secret"):
-                ui.label(entry.get("display", "")).style(
-                    f"font-family:{TYPOGRAPHY['mono']};"
-                    f"font-size:{TYPOGRAPHY['size_sm']};"
-                    f"color:{COLORS['warning']}")
-                ui.label("credential — value comes from .env, never stored here") \
-                    .style(f"font-size:{TYPOGRAPHY['size_xs']};"
-                           f"color:{COLORS['text_muted']}")
+                ui.label(f"{entry.get('display', '')}  · credential, from .env") \
+                    .style(f"{mono}; {self.CLIP}; color:{COLORS['warning']}")
             else:
-                # In full. See the module docstring: this is the one screen
-                # whose job is to answer "what will the test actually use".
-                ui.label(entry.get("value", "") or "—").classes("flex-grow").style(
-                    f"font-family:{TYPOGRAPHY['mono']};"
-                    f"font-size:{TYPOGRAPHY['size_sm']}; word-break:break-all")
-            ui.space()
-            ui.label("${" + name + "}").style(
-                f"font-family:{TYPOGRAPHY['mono']}; white-space:nowrap;"
-                f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}")
-            if not entry.get("is_secret"):
-                ui.button(icon="edit").props("flat dense size=xs") \
-                    .on("click", lambda n=name, e=entry: self._add_dialog(n, e)) \
-                    .tooltip("Change this value")
-            ui.button(icon="drive_file_rename_outline").props("flat dense size=xs") \
-                .on("click", lambda n=name, e=entry: self._rename_dialog(n, e)) \
-                .tooltip("Rename it — every ${reference} is rewritten too")
-            ui.button(icon="delete_outline").props("flat dense size=xs color=negative") \
-                .on("click", lambda n=name, e=entry: self._delete(n, e)) \
-                .tooltip("Remove it")
+                # In full (tooltip) — see the module docstring. One line in the
+                # table so a long URL does not turn a row into a paragraph.
+                value = entry.get("value", "") or "—"
+                ui.label(value).style(f"{mono}; {self.CLIP}").tooltip(value)
+            with ui.row().classes("gap-0 no-wrap"):
+                if not entry.get("is_secret"):
+                    ui.button(icon="edit").props("flat dense size=xs") \
+                        .on("click", lambda n=name, e=entry: self._add_dialog(n, e)) \
+                        .tooltip("Change this value")
+                ui.button(icon="drive_file_rename_outline").props("flat dense size=xs") \
+                    .on("click", lambda n=name, e=entry: self._rename_dialog(n, e)) \
+                    .tooltip("Rename it — every ${reference} is rewritten too")
+                ui.button(icon="delete_outline").props("flat dense size=xs color=negative") \
+                    .on("click", lambda n=name, e=entry: self._delete(n, e)) \
+                    .tooltip("Remove it")
 
     def _rename_dialog(self, name: str, entry: dict) -> None:
         """
