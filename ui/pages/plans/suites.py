@@ -50,6 +50,9 @@ async def render_list() -> None:
         cols = [{"name": k, "label": l, "field": k, "align": "left", "sortable": True} for k, l in (
             ("name", "Suite"), ("platform", "Platform"), ("count", "Test cases"),
             ("cases", "Contains"), ("updated", "Last changed"))]
+        # Long lists stay on one line (full list searchable, and on hover).
+        cols[3].update({"classes": "ellipsis", "style": "max-width:30rem",
+                        "headerStyle": "max-width:30rem"})
         rows = [{"id": s["id"], "name": s["name"], "platform": s["platform"], "count": s["count"],
                  "cases": ", ".join(c["name"] for c in s["test_cases"]),
                  "updated": f"{ist(s.get('updated_at'))} by {s.get('updated_by') or '—'}"
