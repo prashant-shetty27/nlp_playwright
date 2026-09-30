@@ -50,11 +50,12 @@ async def render_list() -> None:
         cols = [{"name": k, "label": l, "field": k, "align": "left", "sortable": True} for k, l in (
             ("name", "Suite"), ("platform", "Platform"), ("count", "Test cases"),
             ("cases", "Contains"), ("updated", "Last changed"))]
-        # Long lists stay on one line; the full list is still searchable.
-        cols[3].update({"classes": "ellipsis", "style": "max-width:30rem",
-                        "headerStyle": "max-width:30rem"})
+        # Every test case in the suite is shown — the cell wraps instead of
+        # cutting the list off with "…".
+        cols[3].update({"style": "max-width:34rem; white-space:normal; word-break:break-word",
+                        "headerStyle": "max-width:34rem"})
         rows = [{"id": s["id"], "name": s["name"], "platform": s["platform"], "count": s["count"],
-                 "cases": ", ".join(c["name"] for c in s["test_cases"]),
+                 "cases": ",  ".join(c["name"] for c in s["test_cases"]),
                  "updated": f"{ist(s.get('updated_at'))} by {s.get('updated_by') or '—'}"
                             if s.get("updated_at") else "—"} for s in items]
         # Search: matches suite name, platform, and the test cases inside it.
