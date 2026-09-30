@@ -19,7 +19,7 @@ click touch_login_popup_may_be_later
 click nct_ask_for_price
 type "${mobile_9987}" into prp_login_mobile
 js click nct_login_pop_continue_button
-type "537393" into nct_login_otp_field
+type "${touch_otp}" into nct_login_otp_field
 verify element nct_ask_for_price_acknowledgement_toast_msg is visible
 delete all cookies
 open https://www.justdial.com/

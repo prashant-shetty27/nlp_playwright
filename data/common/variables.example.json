@@ -33,7 +33,9 @@
     "prod_Bat_Distributors_MRF": "",
     "mobile_9987": "<blocked test mobile number>",
     "mobile_7977": "<blocked test mobile number>",
-    "mobile_7738": "<blocked test mobile number>"
+    "mobile_7738": "<blocked test mobile number>",
+    "web_otp": "<static OTP for Website test numbers>",
+    "touch_otp": "<static OTP for Mobile Site / Touch test numbers>"
   },
   "env": {
     "local": {},

@@ -102,6 +102,11 @@ def check_files(paths: list[str], contents=None) -> list[str]:
                 if re.search(r"[\"'\s]" + n + r"[\"'\s]", text):
                     line = text.count("\n", 0, text.index(n)) + 1
                     problems.append(f"{p}:{line}: test mobile number typed literally — use ${{mobile_{n[:4]}}} from Test Data")
+            if p.endswith((".flow", "reusable_steps.json")):
+                m = re.search(r'(?:type|enter\s+otp)[^"\n]*"(\d{4,6})"[^\n]*otp', text, re.I)
+                if m:
+                    line = text.count("\n", 0, m.start()) + 1
+                    problems.append(f"{p}:{line}: OTP typed literally — use ${{web_otp}} (Website) or ${{touch_otp}} (Mobile Site) from Test Data")
             if p.startswith("plans/") and p.endswith(".json") and re.search(r"\"(next_run|last_run)\"", text):
                 problems.append(f"{p}: carries run state (next_run/last_run) — it belongs in data/plan_state.json")
     return problems

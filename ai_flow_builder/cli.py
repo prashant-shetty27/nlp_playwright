@@ -34,8 +34,10 @@ from ai_flow_builder import scenario as scenario_mod          # noqa: E402
 # Approved bindings: source variable → secure runtime placeholder.
 DEFAULT_BINDINGS = {
     "TEST_MOBILE": "${jd_test_mobile}",
-    "VALID_OTP": "${jd_test_static_otp}",
-    "NEW_VALID_OTP": "${jd_test_static_otp}",
+    # Static OTPs differ by platform: Website ${web_otp}, Mobile Site ${touch_otp}
+    # (both in Test Data). Drafts default to the touch one; switch for web cases.
+    "VALID_OTP": "${touch_otp}",
+    "NEW_VALID_OTP": "${touch_otp}",
     "PDP_URL_AI_3IMG": "${product_url}",
     "PDP_URL_AI_1IMG": "${product_url}",
     "PDP_URL_AI_2IMG": "${product_url}",
@@ -44,7 +46,8 @@ DEFAULT_BINDINGS = {
 DEFAULT_PLACEHOLDERS = {
     "${product_url}": "suite parameter — DesignTest JDMart product page under test",
     "${jd_test_mobile}": "secure runtime config (JD_TEST_MOBILE) — never stored in this file",
-    "${jd_test_static_otp}": "secure runtime config (JD_TEST_STATIC_OTP) — never stored in this file",
+    "${touch_otp}": "Test Data — static OTP for Mobile Site / Touch test numbers",
+    "${web_otp}": "Test Data — static OTP for Website test numbers",
 }
 
 

@@ -10,7 +10,7 @@ wait until element ps_touch_b2b_prp_1st_product is visible
 verify element whatsapp_button is not visible
 open https://www.justdial.com/
 wait 2 seconds
-call SG_Touch_Core_Login_9987996046
+call SG_Touch_Core_Login_Test_Number
 wait 1 seconds
 open https://www.justdial.com/jdmart/Mumbai/Brick/jdm-1011256-ent-2-17398330?fl=undefined&ismap=undefined&subpage=&searchCase=&term=&searchLocUpdate=0&stype=category_list&srcterm=Brick
 wait until element ps_touch_b2b_prp_1st_product is visible
@@ -21,7 +21,7 @@ call PS_Touch_Consent_Popup
 call SG_Service_Category_WA_Removed_Non_Login
 open https://www.justdial.com/
 wait 3 seconds
-call SG_Touch_Core_Login_9987996046
+call SG_Touch_Core_Login_Test_Number
 wait 1 seconds
 open https://www.justdial.com/jdmart/Mumbai/Office-Chair-Repair-Services/jdm-1771503-ent-14-10965295?fl=undefined&ismap=undefined&subpage=&searchCase=&term=office&searchLocUpdate=0&stype=category_list&srcterm=Office%20Chair%20Repair%20%2526%20Services
 wait until element ps_touch_b2b_prp_1st_product is visible
@@ -33,7 +33,7 @@ call PS_Touch_Consent_Popup
 call SG_Freetext_Category_WA_Removed_Non_Login
 open https://www.justdial.com
 wait 3 seconds
-call SG_Touch_Core_Login_9987996046
+call SG_Touch_Core_Login_Test_Number
 wait 1 seconds
 open https://www.justdial.com/jdmart/Mumbai/cct?stype=company_list&ismap=&term=cct&frt=1&searchLocUpdate=0&asflg=6&enid=13630321&enflg=2&ncatid=&srcterm=cct
 wait until element ps_touch_b2b_prp_1st_product is visible
