@@ -13,7 +13,7 @@ A web portal (Python, FastAPI + NiceGUI) where QA writes and runs codeless UI te
 | Item | Value |
 |---|---|
 | OS | Ubuntu 22.04 LTS or Debian 12 (x86_64); RHEL-family also works but `server_setup.sh` uses apt |
-| CPU / RAM / disk | 4 vCPU, **8 GB RAM** (portal ≈ 0.5 GB; each headless browser run ≈ 0.5–1 GB; 3–4 parallel runs), **100 GB disk** (screenshots ~1–2 GB/month, rotated after 30 days) |
+| CPU / RAM / disk | 4 vCPU, **8 GB RAM** (portal ≈ 0.5 GB; each headless browser run ≈ 0.5–1 GB; 3–4 parallel runs), **30 GB disk** (20 GB minimum): app + Python packages + browsers ≈ 3 GB; screenshots ≈ 2.5 MB per run, kept **14 days** (≈ 5 GB at ~150 runs/day); reports, logs, backups ≈ 1–2 GB |
 | Python | 3.11 (script installs it via deadsnakes if missing) |
 | Network | On the office network; reachable from Mumbai + Bangalore offices and over VPN. **Outbound** to *.justdial.com (prod, prot*, devx, seo), jdjira.justdial.com, Slack API (hooks.slack.com / slack.com), PyPI + playwright CDN at install time, api.anthropic.com if the AI drafting feature is enabled |
 | Inbound | TCP **8100** from office/VPN ranges (or 443 via nginx reverse proxy with an internal cert — optional) |
@@ -47,7 +47,7 @@ Updates later: `sudo bash /opt/codeless-automation/deploy/update.sh` (git pull, 
 Full template with comments: `deploy/.env.server.example`.
 
 ## 7. Data on the server (back up these)
-`/opt/codeless-automation/`: `flows/` (test cases), `suites/`, `plans/`, `data/locators_manual.json` (elements), `data/reusable_steps.json`, `data/test_case_folders.json`, `data/users.json`, `data/common/` (Test Data), `config/environments.json`, `data/plan_runs/`, `data/plan_reports/`, `data/logs/`, `.env`. `deploy/backup.sh` (cron.daily) tars these to `/var/backups/codeless-automation`, 30 days kept. Screenshots (`data/screenshots/`) and videos are excluded from backup by design.
+`/opt/codeless-automation/`: `flows/` (test cases), `suites/`, `plans/`, `data/locators_manual.json` (elements), `data/reusable_steps.json`, `data/test_case_folders.json`, `data/users.json`, `data/common/` (Test Data), `config/environments.json`, `data/plan_runs/`, `data/plan_reports/`, `data/logs/`, `.env`. `deploy/backup.sh` (cron.daily) tars these to `/var/backups/codeless-automation`, 14 days kept (a few MB each). Screenshots (`data/screenshots/`) and videos are excluded from backup by design. Screenshots and per-run reports older than 14 days are deleted automatically (`RETENTION_DAYS=14`; the newest 20 runs of every plan are always kept).
 
 ## 8. Security notes
 - `.env` is `chmod 600 codeless`. No secrets in git. Portal logins are local accounts with roles (admin/editor/viewer); passwords hashed. Session cookie signed with `UI_SESSION_SECRET`.
