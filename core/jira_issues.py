@@ -401,9 +401,24 @@ def draft(run_id: str = "", plan_run: str = "") -> dict:
                               if x.get("status") in ("passed", "failed")
                               and not (x.get("test_name", "").startswith("take screenshot"))],
                     "reproduced": [], "when": rep.get("started_at", ""),
+                    "checking": _checking(src["test_case"]), "runs": [],
+                    "context": {"kind": ctx.get("kind"), "name": ctx.get("name", ""),
+                                "id": ctx.get("id", ""), "run_type": rep.get("run_type", ""),
+                                "by": rep.get("triggered_by") or rep.get("executer", ""),
+                                "suite": src.get("suite", "")},
                 }
             if src["device_label"] not in g["devices"]:
                 g["devices"].append(src["device_label"])
+            dev = rep.get("device") or {}
+            atts = src.get("attempts") or []
+            g["runs"].append({
+                "device": src["device_label"],
+                "engine": {"chromium": "Chromium", "webkit": "WebKit (Safari engine)",
+                           "firefox": "Firefox"}.get(dev.get("browser", ""), dev.get("browser", "")),
+                "run_id": src.get("run_id") or rep.get("run_id", ""),
+                "attempts": (f"failed {sum(1 for a in atts if a.get('failed'))} of {len(atts)} attempts"
+                             if atts else "1 attempt"),
+                "when": (rep.get("started_at") or "")[:16].replace("T", " ")})
             g["run_ids"].append(src.get("run_id") or rep.get("run_id", ""))
             for shot in ([results[idx - 1].get("screenshot")] if idx else []) + [r.get("screenshot")]:
                 if shot and shot not in g["screenshots"]:
@@ -437,10 +452,32 @@ def _summary(g: dict) -> str:
     return f"{_human(g['test_case'])}: {_short(g['reason'], 120)}{where}"[:250]
 
 
+def attachment_name(g: dict, rel: str) -> str:
+    """'Chrome-on-Android-Pixel-7_step10_failing.jpg' instead of 'step_0010.jpg'."""
+    run = next((r for r in g.get("runs") or [] if r.get("run_id") and r["run_id"] in rel), None)
+    dev = re.sub(r"[^A-Za-z0-9]+", "-", (run or {}).get("device", "device")).strip("-")
+    m = re.search(r"step_0*(\d+)", rel)
+    n = m.group(1) if m else "x"
+    shots = [x for x in g.get("screenshots") or [] if run and run["run_id"] in x]
+    role = "failing" if shots and rel == shots[-1] else "before"
+    return f"{dev}_step{n}_{role}{os.path.splitext(rel)[1] or '.jpg'}"
+
+
+def _checking(test_case: str) -> str:
+    """What the test case checks, from its '# Story:' / '# Purpose:' header."""
+    h = _flow_header(test_case)
+    text = h.get("story") or h.get("purpose") or ""
+    text = re.sub(r"^\s*[A-Z][A-Z0-9]+-\d+\s*[—:-]*\s*", "", text).strip()
+    return text[:1].upper() + text[1:]
+
+
 def description(g: dict) -> str:
-    """Jira wiki markup — steps, expected / actual, where, evidence."""
+    """Jira wiki markup — what was checked, where, steps, expected / actual,
+    how often, how it was run, evidence."""
     lines = [f"Found by automation — test case *{g['test_case']}*"
              + (f" (story {g['story']})" if g.get("story") else "") + ".", ""]
+    if g.get("checking"):
+        lines += ["h3. What was being checked", g["checking"], ""]
     site = g.get("site") or "—"
     lines += ["h3. Where", f"* Site: {site}"
               + (" (live site)" if g.get("live") and "live" not in site else "")]
@@ -455,11 +492,34 @@ def description(g: dict) -> str:
     lines += ["", "h3. Expected", _expected(g["step"]), "", "h3. Actual",
               plain_reason(g["reason"]) + ".", "{noformat}" + _clean_actual(g["reason"]) + "{noformat}", ""]
     if g.get("confirmed"):
-        lines += ["h3. Confirmation", "Reproduced — " + "; ".join(g["reproduced"]) + "."]
+        lines += ["h3. How often", "Reproduced — " + "; ".join(g["reproduced"]) + "."]
     else:
-        lines += ["h3. Confirmation", "Seen once so far — please check."]
+        lines += ["h3. How often", "Seen once so far — please check."]
+    runs = g.get("runs") or []
+    if runs:
+        lines += ["", "h3. Runs", "||Device||Browser engine||Result||Run||When||"]
+        for r in runs:
+            lines.append(f"|{r['device']}|{r['engine'] or '—'}|{r['attempts']}|{r['run_id'] or '—'}|{r['when']}|")
+    c = g.get("context") or {}
+    how = []
+    if c.get("kind") == "plan":
+        how.append(f"Test plan: {c.get('name')} (run {c.get('id')})")
+    if c.get("suite"):
+        how.append(f"Suite: {c['suite']}")
+    if c.get("run_type"):
+        how.append(f"Run type: {c['run_type']}")
+    if c.get("by"):
+        how.append(f"Run by: {c['by']}")
+    if how:
+        lines += ["", "h3. How it was run"] + [f"* {x}" for x in how]
+    ev = []
     if g["screenshots"]:
-        lines += ["", "Screenshots attached (the step before and the failing step)."]
+        ev.append(f"{len(g['screenshots'])} screenshots — for each device the step before "
+                  "and the failing step: " + ", ".join(attachment_name(g, x) for x in g["screenshots"]))
+    if g.get("video"):
+        ev.append("Screen recording of the run: " + os.path.basename(g["video"]))
+    if ev:
+        lines += ["", "h3. Attachments"] + [f"* {x}" for x in ev]
     return "\n".join(lines)
 
 
@@ -546,17 +606,18 @@ def _fields(issue: dict, story: dict) -> dict:
     return f
 
 
-def _attachments(issue: dict) -> list[str]:
-    paths = []
+def _attachments(issue: dict) -> list[tuple[str, str]]:
+    """[(path on disk, name shown in Jira)]."""
+    out = []
     for rel in issue.get("screenshots") or []:
         p = os.path.join(SCREENSHOTS_DIR, rel)
         if os.path.isfile(p):
-            paths.append(p)
+            out.append((p, attachment_name(issue, rel)))
     if issue.get("video"):
         p = os.path.join(DATA_DIR, issue["video"])
         if os.path.isfile(p) and os.path.getsize(p) <= MAX_ATTACH_BYTES:
-            paths.append(p)
-    return paths
+            out.append((p, os.path.basename(p)))
+    return out
 
 
 def raise_issues(username: str, issues: list[dict], story_key: str) -> list[dict]:
@@ -588,13 +649,13 @@ def raise_issues(username: str, issues: list[dict], story_key: str) -> list[dict
                 "outwardIssue": {"key": story_key}})
             if lr.status_code >= 400:
                 warn.append("not linked to the story")
-            for p in _attachments(issue):
+            for p, shown in _attachments(issue):
                 with open(p, "rb") as fh:
                     ar = s.post(f"{base_url()}/rest/api/2/issue/{key}/attachments",
                                 headers={"X-Atlassian-Token": "no-check"},
-                                files={"file": (os.path.basename(p), fh)}, timeout=60)
+                                files={"file": (shown, fh)}, timeout=60)
                 if ar.status_code >= 400:
-                    warn.append(f"{os.path.basename(p)} not attached")
+                    warn.append(f"{shown} not attached")
             rec = {"key": key, "url": f"{base_url()}/browse/{key}", "type": fields["issuetype"]["name"],
                    "by": username, "at": _dt.datetime.now().isoformat(timespec="seconds")}
             if iid:
