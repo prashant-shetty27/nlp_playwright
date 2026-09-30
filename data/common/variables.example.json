@@ -30,7 +30,10 @@
     "prod_Screw_Importers": "",
     "serv_Crane_Services": "",
     "prod_Cargo_Box_Manufacturers": "",
-    "prod_Bat_Distributors_MRF": ""
+    "prod_Bat_Distributors_MRF": "",
+    "mobile_9987": "<blocked test mobile number>",
+    "mobile_7977": "<blocked test mobile number>",
+    "mobile_7738": "<blocked test mobile number>"
   },
   "env": {
     "local": {},

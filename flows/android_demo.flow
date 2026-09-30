@@ -24,7 +24,7 @@ wait 1 seconds
 click if exists skip_button
 wait 1 seconds
 
-type if exists "9987996046" into mobile_number_input
+type if exists "${mobile_9987}" into mobile_number_input
 wait 1 seconds
 
 click if exists login_with_otp_button

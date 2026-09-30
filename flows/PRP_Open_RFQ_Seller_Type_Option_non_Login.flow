@@ -29,6 +29,6 @@ verify element prp_open_rfq_seller_type_toast_msg is visible
 wait 1 seconds
 scroll to prp_open_rqq_seller_type_post_login_mobile
 store value of prp_open_rqq_seller_type_post_login_mobile as ts_field_value
-verify stored ts_field_value equals "9987996046"
+verify stored ts_field_value equals "${mobile_9987}"
 verify element prp_bd5_banner_img is visible
 delete all cookies

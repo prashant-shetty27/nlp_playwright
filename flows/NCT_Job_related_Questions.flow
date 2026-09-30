@@ -35,7 +35,7 @@ scroll until element send_enquiry_button_1st visible, scroll by 500 pixels, scro
 click send_enquiry_button_1st
 wait 1 seconds
 # OFF: type "Prashant" into enquiry_form_name
-type "7738176962" into enquiry_form_mobile
+type "${mobile_7738}" into enquiry_form_mobile
 click enquiry_form_no
 # OFF: js click enquiry_submit_button
 # OFF: wait until element otp_1st_field is visible

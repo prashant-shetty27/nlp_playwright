@@ -93,7 +93,7 @@
       "verify text \"सहज अनुभव के लिए लॉगिन करें\" on page",
       "click text_41fb82",
       "click text_ask_price_in_hindi",
-      "type \"9987996046\" into prp_login_mobile",
+      "type \"${mobile_9987}\" into prp_login_mobile",
       "js click nct_login_pop_continue_button",
       "click nct_login_otp_field",
       "verify text \"Retry in 00:5\" on page",
@@ -194,7 +194,7 @@
       "wait 1 seconds",
       "click rfq_mobile_number_input",
       "wait 1 seconds",
-      "type \"9987996046\" into rfq_mobile_number_input",
+      "type \"${mobile_9987}\" into rfq_mobile_number_input",
       "wait 1 seconds",
       "wait 1 seconds",
       "wait 3 seconds",
@@ -210,7 +210,7 @@
     "steps": [
       "click prp_login_mobile",
       "wait 1 seconds",
-      "type \"9987996046\" into prp_login_mobile",
+      "type \"${mobile_9987}\" into prp_login_mobile",
       "wait 1 seconds",
       "js click prp_login_submit",
       "wait 1 seconds",
@@ -285,11 +285,11 @@
     "step_count": 8,
     "platform": "mobilesite"
   },
-  "SG_Touch_Core_Login_9987996046": {
+  "SG_Touch_Core_Login_${mobile_9987}": {
     "steps": [
       "click touch_signin_home_page",
       "click touch_contextual_signin",
-      "type \"9987996046\" into rfq_mobile_number_input",
+      "type \"${mobile_9987}\" into rfq_mobile_number_input",
       "js click allpages_login_mobile_continue",
       "wait 3 seconds",
       "type \"537393\" into touch_home_otp_1stfield",

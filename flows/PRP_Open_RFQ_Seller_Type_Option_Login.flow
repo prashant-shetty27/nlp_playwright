@@ -6,7 +6,7 @@ call Live_Touch_Chrome_Navigate_to_Homepage_setup_Popup
 click touch_signin_home_page
 click touch_contextual_signin
 wait 2 seconds
-type "9987996046" into rfq_mobile_number_input
+type "${mobile_9987}" into rfq_mobile_number_input
 wait 2 seconds
 js click allpages_login_mobile_continue
 wait until element touch_home_otp_1stfield is visible
