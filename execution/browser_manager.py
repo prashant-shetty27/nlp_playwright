@@ -441,6 +441,11 @@ def open_browser(session: TestSession | None = None, record_video: bool = False,
         session.browser = browser
         session.context = context
         session.page = page
+        session.frame_stack, session.opened_pages, session.claimed_pages = [], [], []
+        # Every tab / popup the site opens is recorded as it opens, so "wait for
+        # new tab" finds it even when the site opened it with noopener (then
+        # Playwright cannot say which tab opened it).
+        context.on("page", lambda p, _s=session: _s.opened_pages.append(p))
 
     logger.info("🚀 Session Started | Browser Ready")
     return page
@@ -472,6 +477,7 @@ def close_browser(page, test_name: str = "test_run", session: TestSession | None
                     logger.warning("Browser close issue (%s): %s", label, e)
             session.active_page = None
             session.active_frame = None
+            session.frame_stack = []
         # Legacy path — close directly via the page's context/browser if no session
         elif page:
             try:

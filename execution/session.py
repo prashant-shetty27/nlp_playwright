@@ -26,6 +26,14 @@ class TestSession:
         # Session-scoped tab/frame state (replaces action_service module globals)
         self.active_page = None
         self.active_frame = None
+        # Iframes entered, outermost first: [(FrameLocator, label)]. Entering an
+        # iframe while inside one goes deeper; "switch to parent frame" goes back
+        # ONE level; "exit iframe" leaves them all.
+        self.frame_stack: list = []
+        # Tabs/popups the page opened during the run, in the order they opened
+        # (filled by the context's "page" event), and the ones already switched to.
+        self.opened_pages: list = []
+        self.claimed_pages: list = []
 
 
 # ─────────────────────────────────────────────────────────────────────────────

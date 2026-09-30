@@ -347,6 +347,10 @@ def _execute_step_from_command(cmd, page):
         "list_tabs":                 lambda: svc.list_tabs(page),
         # ── Iframes ──────────────────────────────────────────────────────────
         "switch_iframe":             lambda: svc.switch_iframe(page, target),
+        "switch_iframe_index":       lambda: svc.switch_iframe_index(page, cmd.count),
+        "switch_tab_url":            lambda: svc.switch_tab_url(page, text),
+        "wait_new_tab":              lambda: svc.wait_new_tab(page, float(cmd.wait or 10)),
+        "verify_tab_count":          lambda: svc.verify_tab_count(page, cmd.count),
         "exit_iframe":               lambda: svc.exit_iframe(),
     }
 

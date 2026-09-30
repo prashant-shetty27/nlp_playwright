@@ -80,6 +80,28 @@ def _get_locator_root(page):
     return get_active_page(page)
 
 
+def _frame_stack() -> list:
+    stack = getattr(_TEST_SESSION, "frame_stack", None)
+    if stack is None:
+        stack = []
+        _TEST_SESSION.frame_stack = stack
+    return stack
+
+
+def _leave_frames() -> None:
+    """Back to the page itself (no iframe) — after any tab / window change."""
+    _TEST_SESSION.frame_stack = []
+    _TEST_SESSION.active_frame = None
+
+
+def _claim(page_obj) -> None:
+    claimed = getattr(_TEST_SESSION, "claimed_pages", None)
+    if claimed is None:
+        _TEST_SESSION.claimed_pages = claimed = []
+    if page_obj not in claimed:
+        claimed.append(page_obj)
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # INTERNAL HELPERS
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1496,8 +1518,18 @@ def upload_file(page, locator_name: str, file_path: str) -> None:
     logger.info("📎 Uploaded %s via %s", file_path, locator_name)
 
 
-def switch_window_title(page, title: str) -> None:
-    """Bring the window whose title contains `title` to the front."""
+def switch_window_title(page, title: str, timeout_s: float = 10) -> None:
+    """Bring the tab / window whose title contains `title` to the front (waits up to 10 s)."""
+    deadline = time.time() + timeout_s
+    while time.time() < deadline:
+        for candidate in page.context.pages:
+            try:
+                if not candidate.is_closed() and title.strip().lower() in (candidate.title() or "").lower():
+                    _focus(candidate, f"window {candidate.title()!r}")
+                    return candidate
+            except Exception:  # noqa: BLE001
+                continue
+        _pw_pause(page)
     for candidate in page.context.pages:
         try:
             if title.strip().lower() in (candidate.title() or "").lower():
@@ -1505,7 +1537,7 @@ def switch_window_title(page, title: str) -> None:
                 # The next steps must run on this window — bring_to_front
                 # alone left every later click on the old tab.
                 _TEST_SESSION.active_page = candidate
-                _TEST_SESSION.active_frame = None
+                _leave_frames()
                 logger.info("🪟 Switched to window %r", candidate.title())
                 return candidate
         except Exception:  # noqa: BLE001 — a page can close mid-iteration
@@ -1520,11 +1552,14 @@ def switch_window_title(page, title: str) -> None:
 
 
 def parent_frame(page) -> None:
-    """Leave the current iframe for the one containing it."""
-    # The live frame state is _TEST_SESSION.active_frame (the old module
-    # attribute was never read, so this step did nothing).
-    _TEST_SESSION.active_frame = None
-    logger.info("🖼️  Returned to the parent frame")
+    """Go back ONE iframe level (to the iframe containing this one, or the page)."""
+    stack = _frame_stack()
+    if not stack:
+        raise AssertionError("Not inside an iframe — there is no parent frame to go back to.")
+    left = stack.pop()[1]
+    _TEST_SESSION.active_frame = stack[-1][0] if stack else None
+    logger.info("🖼️  Left iframe %s — now in %s", left,
+                f"iframe {stack[-1][1]}" if stack else "the main page")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1889,11 +1924,20 @@ def _tab_named(page, where: str):
                 "'switch to tab 0', or name the window by its title.")
         return parent
     if where == "child":
-        kids = [p for p in pages
-                if p is not active and not p.is_closed() and p.opener() is active]
+        # A popup takes a moment to open after the click: wait up to 5 s.
+        deadline = time.time() + 5
+        while True:
+            pages = page.context.pages
+            kids = [p for p in pages
+                    if p is not active and not p.is_closed() and p.opener() is active]
+            if not kids:                      # opened with noopener: no opener link
+                kids = [p for p in _unclaimed_new_pages(active)]
+            if kids or time.time() > deadline:
+                break
+            _pw_pause(active)
         if not kids:
             raise AssertionError(
-                f"❌ This tab has not opened any others. Open tabs: {len(pages)}. "
+                f"❌ This tab has not opened any others (waited 5 s). Open tabs: {len(pages)}. "
                 f"If the click that opens one has not run yet, wait for it first.")
         return kids[-1]                      # the most recent child
     if where == "previous":
@@ -1927,10 +1971,98 @@ def switch_tab(page, index=None, where: str = ""):
         target = pages[index]
         label = f"tab {index}"
     _TEST_SESSION.active_page = target
-    _TEST_SESSION.active_frame = None
+    _leave_frames()
+    _claim(target)
     _TEST_SESSION.active_page.bring_to_front()
     logger.info("🪟 Switched to %s — %s", label,
                 _strip_credentials(_TEST_SESSION.active_page.url))
+
+
+def _pw_pause(page, ms: int = 250) -> None:
+    """Pause while letting Playwright deliver events (new tabs, navigations).
+    time.sleep() blocks the sync API's event loop, so a tab that opened during
+    the pause stayed invisible until the wait had already given up."""
+    try:
+        page.wait_for_timeout(ms)
+    except Exception:  # noqa: BLE001 — the page closed: fall back to a plain pause
+        time.sleep(ms / 1000)
+
+
+def _unclaimed_new_pages(active=None) -> list:
+    opened = getattr(_TEST_SESSION, "opened_pages", None) or []
+    claimed = getattr(_TEST_SESSION, "claimed_pages", None) or []
+    return [p for p in opened if p is not active and not p.is_closed() and p not in claimed]
+
+
+def _tab_summary(pages) -> str:
+    out = []
+    for i, p in enumerate(pages):
+        try:
+            out.append(f"{i}: {(p.title() or '')[:40]!r} {_strip_credentials(p.url)[:80]}")
+        except Exception:  # noqa: BLE001
+            out.append(f"{i}: (closing)")
+    return "; ".join(out)
+
+
+def _focus(target, label: str) -> None:
+    _TEST_SESSION.active_page = target
+    _leave_frames()
+    _claim(target)
+    try:
+        target.bring_to_front()
+    except Exception:  # noqa: BLE001
+        pass
+    logger.info("🪟 Switched to %s — %s", label, _strip_credentials(target.url))
+
+
+def switch_tab_url(page, text: str, timeout_s: float = 10) -> None:
+    """Focus the tab whose address contains `text` (waits for a popup to load)."""
+    want = (text or "").strip().lower()
+    deadline = time.time() + timeout_s
+    while True:
+        for cand in page.context.pages:
+            try:
+                if not cand.is_closed() and want in (cand.url or "").lower():
+                    return _focus(cand, f"the tab with {text!r} in its address")
+            except Exception:  # noqa: BLE001
+                continue
+        if time.time() > deadline:
+            raise AssertionError(f"No tab's address contains {text!r} (waited {int(timeout_s)} s). "
+                                 f"Open tabs — {_tab_summary(page.context.pages)}")
+        _pw_pause(page)
+
+
+def wait_new_tab(page, timeout_s: float = 10) -> None:
+    """Wait for a tab / popup the site opens, then switch to it."""
+    active = _TEST_SESSION.active_page or page
+    deadline = time.time() + timeout_s
+    while True:
+        fresh = _unclaimed_new_pages(active)
+        if fresh:
+            target = fresh[-1]
+            try:
+                target.wait_for_load_state("domcontentloaded", timeout=15000)
+            except Exception:  # noqa: BLE001
+                pass
+            return _focus(target, "the new tab")
+        if time.time() > deadline:
+            raise AssertionError(f"No new tab opened within {int(timeout_s)} s. "
+                                 f"Open tabs — {_tab_summary(page.context.pages)}")
+        _pw_pause(active)
+
+
+def verify_tab_count(page, expected: int, timeout_s: float = 5) -> None:
+    """Exactly `expected` tabs open (tabs may still be opening or closing: waits up to 5 s)."""
+    deadline = time.time() + timeout_s
+    while True:
+        pages = [p for p in page.context.pages if not p.is_closed()]
+        if len(pages) == int(expected):
+            logger.info("✅ %d tab(s) open", len(pages))
+            return
+        if time.time() > deadline:
+            raise AssertionError(f"Expected {expected} tab(s) open, found {len(pages)} — "
+                                 f"{_tab_summary(pages)}")
+        _pw_pause(page)
 
 
 def close_tab(page, index=None):
@@ -1946,7 +2078,7 @@ def close_tab(page, index=None):
     target.close()
     remaining = ctx.pages
     _TEST_SESSION.active_page = remaining[0] if remaining else None
-    _TEST_SESSION.active_frame = None
+    _leave_frames()
     if _TEST_SESSION.active_page:
         _TEST_SESSION.active_page.bring_to_front()
     logger.info(
@@ -1962,7 +2094,7 @@ def close_all_tabs(page):
     for p in pages[1:]:
         p.close()
     _TEST_SESSION.active_page = pages[0] if pages else None
-    _TEST_SESSION.active_frame = None
+    _leave_frames()
     if _TEST_SESSION.active_page:
         _TEST_SESSION.active_page.bring_to_front()
     logger.info(
@@ -1975,7 +2107,7 @@ def close_all_tabs(page):
 def open_new_tab(page):
     """Open a blank new tab and switch focus to it."""
     _TEST_SESSION.active_page = page.context.new_page()
-    _TEST_SESSION.active_frame = None
+    _leave_frames()
     logger.info("🪟 Opened new tab (now active).")
 
 
@@ -1998,7 +2130,7 @@ def open_in_new_tab(page, url: str):
         parent.evaluate("() => window.open('about:blank')")
     fresh = info.value
     _TEST_SESSION.active_page = fresh
-    _TEST_SESSION.active_frame = None
+    _leave_frames()
     fresh.bring_to_front()
     open_site(fresh, url)
     logger.info("🪟 Opened %s in a new tab (now active).", fresh.url)
@@ -2029,17 +2161,75 @@ def list_tabs(page):
 # IFRAME / FRAME MANAGEMENT (Playwright FrameLocator)
 # ─────────────────────────────────────────────────────────────────────────────
 
-def switch_iframe(page, selector: str):
-    """Switch element-interaction context into an iframe matching the given CSS/XPath selector."""
-    effective = get_active_page(page)
-    _TEST_SESSION.active_frame = effective.frame_locator(selector)
-    logger.info("🖼️  Entered iframe: %s", selector)
+_SELECTOR_RX = re.compile(r"^(//|\(|\./|css=|xpath=|#|\.|\[|iframe\b|frame\b)|[\[\]=>#]")
+IFRAME_WAIT_S = 10
+
+
+def _enter_frame(base, selector: str, label: str, nth: int | None = None) -> None:
+    """Check the iframe exists (waiting for it), then make it the current context."""
+    loc = base.locator(selector)
+    try:
+        (loc.nth(nth) if nth is not None else loc.first).wait_for(
+            state="attached", timeout=IFRAME_WAIT_S * 1000)
+    except Exception:  # noqa: BLE001
+        found = 0
+        try:
+            found = loc.count()
+        except Exception:  # noqa: BLE001
+            pass
+        where = f"inside iframe {_frame_stack()[-1][1]}" if _frame_stack() else "on the page"
+        if nth is not None and found:
+            raise AssertionError(f"Iframe {label} does not exist {where} — only {found} "
+                                 f"iframe(s) (counting from 0).") from None
+        raise AssertionError(f"No iframe {label} {where} (waited {IFRAME_WAIT_S}s).") from None
+    target = loc.nth(nth) if nth is not None else loc.first
+    try:
+        tag = (target.evaluate("e => e.tagName") or "").upper()
+    except Exception:  # noqa: BLE001
+        tag = ""
+    if tag and tag not in ("IFRAME", "FRAME"):
+        raise AssertionError(f"{label} is a <{tag.lower()}>, not an iframe — record the "
+                             f"<iframe> element itself.")
+    fl = base.frame_locator(selector)
+    fl = fl.nth(nth) if nth is not None else fl.first
+    _frame_stack().append((fl, label))
+    _TEST_SESSION.active_frame = fl
+    depth = len(_frame_stack())
+    logger.info("🖼️  Entered iframe %s%s", label, f" (level {depth})" if depth > 1 else "")
+
+
+def switch_iframe(page, target: str):
+    """
+    Go into an iframe, named like any element (from Elements), or by XPath / CSS.
+
+    Relative to where the test is: inside an iframe it enters the iframe INSIDE
+    that one (nested), which is how the browser itself nests them.
+    """
+    target = (target or "").strip().strip('"').strip("'")
+    if not target:
+        raise ValueError("Which iframe? Name it (an element from Elements) or give its XPath.")
+    base = _get_locator_root(page)
+    if _SELECTOR_RX.search(target):
+        selector, label = target, repr(target)
+    else:
+        selector = _resolve_locator_or_raise(target, page)     # resolved where we are now
+        label = target
+    _enter_frame(base, selector, label)
+
+
+def switch_iframe_index(page, index: int):
+    """Go into the Nth iframe where the test is (counting from 0, like tabs)."""
+    base = _get_locator_root(page)
+    label = "last" if int(index) == -1 else f"number {index}"
+    _enter_frame(base, "iframe, frame", label, nth=int(index))
 
 
 def exit_iframe(_page=None):
-    """Return to the main frame (clear iframe context)."""
-    _TEST_SESSION.active_frame = None
-    logger.info("🖼️  Exited iframe — back to main frame.")
+    """Return to the main page, however many iframes deep the test is."""
+    depth = len(_frame_stack())
+    _leave_frames()
+    logger.info("🖼️  Left %s — back to the main page.",
+                f"{depth} iframe level(s)" if depth else "no iframe (already on the main page)")
 
 
 # ─────────────────────────────────────────────────────────────────────────────

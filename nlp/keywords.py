@@ -493,6 +493,24 @@ KEYWORD_MAP = {
                     "switch to current tab", "switch to first tab"],
         "action": "switch_tab", "template": "switch to parent tab"
     },
+    "switch_tab_url": {
+        "phrases": ["switch to tab with url", "switch to tab by url", "tab with address",
+                    "switch to window with url"],
+        "action": "switch_tab_url", "template": "switch to tab with url containing \"{text}\""
+    },
+    "switch_tab_title": {
+        "phrases": ["switch to tab with title", "switch to tab by title", "tab with title"],
+        "action": "switch_window_title", "template": "switch to tab with title \"{text}\""
+    },
+    "wait_new_tab": {
+        "phrases": ["wait for new tab", "wait for popup", "wait for new window",
+                    "new tab opened", "wait for tab to open"],
+        "action": "wait_new_tab", "template": "wait for new tab"
+    },
+    "verify_tab_count": {
+        "phrases": ["verify tab count", "verify tabs are open", "number of tabs", "count tabs"],
+        "action": "verify_tab_count", "template": "verify {number} tabs are open"
+    },
     "open_new_tab": {
         "phrases": ["open new tab", "new tab", "open a new window"],
         "action": "open_new_tab", "template": "open new tab"
@@ -519,6 +537,11 @@ KEYWORD_MAP = {
     "switch_iframe": {
         "phrases": ["switch to iframe", "enter iframe", "go into frame"],
         "action": "switch_iframe", "template": "switch to iframe {locator}"
+    },
+    "switch_iframe_index": {
+        "phrases": ["switch to first iframe", "switch to iframe by index", "switch to iframe number",
+                    "switch to 2nd iframe", "switch to last iframe"],
+        "action": "switch_iframe_index", "template": "switch to iframe {number}"
     },
     "exit_iframe": {
         "phrases": ["exit iframe", "leave iframe", "back to main frame"],

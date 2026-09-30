@@ -841,6 +841,31 @@ def parse_step(step: str) -> Command:
     if m:
         return Command(type="switch_tab", count=int(m.group(1)))
 
+    # By what the tab shows — its address or its title — which stays true
+    # however many tabs are open:
+    #   switch to tab with url containing "/photos"   | switch to window whose url contains "x"
+    #   switch to tab with title "Eden Enterprises"
+    m = re.match(r'^(?:switch\s+to|focus|go\s+to)\s+(?:the\s+)?(?:tab|window)\s+(?:with|whose)\s+'
+                 r'(url|address|title)\s+(?:that\s+)?(?:contains?|containing|like|as|is)?\s*"([^"]+)"$', s, re.I)
+    if m:
+        if m.group(1).lower() == "title":
+            return Command(type="switch_window_title", text=m.group(2))
+        return Command(type="switch_tab_url", text=m.group(2))
+
+    # wait for new tab | wait for a new tab to open (and switch to it) [within N seconds]
+    m = re.match(r'^wait\s+(?:for\s+)?(?:a\s+|the\s+)?new\s+(?:tab|window|popup)'
+                 r'(?:\s+to\s+open)?(?:\s+and\s+switch\s+to\s+it)?'
+                 r'(?:\s+(?:within|for)\s+(\d+)\s*(?:s|sec|secs|seconds?))?$', s, re.I)
+    if m:
+        return Command(type="wait_new_tab", wait=float(m.group(1)) if m.group(1) else None)
+
+    # verify 2 tabs are open | verify tab count is 2 | verify number of tabs is 2
+    m = (re.match(r'^verify\s+(\d+)\s+(?:tabs?|windows?)\s+(?:are|is)\s+open$', s, re.I)
+         or re.match(r'^verify\s+(?:the\s+)?(?:tab|window)\s+count\s+is\s+(\d+)$', s, re.I)
+         or re.match(r'^verify\s+(?:the\s+)?number\s+of\s+(?:tabs|windows)\s+is\s+(\d+)$', s, re.I))
+    if m:
+        return Command(type="verify_tab_count", count=int(m.group(1)))
+
     # A tab named by its RELATIONSHIP rather than its number. An index is only
     # knowable if you have counted what is open, and the count changes the
     # moment a click opens a popup — which is exactly when you need to switch.
@@ -873,9 +898,24 @@ def parse_step(step: str) -> Command:
     # switch to iframe "selector" | switch to frame <name> | enter iframe <xpath>
     # exit iframe | exit frame | switch to main frame | switch to default content
     # =============================
-    m = re.match(r'^(?:switch\s+to|enter)\s+(?:iframe|frame)\s+(.+)$', s, re.I)
+    # By position where the test is now, counting from 0 like tabs:
+    #   switch to iframe 0 | switch to first iframe | switch to 2nd iframe | switch to last iframe
+    _ORD = {"first": 0, "second": 1, "third": 2, "fourth": 3, "fifth": 4, "last": -1}
+    m = re.match(r'^(?:switch\s+to|enter|go\s+into)\s+(?:the\s+)?'
+                 r'(first|second|third|fourth|fifth|last|\d+(?:st|nd|rd|th))\s+(?:iframe|frame)$', s, re.I)
     if m:
-        return Command(type="switch_iframe", target=m.group(1).strip().strip('"'))
+        w = m.group(1).lower()
+        idx = _ORD[w] if w in _ORD else int(re.match(r"\d+", w).group(0)) - 1
+        return Command(type="switch_iframe_index", count=idx)
+    m = re.match(r'^(?:switch\s+to|enter|go\s+into)\s+(?:iframe|frame)\s+(?:number\s+|index\s+)?(\d+)$', s, re.I)
+    if m:
+        return Command(type="switch_iframe_index", count=int(m.group(1)))
+
+    # By element name (from Elements) or by XPath / CSS:
+    #   switch to iframe payment_frame | switch to iframe "//iframe[@id='pay']"
+    m = re.match(r'^(?:switch\s+to|enter|go\s+into)\s+(?:the\s+)?(?:iframe|frame)\s+(.+)$', s, re.I)
+    if m:
+        return Command(type="switch_iframe", target=m.group(1).strip().strip('"').strip("'"))
 
     if re.match(r'^(?:exit\s+(?:iframe|frame)|switch\s+to\s+(?:main\s+frame|default\s+content))$', s, re.I):
         return Command(type="exit_iframe")
