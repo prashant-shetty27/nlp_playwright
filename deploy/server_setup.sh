@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # One-time server setup for the QA Codeless Automation portal (Ubuntu 22.04 / Debian 12).
-# Run as root (sudo) from anywhere:  sudo bash deploy/server_setup.sh <git-clone-url>
+# Run as root (sudo):  sudo bash deploy/server_setup.sh <git-clone-url | unzipped-folder | zip-file>
 #
 # What it does:
 #   1. creates a service user `codeless` and /opt/codeless-automation
@@ -15,7 +15,7 @@ APP_DIR=/opt/codeless-automation
 SVC_USER=codeless
 
 if [[ -z "$REPO_URL" && ! -d "$APP_DIR/.git" ]]; then
-  echo "usage: sudo bash deploy/server_setup.sh <git-clone-url>"; exit 1
+  echo "usage: sudo bash deploy/server_setup.sh <git-clone-url | unzipped-folder | codeless-automation.zip>"; exit 1
 fi
 
 echo "== 1. service user and folder"
@@ -35,6 +35,13 @@ fi
 echo "== 3. code"
 if [[ -d "$APP_DIR/.git" ]]; then
   sudo -u "$SVC_USER" git -C "$APP_DIR" pull --ff-only
+elif [[ -n "$REPO_URL" && -d "$REPO_URL" ]]; then
+  # Unzipped folder (e.g. from codeless-automation-v1.0.zip attached to the ticket)
+  cp -a "$REPO_URL"/. "$APP_DIR"/
+elif [[ -n "$REPO_URL" && -f "$REPO_URL" && "$REPO_URL" == *.zip ]]; then
+  apt-get install -y -q unzip
+  tmp=$(mktemp -d); unzip -q "$REPO_URL" -d "$tmp"
+  cp -a "$tmp"/*/. "$APP_DIR"/; rm -rf "$tmp"
 else
   git clone "$REPO_URL" "$APP_DIR"
 fi
