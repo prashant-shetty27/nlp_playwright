@@ -259,7 +259,13 @@ async def render_edit(plan_id: str = "") -> None:
                                      "device_name": "iPhone 15", "browser": "webkit",
                                      "browser_identity": "ios_chrome", "coverage": "positive"},
             }
-            site_env_sel = ui.select({"": "Default — URL as written in the test"}, value=ex.get("site_env") or "",
+            # The saved choice is an option from the start: the full list arrives a
+            # moment later, and a value missing from the options broke the page.
+            _saved_env = ex.get("site_env") or ""
+            _first = {"": "Default — URL as written in the test"}
+            if _saved_env:
+                _first[_saved_env] = ("live — www.justdial.com" if _saved_env == "live" else _saved_env)
+            site_env_sel = ui.select(_first, value=_saved_env,
                                      label="Environment (where the test cases run)") \
                 .props("outlined dense").style("min-width:22rem")
             muted("Pick prot / prot3 / devx … to run the whole plan on that host: every www.justdial.com "
