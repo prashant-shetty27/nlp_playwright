@@ -259,7 +259,7 @@ async def render_edit(plan_id: str = "") -> None:
                                      "device_name": "iPhone 15", "browser": "webkit",
                                      "browser_identity": "ios_chrome", "coverage": "positive"},
             }
-            site_env_sel = ui.select({"": "As written in the test (no change)"}, value=ex.get("site_env") or "",
+            site_env_sel = ui.select({"": "Default — URL as written in the test"}, value=ex.get("site_env") or "",
                                      label="Environment (where the test cases run)") \
                 .props("outlined dense").style("min-width:22rem")
             muted("Pick prot / prot3 / devx … to run the whole plan on that host: every www.justdial.com "
@@ -270,7 +270,7 @@ async def render_edit(plan_id: str = "") -> None:
                     envs = await api.site_environments()
                 except api.ApiError:
                     envs = []
-                opts = {"": "As written in the test (no change)"}
+                opts = {"": "Default — URL as written in the test"}
                 opts.update({e["name"]: f"{e['name']} — {e['host']}" for e in envs})
                 site_env_sel.set_options(opts, value=site_env_sel.value if site_env_sel.value in opts else "")
             ui.timer(0.1, _fill_envs, once=True)

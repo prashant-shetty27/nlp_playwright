@@ -234,7 +234,7 @@ class RunCenter:
             # Environment: run the same test case on live or on a development /
             # pre-prod host. Every www.justdial.com URL it opens (typed or from
             # Test Data) moves to that host, and that host's saved login is attached.
-            self.site_env = ui.select({"": "As written in the test (no change)"},
+            self.site_env = ui.select({"": "Default — URL as written in the test"},
                                       value="", label="Environment") \
                 .props("outlined dense").classes("w-full") \
                 .tooltip("Pick prot / prot3 / devx … to run this test there without editing any URL.")
@@ -289,7 +289,7 @@ class RunCenter:
             envs = await api.site_environments()
         except api.ApiError:
             envs = []
-        opts = {"": "As written in the test (no change)"}
+        opts = {"": "Default — URL as written in the test"}
         for e in envs:
             note = "" if not e.get("needs_login") or e.get("login_saved") else "  (login not saved — ask admin)"
             opts[e["name"]] = f"{e['name']} — {e['host']}{note}"

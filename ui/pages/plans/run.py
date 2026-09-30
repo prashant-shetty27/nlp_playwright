@@ -429,7 +429,7 @@ class PlanRunPage:
                 # must be answerable from this page.
                 se = ex.get("site_env") or ""
                 muted("Site: " + ({"live": "live — www.justdial.com"}.get(se, se)
-                                  if se else "as written in the test (no change)"))
+                                  if se else "default — URL as written in the test"))
                 muted(f"Browser: {'headless' if ex.get('headless') else 'visible (headed)'}")
                 muted(f"Retry failed: {'once' if ex.get('retry_failed') else 'no'} · "
                       f"stop on first failure: {'yes' if ex.get('stop_on_first_failure') else 'no'}")
