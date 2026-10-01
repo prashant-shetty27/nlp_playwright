@@ -221,3 +221,25 @@ def is_secret_name(name: str, declared: set | None = None) -> bool:
     if declared and name in declared:
         return True
     return any(h in (name or "").lower() for h in SECRET_NAME_HINTS)
+
+
+def portal_base_url() -> str:
+    """
+    The address teammates use to open this portal — what Slack / email / PDF
+    links point at. PORTAL_BASE_URL wins; otherwise, when the portal listens on
+    the network (UI_HOST=0.0.0.0), this machine's network name; else localhost.
+    A "localhost" link opened on someone else's PC opens THEIR portal, which
+    does not have this machine's runs ("No plan run …").
+    """
+    import socket
+    import sys as _sys
+    explicit = os.getenv("PORTAL_BASE_URL", "").strip().rstrip("/")
+    if explicit:
+        return explicit
+    port = os.getenv("UI_PORT", "8100")
+    if os.getenv("UI_HOST", "127.0.0.1") in ("127.0.0.1", "localhost", "::1"):
+        return f"http://localhost:{port}"
+    host = socket.gethostname() or "localhost"
+    if _sys.platform == "darwin" and "." not in host:
+        host += ".local"            # Bonjour name, reachable on the office network
+    return f"http://{host}:{port}"

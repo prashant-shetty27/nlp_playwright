@@ -320,6 +320,7 @@ def _session_secret() -> str:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description="Codeless automation UI")
+    import config.settings  # noqa: F401 — loads .env (UI_HOST, UI_PORT) before reading them
     ap.add_argument("--port", type=int, default=int(os.getenv("UI_PORT", "8080")))
     ap.add_argument("--host", default=os.getenv("UI_HOST", "127.0.0.1"))
     ap.add_argument("--show", action="store_true", help="open a browser on start")

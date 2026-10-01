@@ -16,7 +16,8 @@ import os
 import config.settings  # noqa: F401 — loads .env
 
 logger = logging.getLogger(__name__)
-BASE_URL = os.getenv("PORTAL_BASE_URL", "http://localhost:8100")
+from config.settings import portal_base_url as _pbu  # noqa: E402
+BASE_URL = _pbu()
 ICON = {"passed": "✅", "failed": "❌", "not_run": "⏭️", "stopped": "⏹️",
         "missed": "⏰", "error": "💥", "running": "🔄", "pending": "⏳"}
 

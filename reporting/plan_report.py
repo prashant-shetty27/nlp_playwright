@@ -33,7 +33,8 @@ logger = logging.getLogger(__name__)
 REPORTS_DIR = os.path.join(DATA_DIR, "plan_reports")
 SHOTS_DIR = os.path.join(DATA_DIR, "screenshots")
 BRAND = os.getenv("REPORT_BRAND", "PS Codeless QA Automation")
-BASE_URL = os.getenv("PORTAL_BASE_URL", "http://localhost:8100")
+from config.settings import portal_base_url as _pbu  # noqa: E402
+BASE_URL = _pbu()
 
 GREEN, RED, AMBER, GREY, BLUE, INK = "#16A34A", "#DC2626", "#D97706", "#94A3B8", "#2563EB", "#0F172A"
 STATUS = {  # label, colour, soft background
