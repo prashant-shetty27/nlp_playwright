@@ -45,6 +45,7 @@ def _run_flow_streaming(flow_path: str, headless: bool, send_fn):
     from execution.browser_manager import open_browser, close_browser
     from execution.session import TestSession
     from runner import _interpret
+    from execution.step_flags import IgnoredFailure
 
     # One browser run at a time in this process — the same lock Run Center
     # and plans take. Without it this stream ran alongside a plan, both
@@ -82,7 +83,12 @@ def _run_flow_streaming(flow_path: str, headless: bool, send_fn):
                              "status": "passed"})
                     passed += 1
                     continue
-                _interpret(step, page)
+                try:
+                    _interpret(step, page)
+                except IgnoredFailure as ig:
+                    send_fn({"type": "result", "line": line_num, "step": step,
+                             "status": "ignored", "error": str(ig)})
+                    continue
                 send_fn({"type": "result", "line": line_num, "step": step, "status": "passed"})
                 passed += 1
             except Exception as e:

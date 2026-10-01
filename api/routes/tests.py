@@ -303,7 +303,8 @@ def _run_flow_sync_unlocked(run_id: str, flow_path: str, headless: bool,
     # "running" forever — the caller polls a run that will never finish.
     page = None
     log: list[dict] = []
-    passed = failed = skipped_count = 0
+    passed = failed = skipped_count = ignored_count = 0
+    from execution.step_flags import IgnoredFailure
     from reporting.step_capture import StepCapture
 
     # Every step the run WILL execute, published before the first one starts,
@@ -348,6 +349,7 @@ def _run_flow_sync_unlocked(run_id: str, flow_path: str, headless: bool,
                                     "total": len(planned),
                                     "passed": passed, "failed": failed,
                                     "skipped": skipped_count,
+                                    "ignored": ignored_count,
                                     "updated_at": time.time()}
 
     _publish()
@@ -445,6 +447,15 @@ def _run_flow_sync_unlocked(run_id: str, flow_path: str, headless: bool,
                 row = report.add_result(step, "passed",
                                         duration_ms=entry["duration_ms"])
                 _capture(page, entry, step, row)
+            except IgnoredFailure as e:
+                # "Ignore result": it failed, the test carries on — amber, not red.
+                entry["status"] = "ignored"
+                entry["error"] = str(e).strip()
+                entry["duration_ms"] = round((time.perf_counter() - started) * 1000)
+                ignored_count += 1
+                row = report.add_result(step, "ignored", reason=str(e).strip(),
+                                        duration_ms=entry["duration_ms"])
+                _capture(page, entry, step, row)
             except Exception as e:
                 entry["status"] = "failed"
                 entry["error"] = str(e).strip()
@@ -534,6 +545,7 @@ def _run_flow_sync_unlocked(run_id: str, flow_path: str, headless: bool,
         # Counted separately from failed: a step that never ran did not fail,
         # and a run that stops at step 3 of 14 should not read as 11 defects.
         "skipped": skipped_count,
+        "ignored": ignored_count,
         "stopped_early": bool(skipped_count),
         # Which capture mode ran, how many frames it kept, and whether the cap
         # was hit. Without it, "there is no screenshot for step 12" is

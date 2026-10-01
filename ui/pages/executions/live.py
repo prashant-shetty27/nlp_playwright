@@ -214,9 +214,10 @@ class LiveView:
         total = res.get("total") or len(planned) or len(log)
         passed, failed = res.get("passed", 0), res.get("failed", 0)
         skipped = res.get("skipped", 0)
+        ignored = res.get("ignored", 0)
         if total:
-            self.bar.set_value((passed + failed + skipped) / total)
-            self.counter.set_text(f"{passed + failed + skipped} / {total}")
+            self.bar.set_value((passed + failed + skipped + ignored) / total)
+            self.counter.set_text(f"{passed + failed + skipped + ignored} / {total}")
 
         if res.get("status") != "running" and "passed" in res and not self.done:
             self.done = True
@@ -228,6 +229,7 @@ class LiveView:
                             else "failed" if failed else "passed")
             self.stop_btn.set_visibility(False)
             self.log.push(f"finished: {passed} passed, {failed} failed"
+                          + (f", {ignored} ignored" if ignored else "")
                           + (f", {skipped} not run" if skipped else ""))
             self._render_footer(res)
 
@@ -324,9 +326,10 @@ class LiveView:
             for i, entry in enumerate(rows, 1):
                 st = entry.get("status", "pending")
                 colour = {"passed": COLORS["success"], "failed": COLORS["danger"],
-                          "running": COLORS["primary"]}.get(st, COLORS["text_muted"])
+                          "running": COLORS["primary"], "ignored": COLORS["warning"]
+                          }.get(st, COLORS["text_muted"])
                 icon = {"passed": "✅", "failed": "❌", "running": "🔄",
-                        "skipped": ""}.get(st, "⏳")
+                        "skipped": "", "ignored": "⚠️"}.get(st, "⏳")
                 # Not run (an earlier step failed / turned off) is not a failure:
                 # greyed out with a "not run" sign, never red or a play-like icon.
                 skipped = st == "skipped"
@@ -363,6 +366,12 @@ class LiveView:
                             f"padding:0 8px 6px 3.2rem; color:{COLORS['text_muted']};"
                             f"font-style:italic; font-size:{TYPOGRAPHY['size_xs']};"
                             f"opacity:.8")
+                    elif entry.get("error") and st == "ignored":
+                        ui.label("Failed — result ignored (the test carried on): "
+                                 + entry["error"].replace("ignored — ", "", 1)).style(
+                            f"padding:0 8px 6px 3.2rem; color:{COLORS['warning']};"
+                            f"font-family:{TYPOGRAPHY['mono']}; font-size:{TYPOGRAPHY['size_xs']};"
+                            f"white-space:pre-wrap")
                     elif entry.get("error"):
                         # The failure reason is the reason this page exists — shown
                         # inline, not hidden behind a click.
@@ -376,7 +385,8 @@ class LiveView:
         self.footer.clear()
         with self.footer:
             failed = res.get("failed", 0)
-            ui.label(f"{res.get('passed',0)} passed, {failed} failed").style(
+            ui.label(f"{res.get('passed',0)} passed, {failed} failed"
+                     + (f", {res.get('ignored')} ignored" if res.get("ignored") else "")).style(
                 f"font-weight:{TYPOGRAPHY['weight_medium']};"
                 f"color:{COLORS['danger'] if failed else COLORS['success']}")
             ui.space()

@@ -86,6 +86,14 @@ def step_row(index: int, nlp_text: str, *, action: str = "", target: str = "",
     test case in a few batches rather than one websocket update per row.
     """
     editing = {"on": False}
+    # "Ignore result" (Testsigma's Ignore step result): shown as an amber chip;
+    # the step text itself stays clean. Stored as a "[ignore 5s]" prefix.
+    from execution import step_flags
+    ignore, ignore_wait, body_text = step_flags.split(nlp_text)
+
+    def _set_ignore(on: bool, wait: float | None = None) -> None:
+        if on_edit:
+            on_edit(index, step_flags.join(body_text, on, wait if wait is not None else ignore_wait or None))
 
     # A `call <group>` step is a different kind of row: it stands for a saved
     # sequence, so it is drawn with its own colour, a badge, and a fold that
@@ -156,6 +164,26 @@ def step_row(index: int, nlp_text: str, *, action: str = "", target: str = "",
                 f"padding:1px 7px; font-size:{TYPOGRAPHY['size_xs']};"
                 f"font-family:{TYPOGRAPHY['mono']}; white-space:nowrap")
 
+        if ignore and not group_name:
+            amber = COLORS.get("warning", "#D97706")
+            chip = ui.button(f"Ignore result · {ignore_wait:g}s", icon="warning_amber") \
+                .props("dense unelevated no-caps size=sm") \
+                .style(f"background:{amber}1F; color:{amber}; border-radius:4px; flex:none;"
+                       f"font-size:{TYPOGRAPHY['size_xs']}; padding:0 6px") \
+                .tooltip("If this step fails, the test carries on and the step shows amber "
+                         "'Ignored'. Click to change the wait or turn it off.")
+            with chip:
+                with ui.menu():
+                    ui.label("Wait for this step at most").style(
+                        f"padding:6px 14px 2px; font-size:{TYPOGRAPHY['size_xs']};"
+                        f"color:{COLORS['text_muted']}")
+                    for w in (3, 5, 10, 15, 30):
+                        ui.menu_item(f"{w} seconds" + ("  ✓" if abs(w - ignore_wait) < 1e-9 else ""),
+                                     on_click=lambda w=w: _set_ignore(True, float(w)))
+                    ui.separator()
+                    ui.menu_item("Turn off — a failure fails the test",
+                                 on_click=lambda: _set_ignore(False))
+
         # min-width:0 lets this cell shrink below its content, which is what
         # allows a long step to wrap INSIDE the row. Without it a flex child
         # refuses to go under its own min-content width, and the row grew until
@@ -183,8 +211,9 @@ def step_row(index: int, nlp_text: str, *, action: str = "", target: str = "",
                 elif on_edit:
                     from ui.components.token_step import TokenStep
 
-                    tok = TokenStep(nlp_text, platform=platform,
-                                    on_change=lambda new: on_edit(index, new),
+                    tok = TokenStep(body_text, platform=platform,
+                                    on_change=lambda new: on_edit(
+                                        index, step_flags.join(new, ignore, ignore_wait or None)),
                                     locators=locators or {},
                                     locator_details=locator_details or {},
                                     locators_elsewhere=locators_elsewhere or {},
@@ -307,6 +336,12 @@ def step_row(index: int, nlp_text: str, *, action: str = "", target: str = "",
                     .on("click", lambda i=index: on_add(i, "below")) \
                     .tooltip("Insert a new step BELOW this one")
 
+        if on_edit and not group_name and not ignore:
+            ui.button(icon="warning_amber").props("flat dense size=xs") \
+                .style(f"color:{COLORS['text_muted']}") \
+                .on("click", lambda: _set_ignore(True, step_flags.DEFAULT_WAIT_S)) \
+                .tooltip("Ignore result — if this step fails, carry on (like Testsigma's "
+                         "'Ignore step result'). For popups that may not appear.")
         if on_edit and not group_name:
             ui.button(icon="edit").props("flat dense size=xs") \
                 .on("click", lambda: start_edit_form()) \

@@ -857,9 +857,14 @@ def run_lines(lines, page, execute, logger=None, numbered=None, probe=None) -> N
     prog = FlowProgram(lines, evaluate=make_evaluator(page, probe=probe),
                        variables=RUNTIME_VARIABLES,
                        load_rows=datasets.rows, numbered=numbered)
+    from execution.step_flags import IgnoredFailure
     for it in prog.steps():
         if it.kind is None:
-            execute(it.text)
+            try:
+                execute(it.text)
+            except IgnoredFailure as e:
+                if logger:
+                    logger.warning("⚠️ %s — %s", it.text, e)
         else:
             said = prog.decide(it)
             if logger:

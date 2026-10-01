@@ -579,11 +579,22 @@ def _one(action: str, ctx: _Ctx) -> list[str] | None:
     return None
 
 
+def _ign(ln: str) -> str:
+    """'click X' → '[ignore] click X' (block lines and comments are never marked)."""
+    from execution.control_flow import classify
+    if not ln or ln.startswith("#") or classify(ln):
+        return ln
+    from execution.step_flags import join
+    # A swipe / scroll loop needs room for all its rounds; a popup tap does not.
+    long = ln.startswith(("swipe ", "scroll ")) and " until " in ln
+    return join(ln, True, 30.0 if long else None)
+
+
 def _last_click(out: list[str]):
     """The click that focused a field: the last click within the previous few lines
     (Testsigma often waits between the tap and "Enter data … on focused element")."""
     for k in range(len(out) - 1, max(-1, len(out) - 5), -1):
-        m = re.match(r"^(# OFF: )?(?:js )?click(?: if visible)? (\S+)$", out[k])
+        m = re.match(r"^(# OFF: )?(?:\[ignore[^\]]*\]\s*)?(?:js )?click(?: if visible)? (\S+)$", out[k])
         if m:
             return k, m.group(1) or "", m.group(2)
         if not re.match(r"^(?:# OFF: )?(?:wait|create variable)", out[k]):
@@ -646,6 +657,9 @@ def convert(bundle: dict, *, platform: str = "mobilesite") -> dict:
             ctx.cur = s
             action = " ".join(str(s.get("action") or "").split())
             disabled = bool(s.get("disabled"))
+            # Testsigma "Ignore step result": the step runs, a failure does not fail
+            # the test → our "[ignore]" marker (amber "Ignore result" chip).
+            ignore = bool(s.get("ignoreStepResult"))
             emitted: list[str] | None
             src_actions: list[str] | None = None   # per-line source text, when it differs from `action`
             consumed = 1
@@ -796,9 +810,9 @@ def convert(bundle: dict, *, platform: str = "mobilesite") -> dict:
                         "mobile number is not one of the blocked test numbers" if other_mobile else
                         "only after the lead step above")
                     off.append(f"{where}: {ln}   ({why})")
-                    out.append(f"# OFF: {ln}")
+                    out.append(f"# OFF: {_ign(ln) if ignore else ln}")
                 else:
-                    out.append(ln)
+                    out.append(_ign(ln) if ignore else ln)
             if st.pop("after_group_lead", False):
                 st["lead_sent"] = True
                 st["had_lead"] = True

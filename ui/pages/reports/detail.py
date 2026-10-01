@@ -42,6 +42,7 @@ _MARK = {
     "passed": ("check_circle", COLORS["success"]),
     "failed": ("cancel", COLORS["danger"]),
     "skipped": ("remove_circle_outline", COLORS["text_muted"]),
+    "ignored": ("warning_amber", COLORS["warning"]),
 }
 
 
@@ -124,6 +125,7 @@ class ReportDetail:
         passed = summary.get("passed", 0)
         failed = summary.get("failed", 0)
         skipped = summary.get("skipped", 0)
+        ignored = summary.get("ignored", 0)
         flow = (self.report.get("testplan") or self.report.get("project")
                 or self.run_id)
         ok = not failed
@@ -140,6 +142,7 @@ class ReportDetail:
                 f"font-family:{TYPOGRAPHY['mono']}")
             for label, value, tint in (("passed", passed, COLORS["success"]),
                                        ("failed", failed, COLORS["danger"]),
+                                       ("ignored", ignored, COLORS["warning"]),
                                        ("not run", skipped, COLORS["text_muted"])):
                 if value:
                     ui.label(f"{value} {label}").style(

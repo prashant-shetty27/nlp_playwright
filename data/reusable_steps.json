@@ -34,7 +34,7 @@
   },
   "PS_Touch_Consent_Popup": {
     "steps": [
-      "click if visible consent_text",
+      "[ignore] click if visible consent_text",
       "click if visible consent_text"
     ],
     "created_at": "2026-09-29T16:22:48.762919+00:00",
@@ -67,8 +67,8 @@
     "steps": [
       "open https://www.justdial.com/",
       "wait 5 seconds",
-      "scroll to touch_login_popup_may_be_later",
-      "click touch_login_popup_may_be_later",
+      "[ignore] scroll to touch_login_popup_may_be_later",
+      "[ignore] click touch_login_popup_may_be_later",
       "call Location_Popup",
       "wait for page to load"
     ],
@@ -79,7 +79,7 @@
   "PS_Touch_Location_Popup": {
     "steps": [
       "open https://www.justdial.com/",
-      "click if visible consent_text",
+      "[ignore] click if visible consent_text",
       "click if visible consent_text"
     ],
     "created_at": "2026-09-29T16:22:48.765537+00:00",
@@ -106,7 +106,7 @@
   },
   "Location_Popup": {
     "steps": [
-      "click if visible consent_text",
+      "[ignore] click if visible consent_text",
       "click if visible consent_text"
     ],
     "created_at": "2026-09-29T16:22:48.757455+00:00",
@@ -136,7 +136,7 @@
       "verify element b2b_prp_gvs_popup_mobile is visible",
       "verify element b2b_prp_gvs_popup_cta is visible",
       "click b2b_prp_gvs_popup_cta",
-      "verify element b2b_prp_gvs_popup_mobile_alert is visible",
+      "[ignore] verify element b2b_prp_gvs_popup_mobile_alert is visible",
       "verify element b2b_prp_gvs_popup_skip is visible",
       "click b2b_prp_gvs_popup_skip",
       "wait until element b2b_prp_gvs_popup_skip is not visible"
@@ -245,12 +245,12 @@
   },
   "SG_View_Catalogue_PDP_Seller_Brochure_Verification": {
     "steps": [
-      "swipe bottom to top until element prp_view_catalogue_1st is visible, max 15 times, wait 1",
+      "[ignore 30s] swipe bottom to top until element prp_view_catalogue_1st is visible, max 15 times, wait 1",
       "scroll to prp_view_catalogue_1st",
       "wait 1 seconds",
       "click prp_product_random_view_catalogue",
       "wait 3 seconds",
-      "swipe bottom to top until element pdp_heading_more_from_this_seller is visible, max 15 times, wait 1",
+      "[ignore 30s] swipe bottom to top until element pdp_heading_more_from_this_seller is visible, max 15 times, wait 1",
       "scroll to pdp_seller_brochure_section",
       "verify element pdp_seller_brochure_section is visible",
       "wait 1 seconds",
@@ -263,7 +263,7 @@
   },
   "PS_consent_popup": {
     "steps": [
-      "click if visible consent_text",
+      "[ignore] click if visible consent_text",
       "click if visible consent_text"
     ],
     "created_at": "2026-09-29T16:22:48.768187+00:00",
@@ -272,7 +272,7 @@
   },
   "SG_PRP_View_Catalogue_Non_Login_to_Login_Flow": {
     "steps": [
-      "swipe bottom to top until element prp_request_catalogue_1st is visible, closing b2b_prp_gvs_popup_skip, max 15 times, wait 1",
+      "[ignore 30s] swipe bottom to top until element prp_request_catalogue_1st is visible, closing b2b_prp_gvs_popup_skip, max 15 times, wait 1",
       "wait 2 seconds",
       "click prp_view_catalogue_1st",
       "wait 3 seconds",
@@ -348,7 +348,7 @@
       "click ps_touch_b2b_prp_business_filter_wholesalers",
       "wait 2 seconds",
       "verify page does not contain \"No results found!\"",
-      "verify text \"Wholesaler\" on page"
+      "[ignore] verify text \"Wholesaler\" on page"
     ],
     "created_at": "2026-09-28T20:01:29.373561+00:00",
     "step_count": 6,

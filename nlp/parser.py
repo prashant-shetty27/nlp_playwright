@@ -16,7 +16,8 @@ def _swipe_span(words: str) -> str:
 
 
 def parse_step(step: str) -> Command:
-    s = step.strip()
+    from execution.step_flags import strip as _strip_flags
+    s = _strip_flags(step).strip()       # "[ignore 5s] click X" parses as "click X"
 
     # Block lines — if / else if / else / end if, for each row, repeat …,
     # stop loop, skip to next row. They are decided by execution/control_flow,

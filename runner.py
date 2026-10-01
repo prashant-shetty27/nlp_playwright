@@ -426,6 +426,13 @@ def _expand_reusable(name: str, page) -> None:
 
 
 def _interpret(step: str, page):
+    """One step; a step marked [ignore] runs with short waits and its failure is
+    raised as IgnoredFailure so the caller reports it amber and carries on."""
+    from execution.step_flags import run_ignorable
+    run_ignorable(step, lambda text: _interpret_core(text, page))
+
+
+def _interpret_core(step: str, page):
     """Pre-processes variables, then parses and executes one NLP step."""
     normalized = step.strip()
     logger.info("👉 Interpreting: %s", normalized)
@@ -475,6 +482,9 @@ def _interpret(step: str, page):
     _execute_step_from_command(cmd, page)
 
 
+from execution.step_flags import IgnoredFailure  # noqa: E402
+
+
 def _execute_nlp_flow_core(file_path: str, page) -> dict:
     """
     Inner execution engine — reads and runs one .flow file.
@@ -506,6 +516,10 @@ def _execute_nlp_flow_core(file_path: str, page) -> dict:
             _interpret(step, page)
             stats["passed"] += 1
             stats["log"].append(f"Line {line_num}: ✅ {step}")
+        except IgnoredFailure as e:
+            stats["ignored"] = stats.get("ignored", 0) + 1
+            stats["log"].append(f"Line {line_num}: ⚠️ {step} -> {e}")
+            logger.warning("⚠️ Line %s failed — result ignored: %s", line_num, e)
         except Exception as e:
             stats["failed"] += 1
             error_msg = str(e).strip()

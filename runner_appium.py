@@ -1015,6 +1015,13 @@ def _expand_reusable_appium(name: str, driver, platform: str) -> None:
 
 
 def _interpret_step(step: str, driver, platform: str) -> None:
+    """One step; [ignore] steps get a short time limit and their failure is
+    raised as IgnoredFailure (reported amber, the run continues)."""
+    from execution.step_flags import run_ignorable
+    run_ignorable(step, lambda text: _interpret_step_core(text, driver, platform))
+
+
+def _interpret_step_core(step: str, driver, platform: str) -> None:
     """Resolve variables in a step then parse and execute it (with timeout)."""
     step = step.strip()
     if not step or step.startswith("#"):
@@ -1052,6 +1059,9 @@ def _interpret_step(step: str, driver, platform: str) -> None:
     step_limit = STEP_TIMEOUT
     if cmd.type == "wait" and cmd.wait:
         step_limit += float(cmd.wait)
+    from execution import step_flags as _sf
+    if _sf.CURRENT_WAIT_S:                 # an [ignore Ns] step: its own short limit
+        step_limit = min(step_limit, _sf.CURRENT_WAIT_S + 2)
 
     with ThreadPoolExecutor(max_workers=1) as pool:
         future = pool.submit(_execute_step, cmd, driver, platform)
@@ -1080,6 +1090,9 @@ def _load_flow_file(file_path: str) -> list[str]:
 # CORE EXECUTION ENGINE
 # ─────────────────────────────────────────────────────────────────────────────
 
+from execution.step_flags import IgnoredFailure  # noqa: E402
+
+
 def _run_flow_core(file_path: str, driver, platform: str) -> dict:
     """
     Execute all steps in a .flow file against an Appium driver.
@@ -1104,6 +1117,10 @@ def _run_flow_core(file_path: str, driver, platform: str) -> dict:
                 continue
             _interpret_step(step, driver, platform)
             stats["passed"] += 1
+        except IgnoredFailure as e:
+            stats["ignored"] = stats.get("ignored", 0) + 1
+            stats["log"].append(f"⚠️ {step} -> {e}")
+            logger.warning("⚠️ Result ignored: %s", e)
         except AssertionError as e:
             msg = str(e)
             logger.error("❌ Assertion failed: %s", msg)

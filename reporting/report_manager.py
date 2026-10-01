@@ -40,7 +40,7 @@ class TestReportManager:
         screenshots is still a valid report.
         """
         normalized = (status or "").strip().lower()
-        if normalized not in {"passed", "failed", "skipped"}:
+        if normalized not in {"passed", "failed", "skipped", "ignored"}:
             normalized = "failed"
         # The appended row is returned so a caller can fill a field in later.
         # Screenshot capture needs this: in "failure" mode a frame is only known
@@ -63,11 +63,14 @@ class TestReportManager:
         passed = sum(1 for r in self.results if r["status"] == "passed")
         failed = sum(1 for r in self.results if r["status"] == "failed")
         skipped = sum(1 for r in self.results if r["status"] == "skipped")
+        # A step marked "Ignore result" that failed: shown amber, not a failure.
+        ignored = sum(1 for r in self.results if r["status"] == "ignored")
         return {
             "total": total,
             "passed": passed,
             "failed": failed,
             "skipped": skipped,
+            "ignored": ignored,
         }
 
     def generate_report(self, output_dir: str = "data/logs") -> tuple[str, str]:
