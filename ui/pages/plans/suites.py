@@ -149,18 +149,36 @@ async def render_edit(suite_id: str = "") -> None:
             bulk = ui.row().classes("items-center gap-2")
         box = ui.column().classes("w-full gap-0").style(
             f"border:1px solid {COLORS['border']}; border-radius:6px")
-        with ui.row().classes("w-full items-center gap-2"):
-            picker = ui.select([], label="Add a test case", with_input=True) \
-                .props("outlined dense").style("min-width:30rem")
-            add_btn = ui.button("Add", icon="add").props("flat")
+        # Add several at once: tick test cases, or pick whole folders (PDP, PRP …,
+        # sub-folders included) — added in name order after the ones already here.
+        with ui.row().classes("w-full items-center gap-2").style("flex-wrap:wrap"):
+            picker = ui.select([], label="Add test cases (tick several)", with_input=True,
+                               multiple=True) \
+                .props("outlined dense use-chips").style("min-width:30rem; flex:1 1 30rem")
+            folder_pick = ui.select({}, label="…or add whole folders", multiple=True) \
+                .props("outlined dense use-chips").style("min-width:18rem")
+            add_btn = ui.button("Add", icon="add").props("unelevated")
+        folder_note = muted("")
+        _folders: dict = {"assign": {}, "folders": []}
 
         async def load_choices() -> None:
             try:
                 names = await api.list_projects(plat.value or "")
             except api.ApiError:
                 names = []
-            names = [n for n in names if not n.startswith("_") and n not in state["cases"]]
-            picker.set_options(names)
+            names = [n if isinstance(n, str) else n.get("name", "") for n in names]
+            names = [n for n in names if n and not n.startswith("_") and n not in state["cases"]]
+            picker.set_options(names, value=[v for v in (picker.value or []) if v in names])
+            try:
+                fd = await api.folders(plat.value or "")
+            except api.ApiError:
+                fd = {"assign": {}, "folders": []}
+            _folders.update(fd)
+            counts = {f: sum(1 for t, tf in fd.get("assign", {}).items()
+                             if (tf == f or tf.startswith(f + "/")) and t in names)
+                      for f in fd.get("folders", [])}
+            folder_pick.set_options({f: f"{f}  ({n} not in suite)" for f, n in counts.items() if n},
+                                    value=[])
 
         def draw_bulk() -> None:
             bulk.clear()
@@ -223,16 +241,20 @@ async def render_edit(suite_id: str = "") -> None:
             await load_choices()
 
         async def add() -> None:
-            v = picker.value
-            if not v:
+            chosen = list(picker.value or [])
+            for f in folder_pick.value or []:
+                chosen += sorted(t for t, tf in _folders.get("assign", {}).items()
+                                 if tf == f or tf.startswith(f + "/"))
+            valid = set(picker.options or [])
+            new = [c for c in dict.fromkeys(chosen) if c not in state["cases"] and c in valid]
+            if not new:
+                ui.notify("Nothing new to add — tick test cases or pick a folder", type="info")
                 return
-            if v in state["cases"]:
-                ui.notify(f"{v} is already in this suite", type="warning")
-                return
-            state["cases"].append(v)
-            picker.set_value(None)
+            state["cases"].extend(new)
+            picker.set_value([])
             draw()
             await load_choices()
+            ui.notify(f"Added {len(new)} test case(s) — press Save suite to keep them", type="positive")
 
         add_btn.on_click(add)
         plat.on_value_change(lambda _: load_choices())
@@ -240,6 +262,7 @@ async def render_edit(suite_id: str = "") -> None:
         await load_choices()
         if not writable:
             picker.set_visibility(False)
+            folder_pick.set_visibility(False)
             add_btn.set_visibility(False)
 
         msg = ui.label().style(f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['danger']}")

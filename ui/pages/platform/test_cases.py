@@ -493,9 +493,11 @@ class TestCasesPage:
                     .props("outlined dense clearable").classes("flex-grow")
                 ui.button(icon="create_new_folder", on_click=lambda: self._folder_dialog("new")) \
                     .props("flat dense").tooltip("New folder")
-                ui.button(icon="checklist", on_click=self._toggle_pick) \
-                    .props("flat dense" + (" color=primary" if self.pick_mode else "")) \
-                    .tooltip("Select several test cases to move or delete")
+                ui.button("Done" if self.pick_mode else "Select", icon="checklist",
+                          on_click=self._toggle_pick) \
+                    .props("flat dense no-caps" + (" color=primary" if self.pick_mode else "")) \
+                    .tooltip("Tick several test cases — or whole folders — to add to a suite, "
+                             "move or delete")
                 ui.button(icon="chevron_left", on_click=self._toggle_list) \
                     .props("flat dense").tooltip("Hide the list")
             self.pick_bar = ui.row().classes("w-full items-center gap-2 no-wrap")
@@ -563,6 +565,13 @@ class TestCasesPage:
         with row:
             ui.icon("expand_more" if is_open else "chevron_right", size="18px").style(
                 f"color:{COLORS['text_muted']}")
+            if self.pick_mode:
+                # Tick a folder = every test case in it (and its sub-folders).
+                inside = self._tests_in(path, unfiled)
+                ticked = bool(inside) and all(t in self.picked for t in inside)
+                ui.checkbox(value=ticked).props("dense size=xs") \
+                    .on("click.stop", lambda _=None, ins=inside, on=not ticked: self._pick_many(ins, on)) \
+                    .tooltip(f"Select all {len(inside)} test case(s) in this folder")
             ui.icon("folder_open" if is_open else ("inventory_2" if unfiled else "folder"),
                     size="18px").style(f"color:{COLORS['primary'] if not unfiled else COLORS['text_muted']}")
             ui.label(label).classes("flex-grow").style(
@@ -807,6 +816,17 @@ class TestCasesPage:
         if not self.pick_mode:
             self.picked.clear()
         self.render_list()
+
+    def _tests_in(self, path: str, unfiled: bool = False) -> list[str]:
+        assign = self.folder_data.get("assign", {})
+        folders = set(self.folder_data.get("folders", []))
+        if unfiled:
+            return [t for t in self.projects if not assign.get(t) or assign.get(t) not in folders]
+        return [t for t, f in assign.items() if t in self.projects and (f == path or f.startswith(path + "/"))]
+
+    def _pick_many(self, names: list[str], on: bool) -> None:
+        (self.picked.update if on else self.picked.difference_update)(names)
+        self.render_rows()
 
     def _pick(self, name: str, on: bool) -> None:
         (self.picked.add if on else self.picked.discard)(name)
