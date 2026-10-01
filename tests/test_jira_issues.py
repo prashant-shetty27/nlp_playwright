@@ -66,7 +66,8 @@ def test_draft_groups_devices_and_separates_test_problems(plan):
     assert i["devices"] == ["Chrome on Android (Pixel 7)", "Safari on iPhone (iPhone 15)"]
     assert i["confirmed"] and i["type"] == "Defect" and i["live"] is False
     assert "https://prot3.justdial.com/x" in i["description"]        # moved to the run's site
-    assert i["summary"] == "TC A: icon is not visible"
+    assert i["summary"].endswith("Icon not shown on page load")
+    assert "# *Check the icon is shown*" in i["description"] and "Expected result" in i["description"]
     assert len(i["screenshots"]) == 4
 
 
@@ -100,7 +101,7 @@ def test_raise_creates_links_attaches_and_never_twice(plan, monkeypatch):
     assert res[0]["ok"] and res[0]["key"] == "GJDT-99"
     fields = fake.calls[0][1]["fields"]
     assert fields["issuetype"] == {"name": "Defect"} and fields["assignee"] == {"name": "sohini"}
-    assert fields["priority"] == {"name": "High"} and fields["labels"] == ["GJDT-1"]
+    assert fields["priority"] == {"name": "High"} and fields["labels"] == ["GJDT-1", "ps_codeless_automation"]
     assert "environment" in fields
     assert any(c[0].endswith("/issueLink") for c in fake.calls)
     assert sum(1 for c in fake.calls if c[2]) == 4                     # 4 screenshots attached

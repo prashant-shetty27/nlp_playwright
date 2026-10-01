@@ -262,6 +262,158 @@ def _first_url(results: list[dict], host: str) -> str:
     return ""
 
 
+#: Every issue raised from the portal carries this label, so they can be found together.
+DEFAULT_LABEL = "ps_codeless_automation"
+
+_MODULE_LABEL = {"website": "Website", "mobilesite": "Mobile Site", "android": "Android App",
+                 "ios": "iOS App", "hybrid": "Hybrid App"}
+_ACRONYMS = {"pdp", "prp", "otp", "url", "nct", "rfq", "gvs", "jd", "b2b", "ui", "cta", "faq", "id"}
+
+
+def _r(name: str) -> str:
+    """'gallery_360_icon' → 'gallery 360° icon', 'pdp_first_photo' → 'PDP first photo'."""
+    words = re.split(r"[_\s]+", (name or "").strip())
+    out = [w.upper() if w.lower() in _ACRONYMS else ("360°" if w == "360" else w) for w in words if w]
+    return " ".join(out)
+
+
+def _module_of(test_case: str, rep: dict | None = None) -> str:
+    m = ((rep or {}).get("meta") or {}).get("platform") or ""
+    if not m:
+        try:
+            from api.routes.projects import _platform_of
+            m = _platform_of(test_case)
+        except Exception:  # noqa: BLE001
+            m = ""
+    return m
+
+
+def _tap(module: str) -> str:
+    return "Tap" if module in ("mobilesite", "android", "ios", "hybrid") else "Click"
+
+
+def step_plain(step: str, module: str = "") -> str:
+    """A test step as a person would write it in a bug report."""
+    s = (step or "").strip()
+    tap = _tap(module)
+    E = r"(?:the\s+)?(?:element\s+)?"
+    rules = [
+        (r"^open\s+(.+)$", lambda m: f"Open {m.group(1)}"),
+        (r"^wait\s+for\s+(?:the\s+)?page\s+to\s+load$", lambda m: "Wait for the page to load"),
+        (r"^wait\s+until\s+" + E + r"(\S+)\s+is\s+visible$", lambda m: f"Wait for the {_r(m.group(1))} to appear"),
+        (r"^wait\s+until\s+" + E + r"(\S+)\s+is\s+not\s+visible$", lambda m: f"Wait for the {_r(m.group(1))} to disappear"),
+        (r"^verify\s+(?:that\s+)?" + E + r"(\S+)\s+is\s+visible$", lambda m: f"Check the {_r(m.group(1))} is shown"),
+        (r"^verify\s+(?:that\s+)?" + E + r"(\S+)\s+is\s+not\s+visible$", lambda m: f"Check the {_r(m.group(1))} is not shown"),
+        (r"^verify\s+(?:that\s+)?" + E + r"(\S+)\s+is\s+inside\s+(\S+)$",
+         lambda m: f"Check the {_r(m.group(1))} sits inside the {_r(m.group(2))}"),
+        (r"^verify\s+(?:that\s+)?" + E + r"(\S+)\s+(contains|equals|is)\s+\"(.*)\"$",
+         lambda m: f"Check the {_r(m.group(1))} {'shows' if m.group(2) != 'contains' else 'contains'} \"{m.group(3)}\""),
+        (r"^(?:click|tap)(?:\s+on)?\s+" + E + r"(\S+)$", lambda m: f"{tap} the {_r(m.group(1))}"),
+        (r"^(?:double\s+tap|double\s+click)\s+" + E + r"(\S+)$", lambda m: f"Double-{tap.lower()} the {_r(m.group(1))}"),
+        (r"^(?:enter|type)\s+(.+?)\s+(?:in|into)\s+" + E + r"(\S+)$", lambda m: f"Enter {m.group(1)} in the {_r(m.group(2))}"),
+        (r"^go\s+back$", lambda m: "Go back to the previous page"),
+        (r"^swipe\s+(left|right|up|down)$", lambda m: f"Swipe {m.group(1)}"),
+        (r"^scroll\s+(?:down\s+)?(?:to|until)\s+" + E + r"(\S+)(?:\s+is\s+visible)?$", lambda m: f"Scroll to the {_r(m.group(1))}"),
+        (r"^wait\s+(\d+)\s+seconds?$", lambda m: f"Wait {m.group(1)} seconds"),
+        (r"^store\s+.*$", None),            # bookkeeping — not a user action
+        (r"^take\s+screenshot.*$", None),
+    ]
+    for rx, fn in rules:
+        m = re.match(rx, s, re.I)
+        if m:
+            return fn(m) if fn else ""
+    t = re.sub(r"\b([a-z0-9]+(?:_[a-z0-9]+)+)\b", lambda x: _r(x.group(1)), s)
+    return t[:1].upper() + t[1:]
+
+
+def _secs(reason: str) -> str:
+    m = re.search(r"within\s+(\d+)\s*ms|Timeout\s+(\d+)ms", reason or "")
+    if not m:
+        return ""
+    ms = int(m.group(1) or m.group(2))
+    return f"{ms // 1000} seconds" if ms >= 1000 else f"{ms} ms"
+
+
+def _target_of(step: str) -> str:
+    m = re.match(r"^(?:verify|wait\s+until|check)\s+(?:that\s+)?(?:the\s+)?(?:element\s+)?([A-Za-z_][\w.-]*)", (step or "").strip(), re.I)
+    return m.group(1) if m and m.group(1).lower() not in ("url", "page", "stored", "title", "that") else ""
+
+
+def _problem(step: str, reason: str) -> tuple[str, str, str]:
+    """(summary phrase, expected, actual) for the failing step — in plain words."""
+    s, r = (step or "").strip(), (reason or "")
+    el = _target_of(s)
+    name = _r(el) if el else ""
+    secs = _secs(r)
+    if re.search(r"\bis\s+not\s+visible$", s, re.I):
+        return (f"{name[:1].upper() + name[1:]} is still shown",
+                f"The {name} should not be shown.", f"The {name} is still shown.")
+    if re.search(r"\bis\s+visible$", s, re.I) or "not become visible" in r or "not visible" in r.lower():
+        return (f"{name[:1].upper() + name[1:]} not shown",
+                f"The {name} should be shown.",
+                f"The {name} did not appear" + (f" within {secs}." if secs else "."))
+    m = re.search(r"\bis\s+inside\s+(\S+)$", s, re.I)
+    if m:
+        return (f"{name[:1].upper() + name[1:]} not placed inside the {_r(m.group(1))}",
+                f"The {name} should sit inside the {_r(m.group(1))}.", plain_reason(r) + ".")
+    m = re.search(r"\b(contains|equals|is)\s+\"(.*)\"$", s, re.I)
+    if m and name:
+        return (f"{name[:1].upper() + name[1:]} shows wrong text",
+                f"The {name} should {'contain' if m.group(1) == 'contains' else 'show'} \"{m.group(2)}\".",
+                plain_reason(r) + ".")
+    if re.match(r"^verify\s+url", s, re.I):
+        return ("Wrong page opened", step_plain(s) + ".", plain_reason(r) + ".")
+    if re.match(r"^(?:click|tap)", s, re.I):
+        tgt = re.sub(r"^(?:click|tap)(?:\s+on)?\s+(?:the\s+)?(?:element\s+)?", "", s, flags=re.I)
+        return (f"{_r(tgt)[:1].upper() + _r(tgt)[1:]} cannot be tapped",
+                f"It should be possible to tap the {_r(tgt)}.", plain_reason(r) + ".")
+    short = _short(r, 90)
+    return (short, step_plain(s) + " — should succeed.", plain_reason(r) + ".")
+
+
+def _after(steps: list[str], idx: int, module: str) -> str:
+    """'after tapping the PDP first photo' — the last user action before the failure."""
+    for raw in reversed(steps[:idx]):
+        s = raw.strip()
+        m = re.match(r"^(?:click|tap)(?:\s+on)?\s+(?:the\s+)?(?:element\s+)?(\S+)$", s, re.I)
+        if m:
+            return f"after {'tapping' if _tap(module) == 'Tap' else 'clicking'} the {_r(m.group(1))}"
+        m = re.match(r"^swipe\s+(\w+)$", s, re.I)
+        if m:
+            return f"after swiping {m.group(1)}"
+        if re.match(r"^go\s+back$", s, re.I):
+            return "after going back"
+        m = re.match(r"^(?:enter|type)\s+.+?\s+(?:in|into)\s+(?:the\s+)?(\S+)$", s, re.I)
+        if m:
+            return f"after entering the {_r(m.group(1))}"
+        if re.match(r"^open\s+", s, re.I):
+            return "on page load"
+    return ""
+
+
+def _same_image(a: str, b: str) -> bool:
+    """Two screenshots that show the same screen (only the label differs)."""
+    try:
+        from PIL import Image, ImageChops, ImageStat
+        pa, pb = os.path.join(SCREENSHOTS_DIR, a), os.path.join(SCREENSHOTS_DIR, b)
+        ia = Image.open(pa).convert("L").resize((64, 128))
+        ib = Image.open(pb).convert("L").resize((64, 128))
+        return ImageStat.Stat(ImageChops.difference(ia, ib)).mean[0] < 2.0
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def _ist_when(stamp: str) -> str:
+    try:
+        from datetime import datetime, timedelta, timezone
+        t = datetime.fromisoformat(str(stamp).replace("Z", "+00:00"))
+        if t.tzinfo is not None:
+            t = t.astimezone(timezone(timedelta(hours=5, minutes=30)))
+        return f"{t.day} {t:%b %Y}, {t.hour % 12 or 12}:{t:%M} {'AM' if t.hour < 12 else 'PM'} IST"
+    except Exception:  # noqa: BLE001
+        return (stamp or "")[:16].replace("T", " ")
+
+
 def _expected(step: str) -> str:
     s = step.strip()
     m = re.match(r"^verify\s+(?:that\s+)?(?:element\s+)?(.*)$", s, re.I)
@@ -390,8 +542,13 @@ def draft(run_id: str = "", plan_run: str = "") -> dict:
                 if live is None:
                     host = (urlparse(url).hostname or "").lower() if url.startswith("http") else ""
                     live = host in ("www.justdial.com", "justdial.com") if host else None
+                module = _module_of(src["test_case"], rep)
+                raw_steps = [x.get("test_name", "") for x in results[:idx + 1]]
                 g = groups[gid] = {
                     "id": gid, "test_case": src["test_case"], "suite": src.get("suite", ""),
+                    "module": module, "after": _after(raw_steps, idx, module),
+                    "plain_steps": [p for p in (step_plain(_resolve_display(x, site["host"]), module)
+                                                for x in raw_steps[:-1]) if p],
                     "story": story_of(src["test_case"], ctx.get("name", ""), src.get("suite", "")),
                     "step": step, "reason": reason, "devices": [], "run_ids": [],
                     "screenshots": [], "video": "", "live": live, "url": url,
@@ -420,7 +577,13 @@ def draft(run_id: str = "", plan_run: str = "") -> dict:
                              if atts else "1 attempt"),
                 "when": (rep.get("started_at") or "")[:16].replace("T", " ")})
             g["run_ids"].append(src.get("run_id") or rep.get("run_id", ""))
-            for shot in ([results[idx - 1].get("screenshot")] if idx else []) + [r.get("screenshot")]:
+            before = results[idx - 1].get("screenshot") if idx else ""
+            failing = r.get("screenshot")
+            # The step before only helps when it shows a DIFFERENT screen; the same
+            # screen twice (the page did not change) is one picture, not two.
+            if before and failing and _same_image(before, failing):
+                before = ""
+            for shot in (before, failing):
                 if shot and shot not in g["screenshots"]:
                     g["screenshots"].append(shot)
             if rep.get("video") and not g["video"]:
@@ -446,10 +609,12 @@ def draft(run_id: str = "", plan_run: str = "") -> dict:
 
 
 def _summary(g: dict) -> str:
-    where = ""
-    if len(g["devices"]) == 1:
-        where = f" [{g['devices'][0].split(' (')[0]}]"
-    return f"{_human(g['test_case'])}: {_short(g['reason'], 120)}{where}"[:250]
+    """'[Mobile Site] Gallery 360° icon not shown after tapping the PDP first photo'."""
+    mod = _MODULE_LABEL.get(g.get("module") or "", "")
+    phrase, _, _ = _problem(g["step"], g["reason"])
+    after = g.get("after") or ""
+    text = f"{phrase} {after}".strip()
+    return (f"[{mod}] " if mod else "") + text[:1].upper() + text[1:]
 
 
 def attachment_name(g: dict, rel: str) -> str:
@@ -472,25 +637,33 @@ def _checking(test_case: str) -> str:
 
 
 def description(g: dict) -> str:
-    """Jira wiki markup — what was checked, where, steps, expected / actual,
-    how often, how it was run, evidence."""
-    lines = [f"Found by automation — test case *{g['test_case']}*"
-             + (f" (story {g['story']})" if g.get("story") else "") + ".", ""]
+    """Jira wiki markup a developer can act on without opening the portal:
+    the problem, where, every step to reproduce, expected / actual, how often,
+    technical details, and the attachments."""
+    mod = _MODULE_LABEL.get(g.get("module") or "", g.get("module") or "")
+    phrase, expected, actual = _problem(g["step"], g["reason"])
+    if g.get("after"):
+        expected = expected.rstrip(".") + f" {g['after']}."
+    lines = [f"*Problem:* {phrase} {g.get('after') or ''}".rstrip() + ".", ""]
     if g.get("checking"):
-        lines += ["h3. What was being checked", g["checking"], ""]
+        lines += ["h3. What was being checked", g["checking"]
+                  + (f" (story {g['story']})" if g.get("story") else ""), ""]
+    lines += ["h3. Environment"]
+    if mod:
+        lines.append(f"* Module: {mod}")
     site = g.get("site") or "—"
-    lines += ["h3. Where", f"* Site: {site}"
-              + (" (live site)" if g.get("live") and "live" not in site else "")]
-    lines += [f"* Device: {d}" for d in g["devices"]]
+    lines.append(f"* Server: {site}" + (" (live site)" if g.get("live") and "live" not in site else ""))
     if g.get("url"):
-        lines.append(f"* Page: {g['url']}")
-    lines += [f"* When: {(g.get('when') or '')[:16].replace('T', ' ')}", "",
-              "h3. Steps to reproduce"]
-    for s in g["steps"][:-1]:
-        lines.append(f"# {s}")
-    lines.append(f"# *{g['steps'][-1] if g['steps'] else g['step']}*  ← fails here")
-    lines += ["", "h3. Expected", _expected(g["step"]), "", "h3. Actual",
-              plain_reason(g["reason"]) + ".", "{noformat}" + _clean_actual(g["reason"]) + "{noformat}", ""]
+        lines.append(f"* Page URL: [{g['url']}]")
+    lines += [f"* Device / browser: {d}" for d in g["devices"]]
+    lines += [f"* When: {_ist_when(g.get('when') or '')}", "", "h3. Steps to reproduce"]
+    steps = list(g.get("plain_steps") or [])
+    if g.get("url") and not any(st.lower().startswith("open ") for st in steps):
+        steps.insert(0, f"Open {g['url']}")
+    for st in steps:
+        lines.append(f"# {st}")
+    lines.append(f"# *{step_plain(g['step'], g.get('module') or '')}*  ← fails here")
+    lines += ["", "h3. Expected result", expected, "", "h3. Actual result", actual, ""]
     if g.get("confirmed"):
         lines += ["h3. How often", "Reproduced — " + "; ".join(g["reproduced"]) + "."]
     else:
@@ -506,16 +679,20 @@ def description(g: dict) -> str:
         how.append(f"Test plan: {c.get('name')} (run {c.get('id')})")
     if c.get("suite"):
         how.append(f"Suite: {c['suite']}")
+    how.append(f"Test case: {g['test_case']}")
     if c.get("run_type"):
         how.append(f"Run type: {c['run_type']}")
     if c.get("by"):
         how.append(f"Run by: {c['by']}")
-    if how:
-        lines += ["", "h3. How it was run"] + [f"* {x}" for x in how]
+    lines += ["", "h3. How it was run"] + [f"* {x}" for x in how]
+    lines += ["", "h3. Technical details (for developers)",
+              f"* Failing step as written: {{{{{g['step']}}}}}",
+              "{noformat}" + _clean_actual(g["reason"]) + "{noformat}"]
     ev = []
     if g["screenshots"]:
-        ev.append(f"{len(g['screenshots'])} screenshots — for each device the step before "
-                  "and the failing step: " + ", ".join(attachment_name(g, x) for x in g["screenshots"]))
+        names = ", ".join(attachment_name(g, x) for x in g["screenshots"])
+        ev.append((f"{len(g['screenshots'])} screenshots (the screen before and at the failure): "
+                   if len(g["screenshots"]) > 1 else "Screenshot at the failure: ") + names)
     if g.get("video"):
         ev.append("Screen recording of the run: " + os.path.basename(g["video"]))
     if ev:
@@ -588,7 +765,8 @@ def _fields(issue: dict, story: dict) -> dict:
     t = issue.get("type") or "Defect"
     if t not in ISSUE_TYPES:
         raise IssueError(f"Type must be one of {', '.join(ISSUE_TYPES)}.")
-    labels = [story["key"]] + [x for x in issue.get("labels") or [] if x and x != story["key"]]
+    labels = [story["key"], DEFAULT_LABEL] + [x for x in issue.get("labels") or []
+                                              if x and x not in (story["key"], DEFAULT_LABEL)]
     f = {"project": {"id": story["project"]["id"]}, "issuetype": {"name": t},
          "summary": (issue.get("summary") or "").strip()[:250],
          "description": issue.get("description") or "",
@@ -696,13 +874,13 @@ def prefill_url(issue: dict, project_id: str, story_key: str) -> str:
     q = {"pid": project_id, "issuetype": _TYPE_IDS.get(issue.get("type") or "Defect", "10500"),
          "summary": (issue.get("summary") or "")[:250], "description": desc,
          "priority": _PRIORITY_IDS.get(issue.get("priority") or "Medium", "3"),
-         "labels": story_key}
+         "labels": [story_key, DEFAULT_LABEL] if story_key else [DEFAULT_LABEL]}
     owner = issue.get("owner")
     if isinstance(owner, dict):
         owner = owner.get("name")
     if owner:
         q["assignee"] = owner
-    return f"{base_url()}/secure/CreateIssueDetails!init.jspa?{urlencode(q)}"
+    return f"{base_url()}/secure/CreateIssueDetails!init.jspa?{urlencode(q, doseq=True)}"
 
 
 def csv_bytes(issues: list[dict], project_key: str, story_key: str) -> bytes:
@@ -716,6 +894,7 @@ def csv_bytes(issues: list[dict], project_key: str, story_key: str) -> bytes:
         if isinstance(owner, dict):
             owner = owner.get("name", "")
         w.writerow([project_key, i.get("type") or "Defect", i.get("summary", ""),
-                    i.get("priority") or "Medium", owner, story_key, i.get("description", ""),
+                    i.get("priority") or "Medium", owner,
+                    " ".join(x for x in (story_key, DEFAULT_LABEL) if x), i.get("description", ""),
                     story_key, "; ".join(i.get("screenshots") or [])])
     return buf.getvalue().encode("utf-8-sig")

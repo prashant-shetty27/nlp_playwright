@@ -270,7 +270,8 @@ class IssuesPage:
                     .style("padding-left:1.4rem"):
                 ui.textarea(value=st["description"],
                             on_change=lambda e, s=st: s.update(description=e.value)) \
-                    .props("outlined autogrow").classes("w-full") \
+                    .props('outlined rows=18 input-style="min-height:22rem; resize:vertical"') \
+                    .classes("w-full") \
                     .style(f"font-family:{TYPOGRAPHY['mono']}; font-size:{TYPOGRAPHY['size_xs']}")
                 with ui.row().classes("gap-2"):
                     for shot in i.get("screenshots", []):
