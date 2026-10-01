@@ -45,7 +45,7 @@ async def render_list(module: str = "") -> None:
             heading("Test Suites")
             ui.space()
             if can("write"):
-                ui.button("New suite", icon="add", on_click=lambda: ui.navigate.to("/suites/edit")) \
+                ui.button("New suite", icon="add", on_click=lambda: ui.navigate.to(f"/suites/edit?module={module}")) \
                     .props("unelevated").style(f"background:{COLORS['primary']}")
         muted("A suite is an ordered set of test cases on one platform. Plans run suites, "
               "now or on a schedule.")
@@ -115,10 +115,11 @@ async def render_list(module: str = "") -> None:
             t.on_select(lambda _: draw_bar())
 
 
-async def render_edit(suite_id: str = "") -> None:
+async def render_edit(suite_id: str = "", module: str = "") -> None:
     platforms = await _shell(["Execute", "Test Suites", "Edit" if suite_id else "New"])
     enabled = {p["name"]: p.get("label", p["name"]) for p in platforms if p.get("enabled", True)}
-    data = {"name": "", "platform": next(iter(enabled), "website"), "description": "",
+    data = {"name": "", "platform": module if module in enabled else next(iter(enabled), "website"),
+            "description": "",
             "test_cases": [], "used_by": []}
     if suite_id:
         try:

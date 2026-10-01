@@ -108,11 +108,11 @@ async def suites_page(module: str = "") -> None:
 
 
 @ui.page("/suites/edit")
-async def suite_edit_page(id: str = "") -> None:  # noqa: A002
+async def suite_edit_page(id: str = "", module: str = "") -> None:  # noqa: A002
     if not _page_shell():
         return
     from ui.pages.plans.suites import render_edit
-    await render_edit(id)
+    await render_edit(id, module)
 
 
 @ui.page("/plans")
