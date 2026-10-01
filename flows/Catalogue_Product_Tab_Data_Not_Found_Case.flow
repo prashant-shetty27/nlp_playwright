@@ -1,0 +1,30 @@
+# Platform: mobilesite
+# Imported from Testsigma: Catalogue Product Tab Data Not Found Case (test case 1296, run 115613, last result SUCCESS)
+# Tags: regression
+# OFF steps: every step that would send a REAL lead / enquiry / OTP is switched off,
+#   plus the checks that only pass after it. Switch them on only when a lead is wanted.
+
+# OFF: call Live_Touch_Chrome_Navigate_to_Homepage_setup_Popup
+# OFF: call searchbar_with_location_click
+open https://www.justdial.com/jdmart/Dibrugarh/Mandal-Co-Chowkidingee/9999PX373-X373-190610132456-H1N5_BZDET/catalogue
+# OFF: type "dibrugarh" into touch_core_area_search_field_enter
+# OFF: wait until element ps_core_autosuggest_city_selection_1st is visible
+# OFF: click ps_core_autosuggest_city_selection_1st
+# OFF: wait for page to load
+# OFF: [ignore] click catalogue_header_back
+# OFF: click b2b_search_field
+wait for page to load
+# OFF: type "mandal & co" into b2b_search_field
+# OFF: wait until element mandal_co is visible
+# OFF: wait 10 seconds
+# OFF: click mandal_co
+# OFF: wait for page to load
+# OFF: click ps_touch_core_company_result_page_1st_company_mandal_co
+# OFF: wait for page to load
+click products
+wait until element catalogue_product_tab_laptop is visible
+wait until element catalogue_product_tab_laptop is visible
+verify element catalogue_product_tab_laptop is visible
+click catalogue_product_tab_laptop
+wait until element catalogue_product_tab_product_data_section_loading is visible
+verify element catalogue_product_tab_product_data_section_loading is visible

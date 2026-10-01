@@ -458,6 +458,8 @@ _MAP = [
     (r"^scroll the window to\s+(?P<v>[A-Za-z_]\w*)\s+offset vertically$",
      lambda m, c: [f"scroll down {c.nums[m['v']]}"] if m["v"] in c.nums else None),
     (r"^swipe bottom to middle(?: in the screen)?$", lambda m, c: ["swipe bottom to middle"]),
+    (r"^swipe right to left(?: in the screen)?$", lambda m, c: ["swipe left"]),
+    (r"^swipe left to right(?: in the screen)?$", lambda m, c: ["swipe right"]),
     (r"^swipe middle to top(?: in the screen)?$", lambda m, c: ["swipe middle to top"]),
     (r"^swipe top to middle(?: in the screen)?$", lambda m, c: ["swipe top to middle"]),
     (r"^swipe middle to bottom(?: in the screen)?$", lambda m, c: ["swipe middle to bottom"]),
@@ -550,7 +552,17 @@ _WHILE = re.compile(r"^while (?:the )?element\s+(?P<el>.+?)\s+is not (?:visible|
 _IF_VISIBLE = re.compile(r"^(?:if )?(?:the )?element\s+(?P<el>.+?)\s+is (?:visible|displayed|present)(?: on the page)?$", re.I)
 
 
+_CUSTOM_CALC = re.compile(r"^store numberfunctions\s*::\s*custom calculation in\s+(?P<v>\S+)$", re.I)
+
+
 def _one(action: str, ctx: _Ctx) -> list[str] | None:
+    m = _CUSTOM_CALC.match(" ".join(str(action or "").split()))
+    if m:
+        v = ctx.var(m["v"], store=True)
+        # The formula is kept in Testsigma's function arguments, which the export
+        # does not carry; every use in these test cases is a loop counter (+1).
+        return [f"# Testsigma 'Custom Calculation' → assumed {v} + 1 (check the formula in Testsigma)",
+                f"increase {v} by 1"]
     # "…and With Scrollable TRUE/FALSE" is a Testsigma mobile option, not part of the check.
     raw = " ".join(str(action or "").split())
     scroll_first = bool(re.search(r"with\s+scrollable\s+true\s*$", raw, re.I))
@@ -576,6 +588,61 @@ def _one(action: str, ctx: _Ctx) -> list[str] | None:
             ctx.after_dialog = bool(out) and any(
                 ln.startswith("click if visible ") and ln.split()[-1] in ctx.optional_names for ln in out)
             return out
+    return None
+
+
+_OP_WORDS = {"<=": "is at most", "<": "is less than", "lessthan": "is less than",
+             ">=": "is at least", ">": "is more than", "greaterthan": "is more than",
+             "==": "equals", "=": "equals", "!=": "is not", "contains": "contains",
+             "notcontains": "does not contain", "doesnotcontain": "does not contain"}
+_IF_EXPR = re.compile(r"^verify if\s+(?P<a>.+?)\s+(?P<op><=|>=|==|!=|<|>|=|lessthan|greaterthan|"
+                      r"contains|not ?contains|does ?not ?contain)\s+(?P<b>.+)$", re.I)
+_EL_COND = re.compile(r"^(?:if |while )?(?:the )?element\s+(?P<el>.+?)\s+is\s+(?P<neg>not\s+)?"
+                      r"(?:visible|displayed|present)(?: on the page)?$", re.I)
+
+
+def _scroll_only(s: dict) -> bool:
+    """A While-not-visible whose body only scrolls / swipes / waits / counts / closes popups."""
+    for c in s.get("_children") or []:
+        b = " ".join(str(c.get("action") or "").split()).lower()
+        if not (b.startswith(("swipe", "scroll", "wait", "pagescroll", "store numberfunctions"))
+                or _TAP.match(b) or _JS_TAP.match(b)):
+            return False
+    return True
+
+
+def _block_head(s: dict, action: str, ctx) -> str | None:
+    """The if / repeat line for a Testsigma If or While step, or None."""
+    m = re.match(r"^loop over data set in\s+(?P<ds>.+?)\s+from index\s+(?P<a>\d+)\s+to index\s+(?P<b>\d+)$",
+                 action.strip(), re.I)
+    if m:
+        # Testsigma loops over the rows of its data profile; the rows are not in
+        # the export, so the steps repeat that many times (${round} = 1, 2 …).
+        return f"repeat {int(m['b']) - int(m['a']) + 1} times"
+    loop = s.get("conditionType") == "LOOP_WHILE"
+    a = re.sub(r"^while\s+", "", action.strip(), flags=re.I) if loop else action.strip()
+    m = _EL_COND.match(a) or _EL_COND.match(action.strip())
+    if m:
+        ctx.cur = s
+        el = ctx.loc(m["el"])
+        if loop:
+            return (f"repeat until element {el} is visible (max 50 times)" if m["neg"]
+                    else f"repeat while element {el} is visible (max 50 times)")
+        return f"if element {el} is {'not ' if m['neg'] else ''}visible"
+    m = _IF_EXPR.match(a)
+    if m:
+        ctx.cur = s
+        def side(key, shown):
+            typ, val = ctx.data(key)
+            val = (val if val is not None else shown).strip()
+            if typ == "runtime" or (typ is None and ctx.is_var(val)):
+                return "${" + ctx.var(val) + "}"
+            return val if re.fullmatch(r"-?\d+(\.\d+)?", val) else f'"{val}"'
+        op = _OP_WORDS.get(re.sub(r"\s+", "", m["op"].lower()))
+        if not op:
+            return None
+        cond = f"{side('testData1', m['a'])} {op} {side('testData3', m['b'])}"
+        return f"repeat while {cond} (max 100 times)" if loop else f"if {cond}"
     return None
 
 
@@ -695,7 +762,7 @@ def convert(bundle: dict, *, platform: str = "mobilesite") -> dict:
                     # The group sends (a switched-off) lead: what follows the call
                     # in this test depends on it, exactly as if the steps were inline.
                     st["after_group_lead"] = True
-            elif _WHILE.match(action):
+            elif _WHILE.match(action) and _scroll_only(s):
                 el = _WHILE.match(action)["el"]
                 body = [" ".join(str(c.get("action") or "").split()).lower() for c in s["_children"]]
                 scrolling = [b.startswith(("swipe", "scroll", "wait", "pagescroll")) or
@@ -759,6 +826,35 @@ def convert(bundle: dict, *, platform: str = "mobilesite") -> dict:
                 emitted = [f"type {_q(v)} into focused field"]
                 if lc and lc[1] and st["lead_sent"]:
                     disabled = True        # the field it types into belongs to the switched-off lead
+            elif s.get("conditionType") in ("CONDITION_IF", "CONDITION_ELSE_IF", "LOOP_WHILE", "LOOP_FOR") \
+                    and _block_head(s, action, ctx) is not None:
+                # Testsigma If / While with steps inside → our if … end if /
+                # repeat while … end repeat (control_flow), steps converted inside.
+                head = _block_head(s, action, ctx)
+                kids = s.get("_children") or []
+                else_at = next((k for k, c in enumerate(kids)
+                                if c.get("conditionType") in ("CONDITION_ELSE", "CONDITION_ELSE_IF")), None)
+                body_kids = kids if else_at is None else kids[:else_at]
+                block = [head] + emit(body_kids, where, st)
+                tail_else = []
+                if else_at is not None:          # Testsigma nests the Else under the If
+                    e = kids[else_at]
+                    tail_else = ["else"] + emit(e.get("_children") or [], where, st) + \
+                        emit(kids[else_at + 1:], where, st)
+                elif i + 1 < len(flat) and flat[i + 1].get("conditionType") == "CONDITION_ELSE":
+                    e = flat[i + 1]              # … or puts it right after it
+                    tail_else = ["else"] + emit(e.get("_children") or [], where, st)
+                    consumed = 2
+                if head.startswith("if "):
+                    block += tail_else + ["end if"]
+                else:
+                    block += ["end repeat"]
+                    if tail_else:
+                        block += ["# (Testsigma Else after a loop — kept as steps below)"] + tail_else[1:]
+                out.extend(f"# OFF: {ln}" if disabled and ln and not ln.startswith("#") else ln
+                           for ln in block)
+                i += consumed
+                continue
             else:
                 emitted = _one(action, ctx)
             if emitted is None:
@@ -899,6 +995,21 @@ def _save_registry(d: dict) -> None:
     os.replace(tmp, _REGISTRY)
 
 
+_CRED_URL = re.compile(r"(https?://)[^/\s\"@:]+:[^/\s\"@]+@")
+
+
+def _scrub(text: str) -> str:
+    try:
+        from execution.test_data import get_all
+        mob = {str(e.get("value")): n for n, e in get_all("").items()
+               if re.fullmatch(r"[6-9]\d{9}", str(e.get("value") or ""))}
+    except Exception:  # noqa: BLE001
+        mob = {}
+    text = _CRED_URL.sub(r"\1", text)
+    return re.sub(r"(?<![\d$])([6-9]\d{9})(?!\d)",
+                  lambda m: "${" + mob[m.group(1)] + "}" if m.group(1) in mob else m.group(0), text)
+
+
 def import_case(run_id: str, test_case_id: int, *, platform: str = "mobilesite",
                 overwrite: bool = False) -> dict:
     from core import reusable_steps
@@ -906,6 +1017,11 @@ def import_case(run_id: str, test_case_id: int, *, platform: str = "mobilesite",
 
     bundle = load_bundle(run_id, test_case_id)
     res = convert(bundle, platform=platform)
+    # Never write a login inside a URL or a literal test mobile into a test:
+    # the portal attaches the saved staging login itself, and test numbers are
+    # ${mobile_…} values in Test Data (the commit guard refuses both).
+    res["flow"] = _scrub(res["flow"])
+    res["groups"] = {g: [_scrub(ln) for ln in ls] for g, ls in res["groups"].items()}
     flow_name = slug(res["name"])
     flow_path = os.path.join(BASE_DIR, "flows", flow_name + ".flow")
     reg = _registry()

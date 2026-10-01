@@ -1,0 +1,39 @@
+# Platform: mobilesite
+# Imported from Testsigma: PAID Actual number All PAGES (test case 3253, run 115613, last result SUCCESS)
+# Tags: regression
+
+call PS_Touch_Location_Popup
+click if visible touch_login_popup_may_be_later
+open https://www.justdial.com/jdmart/Udaipur-Rajasthan/Motor/jdm-1073774-ent-2-13733553?srcterm=Motor
+wait 3 seconds
+wait until element ps_touch_b2b_prp_1st_product is visible
+repeat until element prp_chirag_enterprise is visible (max 50 times)
+refresh page
+wait 1 seconds
+open https://www.justdial.com/jdmart/Udaipur-Rajasthan/Motor/jdm-1073774-ent-2-13733553?srcterm=Motor
+wait 3 seconds
+end repeat
+click chirag_enterprises_call_button
+wait 1 seconds
+verify text "+(91)-9414146454" on page
+verify text "+(91)-9828392626" on page
+open https://www.justdial.com/jdmart/Udaipur-Rajasthan/Crompton-V-5-Water-filled-Motor/pid-2183812957/9999PX294-X294-101122091036-N2E7?idx=0&jdmid=jdm-1073774-ent-2-13733553&alsoserveCity=Udaipur-Rajasthan&searchString=Motor&btype=dealers&nid=11536045
+wait 3 seconds
+swipe bottom to top
+wait 1 seconds
+click footer_call_now_button
+wait 2 seconds
+verify text "+(91)-9414146454" on page
+verify text "+(91)-9828392626" on page
+open https://www.justdial.com/Udaipur-Rajasthan/Chirag-Enterprises-In-Front-Of-JC-Boys-Hostel-Tekri/9999PX294-X294-101122091036-N2E7_BZDET?pid=2183812957&nid=11536045&jdmid=jdm-1073774-ent-2-13733553
+wait 2 seconds
+click b2b_catalogue_card_cta_call_now
+wait 1 seconds
+verify text "09414146454" on page
+verify text "09828392626" on page
+open https://www.justdial.com/Udaipur-Rajasthan/Chirag-Enterprises-In-Front-Of-JC-Boys-Hostel-Tekri/9999PX294-X294-101122091036-N2E7_BZDET/photos?newAddress=In+Front+Of+JC+Boys+Hostel+Tekri&cname=Chirag+Enterprises&paid=1&datacity=&ds=0&stxt=&nid=11536045&stype=&docid=9999PX294-X294-101122091036-N2E7&source=detail_page&click=banner&pselect=192899931&tab=all&isImageFullView=1
+wait 3 seconds
+click gallery_footer_call_now_button
+wait 2 seconds
+verify text "09414146454" on page
+verify text "09828392626" on page

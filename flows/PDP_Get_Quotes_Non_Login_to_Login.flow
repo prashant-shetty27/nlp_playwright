@@ -1,0 +1,9 @@
+# Platform: mobilesite
+# Imported from Testsigma: PDP Get Quotes Non Login to Login (test case 2269, run 115613, last result SUCCESS)
+# Tags: regression
+# OFF steps: every step that would send a REAL lead / enquiry / OTP is switched off,
+#   plus the checks that only pass after it. Switch them on only when a lead is wanted.
+
+open https://www.justdial.com/jdmart/Thane/High-Performance-Spherical-Plain-Bearing-1-5-in/pid-801321625/022PXX22-XX22-091011181025-V8E3?idx=0&jdmid=jdm-1100190-ent-2-6849543&alsoserveCity=Mumbai&searchString=Spherical-Plain-Bearing&btype=dealers&img=q28556ho.jpg&nid=10447286
+wait 2 seconds
+call SG_PDP_Get_Quotes_Submission_Non_Login_Flow

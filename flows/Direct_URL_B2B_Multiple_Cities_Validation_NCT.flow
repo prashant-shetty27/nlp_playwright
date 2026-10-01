@@ -1,0 +1,24 @@
+# Platform: mobilesite
+# Imported from Testsigma: Direct URL B2B Multiple Cities Validation NCT (test case 2969, run 115613, last result SUCCESS)
+# Tags: regression
+# OFF steps: every step that would send a REAL lead / enquiry / OTP is switched off,
+#   plus the checks that only pass after it. Switch them on only when a lead is wanted.
+
+open https://www.justdial.com/Delhi-NCR/CCTV-Wholesalers/nct-10887700?fl=undefined&ismap=undefined&subpage=&searchCase=&term=cctv%2520whole&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=CCTV%20Wholesalers&trkid=213287-delhi
+call SG_Direct_URL_City_Validation_Delhi_Ncr
+open https://www.justdial.com/West-Godavari/Chair-Manufacturers/nct-10089962?fl=undefined&ismap=&subpage=&searchCase=&term=chair%20manu&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Chair%20Manufacturers&trkid=25478-remotecity
+wait 2 seconds
+store text of result_heading_title as heading
+verify stored heading contains "West Godavari" ignoring case
+swipe bottom to top
+wait 1 seconds
+swipe bottom to top
+wait 1 seconds
+[ignore] scroll to nct_result_card_only_details
+[ignore] verify element nct_result_card_only_details is visible
+# OFF: open https://www.justdial.com/North-24-Parganas/Tile-Wholesalers/nct-10482503?fl=undefined&ismap=&subpage=&searchCase=&term=tiles%20w&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Tile%20Wholesalers&trkid=27632-remotecity
+# OFF: call SG_Direct_URL_City_Validation_North_24_Parganas
+open https://www.justdial.com/Dehri-On-Sone/CCTV-Wholesalers/nct-10887700?fl=undefined&ismap=undefined&subpage=&searchCase=&term=&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=CCTV%20Wholesalers&trkid=28126-remotecity
+call SG_Direct_URL_City_Validation_Dehri_On_Sone
+open https://www.justdial.com/Sri-Ganganagar-Rajasthan/Tile-Manufacturers/nct-10482071?fl=undefined&ismap=undefined&subpage=&searchCase=&term=tiles%2520manu&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Tile%20Manufacturers&trkid=27631-remotecity
+call SG_Direct_URL_City_Validation_Sri_Ganganagar_Rajas

@@ -1,0 +1,26 @@
+# Platform: mobilesite
+# Imported from Testsigma: B2B PRP Grid View (test case 4987, run 115613, last result SUCCESS)
+# Tags: regression
+
+open https://www.justdial.com/jdmart/Mumbai/CCTV/jdm-1016209-ent-2-13630321
+wait for page to load
+click grid_view_icon
+wait for page to load
+scroll down 200
+scroll down 500
+scroll down 800
+scroll down 1100
+scroll down 1500
+scroll down 1900
+scroll down 2100
+verify element grid_view_listing is visible
+verify element item_1st_grid_image is visible
+verify element item_1st_grid_title is visible
+verify element item_1st_grid_company_name is visible
+verify element item_1st_grid_tags is visible
+verify element item_1st_grid_rating_strip is visible
+verify element item_1st_grid_catalogue is visible
+verify element product_swiper_thumb_above_cta_on_grid_view is visible
+verify element item_1st_grid_cta_s is visible
+verify element item_1st_request_catalogue_on_grid is visible
+verify element item_1st_view_catalogue_on_grid is visible

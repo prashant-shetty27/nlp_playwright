@@ -1,0 +1,94 @@
+# Platform: mobilesite
+# Imported from Testsigma: RFQ - All Verification (test case 2183, run 115613, last result FAILURE)
+# Tags: regression
+# OFF steps: every step that would send a REAL lead / enquiry / OTP is switched off,
+#   plus the checks that only pass after it. Switch them on only when a lead is wanted.
+
+# OFF: call Live_Touch_Chrome_Navigate_to_Homepage_setup_Popup
+open https://www.justdial.com/jdmart/Mumbai/CCTV/jdm-1016209-ent-2-13630321?fl=undefined&ismap=undefined&subpage=&searchCase=&term=&searchLocUpdate=0&stype=category_list&srcterm=CCTV
+wait 3 seconds
+click prp_best_price
+wait 3 seconds
+# OFF: click rfq_skip_all_button
+js click rfq_skip_all_button
+wait 1 seconds
+# OFF: call SG_Touch_B2B_RFQ_Login_Form
+# OFF: call SG_RFQ_Post_Login_All_verification_Products
+open https://www.justdial.com/Thane/Bhavani-Tiles-Oppposite-to-Deepak-Hospital-Mira-Road-East/022PXX22-XX22-120225035322-Q5G7_BZDET?catid=&checkin=&checkout=&vpfs=&stxt=%20Tile%20Wholesalers&nid=10482503&stype=category_list&search=Tile-Wholesalers&area=Oppposite%20To%20Deepak%20Hospital%20Mira%20Road%20East&type=Ceramic%20Tile%20Dealers&totalJdReviews=undefined&bdmsgtype=2&bdcaptiontype=4&bdpage=rsltpge&slectedDimgTag=&show_open_abd=0&isb2b=1&thumbnail_tag=
+wait 3 seconds
+verify element b2b_catalogue_send_enquiry_cta_top is visible
+# OFF: click rfq_skip_all_button
+js click rfq_skip_all_button
+wait 3 seconds
+call SG_RFQ_Post_Submission_All_Verification_Post_Login
+delete all cookies
+refresh page
+open https://www.justdial.com/jdmart/Mumbai/Bulk-SMS-Services/jdm-1156173-ent-14-10970459?fl=undefined&ismap=undefined&subpage=&searchCase=&term=bulk%2520sms&searchLocUpdate=0&stype=category_list&srcterm=Bulk%20SMS%20Services
+wait 3 seconds
+verify text "No results found!" on page
+click prp_best_price
+wait 3 seconds
+scroll to rfq_1st_question
+verify element rfq_1st_question is visible
+click rfq_1st_option
+wait 3 seconds
+click if visible rfq_next_active_button
+call RFQ_Non_Login_Flow_to_Login_Select_2_Option
+wait 3 seconds
+# OFF: verify element rfq_2nd_question is visible
+# OFF: click rfq_2nd_option
+wait 5 seconds
+# OFF: call SG_RFQ_Post_Submission_All_Verification_Bulk_SMS_S
+# OFF: scroll to rfq_continue_with_search_button
+wait 1 seconds
+# OFF: click rfq_continue_with_search_button
+wait 1 seconds
+delete all cookies
+refresh page
+open https://www.justdial.com/Mumbai/Union-Pumps-Company-Near-Bombay-Stock-Exchange-Fort/022PXX22-XX22-091217091909-E3F1_BZDET?trkid=&term=&ncatid=10531207&area=Marol%20Naka%20Andheri%20East&search=Popular%20Water%20Pump%20Dealers%20Crompton%20Greaves%20in%20Marol%20Naka%20Andheri%20East,%20Mumbai&mncatname=Water%20Pump%20Dealers-Crompton%20Greaves&ftterm=&csell=&oncatid=10531207&abd_btn=&abd_heading=&bd=1&cat_b2b_flag=1&searchfrom=lst&thumbnail=crompton-greaves-water-pump-27o6por
+wait until element b2b_catalogue_send_enquiry_cta_top is visible
+# OFF: click b2b_catalogue_send_enquiry_cta_top
+# OFF: wait until element rfq_blue_page_question_1st is visible
+# OFF: click rfq_blue_page_question_1st
+# OFF: wait until element rfq_quantity_input is visible
+# OFF: type "11" into rfq_quantity_input
+# OFF: click rfq_next_button
+# OFF: js click rfq_next_button
+# OFF: call SG_Touch_B2B_RFQ_Login_Form
+wait 2 seconds
+# OFF: click rfq_1st_option
+wait 2 seconds
+# OFF: js click rfq_skip_all_button
+wait 3 seconds
+# OFF: wait until element rfq_result_area is visible
+# OFF: call SG_RFQ_Post_Submission_All_Verification_Lixo_Suppl
+wait 2 seconds
+delete all cookies
+refresh page
+wait 1 seconds
+open https://www.justdial.com/Noida/Lixo-Healthcare-Equipment-Pvt-Ltd-Noida-Sector-38/011PXX11-XX11-180704154533-X1Y3_BZDET
+wait until element b2b_catalogue_send_enquiry_cta_top is visible
+# OFF: click b2b_catalogue_send_enquiry_cta_top
+# OFF: wait until element rfq_blue_page_1st_option is visible
+# OFF: click rfq_blue_page_1st_option
+wait 3 seconds
+# OFF: call SG_RFQ_Popular_Seller_Carousel
+# OFF: scroll to rfq_skip_all_button
+wait 1 seconds
+# OFF: click rfq_skip_all_button
+# OFF: js click rfq_next_button
+# OFF: verify text "Please enter valid quantity." on page
+# OFF: js click rfq_skip_all_button
+wait 3 seconds
+# OFF: call SG_Touch_B2B_RFQ_Login_Form
+# OFF: call SG_RFQ_Post_Submission_All_Verification_Lixo_Suppl
+# OFF: call SG_RFQ_Popular_Seller_Carousel
+delete all cookies
+open https://www.justdial.com/Mumbai/Asian-Paints-Ltd-Head-Office-Shanti-Nagar-Santacruz-East/022PXX22-XX22-000613948179-C9P2_BZDET
+wait until element b2b_catalogue_send_enquiry_cta_top is visible
+# OFF: click b2b_catalogue_send_enquiry_cta_top
+# OFF: wait until element rfq_blue_page_1st_option is visible
+# OFF: click rfq_blue_page_1st_option
+wait 2 seconds
+# OFF: swipe bottom to top
+# OFF: verify element rfq_popular_heading is not visible

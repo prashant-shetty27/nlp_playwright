@@ -1,0 +1,36 @@
+# Platform: mobilesite
+# Imported from Testsigma: Catalogue Seller Call Popup (test case 2214, run 115613, last result FAILURE)
+# Tags: regression
+# OFF steps: every step that would send a REAL lead / enquiry / OTP is switched off,
+#   plus the checks that only pass after it. Switch them on only when a lead is wanted.
+# TODO lines: Testsigma steps with no equivalent here yet — decide per line.
+
+open https://www.justdial.com/Mumbai/Kalsaria-Construction-Near-Dada-Dadi-Park-Malad-East/022PXX22-XX22-200622123529-Q9J8_BZDET?catid=&checkin=&checkout=&vpfs=&stxt=Kalsaria%20Construction&nid=&stype=company_list&search=Kalsaria-Construction&area=Near%20Dada%20Dadi%20Park%20Malad%20East&type=Excavators%20On%20Rent-JCB&totalJdReviews=undefined&bdmsgtype=&bdcaptiontype=&bdpage=rsltpge&slectedDimgTag=&show_open_abd=0&isb2b=&thumbnail_tag=&jdmartId=&overrideNid=&overrideCatName=&trkid=4307301662
+wait 1 seconds
+delete all cookies
+refresh page
+wait until element b2b_catalogue_company_name is visible
+scroll down 1200
+wait 1 seconds
+scroll down 2400
+wait 1 seconds
+scroll down 3600
+wait 1 seconds
+scroll down 5400
+wait 2 seconds
+[ignore 30s] swipe bottom to top until element catalogue_seller_call_pop is visible, max 15 times, wait 1
+wait 2 seconds
+swipe top to bottom for duration 4 seconds
+# TODO (Testsigma, no equivalent yet): Scroll the element Catalogue Seller Call pop to Kalsaria Construction offset vertically
+verify element catalogue_seller_call_pop is visible
+verify element catalogue_image_seller_call_pop is visible
+verify element catalogue_heading_seller_call_popup is visible
+verify element catalogue_avg_rating_seller_call_popup is visible
+verify element catalogue_trust_seller_call_popup is visible
+verify element catalogue_verified_seller_call_popup is visible
+# OFF: verify element catalogue_area_seller_call_popup is visible
+verify element catalogue_seller_call_popup_just_a_call_away is visible
+verify element catalogue_seller_call_popup_text is visible
+# OFF: verify element catalogue_seller_call_popup_category_name contains "Crane"
+# OFF: verify element catalogue_seller_call_popup_get_your_answers_instantly is visible
+verify element catalogue_seller_call_popup_call_now_button is visible

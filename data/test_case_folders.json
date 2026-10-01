@@ -7,13 +7,46 @@
     "Prashant/B2B/PRP",
     "Prashant/Core",
     "Prashant/Core/NCT",
+    "Testsigma Import",
+    "Testsigma Import/B2B Touch",
     "Trails"
   ],
   "assign": {
+    "B2B_Catalogue_Photos_Product_View_Details_Link_Rediretion_to_PDP": "Testsigma Import/B2B Touch",
+    "B2B_Manage_Quotes_Page_Loading_Check": "Testsigma Import/B2B Touch",
+    "B2B_NCT_High_Call_Rate": "Testsigma Import/B2B Touch",
+    "B2B_PRP_Grid_View": "Testsigma Import/B2B Touch",
+    "B2B_PRP_Looking_for_Job": "Testsigma Import/B2B Touch",
+    "B2B_Supplier_Result_Page": "Testsigma Import/B2B Touch",
+    "Catalogue_BD_Category_Popup_non_paid": "Testsigma Import/B2B Touch",
+    "Catalogue_Category_RFQ_Popup_non_paid": "Testsigma Import/B2B Touch",
+    "Catalogue_Company_single_Brochure_click_redirection": "Testsigma Import/B2B Touch",
+    "Catalogue_Page_All_Sections_Verification": "Testsigma Import/B2B Touch",
+    "Catalogue_Page_Offers_Banner": "Testsigma Import/B2B Touch",
+    "Catalogue_Page_Product_Search_Open_RFQ_Check_Tractor": "Testsigma Import/B2B Touch",
+    "Catalogue_Page_SEO_Footer": "Testsigma Import/B2B Touch",
+    "Catalogue_Page_Whatsapp_Strip": "Testsigma Import/B2B Touch",
+    "Catalogue_Product_Tab_Data_Not_Found_Case": "Testsigma Import/B2B Touch",
+    "Catalogue_Products_Tab_Store_Search": "Testsigma Import/B2B Touch",
+    "Catalogue_Seller_Call_Popup": "Testsigma Import/B2B Touch",
+    "Direct_URL_B2B_Multiple_Cities_Validation_NCT": "Testsigma Import/B2B Touch",
+    "Home_SEO_Footer_All_B2B_Tabs_Redirection": "Testsigma Import/B2B Touch",
+    "Intermediate_page_Redirection_Page_Loading": "Testsigma Import/B2B Touch",
     "NCT_Ask_for_Price": "Prashant/Core/NCT",
     "NCT_Job_related_Questions": "Prashant/Core/NCT",
     "NCT_Recommended_Open_RFQ_All_Logics": "Prashant/Core/NCT",
     "Nct_Recommended_Products_For_You_Newlogic": "Prashant/Core/NCT",
+    "PAID_Actual_number_All_PAGES": "Testsigma Import/B2B Touch",
+    "PDP_AllSection_New": "Testsigma Import/B2B Touch",
+    "PDP_Buy_a_Sample_New_Flow_ALL_DETAILS": "Testsigma Import/B2B Touch",
+    "PDP_Change_City_Implementation": "Testsigma Import/B2B Touch",
+    "PDP_GBP_Popup_Page_Scroll": "Testsigma Import/B2B Touch",
+    "PDP_Get_Quotes_Non_Login_to_Login": "Testsigma Import/B2B Touch",
+    "PDP_Inner_Gallery_Login_Flow_Request_more_photos": "Testsigma Import/B2B Touch",
+    "PDP_Need_Assistance_Banner": "Testsigma Import/B2B Touch",
+    "PDP_PDP_Ask_Anything": "Testsigma Import/B2B Touch",
+    "PDP_Seller_Card_New_Design": "Testsigma Import/B2B Touch",
+    "PDP_Visit_Website": "Testsigma Import/B2B Touch",
     "PRP_All_India_City_Popup_GVS_popup": "Prashant/B2B/PRP",
     "PRP_Filter_Combinations": "Prashant/B2B/PRP",
     "PRP_Open_RFQ_Seller_Type_Option_Login": "Prashant/B2B/PRP",
@@ -27,10 +60,20 @@
     "Photos_360_Icon_Gallery_Single": "Prashant/B2B/Catalogue",
     "Photos_360_Icon_Photos_Section": "Prashant/B2B/Catalogue",
     "RECOMMEDED_PRODUCT_CASES_VIA_JIRA": "Trails",
+    "RFQ_All_Verification": "Testsigma Import/B2B Touch",
+    "RFQ_flow_Change_Login_after_1st_question_max_2_question_to_be_shown": "Testsigma Import/B2B Touch",
     "Recommended_Product_Carousel_Logic": "Trails",
     "Recommended_Product_Carousel_Logic_Live": "Trails",
     "Recommended_Product_City_Preference": "Trails",
     "_Report_Smoke_Fail": "Trails",
     "_Report_Smoke_Pass": "Trails"
+  },
+  "modules": {
+    "Testsigma Import": [
+      "mobilesite"
+    ],
+    "Testsigma Import/B2B Touch": [
+      "mobilesite"
+    ]
   }
 }

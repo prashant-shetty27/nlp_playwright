@@ -1,0 +1,15 @@
+# Platform: mobilesite
+# Imported from Testsigma: Catalogue Page SEO Footer (test case 1216, run 115613, last result FAILURE)
+# Tags: regression
+# OFF steps: every step that would send a REAL lead / enquiry / OTP is switched off,
+#   plus the checks that only pass after it. Switch them on only when a lead is wanted.
+
+call SG_Supplier_Search_Flow_Baldev
+call SG_Catalogue_Page_SEO_Footer
+# --- Product Search Flow
+open https://www.justdial.com/Navi-Mumbai/Baldev-Engineering-Nerul/022PXX22-XX22-131219124833-X3Z1_BZDET?trkid=4303885681&newAddress=Opposite+D+Y+Patil+Stadium%2C+MIDC+Industrial+Area+Nerul&galtype=All&cname=Baldev+Engineering&paid=1&ds=0&datacity=&catalogueType=
+scroll down 2000
+wait 1 seconds
+scroll down 2000
+wait 1 seconds
+call SG_Catalogue_Page_SEO_Footer

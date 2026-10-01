@@ -1,0 +1,21 @@
+# Platform: mobilesite
+# Imported from Testsigma: B2B Manage Quotes Page Loading Check (test case 2593, run 115613, last result SUCCESS)
+# Tags: regression
+# OFF steps: every step that would send a REAL lead / enquiry / OTP is switched off,
+#   plus the checks that only pass after it. Switch them on only when a lead is wanted.
+
+call Live_Touch_Chrome_Navigate_to_Homepage_setup_Popup
+# OFF: open https://www.justdial.com/
+# OFF: wait 2 seconds
+call SG_PS_Touch_Home_Login_7738176962
+click touch_signin_home_page
+click manage_quotes
+wait until element heading_manage_quotes is visible
+verify element heading_no_enquiries_found is not visible
+click manage_quotes_header_back
+click sign_out
+call SG_Touch_Core_Login_9987996046
+click touch_signin_home_page
+click manage_quotes
+wait until element heading_manage_quotes is visible
+verify element heading_no_enquiries_found is not visible

@@ -1,0 +1,38 @@
+# Platform: mobilesite
+# Imported from Testsigma: Catalogue - Products Tab Store Search (test case 2352, run 115613, last result FAILURE)
+# Tags: regression
+# OFF steps: every step that would send a REAL lead / enquiry / OTP is switched off,
+#   plus the checks that only pass after it. Switch them on only when a lead is wanted.
+
+wait 2 seconds
+open https://www.justdial.com/Bangalore/Akash-Roofing-Solution-Opposite-Nava-Jeevan-Ashram-and-Bheema-Jewelres-Kalyan-Nagar/080PXX80-XX80-121203203315-K8I2_BZDET?pid=2223047492&nid=10413490&jdmid=jdm-1092649-ent-2-13734943&jdmart=1&search=Roofing-Sheets
+wait 2 seconds
+click b2b_catalogue_tab_product
+wait 1 seconds
+click catalogue_product_tab_store_search
+wait 1 seconds
+type "cctv" into catalogue_product_tab_store_search_box
+verify element catalogue_product_tab_store_search_category_as is visible
+store count of catalogue_product_tab_store_search as product_store_search_AS_count
+# OFF: click catalogue_product_tab_1st_store_search_as
+js click catalogue_product_tab_store_search_category_as
+wait 2 seconds
+# OFF: verify element catalogue_product_tab_search_result is visible
+open https://www.justdial.com/Navi-Mumbai/Baldev-Engineering-Nerul/022PXX22-XX22-131219124833-X3Z1_BZDET?showSearch=0
+wait 2 seconds
+call SG_Product_Store_Search_Tempo_Traveller
+open https://www.justdial.com/Mumbai/Kalsaria-Construction-Malad-East/022PXX22-XX22-200622123529-Q9J8_BZDET
+wait 2 seconds
+call SG_Product_Store_Search_Crane_Services
+open https://www.justdial.com/Hyderabad/A-S-Industries-Kukatpally/040PXX40-XX40-240221201317-Y9N6_BZDET?pid=800932973&nid=11074360&jdmid=jdm-1078482-ent-6-22730456
+wait 2 seconds
+click b2b_catalogue_tab_product
+verify element catalogue_product_tab_store_search is visible
+open https://www.justdial.com/Mumbai/Mitsuba-Systems-India-LLP-Factory-Outlet-Andheri-West/022P1908302_BZDET/products?trkid=4300141751&showSearch=0&nid=10384011&tabNid=
+wait 2 seconds
+click b2b_catalogue_tab_product
+verify element catalogue_product_tab_store_search is visible
+click catalogue_product_tab_1st_category_filter
+verify element catalogue_product_tab_store_search is visible
+click catalogue_product_tab_store_search_all_filter_tab
+verify element catalogue_product_tab_store_search is visible

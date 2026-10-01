@@ -1,0 +1,33 @@
+# Platform: mobilesite
+# Imported from Testsigma: Catalogue BD Category Popup (non paid) (test case 2238, run 115613, last result FAILURE)
+# Tags: regression
+# OFF steps: every step that would send a REAL lead / enquiry / OTP is switched off,
+#   plus the checks that only pass after it. Switch them on only when a lead is wanted.
+
+open https://www.justdial.com/Mumbai/Global-View-Borivali-West/022PXX22-XX22-150314191942-T5N6_BZDET
+wait until element b2b_catalogue_company_name is visible
+scroll down 1200
+wait 2 seconds
+scroll down 2400
+wait 2 seconds
+scroll down 3600
+wait 2 seconds
+scroll down 4800
+wait 2 seconds
+scroll down 6000
+wait 2 seconds
+[ignore 30s] swipe bottom to top until element catalogue_bd_category_popup is visible, max 15 times, wait 1
+wait 1 seconds
+verify element catalogue_bd_category_popup is visible
+verify element catalogue_heading_bd_category_pop is visible
+verify element catalogue_get_text_bd_category_pop is visible
+verify element catalogue_checked_bd_category_rfq_pop is visible
+verify element catalogue_1st_label_bd_category_pop is visible
+verify element catalogue_label_last_bd_category_pop is visible
+verify element catalogue_get_verified_seller_button_bd_category_pop is visible
+verify element catalogue_skip_bd_category_pop is visible
+click catalogue_get_verified_seller_button_bd_category_pop
+wait 2 seconds
+# OFF: click rfq_skip_all_button
+js click rfq_skip_all_button
+# OFF: call RFQ_Non_Login_Flow_to_Login_and_Continue_Search

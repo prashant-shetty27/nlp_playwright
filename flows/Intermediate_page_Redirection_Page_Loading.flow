@@ -1,0 +1,28 @@
+# Platform: mobilesite
+# Imported from Testsigma: Intermediate page Redirection & Page Loading (test case 2837, run 115613, last result SUCCESS)
+# Tags: regression
+# OFF steps: every step that would send a REAL lead / enquiry / OTP is switched off,
+#   plus the checks that only pass after it. Switch them on only when a lead is wanted.
+
+# OFF: call Live_Touch_Chrome_Navigate_to_Homepage_setup_Popup
+open https://www.justdial.com/jdmart
+wait until element all_categories is visible
+click all_categories
+wait until element b2b_all_categories_page_category_count is visible
+store count of b2b_all_categories_page_category_count as size_of_ele
+create variable i with value "1"
+if ${i} is at most ${size_of_ele}
+repeat while element b2b_all_categories_page_category is visible (max 50 times)
+store text of b2b_all_categories_page_category as categoryname
+click b2b_all_categories_page_category
+verify text "categoryname" on page
+wait until element full_page_img_element is visible
+store text of intermediate_page_heading as ip_headi
+verify stored categoryname contains "${ip_headi}"
+verify element full_page_img_element is visible
+click intermediate_page_header_back
+wait until element b2b_all_categories_page_category is visible
+# Testsigma 'Custom Calculation' → assumed i + 1 (check the formula in Testsigma)
+increase i by 1
+end repeat
+end if

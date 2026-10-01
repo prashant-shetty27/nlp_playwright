@@ -1,0 +1,37 @@
+# Platform: mobilesite
+# Imported from Testsigma: B2B PRP Looking for Job (test case 5237, run 115613, last result SUCCESS)
+# Tags: regression
+# OFF steps: every step that would send a REAL lead / enquiry / OTP is switched off,
+#   plus the checks that only pass after it. Switch them on only when a lead is wanted.
+
+[ignore] call Live_Touch_Chrome_Navigate_to_Homepage_setup_Popup
+[ignore] wait for page to load
+call SG_PS_Touch_Home_Login_7738176962
+open https://www.justdial.com/jdmart/Delhi/Job-Placement-Services/jdm-1778102-ent-14-11068585
+wait for page to load
+wait 3 seconds
+scroll down 500
+scroll down 1100
+# OFF: scroll down 1600
+# OFF: scroll down 2100
+# OFF: scroll down 2700
+verify element job_card_b2b_prp is visible
+click yes_on_job_card_on_b2b_prp
+wait 1 seconds
+verify text "Dear" on page
+wait 2 seconds
+verify element job_card_b2b_prp is not visible
+refresh page
+wait for page to load
+wait 3 seconds
+click grid_view_icon
+scroll down 1100
+# OFF: scroll down 500
+verify element job_card_b2b_prp is visible
+click no_job_card_b2b_prp
+wait for page to load
+verify text "B2B Assist" on page
+click close_b2b_assist
+wait 1 seconds
+click yes_proceed_on_b2b_assist
+wait 2 seconds

@@ -1,0 +1,34 @@
+# Platform: mobilesite
+# Imported from Testsigma: Catalogue Page All Sections Verification (test case 804, run 115613, last result FAILURE)
+# Tags: regression
+# OFF steps: every step that would send a REAL lead / enquiry / OTP is switched off,
+#   plus the checks that only pass after it. Switch them on only when a lead is wanted.
+
+# OFF: call Live_Touch_Chrome_Navigate_to_Homepage_setup_Popup
+# OFF: open https://rt_D3v3l0pm3nT@designtest.justdial.com/
+call SG_Supplier_Search_Flow_Baldev
+call SG_Catalogue_Page_Card_Section
+call SG_Catalogue_Page_Timings_Sections
+call SG_Catalogue_Page_Top_CTAs
+call SG_Catalogue_Page_Tabs
+call SG_Catalogue_Page_Ratings_Stars
+call SG_Catalogue_Page_Popular_Product_Overview
+# OFF: call SG_Catalogue_Page_Product_Categories_Overview
+call SG_Catalogue_Page_PDF_Catalogue_Images_Overview
+click b2b_catalogue_tab_overview
+wait 2 seconds
+call SG_Catalogue_Page_Photos_Overview
+call SG_Catalogue_Page_Open_VN_Number_Overview
+call SG_Catalogue_Page_QuickInfo_Overview
+call SG_Catalogue_Page_Whatsapp_Banner
+call SG_Catalogue_Page_Categories_from_the_Seller
+call SG_Catalogue_Page_Open_RFQ_Section
+call SG_Catalogue_Page_Review_Rating_Section
+[ignore] click if visible srp_seller_type_banner_skip
+call SG_Catalogue_Page_Also_Listed_In
+[ignore] click if visible srp_seller_type_banner_skip
+call SG_Catalogue_Page_Report_Error_Footer
+[ignore] click if visible srp_seller_type_banner_skip
+call SG_Catalogue_Page_Need_Assistance_Banner
+# OFF: call SG_Catalogue_Page_Footer_FAQ
+# OFF: call SG_Catalogue_Page_SEO_Footer

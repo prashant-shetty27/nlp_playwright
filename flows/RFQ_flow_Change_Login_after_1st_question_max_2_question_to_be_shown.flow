@@ -1,0 +1,39 @@
+# Platform: mobilesite
+# Imported from Testsigma: RFQ flow Change - Login after 1st question & max 2 question to be shown (test case 2026, run 115613, last result FAILURE)
+# Tags: regression
+# OFF steps: every step that would send a REAL lead / enquiry / OTP is switched off,
+#   plus the checks that only pass after it. Switch them on only when a lead is wanted.
+
+open https://whatismyipaddress.com/
+wait 10 seconds
+call Live_Touch_Chrome_Navigate_to_Homepage_setup_Popup
+open https://www.justdial.com/jdmart/Mumbai/Skf-Ball-Bearing-Deep-Groove-Single-Row-6205-2Z-1-Nos/pid-272203217/022PXX22-XX22-140307153118-I6K6?idx=0&jdmid=jdm-1008206-ent-4-7192762&alsoserveCity=Mumbai&nid=10034271
+wait 2 seconds
+store text of ps_pdp_top_product_name as pdp_productname
+click pdp_gallery_inner_get_best_price_button
+wait 2 seconds
+store text of rfq_product_name as rfq_productname
+verify stored rfq_productname contains "${pdp_productname}"
+type "2" into rfq_quantity_input
+js click rfq_next_button
+# OFF: click rfq_next_button
+# OFF: call SG_Touch_B2B_RFQ_Login_Form
+# OFF: click rfq_don_t_know_button
+# OFF: click rfq_skip_all_button
+# OFF: wait until element rfq_continue_with_search_button is visible
+# OFF: click rfq_continue_with_search_button
+delete all cookies
+wait 2 seconds
+open https://www.justdial.com/jdmart/Mumbai/
+wait 2 seconds
+call PS_consent_popup
+open https://www.justdial.com/jdmart/Mumbai/CCTV/jdm-1016209-ent-2-13630321?fl=undefined&ismap=undefined&subpage=&searchCase=&term=cctv&searchLocUpdate=0&stype=category_list&srcterm=CCTV
+wait 2 seconds
+store text of ps_b2b_prp_1st_product as prp_1stProduct
+wait until element prp_best_price is visible
+click prp_best_price
+store text of rfq_product_name as rfq_prp_product
+verify stored rfq_prp_product contains "${rfq_prp_product}"
+verify element rfq_quantity_input is visible
+# OFF: call RFQ_Non_Login_Flow_to_Login_and_Continue_Search
+wait 1 seconds

@@ -1,0 +1,15 @@
+# Platform: mobilesite
+# Imported from Testsigma: PDP Visit Website (test case 2272, run 115613, last result SUCCESS)
+# Tags: regression
+# OFF steps: every step that would send a REAL lead / enquiry / OTP is switched off,
+#   plus the checks that only pass after it. Switch them on only when a lead is wanted.
+
+[ignore] call Location_Popup
+open https://www.justdial.com/jdmart/Kadi/Sanitizer/pid-2030572139/9999P2762-2762-210524104439-X9W9
+wait 2 seconds
+scroll to pdp_seller_info_view_more_tab
+verify element pdp_seller_info_view_more_tab is visible
+click pdp_seller_info_view_more_tab
+click pdp_website_1st_link
+wait 5 seconds
+# OFF: verify text "Shako" on page

@@ -1,0 +1,8 @@
+# Platform: mobilesite
+# Imported from Testsigma: Catalogue Page Offers Banner (test case 1217, run 115613, last result SUCCESS)
+# Tags: regression
+
+call Live_Touch_Chrome_Navigate_to_Homepage_setup_Popup
+open https://www.justdial.com/Bangalore/ZXY-Prashant-B2b-Store-Chikkanahalli/080PXX80-XX80-230417160552-Z2S6_BZDET?auto=1&trkid=&term=
+wait for page to load
+call SG_Catalogue_Page_Offers_Banner

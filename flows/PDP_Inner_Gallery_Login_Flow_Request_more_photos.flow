@@ -1,0 +1,15 @@
+# Platform: mobilesite
+# Imported from Testsigma: PDP Inner Gallery - Login Flow Request more photos (test case 3300, run 115613, last result SUCCESS)
+# Tags: regression
+# OFF steps: every step that would send a REAL lead / enquiry / OTP is switched off,
+#   plus the checks that only pass after it. Switch them on only when a lead is wanted.
+
+call PS_Touch_Location_Popup
+call SG_Touch_Core_Login_9987996046
+open https://www.justdial.com/jdmart/Mumbai/Roller-Lock-Ball-lock-Coated-SS304-4-6mm-width-PRU44-150/pid-2030900705/022PXX22-XX22-180320192332-E1H1?slider=1&initialIndex=0&sellers=0
+wait 3 seconds
+swipe left
+[ignore 30s] swipe bottom to top until element inner_gallery_request_more_photos is visible, max 15 times, wait 1
+# OFF: click inner_gallery_request_more_photos
+wait 2 seconds
+# OFF: verify element inner_gallery_product_name is visible

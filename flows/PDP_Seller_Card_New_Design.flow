@@ -1,0 +1,64 @@
+# Platform: mobilesite
+# Imported from Testsigma: PDP Seller Card (New Design) (test case 2182, run 115613, last result SUCCESS)
+# Tags: regression
+# OFF steps: every step that would send a REAL lead / enquiry / OTP is switched off,
+#   plus the checks that only pass after it. Switch them on only when a lead is wanted.
+
+call Live_Touch_Chrome_Navigate_to_Homepage_setup_Popup
+open https://www.justdial.com/jdmart/Bangalore/Hardic-Engineering-Refractory-Brick/pid-2220109969/080PXX80-XX80-190716164616-X6B6?idx=0&jdmid=jdm-1011256-ent-2-17398330&alsoserveCity=Bangalore&nid=15676215
+wait 2 seconds
+scroll to pdp_seller_info_section
+scroll to pdp_seller_info_heading
+verify element pdp_seller_info_heading is visible
+# OFF: verify element pdp_seller_info_verified_tag is visible
+verify element pdp_seller_info_business_yrs is visible
+# OFF: verify element pdp_seller_info_paid_thumb_icon is visible
+verify element pdp_seller_info_name is visible
+verify element pdp_seller_info_img is visible
+verify element pdp_seller_info_rating_section is visible
+verify element pdp_seller_info_average_rating_stars is visible
+verify element pdp_seller_info_address is visible
+verify element pdp_seller_info_enquiry_icon is visible
+verify element pdp_seller_info_enquiry_count is visible
+verify element pdp_seller_info_business_type_icon is visible
+verify element pdp_seller_info_business_type is visible
+verify element pdp_seller_info_call_icon is visible
+verify element pdp_seller_info_call_text is visible
+verify element pdp_seller_info_view_more_tab is visible
+click pdp_seller_info_view_more_tab
+scroll to pdp_seller_info_address_text
+verify element pdp_seller_info_address_text is visible
+verify element pdp_seller_info_address_details is visible
+open http://justdial.com/jdmart/Delhi/footballs-jersey-with-shorts/pid-2231521559/011PXX11-XX11-241010154419-R5H7?idx=0&jdmid=jdm-1063601-ent-15-1063601&alsoserveCity=Delhi&searchString=Jersey&btype=wholesalers&nid=10280724
+wait 3 seconds
+click pdp_seller_info_view_more_tab
+scroll to pdp_seller_info_heading
+verify element pdp_seller_info_heading is visible
+scroll to pdp_seller_info_website_text
+verify element pdp_seller_info_website_text is visible
+verify element website_link is visible
+verify element pdp_seller_info_year_of_establishment_text is visible
+verify element pdp_seller_info_year is visible
+scroll to pdp_seller_info_no_of_employee_text
+verify element pdp_seller_info_no_of_employee_text is visible
+verify element employee_count is visible
+verify element pdp_seller_info_turn_over_text is visible
+verify element turn_over_count is visible
+verify element pdp_seller_info_gstin_text is visible
+verify element gstin is visible
+# OFF: open https://www.justdial.com/jdmart/Bangalore/Hardic-Engineering-Refractory-Brick/pid-2220109969/080PXX80-XX80-190716164616-X6B6?idx=0&jdmid=jdm-1011256-ent-2-17398330&alsoserveCity=Bangalore&nid=15676215
+# OFF: wait 2 seconds
+# OFF: click pdp_seller_info_view_more_tab
+# OFF: wait 1 seconds
+scroll to pdp_seller_info_call_vn_all
+verify element pdp_seller_info_call_vn_all is visible
+verify element pdp_seller_info_call_vn_number is visible
+verify element pdp_seller_info_call_vn_text_call_for_help is visible
+verify element pdp_seller_info_view_more_tab is visible
+verify element pdp_seller_info_arrow_down is visible
+open https://www.justdial.com/jdmart/Gurgaon/Large-Power-System/pid-2023660834/011PXX11-XX11-210528140220-G9W6
+wait 2 seconds
+scroll to pdp_seller_info_section
+click pdp_seller_info_view_more_tab
+verify element pdp_seller_info_paid_thumb_icon is not visible
+verify element pdp_seller_info_call_vn_all is not visible

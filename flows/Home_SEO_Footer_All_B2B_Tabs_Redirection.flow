@@ -1,0 +1,50 @@
+# Platform: mobilesite
+# Imported from Testsigma: Home SEO Footer All B2B Tabs Redirection (test case 2215, run 115613, last result SUCCESS)
+# Tags: regression
+# OFF steps: every step that would send a REAL lead / enquiry / OTP is switched off,
+#   plus the checks that only pass after it. Switch them on only when a lead is wanted.
+
+# OFF: call Live_Touch_Chrome_Navigate_to_Homepage_setup_Popup
+open https://www.justdial.com/jdmart?jdtracker=internaljd_mainhmpge_b2bhotkey-wap2
+wait 2 seconds
+call PS_Touch_Consent_Popup
+wait until element home_top_all_categories_section is visible
+scroll down 6000
+wait 2 seconds
+scroll down 8000
+# OFF: wait 2 seconds
+wait until element b2b_home_seo_footer_recently_added is visible
+swipe bottom to top until element b2b_home_seo_footer_recently_added is visible, max 15 times, wait 1
+click b2b_home_seo_footer_recently_added
+scroll to b2b_home_seo_footer_recently_added
+verify element b2b_home_seo_footer_recently_added is visible
+store text of b2b_home_seo_footer_recent_category_2 as seo_footer_data_2
+remove "&" from "${seo_footer_data_2}" and store as New_SEOFooter_Category
+click b2b_home_seo_footer_recent_category_2
+wait for page to load
+wait 3 seconds
+wait until element b2b_prp_1st_product_card is visible
+# OFF: verify text "New_SEOFooter_Category" on page
+# OFF: verify text "New_SEOFooter_Category" on page
+press back
+wait 2 seconds
+scroll to b2b_home_seo_footer_recently_added
+verify element b2b_home_seo_footer_recently_added is visible
+click b2b_home_seo_footer_recently_added
+scroll to b2b_home_seo_footer_recently_added_categories_50
+verify element b2b_home_seo_footer_recently_added_categories_50 is visible
+store text of b2b_home_seo_footer_recently_added_categories_50 as seo_footer_data_50
+click b2b_home_seo_footer_recently_added_categories_50
+# OFF: wait 3 seconds
+wait until element b2b_prp_1st_product_card is visible
+# OFF: verify text "seo footer data 50" on page
+store text of prp_search_box_category_name as category_N
+[ignore] verify stored seo_footer_data_50 contains "${category_N}" ignoring case
+press back
+wait 2 seconds
+call SG_SEO_Footer_Redirection_Leading_Categories
+call SG_SEO_Footer_Redirection_Trending_Categories
+call SG_SEO_Footer_Redirection_Top_Ranked_Categories
+# OFF: open https://www.justdial.com/india
+# OFF: wait 3 seconds
+# OFF: call SG_All_India_SEO_Footer

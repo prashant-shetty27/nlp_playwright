@@ -1,0 +1,67 @@
+# Platform: mobilesite
+# Imported from Testsigma: B2B Supplier Result Page (test case 3389, run 115613, last result FAILURE)
+# Tags: regression
+# OFF steps: every step that would send a REAL lead / enquiry / OTP is switched off,
+#   plus the checks that only pass after it. Switch them on only when a lead is wanted.
+
+open https://www.justdial.com/
+wait 2 seconds
+[ignore] click maybe_later
+click b2b1
+wait 2 seconds
+click b2b_search_field
+click b2b_search_field_2
+click suppliers_tab
+click b2b_search_field_2
+type "cctv" into b2b_search_field_2
+click cctv_1st_autosuggest
+wait 2 seconds
+click ps_touch_b2b_prp_sller_type_filter
+click ps_touch_b2b_prp_business_filter_wholesalers
+scroll element sort_by_filter_tab horizontally by 68
+click srp_sort_by_tab
+click srp_sort_by_relevance_popularity
+click srp_map_tab
+click srp_list_view_tab
+click srp_city_filter
+click srp_heading_all_india
+click srp_change_location
+click srp_heading_delhi
+click srp_filter_icon
+wait 5 seconds
+click srp_filter_page_clear_all
+click filter_div_apply_button
+click srp_city_delhi
+click srp_city_bangalore
+click srp_1st_result
+click catalogue_header_back
+click srp_filter_icon
+click srp_filter_page_verified_toggle_icon
+click srp_filter_page_trust_toggle_icon
+click filter_div_apply_button
+click srp_filter_icon
+type "10" into min_order_quantity_input
+click filter_div_apply_button
+scroll to srp_seller_type_banner
+verify element srp_seller_type_banner is visible
+click srp_seller_type_banner_manufacturer
+click srp_seller_type_banner_skip
+verify element srp_seller_img is visible
+verify element srp_seller_paid_icon is visible
+verify element srp_1st_seller_name is visible
+verify element srp_seller_area is visible
+verify element srp_seller_rating is visible
+verify element srp_seller_verified is visible
+verify element srp_seller_trust_icon is visible
+verify element srp_seller_yrs is visible
+verify element srp_call_now_button is visible
+verify element srp_seller_gbp_button is visible
+scroll to srp_seller_type_option
+verify element srp_seller_type_option is visible
+verify element srp_seller_gbp_button is visible
+verify element srp_seller_type_banner_submit is visible
+click srp_seller_gbp_button
+wait 3 seconds
+# OFF: click rfq_skip_all_button
+js click rfq_skip_all_button
+# OFF: call RFQ_Non_Login_Flow_to_Login_and_Continue_Search

@@ -1,0 +1,23 @@
+# Platform: mobilesite
+# Imported from Testsigma: Catalogue Page Whatsapp Strip (test case 1252, run 115613, last result SUCCESS)
+# Tags: regression
+# OFF steps: every step that would send a REAL lead / enquiry / OTP is switched off,
+#   plus the checks that only pass after it. Switch them on only when a lead is wanted.
+
+call Live_Touch_Chrome_Navigate_to_Homepage_setup_Popup
+# OFF: call SG_Supplier_Search_Mandal_Co
+open https://www.justdial.com/Delhi/Six-India-Dwarka/011PXX11-XX11-180824185125-M4B8_BZDET
+wait 3 seconds
+refresh page
+wait 2 seconds
+call SG_Touch_B2B_Catalogue_Whatsapp_Strip_Overview
+open https://www.justdial.com/jdmart/Delhi/Six-India-Dwarka/011PXX11-XX11-180824185125-M4B8_BZDET/catalogue
+call SG_Touch_B2B_Catalogue_Whatsapp_Strip_Overview
+wait until element b2b_catalogue_whatsapp_strip_text is visible
+wait 1 seconds
+[ignore] scroll to b2b_catalogue_whatsapp_strip_product_name
+[ignore] verify element b2b_catalogue_whatsapp_strip_product_name is visible
+scroll to b2b_catalogue_whatsapp_strip_icon
+verify element b2b_catalogue_whatsapp_strip_icon is visible
+[ignore] scroll to b2b_catalogue_whatsapp_strip_text
+[ignore] verify element b2b_catalogue_whatsapp_strip_text is visible

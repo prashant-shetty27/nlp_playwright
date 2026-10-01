@@ -1,0 +1,16 @@
+# Platform: mobilesite
+# Imported from Testsigma: PDP - GBP Popup Page Scroll (test case 3193, run 115613, last result SUCCESS)
+# Tags: regression
+# OFF steps: every step that would send a REAL lead / enquiry / OTP is switched off,
+#   plus the checks that only pass after it. Switch them on only when a lead is wanted.
+
+# OFF: call PS_Touch_Location_Popup
+# OFF: call SG_Touch_Core_Login_9987996046
+# OFF: open https://www.justdial.com/jdmart/Mumbai/Skf-Ball-Bearing-Deep-Groove-Single-Row-6205-2Z-1-Nos/pid-272203217/022PXX22-XX22-140307153118-I6K6?idx=0&jdmid=jdm-1008206-ent-4-7192762&alsoserveCity=Mumbai&nid=10034271&slider=0&initialIndex=3&sellers=0&isLogin=1
+# OFF: wait 2 seconds
+# OFF: [ignore 30s] swipe bottom to top until element pdp_gbp_popup is visible, max 15 times, wait 1
+# OFF: call SG_PDP_Post_Login_GBP_Popup
+open https://www.justdial.com/jdmart/Mumbai/Bike-Covers-for-Hero-Xtreme-160R/pid-2102058125/022PXX22-XX22-220118134107-L9E8
+call PS_Touch_Consent_Popup
+call SG_PDP_GBP_POP
+wait 1 seconds
