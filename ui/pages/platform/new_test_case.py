@@ -267,7 +267,7 @@ async def new_test_case_dialog(platform: str, on_created: Callable, folder: str 
                     if not needed:
                         return
                     try:
-                        have = (await api.testdata("")).get("values", {}) or {}
+                        have = (await api.testdata("", platform)).get("values", {}) or {}
                     except api.ApiError:
                         have = {}
                     found = state.get("values_found") or {}
@@ -298,7 +298,7 @@ async def new_test_case_dialog(platform: str, on_created: Callable, folder: str 
                                 if not v or (have.get(n, {}).get("value") == v):
                                     continue
                                 try:
-                                    await api.set_testdata(n, v, updating=n in have, force=True)
+                                    await api.set_testdata(n, v, updating=n in have, force=True, modules=[platform])
                                     saved += 1
                                 except api.ApiError as e:
                                     ui.notify(f"{n}: {e.detail}", type="warning")

@@ -255,6 +255,8 @@ def _run_flow_sync_unlocked(run_id: str, flow_path: str, headless: bool,
                                  ("device_name", "browser", "browser_identity", "headless")}
         if capabilities.get("site_env"):
             report.meta["site_env"] = capabilities["site_env"]
+        if capabilities.get("platform"):
+            report.meta["platform"] = capabilities["platform"]
 
     session = TestSession()
     # Bind the session's own variable store BEFORE injecting, so values land where
@@ -277,10 +279,12 @@ def _run_flow_sync_unlocked(run_id: str, flow_path: str, headless: bool,
     try:
         from execution.test_data import resolved
 
-        for name, value in resolved(environment).items():
+        _module = (capabilities or {}).get("platform") or None
+        _vals = resolved(environment, _module)
+        for name, value in _vals.items():
             RUNTIME_VARIABLES[name] = str(value)
-        logger.info("📦 Test Data loaded: %s", ", ".join(sorted(resolved(environment)))
-                    or "nothing stored")
+        logger.info("📦 Test Data loaded%s: %s", f" ({_module})" if _module else "",
+                    ", ".join(sorted(_vals)) or "nothing stored")
     except Exception as e:  # noqa: BLE001 — a run must not die on the store
         logger.warning("Could not load Test Data for this run: %s", e)
 
@@ -859,6 +863,7 @@ def _prepare_run(body: "RunRequest", flow_path: str = ""):
     ident = browser_identity(getattr(body, "browser_identity", ""))
     device = body.device_name or ident.get("device") or platform.default_device or ""
     caps = {
+        "platform": platform.name,      # Test Data is supplied per module
         "headless": body.headless,
         "mobile_web": bool(device),
         "device_name": device,
@@ -888,7 +893,7 @@ def _prepare_run(body: "RunRequest", flow_path: str = ""):
 
         needed = run_parameters([ln for ln in flow_text.splitlines()
                                  if ln.strip() and not ln.strip().startswith("#")])
-        supplied = set(body.parameters or {}) | set(get_all(body.environment).keys())
+        supplied = set(body.parameters or {}) | set(get_all(body.environment, body.platform or None).keys())
         missing = [n for n in needed if n not in supplied]
     except Exception:  # noqa: BLE001 — never block a run on this check failing
         missing = []
@@ -1049,6 +1054,17 @@ def auth_domains(flow: str):
             "opens": [{"host": h, "name": env_name_for_host(h)} for h in opens]}
 
 
+def _flow_platform(flow: str) -> str:
+    """The module a test case belongs to (for module-wise History / Reports)."""
+    if not flow:
+        return ""
+    try:
+        from api.routes.projects import _platform_of
+        return _platform_of(flow)
+    except Exception:  # noqa: BLE001
+        return ""
+
+
 def _flow_hosts(flow_path: str) -> list[str]:
     """Every justdial host the flow opens, in order (Test Data links resolved)."""
     from urllib.parse import urlparse
@@ -1136,6 +1152,7 @@ def run_history(limit: int = 50):
                            or round(sum((r.get("duration_ms") or 0) for r in data.get("results") or []) / 1000, 1)),
             "plan_run": data.get("plan_run", ""),
             "triggered_by": data.get("triggered_by", ""),
+            "platform": (data.get("meta") or {}).get("platform") or _flow_platform(data.get("testplan", "")),
         })
         if len(rows) >= limit:
             break

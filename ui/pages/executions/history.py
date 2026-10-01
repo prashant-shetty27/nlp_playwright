@@ -33,18 +33,23 @@ def _when(iso: str) -> str:
         return iso or "—"
 
 
-async def render() -> None:
+async def render(module: str = "") -> None:
+    from ui.layout import module_scope
     platforms = []
     try:
         platforms = await api.platforms()
     except api.ApiError:
         pass
+    module = module_scope.pick(module, platforms)
     sidebar(active="/history", platforms=platforms)
-    topbar(["Execute", "History"], platforms=platforms)
+    topbar(["Execute", "History"], platforms=platforms, platform=module,
+           on_platform_change=module_scope.switcher("/history"))
 
     with ui.column().classes("w-full gap-2 p-4"):
         try:
             runs = (await api.run_history()) or []
+            # This module's runs only (each run carries the platform of its test case).
+            runs = [r for r in runs if module_scope.belongs(r.get("platform"), module)]
         except api.ApiError as e:
             ui.label(f"Could not read the run history: {e.detail[:140]}").style(
                 f"color:{COLORS['danger']}")

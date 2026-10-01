@@ -496,7 +496,7 @@ class DraftPage:
         if not needed:
             return {}
         try:
-            have = (await api.testdata("")).get("values", {}) or {}
+            have = (await api.testdata("", self.platform)).get("values", {}) or {}
         except api.ApiError:
             have = {}
         found = self.res.get("values_found") or {}
@@ -578,7 +578,8 @@ class DraftPage:
                         renames[n] = dup   # same value already stored – reuse, don't duplicate
                         continue
                     try:
-                        await api.set_testdata(new_name, v, updating=new_name in have, force=True)
+                        await api.set_testdata(new_name, v, updating=new_name in have, force=True,
+                                               modules=[self.platform])
                         saved += 1
                     except api.ApiError as e:
                         ui.notify(f"{n}: {e.detail}", type="warning")

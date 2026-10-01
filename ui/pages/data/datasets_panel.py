@@ -20,14 +20,15 @@ from ui.theme import COLORS, TYPOGRAPHY
 
 
 class DatasetsPanel:
-    def __init__(self) -> None:
+    def __init__(self, module: str = "") -> None:
+        self.module = module          # uploads belong to this module; only its sets are listed
         self.items: list[dict] = []
         self.box = None
         self._pending: tuple[str, bytes] | None = None
 
     async def load(self) -> None:
         try:
-            self.items = await api.datasets()
+            self.items = await api.datasets(self.module)
         except api.ApiError as e:
             ui.notify(f"Could not read data sets: {e.detail}", type="negative")
             self.items = []
@@ -95,6 +96,23 @@ class DatasetsPanel:
                         f"font-family:{TYPOGRAPHY['mono']}; font-size:{TYPOGRAPHY['size_xs']};"
                         f"background:{COLORS['accent']}1A; color:{COLORS['accent']};"
                         "border-radius:4px; padding:1px 6px").tooltip(f"Column: {h}")
+            # Modules this data set belongs to (tick more to share it).
+            _mods = {"website": "Website", "mobilesite": "Mobile Site", "android": "Android App",
+                     "ios": "iOS App", "hybrid": "Hybrid"}
+            _cur = d.get("modules") or list(_mods)
+
+            async def _retag(e, n=d["name"]) -> None:
+                if not e.value:
+                    ui.notify("Pick at least one module", type="warning")
+                    return
+                try:
+                    await api.set_dataset_modules(n, list(e.value))
+                    ui.notify(f"{n}: modules saved", type="positive")
+                except api.ApiError as err:
+                    ui.notify(str(err.detail), type="negative")
+            ui.select(_mods, value=_cur, multiple=True, label="Modules",
+                      on_change=_retag).props("outlined dense use-chips options-dense") \
+                .style("min-width:18rem; max-width:34rem")
             who = []
             if d.get("created_by") or d.get("created_at"):
                 who.append(f"Created by {d.get('created_by') or '—'} · {d.get('created_at', '')[:16]}")
@@ -144,7 +162,7 @@ class DatasetsPanel:
 
     async def _send(self, name: str, data: bytes, replace: bool) -> None:
         try:
-            res = await api.upload_dataset(name, data, replace=replace)
+            res = await api.upload_dataset(name, data, replace=replace, module=self.module)
         except api.ApiError as err:
             if err.status == 409 and isinstance(err.detail, dict):
                 self._confirm_replace(name, data, err.detail)

@@ -12,6 +12,7 @@ from nicegui import ui
 
 from ui import api_client as api
 from ui.auth import can
+from ui.layout import module_scope
 from ui.layout.sidebar import sidebar
 from ui.layout.topbar import topbar
 from ui.pages.plans.common import chip, confirm, heading, ist, muted
@@ -25,13 +26,19 @@ FREQ = {"daily": "Every day", "weekdays": "Weekdays (Mon–Fri)", "weekly": "Sel
         "hourly": "Every N hours", "once": "Once"}
 
 
-async def _shell(crumbs: list[str]) -> None:
+async def _shell(crumbs: list[str], module: str | None = "") -> str:
     try:
         platforms = await api.platforms()
     except api.ApiError:
         platforms = []
     sidebar(active="/plans", platforms=platforms)
-    topbar(crumbs, platforms=platforms)
+    if module is None:
+        topbar(crumbs, platforms=platforms)
+        return ""
+    module = module_scope.pick(module, platforms)
+    topbar(crumbs, platforms=platforms, platform=module,
+           on_platform_change=module_scope.switcher("/plans"))
+    return module
 
 
 RUN_TYPE_HELP = {
@@ -85,8 +92,8 @@ async def _start_plan(plan_id: str, run_type: str = "") -> None:
     ui.navigate.to(f"/plans/run/{quote(r['run_id'])}")
 
 
-async def render_list() -> None:
-    await _shell(["Execute", "Test Plans"])
+async def render_list(module: str = "") -> None:
+    module = await _shell(["Execute", "Test Plans"], module)
     with ui.column().classes("w-full gap-3 p-4").style("max-width:80rem"):
         with ui.row().classes("w-full items-center"):
             heading("Test Plans")
@@ -106,6 +113,8 @@ async def render_list() -> None:
         except api.ApiError as e:
             ui.label(e.detail).style(f"color:{COLORS['danger']}")
             return
+        # Only plans with this module's suites (a mixed plan shows in each of its modules).
+        items = [p for p in items if module_scope.belongs(p.get("platform"), module)]
         if not items:
             muted("No plans yet. A plan runs one or more suites, now or on a schedule, "
                   "and posts the result to Slack.")
@@ -152,7 +161,7 @@ async def _runs_table(plan_id: str) -> None:
     for r in runs:
         t = r.get("totals") or {}
         rows.append({"id": r["id"], "plan": r.get("plan_name"), "status": r.get("status"),
-                     "result": f"{t.get('passed', 0)}✓ {t.get('failed', 0)}✗ {t.get('not_run', 0)}⏭ / {t.get('test_cases', 0)}",
+                     "result": f"{t.get('passed', 0)}✓ {t.get('failed', 0)}✗ {t.get('not_run', 0)}⊘ / {t.get('test_cases', 0)}",
                      "when": ist(r.get("started_at") or r.get("queued_at")),
                      "duration": (f"{r['duration_s'] / 60:.1f} min" if r.get("duration_s") is not None
                                   else ("running…" if r.get("status") == "running" else "—")),
@@ -171,7 +180,7 @@ async def _runs_table(plan_id: str) -> None:
 
 
 async def render_edit(plan_id: str = "") -> None:
-    await _shell(["Execute", "Test Plans", "Edit" if plan_id else "New"])
+    await _shell(["Execute", "Test Plans", "Edit" if plan_id else "New"], None)
     data = {"name": "", "description": "", "suites": [],
             "execution": {"headless": False, "stop_on_failure": False,
                           "stop_on_first_failure": False, "retry_failed": True},
@@ -268,25 +277,37 @@ async def render_edit(plan_id: str = "") -> None:
             site_env_sel = ui.select(_first, value=_saved_env,
                                      label="Environment (where the test cases run)") \
                 .props("outlined dense").style("min-width:22rem")
-            muted("Pick prot / prot3 / devx … to run the whole plan on that host: every www.justdial.com "
-                  "URL in its test cases moves there and the saved login is attached."
-                  " Servers are never mixed: staging2 / stg are Website only, prot / prot3 / prot4 / "
-                  "devx / designtest / seo are Mobile Site only — a test case of the other platform "
-                  "is marked not run with the reason.")
+            muted("Only the servers of this plan's modules are listed (Website: staging2, stg · "
+                  "Mobile Site: prot, prot3, prot4, devx, designtest, seo · live: both). Every "
+                  "www.justdial.com URL in its test cases moves to the chosen server and its saved "
+                  "login is attached.")
 
-            async def _fill_envs() -> None:
+            _suite_platform = {s["id"]: (s.get("platform") or "").lower() for s in all_suites}
+
+            async def _fill_envs(_=None) -> None:
+                # Only the servers of the modules in this plan: a Mobile Site plan
+                # lists Mobile Site servers, a Website plan Website servers.
+                mods = {_suite_platform.get(sid, "") for sid in (chosen.value or [])}
+                mods = {m for m in mods if m in ("website", "mobilesite")}
                 try:
-                    envs = await api.site_environments()
+                    envs = await api.site_environments(next(iter(mods)) if len(mods) == 1 else "")
                 except api.ApiError:
                     envs = []
+                if len(mods) > 1:
+                    pass                                  # mixed plan: show all, labelled
+                elif not mods:
+                    envs = [e for e in envs if e["name"] == "live"]
                 opts = {"": "Default — each test case's own URL (prot3, devx …)"}
                 for e in envs:
                     only = e.get("platforms") or []
-                    tag = "  (Website only)" if only == ["website"] else \
+                    tag = "" if len(mods) < 2 else \
+                          "  (Website only)" if only == ["website"] else \
                           "  (Mobile Site only)" if only == ["mobilesite"] else ""
                     opts[e["name"]] = f"{e['name']} — {e['host']}{tag}"
-                site_env_sel.set_options(opts, value=site_env_sel.value if site_env_sel.value in opts else "")
+                keep = site_env_sel.value if site_env_sel.value in opts else ""
+                site_env_sel.set_options(opts, value=keep)
             ui.timer(0.1, _fill_envs, once=True)
+            chosen.on_value_change(_fill_envs)
 
             devices = ui.select({k: v["label"] for k, v in DEVICE_PROFILES.items()}, multiple=True,
                                 value=[d.get("browser_identity") for d in (ex.get("devices") or [])

@@ -172,7 +172,7 @@ async def prefetch_segments(steps: list[str]) -> None:
     _SEGMENT_CACHE.update(res.get("segments") or {})
 
 
-async def step_variables(steps: list[str], environment: str = "") -> dict:
+async def step_variables(steps: list[str], environment: str = "", platform: str = "") -> dict:
     """
     Where each ${variable} in a test gets its value.
 
@@ -181,7 +181,7 @@ async def step_variables(steps: list[str], environment: str = "") -> dict:
     is answered there rather than re-derived here.
     """
     return await _call("POST", "/nlp/variables",
-                       json={"steps": steps, "environment": environment})
+                       json={"steps": steps, "environment": environment, "platform": platform})
 
 
 async def locators(page: str | None = None) -> dict:
@@ -276,23 +276,31 @@ async def add_locator(page: str, name: str, xpath: str, dna: dict | None = None,
 
 # ── Sources ──────────────────────────────────────────────────────────────────
 async def testdata_suggest(partial: str, environment: str = "",
-                           limit: int = 12) -> list[dict]:
-    """Global / per-environment values matching a partial, by name or by value."""
+                           limit: int = 12, module: str = "") -> list[dict]:
+    """Values matching a partial, by name or by value — only this module's when given."""
     res = await _call("GET", "/testdata/suggest",
-                      params={"partial": partial, "environment": environment, "limit": limit})
+                      params={"partial": partial, "environment": environment, "limit": limit,
+                              "module": module})
     return res.get("suggestions", [])
 
 
 async def set_testdata(name: str, value: str, scope: str = "global",
                        environment: str = "", force: bool = False,
-                       updating: bool = False) -> dict:
+                       updating: bool = False, modules: list[str] | None = None,
+                       retag: bool = False) -> dict:
     """Save a value. force=True overwrites a name the store already has;
     updating=True says the name is known to exist and only its value changes."""
     return await _call("PUT", "/testdata", json={"name": name, "value": value,
                                                  "scope": scope,
                                                  "environment": environment,
                                                  "updating": updating,
+                                                 "modules": modules or [],
+                                                 "retag": retag,
                                                  "force": force})
+
+
+async def set_testdata_modules(name: str, modules: list[str]) -> dict:
+    return await _call("PUT", f"/testdata/{name}/modules", json={"modules": modules})
 
 
 async def delete_testdata(name: str, scope: str = "global",
@@ -309,25 +317,30 @@ async def rename_testdata(name: str, new_name: str, scope: str = "global",
                              "environment": environment, "apply": apply})
 
 
-async def datasets() -> list[dict]:
-    return (await _call("GET", "/testdata/datasets")).get("datasets", [])
+async def datasets(module: str = "") -> list[dict]:
+    return (await _call("GET", "/testdata/datasets", params={"module": module})).get("datasets", [])
 
 
 async def dataset(name: str, limit: int = 200) -> dict:
     return await _call("GET", f"/testdata/datasets/{name}", params={"limit": limit})
 
 
-async def upload_dataset(filename: str, data: bytes, replace: bool = False) -> dict:
+async def upload_dataset(filename: str, data: bytes, replace: bool = False,
+                         module: str = "") -> dict:
     return await _call("POST", "/testdata/datasets/upload", files={"file": (filename, data)},
-                       params={"replace": replace})
+                       params={"replace": replace, "module": module})
+
+
+async def set_dataset_modules(name: str, modules: list[str]) -> dict:
+    return await _call("PUT", f"/testdata/datasets/{name}/modules", json={"modules": modules})
 
 
 async def delete_dataset(name: str) -> dict:
     return await _call("DELETE", f"/testdata/datasets/{name}")
 
 
-async def testdata(environment: str = "") -> dict:
-    return await _call("GET", "/testdata", params={"environment": environment})
+async def testdata(environment: str = "", module: str = "") -> dict:
+    return await _call("GET", "/testdata", params={"environment": environment, "module": module})
 
 
 async def upload_source(filename: str, data: bytes, uploaded_by: str = "") -> dict:

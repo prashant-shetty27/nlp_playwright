@@ -12,24 +12,34 @@ from nicegui import ui
 
 from ui import api_client as api
 from ui.auth import can
+from ui.layout import module_scope
 from ui.layout.sidebar import sidebar
 from ui.layout.topbar import topbar
 from ui.pages.plans.common import confirm, heading, ist, muted
 from ui.theme import COLORS, TYPOGRAPHY
 
 
-async def _shell(crumbs: list[str]) -> list[dict]:
+async def _shell(crumbs: list[str], module: str = "") -> list[dict]:
     try:
         platforms = await api.platforms()
     except api.ApiError:
         platforms = []
     sidebar(active="/suites", platforms=platforms)
-    topbar(crumbs, platforms=platforms)
+    if module:
+        topbar(crumbs, platforms=platforms, platform=module,
+               on_platform_change=module_scope.switcher("/suites"))
+    else:
+        topbar(crumbs, platforms=platforms)
     return platforms
 
 
-async def render_list() -> None:
-    await _shell(["Execute", "Test Suites"])
+async def render_list(module: str = "") -> None:
+    try:
+        _pl = await api.platforms()
+    except api.ApiError:
+        _pl = []
+    module = module_scope.pick(module, _pl)
+    await _shell(["Execute", "Test Suites"], module)
     with ui.column().classes("w-full gap-3 p-4").style("max-width:76rem"):
         with ui.row().classes("w-full items-center"):
             heading("Test Suites")
@@ -44,8 +54,10 @@ async def render_list() -> None:
         except api.ApiError as e:
             ui.label(e.detail).style(f"color:{COLORS['danger']}")
             return
+        # Only this module's suites — whatever is created in a module stays in it.
+        items = [s for s in items if module_scope.belongs(s.get("platform"), module)]
         if not items:
-            muted("No suites yet.")
+            muted("No suites in this module yet.")
             return
         cols = [{"name": k, "label": l, "field": k, "align": "left", "sortable": True} for k, l in (
             ("name", "Suite"), ("platform", "Platform"), ("count", "Test cases"),

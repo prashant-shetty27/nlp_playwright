@@ -49,13 +49,16 @@ def _tile(label: str, value: str, sub: str = "", colour: str = "") -> None:
             muted(sub)
 
 
-async def render() -> None:
+async def render(module: str = "") -> None:
+    from ui.layout import module_scope
     try:
         platforms = await api.platforms()
     except api.ApiError:
         platforms = []
+    module = module_scope.pick(module, platforms)
     sidebar(active="/reports", platforms=platforms)
-    topbar(["Manage", "Reports"], platforms=platforms)
+    topbar(["Manage", "Reports"], platforms=platforms, platform=module,
+           on_platform_change=module_scope.switcher("/reports"))
     try:
         plan_runs = await api.plan_runs("", 200)
     except api.ApiError:
@@ -64,6 +67,15 @@ async def render() -> None:
         tc_runs = await api.run_history(200)
     except api.ApiError:
         tc_runs = []
+    # Only this module's reports (screenshots and videos live inside them).
+    tc_runs = [r for r in tc_runs if module_scope.belongs(r.get("platform"), module)]
+    try:
+        _plan_mod = {p["id"]: p.get("platform", "") for p in await api.plans()}
+    except api.ApiError:
+        _plan_mod = {}
+    plan_runs = [r for r in plan_runs
+                 if module_scope.belongs(r.get("platform") or _plan_mod.get(r.get("plan") or r.get("plan_id"), ""),
+                                         module)]
 
     week_ago = datetime.now(timezone.utc) - timedelta(days=7)
 
@@ -120,7 +132,7 @@ async def render() -> None:
                         "id": r["id"], "plan": r.get("plan_name") or "", "status": r.get("status") or "",
                         "type": (r.get("run_type") or "full").title(),
                         "pct": f"{round(100 * (t.get('passed') or 0) / n)}%" if n else "—",
-                        "cases": f"{t.get('passed', 0)} ✓  {t.get('failed', 0)} ✗  {t.get('not_run', 0)} ⏭  / {n}",
+                        "cases": f"{t.get('passed', 0)} ✓  {t.get('failed', 0)} ✗  {t.get('not_run', 0)} ⊘  / {n}",
                         "duration": _mins(r["duration_s"]) if r.get("duration_s") is not None else "—",
                         "when": ist(r.get("started_at") or r.get("queued_at"), "%d %b %Y %H:%M"),
                         "by": ("⏰ " if r.get("trigger") == "schedule" else "") + (r.get("triggered_by") or ""),
@@ -150,7 +162,7 @@ async def render() -> None:
                     s = r.get("summary") or {}
                     crow.append({
                         "id": r["run_id"], "flow": r.get("flow") or "", "status": r.get("status") or "",
-                        "steps": f"{s.get('passed', 0)} ✓  {s.get('failed', 0)} ✗  {s.get('skipped', 0)} ⏭  / {s.get('total', 0)}",
+                        "steps": f"{s.get('passed', 0)} ✓  {s.get('failed', 0)} ✗  {s.get('skipped', 0)} ⊘  / {s.get('total', 0)}",
                         "duration": _mins(r.get("duration_s")) if r.get("duration_s") else "—",
                         "when": (r.get("started_at") or "").replace("T", " ")[:16],
                         "by": r.get("triggered_by") or r.get("executer") or "",

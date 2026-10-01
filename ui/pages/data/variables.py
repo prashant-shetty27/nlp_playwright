@@ -41,7 +41,9 @@ class TestDataPage:
     #: applied before you have asked anything hides most of the answer.
     ALL = "*"
 
-    def __init__(self) -> None:
+    def __init__(self, module: str = "") -> None:
+        #: The module (website, mobilesite …) whose values are shown and created.
+        self.module = module
         self.environment = self.ALL
         self.environments: list[str] = []
         self.values: dict = {}
@@ -51,15 +53,17 @@ class TestDataPage:
 
     async def load(self) -> None:
         try:
-            self.dataset_items = await api.datasets()
-        except api.ApiError:
-            self.dataset_items = []
-        try:
             self.platforms = await api.platforms()
         except api.ApiError:
             self.platforms = []
+        from ui.layout import module_scope
+        self.module = module_scope.pick(self.module, self.platforms)
         try:
-            data = await api.testdata(self.environment)
+            self.dataset_items = await api.datasets(self.module)
+        except api.ApiError:
+            self.dataset_items = []
+        try:
+            data = await api.testdata(self.environment, self.module)
             self.environments = data.get("environments", [])
             self.values = data.get("values", {})
             self.rows = data.get("rows", [])
@@ -71,8 +75,10 @@ class TestDataPage:
     def render(self, tab: str = "") -> None:
         from ui.pages.data.datasets_panel import DatasetsPanel
 
+        from ui.layout import module_scope
         sidebar(active="/data/variables", platforms=self.platforms)
-        topbar(["Manage", "Test Data"], platforms=self.platforms)
+        topbar(["Manage", "Test Data"], platforms=self.platforms, platform=self.module,
+               on_platform_change=module_scope.switcher("/data/variables"))
         with ui.column().classes("w-full gap-3 p-4"):
             with ui.tabs().props("dense align=left no-caps") as tabs:
                 t_values = ui.tab("values", label="Values", icon="data_object")
@@ -83,7 +89,7 @@ class TestDataPage:
                 with ui.tab_panel(t_values).style("padding:8px 0"):
                     self.body = ui.column().classes("w-full gap-3")
                 with ui.tab_panel(t_sets).style("padding:8px 0"):
-                    self.sets = DatasetsPanel()
+                    self.sets = DatasetsPanel(module=self.module)
                     self.sets.items = self.dataset_items
                     self.sets.render()
         self._draw()
@@ -141,7 +147,7 @@ class TestDataPage:
     #: Scope column (prod_Hotel_Equipment_Manufacturers ran into "global");
     #: a grid cell clips its own content instead.
     GRID = ("display:grid; grid-template-columns:"
-            "minmax(10rem,17rem) 5.5rem 7rem minmax(0,1fr) auto;"
+            "minmax(10rem,17rem) 5.5rem 7rem 9rem minmax(0,1fr) auto;"
             "column-gap:12px; align-items:center; width:100%")
 
     #: Clip to one line with an ellipsis; the full text is in the tooltip.
@@ -152,7 +158,7 @@ class TestDataPage:
                 f"{self.GRID}; padding:6px 10px;"
                 f"border-bottom:1px solid {COLORS['border']};"
                 f"background:{COLORS['surface_alt']}"):
-            for text in ("Name", "Scope", "Environment", "Value", ""):
+            for text in ("Name", "Scope", "Environment", "Modules", "Value", ""):
                 ui.label(text).style(
                     f"font-size:{TYPOGRAPHY['size_xs']};"
                     f"color:{COLORS['text_muted']}; font-weight:"
@@ -180,6 +186,12 @@ class TestDataPage:
             ui.label(env or "—").style(
                 f"{mono}; {self.CLIP};"
                 f"color:{COLORS['text'] if env else COLORS['text_muted']}")
+            from ui.layout.module_scope import SHORT
+            mods = entry.get("modules") or []
+            ui.label(", ".join(SHORT.get(m, m) for m in mods) if len(mods) < 5 else "All modules") \
+                .style(f"font-size:{TYPOGRAPHY['size_xs']}; {self.CLIP};"
+                       f"color:{COLORS['text_muted']}") \
+                .tooltip("Shown and used in: " + ", ".join(mods))
             if entry.get("is_secret"):
                 ui.label(f"{entry.get('display', '')}  · credential, from .env") \
                     .style(f"{mono}; {self.CLIP}; color:{COLORS['warning']}")
@@ -310,6 +322,14 @@ class TestDataPage:
                           next(iter(options)))
             envsel = ui.select(options, value=chosen, label="Environment") \
                 .props("outlined dense").classes("w-full")
+            # Which modules see this value. New: the module you are in; tick
+            # more to share it (e.g. a test mobile number used everywhere).
+            mod_opts = {p["name"]: p.get("label", p["name"]) for p in self.platforms} or \
+                {"website": "Website", "mobilesite": "Mobile Site"}
+            start = (entry or {}).get("modules") or [self.module]
+            modsel = ui.select(mod_opts, value=[m for m in start if m in mod_opts] or [self.module],
+                               multiple=True, label="Modules (where this value is used)") \
+                .props("outlined dense use-chips").classes("w-full")
             note = ui.label().style(
                 f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['warning']}")
             #: Where a name clash is explained, with the way out beside it.
@@ -317,11 +337,14 @@ class TestDataPage:
 
             async def save(force: bool = False) -> None:
                 try:
+                    if not modsel.value:
+                        ui.notify("Pick at least one module", type="warning")
+                        return
                     res = await api.set_testdata(
                         (n.value or "").strip(), v.value or "",
                         scope=scope.value or "global",
                         environment=envsel.value or "", force=force,
-                        updating=editing)
+                        updating=editing, modules=list(modsel.value), retag=True)
                 except api.ApiError as e:
                     detail = e.detail
                     # A name clash comes back as 409 with a structured body. It
@@ -402,7 +425,7 @@ class TestDataPage:
         dialog.open()
 
 
-async def render(tab: str = "") -> None:
-    page = TestDataPage()
+async def render(tab: str = "", module: str = "") -> None:
+    page = TestDataPage(module)
     await page.load()
     page.render(tab)

@@ -100,11 +100,11 @@ async def testsigma_page() -> None:
 
 
 @ui.page("/suites")
-async def suites_page() -> None:
+async def suites_page(module: str = "") -> None:
     if not _page_shell():
         return
     from ui.pages.plans.suites import render_list
-    await render_list()
+    await render_list(module)
 
 
 @ui.page("/suites/edit")
@@ -116,11 +116,11 @@ async def suite_edit_page(id: str = "") -> None:  # noqa: A002
 
 
 @ui.page("/plans")
-async def plans_page() -> None:
+async def plans_page(module: str = "") -> None:
     if not _page_shell():
         return
     from ui.pages.plans.index import render_list
-    await render_list()
+    await render_list(module)
 
 
 @ui.page("/plans/edit")
@@ -208,19 +208,19 @@ async def step_groups_page(platform: str = "website", edit: str = "", back: str 
 
 
 @ui.page("/history")
-async def history_page() -> None:
+async def history_page(module: str = "") -> None:
     if not _page_shell():
         return
     from ui.pages.executions.history import render
-    await render()
+    await render(module)
 
 
 @ui.page("/reports")
-async def reports_page() -> None:
+async def reports_page(module: str = "") -> None:
     if not _page_shell():
         return
     from ui.pages.reports.index import render
-    await render()
+    await render(module)
 
 
 @ui.page("/reports/{run_id}")
@@ -248,11 +248,11 @@ async def issues_page(run_id: str = "", plan_run: str = "") -> None:
 
 
 @ui.page("/data/variables")
-async def variables_page(tab: str = "") -> None:
+async def variables_page(tab: str = "", module: str = "") -> None:
     if not _page_shell():
         return
     from ui.pages.data.variables import render
-    await render(tab)
+    await render(tab, module)
 
 
 @ui.page("/platform/{platform}/draft")

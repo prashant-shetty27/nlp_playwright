@@ -41,6 +41,13 @@ NAV = [
 ]
 
 
+#: Pages that show one module at a time (whatever is created in a module stays
+#: in it). The sidebar opens them on the module last chosen in the topbar.
+MODULE_ROUTES = {"/data/variables": "module", "/step-groups": "platform", "/suites": "module",
+                 "/plans": "module", "/history": "module", "/reports": "module",
+                 "/run": "platform"}
+
+
 def _go(route: str) -> None:
     """
     Follow a sidebar link, keeping the platform the person is working in.
@@ -50,6 +57,13 @@ def _go(route: str) -> None:
     clicking Test Cases from History lands on Mobile Site when that is what
     was open, not on Website.
     """
+    if route in MODULE_ROUTES:
+        import json
+        key = MODULE_ROUTES[route]
+        ui.run_javascript(
+            "(function(){var p='website';try{p=localStorage.getItem('nlp_platform')||p}catch(e){}"
+            f"window.location.href={json.dumps(route)}+'?{key}='+encodeURIComponent(p);}})()")
+        return
     if route.startswith("/platform/website"):
         import json
         ui.run_javascript(

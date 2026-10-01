@@ -13,7 +13,7 @@ STATUS_COLOR = {
     "not_run": COLORS["text_muted"], "stopped": COLORS["warning"], "missed": COLORS["warning"],
 }
 STATUS_ICON = {"passed": "✅", "failed": "❌", "error": "💥", "running": "🔄", "queued": "⏳",
-               "pending": "⏳", "not_run": "⏭", "stopped": "⏹", "missed": "⏰"}
+               "pending": "⏳", "not_run": "⊘", "stopped": "⏹", "missed": "⏰"}
 
 
 def _ist():

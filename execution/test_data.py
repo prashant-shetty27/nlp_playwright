@@ -109,11 +109,42 @@ def mask(value: str) -> str:
     return f"{v[:2]}---{v[-3:]}"
 
 
+# ── modules ───────────────────────────────────────────────────────────────────
+# Each value is tagged with the modules (website, mobilesite, android, ios,
+# hybrid) it belongs to — by default the module it was created in. A value is
+# listed, suggested and supplied to a run only in its own modules; tagging it
+# with several modules is how one value is shared. Tags live beside the values
+# ("modules": {name: [...]}) so the value storage itself is unchanged.
+MODULES = ("website", "mobilesite", "android", "ios", "hybrid")
+
+
+def modules_of(name: str, data: dict | None = None) -> list[str]:
+    """The modules a value is tagged with; an untagged value belongs to all."""
+    tags = ((data or _read()).get("modules") or {}).get(name)
+    return [m for m in tags if m in MODULES] if isinstance(tags, list) and tags else list(MODULES)
+
+
+def _in_module(name: str, module: str | None, data: dict) -> bool:
+    return not module or module not in MODULES or module in modules_of(name, data)
+
+
+def set_modules(name: str, modules: list[str]) -> list[str]:
+    """Tag a value with the modules it belongs to (at least one)."""
+    clean = [m for m in dict.fromkeys(str(x).lower() for x in modules or []) if m in MODULES]
+    if not clean:
+        raise ValueError("Pick at least one module for this value.")
+    with _LOCK:
+        data = _read(strict=True)
+        data.setdefault("modules", {})[name] = clean
+        _write(data)
+    return clean
+
+
 def environments() -> list[str]:
     return sorted(_read().get("env", {}))
 
 
-def get_all(environment: str = "") -> dict:
+def get_all(environment: str = "", module: str | None = None) -> dict:
     """
     Every declared value, with provenance and a masked display form.
 
@@ -125,21 +156,21 @@ def get_all(environment: str = "") -> dict:
     out: dict[str, dict] = {}
 
     for name, value in (data.get("global") or {}).items():
-        if str(name).startswith("_"):
+        if str(name).startswith("_") or not _in_module(name, module, data):
             continue
-        out[name] = _entry(name, value, scope="global", environment="")
+        out[name] = _entry(name, value, scope="global", environment="", data=data)
 
     if environment:
         for name, value in (data.get("env", {}).get(environment) or {}).items():
-            if str(name).startswith("_"):
+            if str(name).startswith("_") or not _in_module(name, module, data):
                 continue
             # A per-environment value overrides a global of the same name: it is
             # the more specific statement about where you are pointing.
-            out[name] = _entry(name, value, scope="environment", environment=environment)
+            out[name] = _entry(name, value, scope="environment", environment=environment, data=data)
     return out
 
 
-def rows(environment: str = "") -> list:
+def rows(environment: str = "", module: str | None = None) -> list:
     """
     One entry per stored value, as a LIST rather than a name-keyed dict.
 
@@ -149,19 +180,19 @@ def rows(environment: str = "") -> list:
     to let you see through.
     """
     data = _read()
-    out = [_entry(n, v, scope="global", environment="")
+    out = [_entry(n, v, scope="global", environment="", data=data)
            for n, v in (data.get("global") or {}).items()
-           if not str(n).startswith("_")]
+           if not str(n).startswith("_") and _in_module(n, module, data)]
     envs = (list((data.get("env") or {}).keys()) if environment == "*"
             else ([environment] if environment else []))
     for env in envs:
-        out += [_entry(n, v, scope="environment", environment=env)
+        out += [_entry(n, v, scope="environment", environment=env, data=data)
                 for n, v in ((data.get("env", {}).get(env) or {}).items())
-                if not str(n).startswith("_")]
+                if not str(n).startswith("_") and _in_module(n, module, data)]
     return out
 
 
-def resolved(environment: str = "") -> dict:
+def resolved(environment: str = "", module: str | None = None) -> dict:
     """
     {name: value} for everything that actually HAS a value right now.
 
@@ -173,7 +204,7 @@ def resolved(environment: str = "") -> dict:
     real value later.
     """
     out: dict[str, str] = {}
-    for name, entry in get_all(environment).items():
+    for name, entry in get_all(environment, module).items():
         if entry.get("is_secret"):
             value = os.getenv(name.upper()) or os.getenv(name) or ""
         else:
@@ -183,7 +214,13 @@ def resolved(environment: str = "") -> dict:
     return out
 
 
-def _entry(name: str, value, scope: str, environment: str) -> dict:
+def _entry(name: str, value, scope: str, environment: str, data: dict | None = None) -> dict:
+    e = _entry_core(name, value, scope, environment)
+    e["modules"] = modules_of(name, data)
+    return e
+
+
+def _entry_core(name: str, value, scope: str, environment: str) -> dict:
     # Storage is refused only for true credentials. An OTP or a mobile number is
     # ordinary test data: stored here, masked on screen, masked in logs.
     secret = settings.is_credential_name(name)
@@ -199,7 +236,8 @@ def _entry(name: str, value, scope: str, environment: str) -> dict:
 
 
 def set_value(name: str, value: str, *, scope: str = "global",
-              environment: str = "") -> dict:
+              environment: str = "", modules: list[str] | None = None,
+              retag: bool = False) -> dict:
     """
     Declare or update one value.
 
@@ -215,6 +253,8 @@ def set_value(name: str, value: str, *, scope: str = "global",
 
     with _LOCK:
         data = _read(strict=True)
+        existed = clean in (data.get("global") or {}) or any(
+            clean in (b or {}) for b in (data.get("env") or {}).values())
         if settings.is_credential_name(clean):
             stored, note = "", ("Declared. Its value must come from .env — "
                                 "secrets are never written to this file.")
@@ -227,6 +267,11 @@ def set_value(name: str, value: str, *, scope: str = "global",
             data.setdefault("env", {}).setdefault(environment, {})[clean] = stored
         else:
             data.setdefault("global", {})[clean] = stored
+        tags = [m for m in dict.fromkeys(str(x).lower() for x in (modules or [])) if m in MODULES]
+        # A new value belongs to the module it is created in; an existing one keeps
+        # its tags unless they are being changed on purpose (Test Data screen).
+        if tags and (retag or not existed):
+            data.setdefault("modules", {})[clean] = tags
         _write(data)
 
     return {"name": clean, "scope": scope, "environment": environment,
@@ -245,11 +290,16 @@ def delete_value(name: str, *, scope: str = "global", environment: str = "") -> 
         if name not in bucket:
             return False
         del bucket[name]
+        still = name in (data.get("global") or {}) or any(
+            name in (b or {}) for b in (data.get("env") or {}).values())
+        if not still:
+            (data.get("modules") or {}).pop(name, None)
         _write(data)
     return True
 
 
-def suggestions(partial: str, environment: str = "", limit: int = 12) -> list[dict]:
+def suggestions(partial: str, environment: str = "", limit: int = 12,
+                module: str | None = None) -> list[dict]:
     """
     Values matching `partial`, by NAME or by the value itself.
 
@@ -260,7 +310,7 @@ def suggestions(partial: str, environment: str = "", limit: int = 12) -> list[di
     """
     p = (partial or "").strip().lower()
     rows: list[dict] = []
-    for name, e in get_all(environment).items():
+    for name, e in get_all(environment, module).items():
         if p and p not in name.lower() and not (e["value"] and e["value"].lower().startswith(p)):
             continue
         rows.append({"name": name,

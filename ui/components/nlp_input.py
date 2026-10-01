@@ -175,7 +175,7 @@ class NlpInput:
         except api.ApiError as e:
             self.hint.set_text(f"Locator list unavailable: {e.detail[:60]}")
         try:
-            self._datasets = {d["name"]: d.get("columns", []) for d in await api.datasets()}
+            self._datasets = {d["name"]: d.get("columns", []) for d in await api.datasets(self.platform)}
         except api.ApiError:
             self._datasets = {}
         if self.context:

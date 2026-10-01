@@ -33,7 +33,7 @@ from ui.theme import MAPPING_COLOR, MAPPING_HINT, TYPOGRAPHY, status_color
 ICON = {
     "pass": "✅", "passed": "✅", "done": "✅",
     "fail": "❌", "failed": "❌",
-    "running": "▶", "skipped": "⏭", "stopped": "⏹", "pending": "⏳",
+    "running": "▶", "skipped": "⊘", "stopped": "⏹", "pending": "⏳",
 }
 _SIZE = {"sm": ("0.68rem", "1px 7px"), "md": ("0.75rem", "2px 10px"),
          "lg": ("0.875rem", "4px 14px")}

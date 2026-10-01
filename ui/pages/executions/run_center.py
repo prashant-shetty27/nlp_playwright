@@ -367,7 +367,7 @@ class RunCenter:
             return
 
         try:
-            store = await api.testdata("")
+            store = await api.testdata("", self.platform)
             self.provided = store.get("values", {}) or {}
         except api.ApiError:
             self.provided = {}

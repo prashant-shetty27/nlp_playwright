@@ -141,7 +141,8 @@ def _now() -> str:
     return _dt.datetime.now().isoformat(timespec="seconds")
 
 
-def save(name: str, headings: list[str], rows: list[list[str]], user: str = "") -> dict:
+def save(name: str, headings: list[str], rows: list[list[str]], user: str = "",
+         module: str = "") -> dict:
     name = clean_name(name)
     if not name:
         raise DatasetError("A data set needs a name.")
@@ -152,6 +153,8 @@ def save(name: str, headings: list[str], rows: list[list[str]], user: str = "") 
             w = csv.writer(f)
             w.writerow(headings)
             w.writerows(rows)
+        if module and not meta.get("modules"):
+            meta["modules"] = [module]       # belongs to the module it was uploaded in
         meta.setdefault("created_by", user or "")
         meta.setdefault("created_at", _now())
         meta["updated_by"] = user or ""
@@ -204,18 +207,38 @@ def info(name: str) -> dict:
     meta = _read_meta(clean_name(name))
     return {"name": clean_name(name), "headings": headings,
             "columns": [column_name(h) for h in headings], "row_count": len(body),
+            "modules": meta.get("modules") or [],          # [] = every module
             **{k: meta.get(k, "") for k in ("created_by", "created_at",
                                              "updated_by", "updated_at")}}
 
 
-def all_info() -> list[dict]:
+def all_info(module: str = "") -> list[dict]:
+    """Every data set — only the given module's when one is named."""
     out = []
     for n in names():
         try:
-            out.append(info(n))
+            i = info(n)
         except (OSError, DatasetError):
             continue
+        if module and i["modules"] and module not in i["modules"]:
+            continue
+        out.append(i)
     return out
+
+
+def set_modules(name: str, modules: list[str]) -> list[str]:
+    key = clean_name(name)
+    if not exists(key):
+        raise DatasetError(f"No data set called '{name}'.")
+    clean = [m for m in dict.fromkeys(str(x).lower() for x in modules or []) if m]
+    if not clean:
+        raise DatasetError("Pick at least one module.")
+    with _LOCK:
+        meta = _read_meta(key)
+        meta["modules"] = clean
+        with open(_meta_path(key), "w", encoding="utf-8") as f:
+            json.dump(meta, f, indent=2)
+    return clean
 
 
 def delete(name: str) -> None:

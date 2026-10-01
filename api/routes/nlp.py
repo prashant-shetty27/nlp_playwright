@@ -238,6 +238,7 @@ def segment_steps(body: SegmentBatchRequest):
 class VariablesRequest(BaseModel):
     steps: list[str]
     environment: str = ""
+    platform: str = ""          # module: only Test Data tagged for it counts
 
 
 @router.post("/variables")
@@ -282,7 +283,7 @@ def variables(body: VariablesRequest):
     try:
         from execution.test_data import get_all
 
-        stored = sorted(get_all(body.environment))
+        stored = sorted(get_all(body.environment, body.platform or None))
     except Exception:  # noqa: BLE001
         stored = []
 

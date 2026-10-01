@@ -1042,13 +1042,13 @@ class TestCasesPage:
             self._locator_details = {}
             self._locators_elsewhere = {}
         try:
-            self._vars = await api.step_variables(self.steps)
+            self._vars = await api.step_variables(self.steps, platform=self.platform)
         except api.ApiError:
             self._vars = {"defined": {}, "stored": [], "unresolved": []}
         # One request for every row's segmentation instead of one per row.
         await api.prefetch_segments([st for st in self.steps if not st.startswith("#")])
         try:
-            self._dataset_cols = {d["name"]: d.get("columns", []) for d in await api.datasets()}
+            self._dataset_cols = {d["name"]: d.get("columns", []) for d in await api.datasets(self.platform)}
         except api.ApiError:
             self._dataset_cols = {}
         # Step groups, so a `call <name>` row can show what it expands to.

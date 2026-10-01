@@ -520,7 +520,7 @@ class PlanRunPage:
                               (max(int(h["total"]) - p - f, 0), COLORS["border"])], "6px")
                     elif it.get("passed_steps") is not None:
                         p, f, s = (int(it.get(k) or 0) for k in ("passed_steps", "failed_steps", "skipped_steps"))
-                        muted(f"{p}✓  {f}✗  {s}⏭  of {p + f + s}")
+                        muted(f"{p}✓  {f}✗  {s}⊘  of {p + f + s}")
                         _bar([(p, COLORS["success"]), (f, COLORS["danger"]), (s, COLORS["text_muted"])], "6px")
                     else:
                         muted("—")

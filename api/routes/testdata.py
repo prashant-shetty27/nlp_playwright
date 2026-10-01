@@ -24,6 +24,10 @@ class ValueBody(BaseModel):
     #: "global" — every platform and environment. "environment" — this one only.
     scope: str = "global"
     environment: str = ""
+    #: Modules this value belongs to; a new value defaults to the module it is created in.
+    modules: list[str] = []
+    #: True when `modules` is a deliberate re-tag of an existing value.
+    retag: bool = False
     force: bool = False
     #: True when changing the value of a name the caller knows exists: the name
     #: is then not reported as a clash, only a value some OTHER name already has.
@@ -31,7 +35,7 @@ class ValueBody(BaseModel):
 
 
 @router.get("")
-def list_values(environment: str = Query("")):
+def list_values(environment: str = Query(""), module: str = Query("")):
     """
     Everything stored. `environment="*"` spans every environment.
 
@@ -42,20 +46,21 @@ def list_values(environment: str = Query("")):
     resolved_for = "" if environment == "*" else environment
     return {"environments": test_data.environments(),
             "environment": environment,
-            "values": test_data.get_all(resolved_for),
-            "rows": test_data.rows(environment)}
+            "values": test_data.get_all(resolved_for, module or None),
+            "rows": test_data.rows(environment, module or None),
+            "modules": list(test_data.MODULES)}
 
 
 @router.get("/suggest")
 def suggest_values(partial: str = Query(""), environment: str = Query(""),
-                   limit: int = Query(12, ge=1, le=50)):
+                   limit: int = Query(12, ge=1, le=50), module: str = Query("")):
     """
     Values matching `partial`, by name OR by the value itself.
 
     Matching the value is what lets an author type "93" and pick the test mobile
     without remembering its name. Only the masked form comes back.
     """
-    return {"suggestions": test_data.suggestions(partial, environment, limit)}
+    return {"suggestions": test_data.suggestions(partial, environment, limit, module or None)}
 
 
 @router.put("", status_code=200)
@@ -75,7 +80,21 @@ def put_value(body: ValueBody):
                     "hint": "Resend with force=true to replace it deliberately."})
     try:
         return test_data.set_value(body.name, body.value,
-                                   scope=body.scope, environment=body.environment)
+                                   scope=body.scope, environment=body.environment,
+                                   modules=body.modules, retag=body.retag)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
+
+
+class ModulesBody(BaseModel):
+    modules: list[str]
+
+
+@router.put("/{name}/modules")
+def put_modules(name: str, body: ModulesBody):
+    """Which modules a value belongs to (shown, suggested and supplied only there)."""
+    try:
+        return {"name": name, "modules": test_data.set_modules(name, body.modules)}
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e)) from e
 
@@ -114,9 +133,17 @@ from core import datasets  # noqa: E402
 
 
 @router.get("/datasets")
-def list_datasets():
-    """Every uploaded table: name, column step-names, row count, creator / last editor."""
-    return {"datasets": datasets.all_info()}
+def list_datasets(module: str = Query("")):
+    """Uploaded tables (only this module's when given): name, columns, rows, creator / editor."""
+    return {"datasets": datasets.all_info(module)}
+
+
+@router.put("/datasets/{name}/modules")
+def put_dataset_modules(name: str, body: ModulesBody):
+    try:
+        return {"name": name, "modules": datasets.set_modules(name, body.modules)}
+    except datasets.DatasetError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
 
 
 @router.get("/datasets/{name}")
@@ -130,7 +157,7 @@ def get_dataset(name: str, limit: int = Query(200, ge=1, le=datasets.MAX_ROWS)):
 
 @router.post("/datasets/upload")
 async def upload_dataset(file: UploadFile = File(...), replace: bool = Query(False),
-                         user: str = Depends(acting_user)):
+                         module: str = Query(""), user: str = Depends(acting_user)):
     """
     A .xlsx / .csv file → one data set per sheet. An existing name is only
     overwritten with replace=true, so two people cannot silently replace each
@@ -149,7 +176,7 @@ async def upload_dataset(file: UploadFile = File(...), replace: bool = Query(Fal
             "message": f"A data set called {', '.join(clashes)} already exists.",
             "why": "Uploading again replaces its rows for every test that uses it.",
             "names": clashes})
-    saved = [datasets.save(n, h, r, user=user) for n, (h, r) in tables.items()]
+    saved = [datasets.save(n, h, r, user=user, module=module) for n, (h, r) in tables.items()]
     return {"saved": saved}
 
 

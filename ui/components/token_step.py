@@ -335,7 +335,7 @@ class TokenStep:
                 if not ref_name:
                     return
                 try:
-                    info = (await api.testdata("")).get("values", {}).get(ref_name)
+                    info = (await api.testdata("", self.platform)).get("values", {}).get(ref_name)
                 except api.ApiError:
                     info = None
                 if not info:
@@ -435,7 +435,7 @@ class TokenStep:
                 # of the flow file, the report and the screenshot.
                 if role in ("text", "number", "url", "variable"):
                     try:
-                        for g in await api.testdata_suggest(typed, limit=8):
+                        for g in await api.testdata_suggest(typed, limit=8, module=self.platform):
                             note = f"{g['display']}  ({g['tag']})"
                             if g.get("is_secret") and not g.get("defined"):
                                 note = f"{g['display']} — set it in .env  ({g['tag']})"
@@ -509,7 +509,7 @@ class TokenStep:
     async def _stored_name_for(self, literal: str) -> str:
         """The Test Data name whose value equals `literal`, or ""."""
         try:
-            values = (await api.testdata("")).get("values", {}) or {}
+            values = (await api.testdata("", self.platform)).get("values", {}) or {}
         except api.ApiError:
             return ""
         for n, entry in values.items():
@@ -579,7 +579,8 @@ class TokenStep:
                     return
                 try:
                     await api.set_testdata(name, new_value, scope=scope,
-                                           environment=env, updating=True, force=force)
+                                           environment=env, updating=True, force=force,
+                                           modules=[self.platform])
                 except api.ApiError as e:
                     detail = e.detail
                     if e.status == 409 and isinstance(detail, dict) and not force:

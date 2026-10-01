@@ -326,7 +326,10 @@ class LiveView:
                 colour = {"passed": COLORS["success"], "failed": COLORS["danger"],
                           "running": COLORS["primary"]}.get(st, COLORS["text_muted"])
                 icon = {"passed": "✅", "failed": "❌", "running": "🔄",
-                        "skipped": "⏭"}.get(st, "⏳")
+                        "skipped": ""}.get(st, "⏳")
+                # Not run (an earlier step failed / turned off) is not a failure:
+                # greyed out with a "not run" sign, never red or a play-like icon.
+                skipped = st == "skipped"
                 has_frame = bool(entry.get("screenshot"))
                 row_el = ui.column().classes(
                     "w-full gap-0" + (" cursor-pointer" if has_frame else "")) \
@@ -340,7 +343,12 @@ class LiveView:
                 with row_el:
                     with ui.row().classes("w-full items-center gap-2") \
                             .style("padding:5px 8px"):
-                        ui.label(icon)
+                        if skipped:
+                            ui.icon("remove_circle_outline").style(
+                                f"color:{COLORS['text_muted']}; font-size:1.1rem; opacity:.7") \
+                                .tooltip("Not run")
+                        else:
+                            ui.label(icon)
                         ui.label(str(i)).style(
                             f"width:1.6rem; text-align:right;"
                             f"color:{COLORS['text_muted']};"
@@ -349,8 +357,13 @@ class LiveView:
                         ui.label(entry.get("step", "")).style(
                             f"font-family:{TYPOGRAPHY['mono']};"
                             f"font-size:{TYPOGRAPHY['size_sm']}; color:{colour};"
-                            f"word-break:break-all")
-                    if entry.get("error"):
+                            f"word-break:break-all" + ("; opacity:.6" if skipped else ""))
+                    if entry.get("error") and skipped:
+                        ui.label(entry["error"]).style(
+                            f"padding:0 8px 6px 3.2rem; color:{COLORS['text_muted']};"
+                            f"font-style:italic; font-size:{TYPOGRAPHY['size_xs']};"
+                            f"opacity:.8")
+                    elif entry.get("error"):
                         # The failure reason is the reason this page exists — shown
                         # inline, not hidden behind a click.
                         ui.label(entry["error"]).style(
