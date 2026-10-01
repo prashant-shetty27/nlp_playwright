@@ -28,6 +28,9 @@ OTHER = "__other__"
 async def open_step_form(step: str, platform: str, index: int,
                          on_save: Callable[[str], None]) -> bool:
     """Open the edit dialog for `step`. Always opens; returns True."""
+    # "Ignore result" lives in this dialog (a switch + wait), not on every row.
+    from execution import step_flags
+    ign_on, ign_wait, step = step_flags.split(step)
     try:
         form = (await api.step_form(step) or {}).get("form")
     except api.ApiError:
@@ -202,6 +205,20 @@ async def open_step_form(step: str, platform: str, index: int,
             show_mode()
         raw_toggle.on_value_change(toggled)
 
+        ui.separator().style("margin-top:4px")
+        with ui.row().classes("w-full items-center no-wrap gap-3"):
+            ign = ui.switch("Ignore result", value=ign_on).props("dense color=warning")
+            ign_sel = ui.select({3.0: "wait 3 s", 5.0: "wait 5 s", 10.0: "wait 10 s",
+                                 15.0: "wait 15 s", 30.0: "wait 30 s"},
+                                value=ign_wait if ign_on and ign_wait in (3.0, 5.0, 10.0, 15.0, 30.0)
+                                else step_flags.DEFAULT_WAIT_S) \
+                .props("dense outlined options-dense").style("width:8rem")
+            ign_sel.bind_visibility_from(ign, "value")
+        ui.label("If this step fails, the test carries on — the step shows amber "
+                 "'Ignored' (Testsigma's 'Ignore step result'). For popups that may not "
+                 "appear; the wait keeps a missing popup from costing 15 s.").style(
+            f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}")
+
         with ui.row().classes("w-full justify-end gap-2").style("margin-top:6px"):
             ui.button("Cancel", on_click=dlg.close).props("flat")
 
@@ -221,7 +238,7 @@ async def open_step_form(step: str, platform: str, index: int,
                     if not text:
                         return
                 dlg.close()
-                on_save(text)
+                on_save(step_flags.join(text, bool(ign.value), float(ign_sel.value or 5)))
             ui.button("Save step", icon="done", on_click=save).props("unelevated")
 
     build_fields()

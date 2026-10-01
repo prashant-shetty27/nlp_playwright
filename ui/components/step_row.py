@@ -336,12 +336,6 @@ def step_row(index: int, nlp_text: str, *, action: str = "", target: str = "",
                     .on("click", lambda i=index: on_add(i, "below")) \
                     .tooltip("Insert a new step BELOW this one")
 
-        if on_edit and not group_name and not ignore:
-            ui.button(icon="warning_amber").props("flat dense size=xs") \
-                .style(f"color:{COLORS['text_muted']}") \
-                .on("click", lambda: _set_ignore(True, step_flags.DEFAULT_WAIT_S)) \
-                .tooltip("Ignore result — if this step fails, carry on (like Testsigma's "
-                         "'Ignore step result'). For popups that may not appear.")
         if on_edit and not group_name:
             ui.button(icon="edit").props("flat dense size=xs") \
                 .on("click", lambda: start_edit_form()) \
