@@ -44,7 +44,7 @@ async def new_test_case_dialog(platform: str, on_created: Callable, folder: str 
         ui.label("New Test Case").style(
             f"font-size:{TYPOGRAPHY['size_lg']}; font-weight:{TYPOGRAPHY['weight_bold']}")
         # Where it is saved — asked up front, for every way of creating one.
-        picker = FolderPicker(folder)
+        picker = FolderPicker(folder, platform)
         with ui.tabs().classes("w-full") as tabs:
             t_blank = ui.tab("Blank", icon="edit")
             t_sheet = ui.tab("From spreadsheet", icon="table_view")

@@ -326,7 +326,7 @@ class DraftPage:
             if not self.extend_flow:
                 from ui.components.folder_picker import FolderPicker
                 with ui.column().classes("w-full gap-0").style("margin-top:8px; max-width:40rem"):
-                    self.picker = FolderPicker(self.folder)
+                    self.picker = FolderPicker(self.folder, self.platform)
                 ui.timer(0.01, self.picker.load, once=True)
 
             # generate

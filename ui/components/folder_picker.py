@@ -15,7 +15,8 @@ from ui.theme import COLORS, TYPOGRAPHY
 
 
 class FolderPicker:
-    def __init__(self, value: str = "") -> None:
+    def __init__(self, value: str = "", module: str = "") -> None:
+        self.module = module            # only this module's folders; new ones belong to it
         self.folders: list[str] = []
         with ui.row().classes("w-full items-center gap-2 no-wrap"):
             self.select = ui.select({value: value} if value else {}, value=value or None,
@@ -28,7 +29,7 @@ class FolderPicker:
 
     async def load(self) -> None:
         try:
-            self.folders = sorted((await api.folders()).get("folders", []))
+            self.folders = sorted((await api.folders(self.module)).get("folders", []))
         except api.ApiError:
             self.folders = []
         current = self.select.value
@@ -65,7 +66,7 @@ class FolderPicker:
                     return
                 path = f"{parent.value}/{n}" if parent.value else n
                 try:
-                    path = (await api.create_folder(path)).get("path", path)
+                    path = (await api.create_folder(path, self.module)).get("path", path)
                 except api.ApiError as e:
                     ui.notify(str(e.detail), type="negative")
                     return

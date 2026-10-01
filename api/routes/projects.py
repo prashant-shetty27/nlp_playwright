@@ -337,6 +337,53 @@ def rename_project(name: str, body: RenameBody, user: str = Depends(acting_user)
         raise HTTPException(status_code=409, detail=str(e)) from e
 
 
+class CloneBody(BaseModel):
+    new_name: str = ""
+    #: Folder for the copy; None = the same folder as the original.
+    folder: str | None = None
+
+
+@router.post("/{name}/clone", status_code=201)
+def clone_project(name: str, body: CloneBody, user: str = Depends(acting_user)):
+    """
+    Copy a test case under a new name — steps, header (platform, tags, story),
+    switched-off steps and its element map — into a folder (default: the
+    original's). The copy is a separate test case: editing one never changes
+    the other, and it is in no suite until you add it.
+    """
+    require(user, "write")
+    src = _flow_path_or_422(name)
+    if not os.path.exists(src):
+        raise HTTPException(status_code=404, detail=f"Test case '{name}' not found.")
+    stem = os.path.basename(src)[:-len(".flow")]
+    wanted = (body.new_name or "").strip() or f"{stem}_copy"
+    dst = _flow_path_or_422(wanted)
+    if os.path.exists(dst):
+        raise HTTPException(status_code=409, detail=f"A test case called "
+                            f"'{os.path.basename(dst)[:-len('.flow')]}' already exists — pick another name.")
+    new = os.path.basename(dst)[:-len(".flow")]
+    with open(src, encoding="utf-8") as f:
+        lines = f.read().splitlines()
+    # Say where it came from; a Testsigma import line belongs to the original only.
+    lines = [ln for ln in lines if not ln.startswith("# Imported from Testsigma")]
+    head = 0
+    while head < len(lines) and lines[head].startswith("#") and not lines[head].startswith("# OFF"):
+        head += 1
+    lines.insert(head, f"# Cloned from: {stem}")
+    with open(dst, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines).rstrip("\n") + "\n")
+    side_src, side_dst = src[:-len(".flow")] + ".map.json", dst[:-len(".flow")] + ".map.json"
+    if os.path.exists(side_src):
+        import shutil
+        shutil.copyfile(side_src, side_dst)
+    audit.touch(new, user, created=True)
+    from core import folders
+    target = folders.folder_of(stem) if body.folder is None else body.folder
+    if target:
+        folders.assign([new], target)
+    return {"name": new, "from": stem, "folder": target or "Unfiled"}
+
+
 @router.delete("/{name}", status_code=200)
 def delete_project(name: str, user: str = Depends(acting_user)):
     """Delete a .flow project file."""

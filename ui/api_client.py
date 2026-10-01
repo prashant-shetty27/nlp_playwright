@@ -702,12 +702,17 @@ async def testsigma_import(run_id: int, test_case_ids: list[int], overwrite: boo
 
 
 # ── Test case folders ──────────────────────────────────────────────────────────
-async def folders() -> dict:
-    return await _call("GET", "/folders")
+async def clone_project(name: str, new_name: str = "", folder: str | None = None) -> dict:
+    return await _call("POST", f"/projects/{name}/clone",
+                       json={"new_name": new_name, "folder": folder})
 
 
-async def create_folder(path: str) -> dict:
-    return await _call("POST", "/folders", json={"path": path})
+async def folders(module: str = "") -> dict:
+    return await _call("GET", "/folders", params={"module": module} if module else None)
+
+
+async def create_folder(path: str, module: str = "") -> dict:
+    return await _call("POST", "/folders", json={"path": path, "module": module})
 
 
 async def rename_folder(path: str, new_name: str) -> dict:

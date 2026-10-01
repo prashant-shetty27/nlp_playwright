@@ -19,6 +19,7 @@ router = APIRouter(prefix="/folders", tags=["folders"])
 
 class PathBody(BaseModel):
     path: str
+    module: str = ""
 
 
 class RenameBody(BaseModel):
@@ -39,13 +40,14 @@ def _run(fn, *a):
 
 
 @router.get("")
-def list_folders():
-    return folders.get()
+def list_folders(module: str = ""):
+    """The folder tree — only what belongs to `module` when given."""
+    return folders.visible(module) if module else folders.get()
 
 
 @router.post("", status_code=201)
 def create_folder(body: PathBody):
-    return {"path": _run(folders.create, body.path)}
+    return {"path": _run(folders.create, body.path, body.module)}
 
 
 @router.post("/rename")

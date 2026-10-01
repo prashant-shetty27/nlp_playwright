@@ -81,7 +81,38 @@ def get() -> dict:
     return _load()
 
 
-def create(path: str) -> str:
+def visible(module: str) -> dict:
+    """
+    The tree as one module sees it. Whatever is created in a module stays in it:
+    a folder shows in a module when it was created there, holds that module's
+    test cases (here or below), or is an empty, untagged folder (shared).
+    Parents of a shown folder are shown so the tree stays whole.
+    """
+    d = _load()
+    if not module:
+        return d
+    try:
+        from api.routes.projects import _platform_of
+    except Exception:  # noqa: BLE001
+        return d
+    mods = d.get("modules") or {}
+    plat = {t: _platform_of(t) for t in d["assign"]}
+
+    def under(f: str, t_folder: str) -> bool:
+        return t_folder == f or t_folder.startswith(f + "/")
+    keep: set[str] = set()
+    for f in d["folders"]:
+        mine = any(under(f, tf) and plat.get(t) == module for t, tf in d["assign"].items())
+        anyone = any(under(f, tf) for tf in d["assign"].values())
+        tags = mods.get(f) or []
+        if mine or module in tags or (not tags and not anyone):
+            keep.update(_with_parents(f))
+    folders_ = [f for f in d["folders"] if f in keep]
+    return {**d, "folders": folders_,
+            "assign": {t: f for t, f in d["assign"].items() if plat.get(t) == module}}
+
+
+def create(path: str, module: str = "") -> str:
     path = clean_path(path)
     with _lock:
         d = _load()
@@ -96,6 +127,12 @@ def create(path: str) -> str:
             full = "/".join(out)
             if not _find(d["folders"], full):
                 d["folders"].append(full)
+                if module:                       # belongs to the module it was created in
+                    d.setdefault("modules", {})[full] = [module]
+            elif module:
+                tags = d.setdefault("modules", {}).setdefault(full, [])
+                if tags and module not in tags:
+                    tags.append(module)
         _save(d)
         return "/".join(out)
 
@@ -118,6 +155,7 @@ def rename(old: str, new_name: str) -> str:
             return new + p[len(old):] if p == old or p.startswith(old + "/") else p
         d["folders"] = [swap(p) for p in d["folders"]]
         d["assign"] = {t: swap(p) for t, p in d["assign"].items()}
+        d["modules"] = {swap(p): m for p, m in (d.get("modules") or {}).items()}
         _save(d)
         return new
 
@@ -152,6 +190,7 @@ def move(path: str, new_parent: str) -> str:
             return new + p[len(old):] if p == old or p.startswith(old + "/") else p
         d["folders"] = [swap(p) for p in d["folders"]]
         d["assign"] = {t: swap(p) for t, p in d["assign"].items()}
+        d["modules"] = {swap(p): m for p, m in (d.get("modules") or {}).items()}
         _save(d)
         return new
 
@@ -167,6 +206,7 @@ def delete(path: str) -> dict:
         parent = "/".join(path.split("/")[:-1])
         gone = [p for p in d["folders"] if p == path or p.startswith(path + "/")]
         d["folders"] = [p for p in d["folders"] if p not in gone]
+        d["modules"] = {p: m for p, m in (d.get("modules") or {}).items() if p not in gone}
         moved = 0
         for t, p in list(d["assign"].items()):
             if p in gone:
@@ -179,9 +219,9 @@ def delete(path: str) -> dict:
         return {"deleted": gone, "moved_tests": moved, "to": parent or "Unfiled"}
 
 
-def assign(tests: list[str], folder: str) -> dict:
+def assign(tests: list[str], folder: str, module: str = "") -> dict:
     """Put test cases into a folder ('' = Unfiled). The folder is created if needed."""
-    folder = create(folder) if str(folder or "").strip() else ""
+    folder = create(folder, module) if str(folder or "").strip() else ""
     with _lock:
         d = _load()
         for t in tests:

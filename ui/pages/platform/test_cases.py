@@ -118,7 +118,7 @@ class TestCasesPage:
             self.projects = sorted(
                 p if isinstance(p, str) else p.get("name", "") for p in raw)
             try:
-                self.folder_data = await api.folders()
+                self.folder_data = await api.folders(self.platform)
             except api.ApiError:
                 self.folder_data = {"folders": [], "assign": {}}
         except api.ApiError as e:
@@ -317,6 +317,52 @@ class TestCasesPage:
                 ui.button("Cancel", on_click=dialog.close).props("flat")
                 ui.button("Delete", on_click=do_delete) \
                     .props("unelevated color=negative")
+        dialog.open()
+
+    def _clone_dialog(self, name: str) -> None:
+        """Copy a test case under a new name into a folder (default: the same one)."""
+        if not name:
+            return
+        from ui.components.folder_picker import FolderPicker
+        existing = set(self.projects)
+        base = f"{name}_copy"
+        new_default, n = base, 2
+        while new_default in existing:
+            new_default, n = f"{base}{n}", n + 1
+        here = self.folder_data.get("assign", {}).get(name, "")
+        dialog = ui.dialog().props("persistent")
+        with dialog, ui.card().style("width:32rem"):
+            ui.label(f"Clone {name}").style(
+                f"font-size:{TYPOGRAPHY['size_lg']}; font-weight:{TYPOGRAPHY['weight_bold']}")
+            box = ui.input("Name of the copy", value=new_default) \
+                .props("outlined dense autofocus").classes("w-full")
+            picker = FolderPicker(here, self.platform)
+            ui.timer(0.05, picker.load, once=True)
+            if self.dirty and name == self.selected:
+                ui.label("Unsaved changes are not copied — save first if you want them in the clone.") \
+                    .style(f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['warning']}")
+            ui.label("The copy has the same steps, header and switched-off steps. It is a separate "
+                     "test case — editing one never changes the other — and is in no suite yet.") \
+                .style(f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}")
+            note = ui.label().style(f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['danger']}")
+
+            async def go() -> None:
+                folder = picker.value
+                try:
+                    res = await api.clone_project(name, (box.value or "").strip(), folder)
+                except api.ApiError as e:
+                    note.set_text(str(e.detail)[:220])
+                    return
+                dialog.close()
+                ui.notify(f"Cloned as {res['name']} in {res['folder']}", type="positive")
+                await self.load()
+                self.render_list()
+                self.open_project_guarded(res["name"])
+
+            box.on("keydown.enter", go)
+            with ui.row().classes("w-full justify-end gap-2"):
+                ui.button("Cancel", on_click=dialog.close).props("flat")
+                ui.button("Clone", icon="content_copy", on_click=go).props("unelevated")
         dialog.open()
 
     def rename_dialog(self) -> None:
@@ -598,6 +644,8 @@ class TestCasesPage:
                 with ui.button(icon="more_vert").props("flat dense round size=xs") \
                         .on("click.stop", lambda: None):
                     with ui.menu():
+                        ui.menu_item("Clone…",
+                                     on_click=lambda n=name: self._clone_dialog(n))
                         ui.menu_item("Move to folder…",
                                      on_click=lambda n=name: self._move_dialog([n]))
                         ui.menu_item("Add to suite…",
@@ -641,7 +689,7 @@ class TestCasesPage:
                         if self.current_folder == path or self.current_folder.startswith(path + "/"):
                             self.current_folder = new + self.current_folder[len(path):]
                     else:
-                        res = await api.create_folder(f"{path}/{val}" if path else val)
+                        res = await api.create_folder(f"{path}/{val}" if path else val, self.platform)
                         new = res.get("path", "")
                         parts = new.split("/")
                         self.open_folders.update("/".join(parts[:i]) for i in range(1, len(parts) + 1))
@@ -1072,10 +1120,13 @@ class TestCasesPage:
                             f"font-family:{TYPOGRAPHY['mono']};"
                             "white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"
                             "min-width:0").tooltip(self.selected or "")
-                        ui.button(icon="drive_file_rename_outline",
-                                  on_click=self.rename_dialog) \
-                            .props("flat dense size=sm").style("flex-shrink:0") \
-                            .tooltip("Rename this test case")
+                        with ui.button(icon="drive_file_rename_outline") \
+                                .props("flat dense size=sm").style("flex-shrink:0") \
+                                .tooltip("Rename or clone this test case"):
+                            with ui.menu():
+                                ui.menu_item("Rename…", on_click=self.rename_dialog)
+                                ui.menu_item("Clone…",
+                                             on_click=lambda: self._clone_dialog(self.selected))
                         if self.dirty:
                             with ui.row().classes("items-center gap-1 no-wrap") \
                                     .props('data-unsaved="1"').style(
