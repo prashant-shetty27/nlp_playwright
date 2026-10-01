@@ -329,6 +329,8 @@ def main() -> None:
     # the 3 s default a Wi-Fi blip or a closed lid dropped the page and its edits.
     ui.run_with(fastapi_app, title="Codeless Automation", favicon="🧪",
                 storage_secret=_session_secret(), reconnect_timeout=120)
+    # Links (Slack / PDF / share-url) describe the address actually served.
+    os.environ["UI_HOST"], os.environ["UI_PORT"] = args.host, str(args.port)
     import uvicorn
     uvicorn.run(fastapi_app, host=args.host, port=args.port, log_level="info",
                 proxy_headers=False)

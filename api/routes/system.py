@@ -129,6 +129,15 @@ def _current_port() -> int:
 
 
 def _current_host() -> str:
+    # A UI_HOST changed in .env since this process started takes effect on
+    # restart (e.g. putting the portal on the office network).
+    try:
+        from dotenv import dotenv_values
+        fresh = (dotenv_values(os.path.join(_project_root(), ".env")).get("UI_HOST") or "").strip()
+        if fresh:
+            return fresh
+    except Exception:  # noqa: BLE001
+        pass
     argv = sys.argv
     for i, a in enumerate(argv):
         if a == "--host" and i + 1 < len(argv):
