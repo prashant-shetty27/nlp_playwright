@@ -318,6 +318,43 @@ async def render_edit(plan_id: str = "") -> None:
                   "Safari iPhone run the whole suite; 'positive cases only' browsers run just the test "
                   "cases tagged smoke / sanity (their '# Tags:' line). Website test cases ignore this.")
 
+            # Fill these settings from a saved run configuration (Run Center 💾).
+            cfg_sel = ui.select({"": "—"}, value="", label="Fill from a saved run configuration") \
+                .props("outlined dense").style("min-width:22rem")
+            _cfgs: dict = {}
+
+            async def _fill_cfgs(_=None) -> None:
+                mods = {_suite_platform.get(sid, "") for sid in (chosen.value or [])} - {""} \
+                    or {"mobilesite", "website"}
+                _cfgs.clear()
+                for m in sorted(mods):
+                    try:
+                        for c in await api.run_configs(m):
+                            _cfgs[c["id"]] = c
+                    except api.ApiError:
+                        pass
+                cfg_sel.set_options({"": "—", **{k: f"{c['name']}  ({c['module']}) — {c.get('summary', '')}"
+                                                 for k, c in _cfgs.items()}}, value="")
+
+            def _apply_cfg(e) -> None:
+                c = _cfgs.get(e.value or "")
+                if not c:
+                    return
+                st = c.get("settings") or {}
+                headless.value = bool(st.get("headless", headless.value))
+                stop_step.value = bool(st.get("stop_on_failure", stop_step.value))
+                if st.get("screenshot_mode") in (shots.options or {}):
+                    shots.value = st["screenshot_mode"]
+                if (st.get("site_env") or "") in (site_env_sel.options or {}):
+                    site_env_sel.value = st.get("site_env") or ""
+                if st.get("browser_identity") in DEVICE_PROFILES:
+                    devices.value = [st["browser_identity"]]
+                ui.notify(f"Settings filled from '{c['name']}' — save the plan to keep them",
+                          type="positive")
+            cfg_sel.on_value_change(_apply_cfg)
+            ui.timer(0.2, _fill_cfgs, once=True)
+            chosen.on_value_change(_fill_cfgs)
+
             def on_type(e) -> None:
                 d = RUN_TYPE_DEFAULTS.get(e.value) or {}
                 type_help.set_text(RUN_TYPE_HELP[e.value][1])

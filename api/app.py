@@ -127,6 +127,8 @@ from api.routes import users as _users_routes  # noqa: E402
 app.include_router(_users_routes.router)
 from api.routes import suites_plans as _sp_routes  # noqa: E402
 app.include_router(_sp_routes.router)
+from api.routes import run_configs as _rc_routes  # noqa: E402
+app.include_router(_rc_routes.router, dependencies=[Depends(need("run", reads="read"))])
 from api.routes import testsigma as _ts_routes  # noqa: E402
 app.include_router(_ts_routes.router, dependencies=[Depends(need("admin"))])
 

@@ -64,3 +64,4 @@ _handover/
 _samples/
 data/jira_logins.json
 data/raised_issues.json
+data/run_configs.json

@@ -707,6 +707,21 @@ async def clone_project(name: str, new_name: str = "", folder: str | None = None
                        json={"new_name": new_name, "folder": folder})
 
 
+async def run_configs(module: str) -> list[dict]:
+    return (await _call("GET", "/run-configs", params={"module": module})).get("configs", [])
+
+
+async def save_run_config(name: str, module: str, settings: dict, shared: bool = False,
+                          cid: str = "") -> dict:
+    return await _call("POST", "/run-configs", json={"name": name, "module": module,
+                                                    "settings": settings, "shared": shared,
+                                                    "id": cid})
+
+
+async def delete_run_config(cid: str) -> dict:
+    return await _call("DELETE", f"/run-configs/{cid}")
+
+
 async def folders(module: str = "") -> dict:
     return await _call("GET", "/folders", params={"module": module} if module else None)
 

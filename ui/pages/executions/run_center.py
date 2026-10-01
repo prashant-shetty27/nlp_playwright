@@ -135,6 +135,8 @@ class RunCenter:
     def _set_platform(self, p: str) -> None:
         self.platform = p
         self._render_right()
+        if getattr(self, "config_select", None) is not None:
+            ui.timer(0.02, lambda: self._load_configs(""), once=True)
         # _render_right rebuilds the panel from scratch, placeholder and all, so
         # the flow's fields have to be asked for again — otherwise switching
         # platform emptied the form while the flow stayed selected.
@@ -166,6 +168,22 @@ class RunCenter:
             ui.separator()
             ui.label("How to run it").style(
                 f"font-weight:{TYPOGRAPHY['weight_bold']}")
+            # Saved configurations: pick one to fill every option below; save the
+            # current options under a name for one-click runs later.
+            with ui.row().classes("w-full items-center no-wrap gap-1"):
+                self.config_select = ui.select({"": "— none (set options below) —"}, value="",
+                                               label="Saved configuration",
+                                               on_change=lambda e: self._pick_config(e.value)) \
+                    .props("outlined dense options-dense").classes("flex-grow")
+                ui.button(icon="save", on_click=lambda: self._save_config_dialog()) \
+                    .props("flat dense round").tooltip("Save these options as a configuration")
+                self.config_del = ui.button(icon="delete_outline",
+                                            on_click=lambda: self._delete_config()) \
+                    .props("flat dense round color=negative").tooltip("Delete this configuration")
+                self.config_del.set_visibility(False)
+            self.config_note = ui.label("").style(
+                f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}")
+            ui.timer(0.05, self._load_configs, once=True)
             self.headless = ui.switch("Headless", value=False).props("dense")
             ui.label("Off shows the browser while it runs.").style(
                 f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}")
@@ -418,6 +436,111 @@ class RunCenter:
                                 "written to the log or echoed by the API")
                 self.fields[n] = box
 
+    # ── saved configurations ────────────────────────────────────────────────
+    async def _load_configs(self, select: str = "") -> None:
+        try:
+            self._configs = await api.run_configs(self.platform)
+        except api.ApiError:
+            self._configs = []
+        opts = {"": "— none (set options below) —"}
+        for c in self._configs:
+            opts[c["id"]] = c["name"] + ("" if c.get("mine") else f"  (shared by {c.get('owner')})") \
+                + ("  · shared" if c.get("mine") and c.get("shared") else "")
+        want = select or getattr(self, "_wanted_config", "") or ""
+        self.config_select.set_options(opts, value=want if want in opts else "")
+        if want and want in opts:
+            self._pick_config(want)
+
+    def _settings_now(self) -> dict:
+        return {"headless": bool(self.headless.value),
+                "device_name": self.device_select.value or "",
+                "browser": self.browser_select.value or "",
+                "browser_identity": (getattr(self, "identity", None) and self.identity.value) or "",
+                "site_env": (getattr(self, "site_env", None) and self.site_env.value) or "",
+                "http_auth_domain": (getattr(self, "auth_select", None) and self.auth_select.value) or "",
+                "browser_permissions": self.permissions.value or "",
+                "screenshot_mode": self.shot_mode.value or "all",
+                "screenshot_context": int(self.shot_context.value or 5),
+                "stop_on_failure": bool(self.stop_on_failure.value),
+                "record_video": bool(getattr(self, "record_video", None) and self.record_video.value)}
+
+    def _pick_config(self, cid: str) -> None:
+        c = next((x for x in getattr(self, "_configs", []) if x["id"] == cid), None)
+        self.config_del.set_visibility(bool(c and c.get("mine")))
+        if not c:
+            self.config_note.set_text("")
+            return
+        s = c.get("settings") or {}
+
+        def put(widget, value) -> None:
+            if widget is None or value is None:
+                return
+            opts = getattr(widget, "options", None)
+            if isinstance(opts, dict) and value not in opts and value != "":
+                if widget is getattr(self, "site_env", None):
+                    self._wanted_env = value        # list may still be loading
+                return
+            widget.set_value(value)
+        put(self.headless, s.get("headless"))
+        put(self.shot_mode, s.get("screenshot_mode"))
+        put(self.shot_context, s.get("screenshot_context"))
+        put(self.stop_on_failure, s.get("stop_on_failure"))
+        put(self.device_select, s.get("device_name"))
+        put(self.browser_select, s.get("browser"))
+        put(getattr(self, "record_video", None), s.get("record_video"))
+        put(self.permissions, s.get("browser_permissions"))
+        put(getattr(self, "identity", None), s.get("browser_identity"))
+        put(getattr(self, "site_env", None), s.get("site_env"))
+        put(getattr(self, "auth_select", None), s.get("http_auth_domain"))
+        self.config_note.set_text(c.get("summary", ""))
+
+    def _save_config_dialog(self) -> None:
+        cur = next((x for x in getattr(self, "_configs", [])
+                    if x["id"] == (self.config_select.value or "") and x.get("mine")), None)
+        dialog = ui.dialog()
+        with dialog, ui.card().style("width:28rem"):
+            ui.label("Save run configuration").style(
+                f"font-size:{TYPOGRAPHY['size_lg']}; font-weight:{TYPOGRAPHY['weight_bold']}")
+            name = ui.input("Name", value=(cur or {}).get("name", ""),
+                            placeholder="Live · Samsung Internet · headless") \
+                .props("outlined dense autofocus").classes("w-full")
+            shared = ui.checkbox("Share with the team", value=bool((cur or {}).get("shared")))
+            ui.label(f"Saved for {self.platform} — the options below, not test values "
+                     "(those stay in Test Data). Shared: everyone can use it; only you can change it.") \
+                .style(f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}")
+
+            async def go(update: bool) -> None:
+                try:
+                    res = await api.save_run_config((name.value or "").strip(), self.platform,
+                                                    self._settings_now(), bool(shared.value),
+                                                    cur["id"] if (update and cur) else "")
+                except api.ApiError as e:
+                    ui.notify(str(e.detail), type="negative")
+                    return
+                dialog.close()
+                ui.notify(f"Saved '{res['name']}'", type="positive")
+                await self._load_configs(res["id"])
+            with ui.row().classes("w-full justify-end gap-2"):
+                ui.button("Cancel", on_click=dialog.close).props("flat")
+                if cur:
+                    ui.button("Save as new", on_click=lambda: go(False)).props("flat")
+                    ui.button("Update", icon="save", on_click=lambda: go(True)).props("unelevated")
+                else:
+                    ui.button("Save", icon="save", on_click=lambda: go(False)).props("unelevated")
+        dialog.open()
+
+    async def _delete_config(self) -> None:
+        cid = self.config_select.value or ""
+        if not cid:
+            return
+        try:
+            await api.delete_run_config(cid)
+        except api.ApiError as e:
+            ui.notify(str(e.detail), type="negative")
+            return
+        ui.notify("Configuration deleted", type="positive")
+        await self._load_configs("")
+
     async def launch(self) -> None:
         if not self.flow:
             ui.notify("Pick a flow first", type="warning")
@@ -468,8 +591,10 @@ class RunCenter:
 
 
 async def render(flow: str = "", platform: str = "website", *,
-                 device: str = "", browser: str = "", identity: str = "", env: str = "") -> None:
+                 device: str = "", browser: str = "", identity: str = "", env: str = "",
+                 config: str = "", autorun: bool = False) -> None:
     page = RunCenter(flow, platform)
+    page._wanted_config = config
     await page.load()
     page.render()
     if device and getattr(page, "device_select", None) is not None:
@@ -486,3 +611,10 @@ async def render(flow: str = "", platform: str = "website", *,
     # nowhere to type. Ask for them explicitly.
     if flow and flow in page.projects:
         await page._load_inputs(flow)
+    # Quick run with a saved configuration: apply it, then start — unless the
+    # test still needs a value typed here (then the form stays open for it).
+    if config and autorun and flow:
+        async def _go() -> None:
+            await page._load_configs(config)
+            await page.launch()
+        ui.timer(1.2, _go, once=True)

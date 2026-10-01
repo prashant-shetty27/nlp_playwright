@@ -1165,8 +1165,12 @@ class TestCasesPage:
                             "steps are appended after the last step of this test case")
                     ui.button(icon="delete_outline", on_click=self.delete_dialog) \
                         .props("flat dense color=negative").tooltip("Delete this test case")
-                    ui.button("Run", icon="play_arrow", on_click=self.run) \
-                        .props("unelevated dense").style(f"background:{COLORS['success']}")
+                    with ui.row().classes("no-wrap gap-0"):
+                        ui.button("Run", icon="play_arrow", on_click=self.run) \
+                            .props("unelevated dense").style(f"background:{COLORS['success']}")
+                        from ui.components.run_menu import config_menu
+                        config_menu(lambda: self.selected or "", self.platform,
+                                    colour=COLORS["success"])
 
             # Any step that cannot run is surfaced before the operator presses Run,
             # not after — that is the whole point of carrying per-step status.

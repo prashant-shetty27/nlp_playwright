@@ -59,10 +59,13 @@ def _quick_run(route: str, current_flow: str = "", current_platform: str = "") -
     # mobilesite test appeared to "run in website mode".
     if current_flow:
         holder = {"flow": current_flow}
-        button = ui.button(f"Run {current_flow}", icon="play_arrow",
-                           on_click=lambda: ui.navigate.to(
-                               f"{route}?flow={holder['flow']}&platform={current_platform}")) \
-            .props("dense unelevated").style(f"background:{COLORS['primary']}")
+        with ui.row().classes("no-wrap gap-0 items-center"):
+            button = ui.button(f"Run {current_flow}", icon="play_arrow",
+                               on_click=lambda: ui.navigate.to(
+                                   f"{route}?flow={holder['flow']}&platform={current_platform}")) \
+                .props("dense unelevated").style(f"background:{COLORS['primary']}")
+            from ui.components.run_menu import config_menu
+            config_menu(lambda: holder["flow"], current_platform or "website")
         button.tooltip(f"Run {current_flow} on {current_platform or 'its platform'} — opens Run Center")
         # Let the page retarget the button when the author opens another test case.
         cid = ui.context.client.id
