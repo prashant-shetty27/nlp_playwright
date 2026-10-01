@@ -84,6 +84,40 @@ class LiveView:
         self.follow = True
         self.log_cache: list[dict] = []
 
+    def _batch_strip(self) -> None:
+        """Same test on several browsers: one chip per run (they go one after another)."""
+        from urllib.parse import quote
+        from nlp.platforms import BROWSER_IDENTITIES
+        all_ids = ",".join(f"{r}:{i}" for r, i in self.batch)
+        box = ui.row().classes("w-full items-center gap-2").style("flex-wrap:wrap")
+
+        async def paint() -> None:
+            box.clear()
+            with box:
+                ui.label("Browsers").style(f"font-weight:{TYPOGRAPHY['weight_bold']}")
+                for rid, ident in self.batch:
+                    try:
+                        st = (await api.run_result(rid)).get("status", "")
+                        res = await api.run_result(rid)
+                        if st != "running" and "passed" in res:
+                            st = "failed" if res.get("failed") else "passed"
+                    except api.ApiError:
+                        st = "queued"
+                    label = BROWSER_IDENTITIES.get(ident, {}).get("label", ident or "default").split(" (")[0]
+                    colour = {"passed": COLORS["success"], "failed": COLORS["danger"],
+                              "running": COLORS["primary"]}.get(st, COLORS["text_muted"])
+                    mark = {"passed": "✓", "failed": "✗", "running": "●"}.get(st, "…")
+                    b = ui.button(f"{mark} {label}", on_click=lambda r=rid: ui.navigate.to(
+                        f"/run/live?run_id={r}&flow={quote(self.flow, safe='')}"
+                        f"&platform={self.platform}&batch={all_ids}")) \
+                        .props("dense no-caps rounded outline" if rid != self.run_id
+                               else "dense no-caps rounded unelevated") \
+                        .style(f"color:{colour if rid != self.run_id else 'white'};"
+                               + (f"background:{colour};" if rid == self.run_id else ""))
+                    b.tooltip(f"{label}: {st or 'queued'}")
+        ui.timer(0.05, paint, once=True)
+        ui.timer(3.0, paint)
+
     def render(self) -> None:
         from ui.layout.sidebar import sidebar
         from ui.layout.topbar import topbar
@@ -96,6 +130,8 @@ class LiveView:
                                self.platform if hasattr(self, "platform") else "website")
 
         with ui.column().classes("w-full gap-3 p-4"):
+            if getattr(self, "batch", None):
+                self._batch_strip()
             with ui.row().classes("w-full items-center gap-3"):
                 ui.label(self.flow or "run").style(
                     f"font-size:{TYPOGRAPHY['size_lg']};"
@@ -417,5 +453,8 @@ class LiveView:
             ui.notify(res.get("message") or "Already finished", type="info")
 
 
-async def render(run_id: str, flow: str = "", platform: str = "website") -> None:
-    LiveView(run_id, flow, platform).render()
+async def render(run_id: str, flow: str = "", platform: str = "website", batch: str = "") -> None:
+    view = LiveView(run_id, flow, platform)
+    view.batch = [b.split(":", 1) + [""] if ":" not in b else b.split(":", 1)
+                  for b in batch.split(",") if b] if batch else []
+    view.render()

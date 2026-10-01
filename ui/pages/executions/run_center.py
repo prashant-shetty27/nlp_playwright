@@ -106,11 +106,16 @@ class RunCenter:
                platform=self.platform,
                on_platform_change=self._set_platform,
                current_flow=self.flow or "")
-        with ui.row().classes("w-full items-center gap-3").style("padding:8px 16px 0"):
+        with ui.column().classes("w-full gap-3").style("padding:8px 16px 16px; max-width:90rem"):
             _back_to_test_case(self.flow, self.platform)
-        with ui.row().classes("w-full no-wrap gap-4 p-4"):
-            self.left = ui.column().classes("gap-3").style("width:26rem; flex:none")
-            self.right = ui.column().classes("flex-grow gap-3")
+            # Top: what, where, on which browsers — and Run. Below: how (options)
+            # beside the values the test needs. Rarely-touched settings fold away.
+            self.top = ui.card().classes("w-full").style("padding:14px 16px")
+            with ui.row().classes("w-full gap-4 items-start").style("flex-wrap:wrap"):
+                self.left = ui.card().classes("gap-2").style(
+                    "flex:1 1 26rem; min-width:22rem; padding:14px 16px")
+                self.right = ui.card().classes("gap-3").style(
+                    "flex:1 1 26rem; min-width:22rem; padding:14px 16px")
         self._render_left()
         self._render_right()
 
@@ -134,6 +139,8 @@ class RunCenter:
 
     def _set_platform(self, p: str) -> None:
         self.platform = p
+        self._wanted_targets = []           # another module offers other browsers
+        self._render_left()
         self._render_right()
         if getattr(self, "config_select", None) is not None:
             ui.timer(0.02, lambda: self._load_configs(""), once=True)
@@ -144,150 +151,152 @@ class RunCenter:
             ui.timer(0.01, lambda: self._load_inputs(self.flow), once=True)
 
     def _render_left(self) -> None:
+        from nlp.platforms import RUN_TARGETS
+        muted = f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}"
+        head = f"font-weight:{TYPOGRAPHY['weight_bold']}"
+        self.top.clear()
         self.left.clear()
-        with self.left:
-            ui.label("What to run").style(
-                f"font-weight:{TYPOGRAPHY['weight_bold']}")
-            enabled = self._enabled()
-            self.platform_select = ui.select(
-                {p["name"]: p.get("label", p["name"]) for p in enabled},
-                value=self.platform if any(p["name"] == self.platform for p in enabled)
-                else (enabled[0]["name"] if enabled else None),
-                label="Platform", on_change=lambda e: self._set_platform(e.value),
-            ).props("outlined dense").classes("w-full")
-
-            self.flow_select = ui.select(
-                self.projects or [], value=self.flow if self.flow in self.projects else None,
-                label="Flow", with_input=True,
-                on_change=lambda e: self._load_inputs(e.value),
-            ).props("outlined dense").classes("w-full")
+        enabled = self._enabled()
+        with self.top:
+            with ui.row().classes("w-full items-start gap-3").style("flex-wrap:wrap"):
+                self.platform_select = ui.select(
+                    {p["name"]: p.get("label", p["name"]) for p in enabled},
+                    value=self.platform if any(p["name"] == self.platform for p in enabled)
+                    else (enabled[0]["name"] if enabled else None),
+                    label="Platform", on_change=lambda e: self._set_platform(e.value),
+                ).props("outlined dense").style("width:13rem")
+                self.flow_select = ui.select(
+                    self.projects or [], value=self.flow if self.flow in self.projects else None,
+                    label="Test case", with_input=True,
+                    on_change=lambda e: self._load_inputs(e.value),
+                ).props("outlined dense").style("flex:1 1 18rem; min-width:16rem")
+                with ui.column().classes("gap-0").style("flex:1 1 20rem; min-width:16rem"):
+                    # Environment: the same test on live or a development host —
+                    # every www.justdial.com URL moves there, with its saved login.
+                    self.site_env = ui.select({"": "Default — URL as written in the test"},
+                                              value="", label="Environment") \
+                        .props("outlined dense").classes("w-full") \
+                        .tooltip("Pick a server to run this test there without editing any URL "
+                                 "— only servers for this platform are listed.")
+                    self.site_env_hint = ui.label("").style(muted)
+                self.run_btn = ui.button("Run now", icon="play_arrow", on_click=self.launch) \
+                    .props("unelevated").style(
+                        f"background:{COLORS['success']}; height:40px; padding:0 22px")
             if not self.projects:
-                ui.label("No saved flows yet — author one first.").style(
-                    f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}")
+                ui.label("No saved test cases yet — author one first.").style(muted)
 
-            ui.separator()
-            ui.label("How to run it").style(
-                f"font-weight:{TYPOGRAPHY['weight_bold']}")
-            # Saved configurations: pick one to fill every option below; save the
-            # current options under a name for one-click runs later.
+            # Run on: one run per ticked browser, one after another.
+            targets = RUN_TARGETS.get(self.platform, [])
+            self.targets: list[str] = list(getattr(self, "_wanted_targets", []) or
+                                           ([targets[0][0]] if targets else []))
+            self._target_btns: dict[str, ui.button] = {}
+            if targets:
+                with ui.row().classes("w-full items-center gap-2").style("flex-wrap:wrap; margin-top:4px"):
+                    ui.label("Run on").style(head + "; margin-right:4px")
+                    for key, label in targets:
+                        b = ui.button(label, on_click=lambda k=key: self._toggle_target(k)) \
+                            .props("dense no-caps rounded").style("padding:2px 12px")
+                        self._target_btns[key] = b
+                    self.targets_note = ui.label("").style(muted)
+                self._paint_targets()
+
+        with self.left:
+            ui.label("Run options").style(head)
+            # Saved configurations: pick one to fill every option; 💾 saves these.
             with ui.row().classes("w-full items-center no-wrap gap-1"):
-                self.config_select = ui.select({"": "— none (set options below) —"}, value="",
+                self.config_select = ui.select({"": "— none —"}, value="",
                                                label="Saved configuration",
                                                on_change=lambda e: self._pick_config(e.value)) \
                     .props("outlined dense options-dense").classes("flex-grow")
                 ui.button(icon="save", on_click=lambda: self._save_config_dialog()) \
-                    .props("flat dense round").tooltip("Save these options as a configuration")
+                    .props("flat dense round").tooltip("Save these options (and Run on) under a name")
                 self.config_del = ui.button(icon="delete_outline",
                                             on_click=lambda: self._delete_config()) \
                     .props("flat dense round color=negative").tooltip("Delete this configuration")
                 self.config_del.set_visibility(False)
-            self.config_note = ui.label("").style(
-                f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}")
+            self.config_note = ui.label("").style(muted)
             ui.timer(0.05, self._load_configs, once=True)
-            self.headless = ui.switch("Headless", value=False).props("dense")
-            ui.label("Off shows the browser while it runs.").style(
-                f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}")
-            # Screenshots per step. What makes a failed run readable afterwards
-            # — and the mode is what keeps it affordable: every step on a
-            # 20-step run is about 4 MB, so fifty runs a day is real storage.
-            self.shot_mode = ui.select(
-                {"all": "Screenshot every step",
-                 "key": "Only checks and new pages",
-                 "failure": "Only the failure and the steps before it",
-                 "off": "No screenshots"},
-                value="all", label="Screenshots",
-                on_change=lambda e: self._shot_mode_changed(e.value)) \
-                .props("outlined dense").classes("w-full")
-            self.shot_context = ui.number(
-                "Steps to keep before the failure", value=5, min=0, max=50,
-                format="%d").props("outlined dense").classes("w-full")
-            self.shot_context.set_visibility(False)
-            self.shot_note = ui.label(
-                "Every step is photographed. Roughly 4 MB per 20-step run.").style(
-                f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}")
 
-            self.stop_on_failure = ui.switch("Stop at the first failure",
-                                             value=True).props("dense")
-            ui.label("On, a failed step ends the run and the rest are marked not "
-                     "run. Off, every step is attempted — useful for seeing how "
-                     "much of a flow is broken at once, misleading for anything "
-                     "that submits a form.").style(
-                f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}")
+            with ui.row().classes("w-full gap-x-6 gap-y-1").style("flex-wrap:wrap"):
+                self.headless = ui.switch("Headless", value=False).props("dense") \
+                    .tooltip("Off shows the browser while it runs.")
+                self.stop_on_failure = ui.switch("Stop at the first failure", value=True) \
+                    .props("dense").tooltip(
+                        "On: a failed step ends the run, the rest are marked not run. Off: every "
+                        "step is attempted — misleading for anything that submits a form.")
+                self.record_video = ui.switch("Record video", value=False).props("dense") \
+                    .tooltip("Saves a .webm under Reports → Video — for a re-run to attach to a ticket.")
+            with ui.row().classes("w-full items-start no-wrap gap-2"):
+                self.shot_mode = ui.select(
+                    {"all": "Screenshot every step",
+                     "key": "Only checks and new pages",
+                     "failure": "Only the failure and the steps before it",
+                     "off": "No screenshots"},
+                    value="all", label="Screenshots",
+                    on_change=lambda e: self._shot_mode_changed(e.value)) \
+                    .props("outlined dense").classes("flex-grow")
+                self.shot_context = ui.number(
+                    "Steps before", value=5, min=0, max=50,
+                    format="%d").props("outlined dense").style("width:7rem")
+                self.shot_context.set_visibility(False)
+            self.shot_note = ui.label(self._SHOT_NOTES["all"]).style(muted)
 
-            mobile = [d for d in self.devices if d.get("mobile")]
-            self.device_select = ui.select(
-                {"": "Platform default"} | {d["name"]: f"{d['name']}  ({d['viewport']})"
-                                            for d in mobile},
-                value="", label="Device").props("outlined dense").classes("w-full")
-            # The engine follows the device unless overridden, so the default is
-            # named rather than left blank — an operator should not have to know
-            # that iPhone implies WebKit.
-            self.browser_select = ui.select(
-                {"": "From device (recommended)", "chromium": "Chromium",
-                 "firefox": "Firefox", "webkit": "WebKit / Safari"},
-                value="", label="Browser engine").props("outlined dense").classes("w-full")
+            with ui.expansion("Advanced", icon="tune").classes("w-full") \
+                    .props("dense header-class=text-sm"):
+                with ui.column().classes("w-full gap-2"):
+                    mobile = [d for d in self.devices if d.get("mobile")]
+                    with ui.row().classes("w-full no-wrap gap-2"):
+                        self.device_select = ui.select(
+                            {"": "From 'Run on'"} | {d["name"]: f"{d['name']}  ({d['viewport']})"
+                                                    for d in mobile},
+                            value="", label="Exact device").props("outlined dense").classes("flex-grow")
+                        # The engine follows the device unless overridden.
+                        self.browser_select = ui.select(
+                            {"": "From 'Run on'", "chromium": "Chromium",
+                             "firefox": "Firefox", "webkit": "WebKit / Safari"},
+                            value="", label="Browser engine").props("outlined dense").classes("flex-grow")
+                    ui.label("Only for a single browser in 'Run on' — overrides its device / engine.") \
+                        .style(muted)
+                    # Browser permission prompts are drawn by the BROWSER — decided here.
+                    self.permissions = ui.select(
+                        {"": "Ask the browser (default behaviour)",
+                         "allow": "Allow all browser permissions",
+                         "deny": "Deny all browser permissions"},
+                        value="", label="Browser permission popups") \
+                        .props("outlined dense").classes("w-full") \
+                        .tooltip("Geolocation, notifications, camera, clipboard. Site popups stay "
+                                 "under your test's control.")
+                    # HTTP Basic login for a staging host (prot3, devx…).
+                    self.auth_select = ui.select({"none": "Not needed / use URL login"},
+                                                 value="none", label="Staging site login (HTTP Basic)") \
+                        .props("outlined dense").classes("w-full")
+                    self.auth_select.set_visibility(False)
+                    self.auth_hint = ui.label("").style(muted)
+                    self.auth_hint.set_visibility(False)
+            self.identity = None            # replaced by "Run on"
 
-            # A .webm of the whole session, for attaching to a ticket. Off by
-            # default: it is a few MB per minute and slows the browser slightly,
-            # so it is switched on for the confirming re-run, not every run.
-            self.record_video = ui.switch("Record video", value=False).props("dense")
-            ui.label("Saves a .webm of the run under Reports → Video. Turn on for a "
-                     "re-run whose recording you want to attach to a ticket.").style(
-                f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}")
+    # ── Run on (browsers) ───────────────────────────────────────────────────
+    def _toggle_target(self, key: str) -> None:
+        if key in self.targets:
+            if len(self.targets) == 1:
+                ui.notify("Keep at least one browser", type="info")
+                return
+            self.targets.remove(key)
+        else:
+            self.targets.append(key)
+        self._paint_targets()
 
-            # Browser permission prompts (geolocation, notifications, camera…)
-            # are drawn by the BROWSER, so no locator can reach them and a run
-            # simply stalls behind one. Decided here, before the browser opens.
-            self.permissions = ui.select(
-                {"": "Ask the browser (default behaviour)",
-                 "allow": "Allow all browser permissions",
-                 "deny": "Deny all browser permissions"},
-                value="", label="Browser permission popups") \
-                .props("outlined dense").classes("w-full")
-            ui.label("Geolocation, notifications, camera, clipboard. Site popups "
-                     "— cookie banners, login modals — are page content and stay "
-                     "under your test's control.").style(
-                f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}")
-
-            # Environment: run the same test case on live or on a development /
-            # pre-prod host. Every www.justdial.com URL it opens (typed or from
-            # Test Data) moves to that host, and that host's saved login is attached.
-            self.site_env = ui.select({"": "Default — URL as written in the test"},
-                                      value="", label="Environment") \
-                .props("outlined dense").classes("w-full") \
-                .tooltip("Pick a server to run this test there without editing any URL — only servers for this platform are listed.")
-            self.site_env_hint = ui.label("").style(
-                f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}")
-
-            # Which browser the site should see. Samsung Internet and the stock
-            # browsers are Chromium; the site tells them apart by user agent.
-            self.identity = ui.select(
-                {"": "Device default (Chrome on Android / Safari on iPhone)",
-                 "samsung_internet": "Samsung Internet (Galaxy S9+, Chromium)",
-                 "ios_safari": "Safari on iPhone (iPhone 15, WebKit)",
-                 "ios_chrome": "Chrome on iPhone (iPhone 15, WebKit engine)",
-                 "android_chrome": "Chrome on Android (Pixel 7)"},
-                value="", label="Browser identity") \
-                .props("outlined dense").classes("w-full") \
-                .tooltip("Sets the user agent (and the matching device/engine unless you chose "
-                         "them above). Use it to check a design change on Safari or Samsung Internet.")
-
-            # HTTP Basic login for a staging host (prot3, devx…). Off by default:
-            # the browser then answers the server's challenge with the URL-embedded
-            # credentials, which is what every existing flow relies on. "On"
-            # attaches the saved login to the browser context instead, so XHR
-            # calls the page makes after loading carry it too.
-            self.auth_select = ui.select({"none": "Not needed / use URL login"},
-                                         value="none", label="Staging site login (HTTP Basic)") \
-                .props("outlined dense").classes("w-full")
-            self.auth_select.set_visibility(False)
-            self.auth_hint = ui.label("").style(
-                f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}")
-            self.auth_hint.set_visibility(False)
-
-            ui.button("Run Now", icon="play_arrow", on_click=self.launch) \
-                .props("unelevated").classes("w-full") \
-                .style(f"background:{COLORS['success']}; margin-top:8px")
+    def _paint_targets(self) -> None:
+        for key, b in getattr(self, "_target_btns", {}).items():
+            on = key in self.targets
+            b.props(f"unelevated color={'primary' if on else 'grey-4'} "
+                    f"text-color={'white' if on else 'grey-9'} icon={'check' if on else 'none'}")
+        n = len(self.targets)
+        if getattr(self, "targets_note", None) is not None:
+            self.targets_note.set_text(
+                f"{n} runs, one after another — each with its own report" if n > 1 else "")
+        if getattr(self, "run_btn", None) is not None:
+            self.run_btn.set_text(f"Run on {n}" if n > 1 else "Run now")
 
     def _render_right(self) -> None:
         self.right.clear()
@@ -455,7 +464,7 @@ class RunCenter:
         return {"headless": bool(self.headless.value),
                 "device_name": self.device_select.value or "",
                 "browser": self.browser_select.value or "",
-                "browser_identity": (getattr(self, "identity", None) and self.identity.value) or "",
+                "targets": list(getattr(self, "targets", []) or []),
                 "site_env": (getattr(self, "site_env", None) and self.site_env.value) or "",
                 "http_auth_domain": (getattr(self, "auth_select", None) and self.auth_select.value) or "",
                 "browser_permissions": self.permissions.value or "",
@@ -489,7 +498,13 @@ class RunCenter:
         put(self.browser_select, s.get("browser"))
         put(getattr(self, "record_video", None), s.get("record_video"))
         put(self.permissions, s.get("browser_permissions"))
-        put(getattr(self, "identity", None), s.get("browser_identity"))
+        from nlp.platforms import RUN_TARGETS
+        valid = [k for k, _ in RUN_TARGETS.get(self.platform, [])]
+        tg = [t for t in (s.get("targets") or ([s["browser_identity"]] if s.get("browser_identity") else []))
+              if t in valid]
+        if tg:
+            self.targets = tg
+            self._paint_targets()
         put(getattr(self, "site_env", None), s.get("site_env"))
         put(getattr(self, "auth_select", None), s.get("http_auth_domain"))
         self.config_note.set_text(c.get("summary", ""))
@@ -566,28 +581,38 @@ class RunCenter:
                       f"save them under Test Data so every run picks them up",
                       type="warning", timeout=7000)
             return
-        try:
-            res = await api.run(
-                self.flow, self.platform,
-                headless=bool(self.headless.value),
-                device_name=self.device_select.value or "",
-                browser=self.browser_select.value or "",
-                parameters=params,
-                secret_parameters=[n for n in params if _is_secret(n)],
-                browser_permissions=self.permissions.value or "",
-                stop_on_failure=bool(self.stop_on_failure.value),
-                screenshot_mode=self.shot_mode.value or "all",
-                screenshot_context=int(self.shot_context.value or 5),
-                http_auth_domain=(getattr(self, "auth_select", None) and self.auth_select.value) or "",
-                record_video=bool(getattr(self, "record_video", None) and self.record_video.value),
-                browser_identity=(getattr(self, "identity", None) and self.identity.value) or "",
-                site_env=(getattr(self, "site_env", None) and self.site_env.value) or "",
-            )
-        except api.ApiError as e:
-            ui.notify(f"Could not start: {e.detail}", type="negative")
+        targets = list(getattr(self, "targets", []) or [""])
+        single = len(targets) == 1
+        run_ids: list[str] = []
+        for ident in targets:
+            try:
+                res = await api.run(
+                    self.flow, self.platform,
+                    headless=bool(self.headless.value),
+                    # Exact device / engine overrides apply to a single browser only.
+                    device_name=(self.device_select.value or "") if single else "",
+                    browser=(self.browser_select.value or "") if single else "",
+                    parameters=params,
+                    secret_parameters=[n for n in params if _is_secret(n)],
+                    browser_permissions=self.permissions.value or "",
+                    stop_on_failure=bool(self.stop_on_failure.value),
+                    screenshot_mode=self.shot_mode.value or "all",
+                    screenshot_context=int(self.shot_context.value or 5),
+                    http_auth_domain=(getattr(self, "auth_select", None) and self.auth_select.value) or "",
+                    record_video=bool(getattr(self, "record_video", None) and self.record_video.value),
+                    browser_identity=ident,
+                    site_env=(getattr(self, "site_env", None) and self.site_env.value) or "",
+                )
+            except api.ApiError as e:
+                ui.notify(f"Could not start ({ident or 'default'}): {e.detail}", type="negative")
+                continue
+            run_ids.append(f"{res['run_id']}:{ident}")
+        if not run_ids:
             return
-        ui.navigate.to(f"/run/live?run_id={res['run_id']}&flow={self.flow}"
-                       f"&platform={self.platform}")
+        first = run_ids[0].split(":")[0]
+        batch = f"&batch={','.join(run_ids)}" if len(run_ids) > 1 else ""
+        ui.navigate.to(f"/run/live?run_id={first}&flow={self.flow}"
+                       f"&platform={self.platform}{batch}")
 
 
 async def render(flow: str = "", platform: str = "website", *,
@@ -601,8 +626,9 @@ async def render(flow: str = "", platform: str = "website", *,
         page.device_select.set_value(device)
     if browser and getattr(page, "browser_select", None) is not None:
         page.browser_select.set_value(browser)
-    if identity and getattr(page, "identity", None) is not None:
-        page.identity.set_value(identity)
+    if identity and identity in getattr(page, "_target_btns", {}):
+        page.targets = [identity]          # a report's Re-run: the browser it ran on
+        page._paint_targets()
     page._wanted_env = env or ""
     # Setting a select's initial `value` does not fire its on_change, so a flow
     # arriving in the URL — which is how the editor's Run button gets here —

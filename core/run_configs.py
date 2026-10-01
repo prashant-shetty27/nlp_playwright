@@ -31,7 +31,7 @@ FIELDS = {
     "headless": bool, "device_name": str, "browser": str, "browser_identity": str,
     "site_env": str, "http_auth_domain": str, "browser_permissions": str,
     "screenshot_mode": str, "screenshot_context": int, "stop_on_failure": bool,
-    "record_video": bool,
+    "record_video": bool, "targets": list,
 }
 
 
@@ -66,7 +66,7 @@ def clean_settings(settings: dict) -> dict:
     for k, typ in FIELDS.items():
         if k in (settings or {}) and settings[k] is not None:
             try:
-                out[k] = typ(settings[k])
+                out[k] = [str(x) for x in settings[k]][:10] if typ is list else typ(settings[k])
             except (TypeError, ValueError):
                 continue
     return out
@@ -76,7 +76,14 @@ def describe(c: dict) -> str:
     """'Live · Pixel 7 · headless · failures only' — what it will do, in a line."""
     s = c.get("settings") or {}
     bits = [s.get("site_env") or "default server"]
-    if s.get("browser_identity"):
+    if s.get("targets"):
+        try:
+            from nlp.platforms import BROWSER_IDENTITIES
+            bits.append(" + ".join(BROWSER_IDENTITIES.get(t, {}).get("label", t).split(" (")[0]
+                                   for t in s["targets"]))
+        except Exception:  # noqa: BLE001
+            bits.append(" + ".join(s["targets"]))
+    elif s.get("browser_identity"):
         bits.append(s["browser_identity"].replace("_", " "))
     elif s.get("device_name"):
         bits.append(s["device_name"])

@@ -191,14 +191,14 @@ async def run_page(flow: str = "", platform: str = "website",
 
 @ui.page("/run/live")
 async def live_page(run_id: str = "", flow: str = "",
-                   platform: str = "website") -> None:
+                   platform: str = "website", batch: str = "") -> None:
     if not _page_shell():
         return
     if not run_id:
         ui.navigate.to("/run")
         return
     from ui.pages.executions.live import render
-    await render(run_id, flow, platform)
+    await render(run_id, flow, platform, batch=batch)
 
 
 @ui.page("/step-groups")

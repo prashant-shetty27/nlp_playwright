@@ -240,7 +240,11 @@ def _run_flow_sync_unlocked(run_id: str, flow_path: str, headless: bool,
     # time, so a module-level setting in action_service is safe; cleared below.
     import execution.action_service as _svc
     _svc.SITE_ENV = (capabilities or {}).get("site_env") or None
-    _svc.RUN_PLATFORM = "mobilesite" if (capabilities or {}).get("mobile_web") else "website"
+    # The module decides (an iPad run is a Website test on a tablet screen);
+    # without one, a device means Mobile Site as before.
+    _plat = (capabilities or {}).get("platform")
+    _svc.RUN_PLATFORM = _plat if _plat in ("website", "mobilesite") else (
+        "mobilesite" if (capabilities or {}).get("mobile_web") else "website")
     _svc.LAST_MOBILE = ""
 
     project_name = os.path.basename(flow_path).replace(".flow", "")

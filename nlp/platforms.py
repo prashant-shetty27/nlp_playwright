@@ -183,6 +183,42 @@ BROWSER_IDENTITIES: dict[str, dict] = {
         "user_agent": ("Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 "
                        "(KHTML, like Gecko) CriOS/126.0.6478.108 Mobile/15E148 Safari/604.1"),
         "browser": "webkit", "device": "iPhone 15"},
+    # ── Website (desktop) ────────────────────────────────────────────────────
+    "linux_chrome": {
+        "label": "Ubuntu · Chrome",
+        "user_agent": ("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) "
+                       "Chrome/126.0.0.0 Safari/537.36"),
+        "browser": "chromium", "device": ""},
+    "windows_chrome": {
+        "label": "Windows · Chrome",
+        "user_agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+                       "Chrome/126.0.0.0 Safari/537.36"),
+        "browser": "chromium", "device": ""},
+    "mac_chrome": {
+        "label": "Mac · Chrome",
+        "user_agent": ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) "
+                       "Chrome/126.0.0.0 Safari/537.36"),
+        "browser": "chromium", "device": ""},
+    "mac_safari": {
+        "label": "Mac · Safari (WebKit)",
+        "user_agent": ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) "
+                       "Version/17.5 Safari/605.1.15"),
+        "browser": "webkit", "device": ""},
+    "firefox": {
+        "label": "Firefox",
+        "user_agent": "", "browser": "firefox", "device": ""},
+    "ipad_safari": {
+        "label": "iPad · Safari (iPad Pro 11, WebKit)",
+        "user_agent": "", "browser": "webkit", "device": "iPad Pro 11 landscape"},
+}
+
+#: What "Run on" offers per module, in order; the first is the default pick.
+RUN_TARGETS: dict[str, list[tuple[str, str]]] = {
+    "mobilesite": [("android_chrome", "Android · Chrome"), ("ios_safari", "iPhone · Safari"),
+                   ("ios_chrome", "iPhone · Chrome"), ("samsung_internet", "Android · Samsung Internet")],
+    "website": [("linux_chrome", "Ubuntu · Chrome"), ("windows_chrome", "Windows · Chrome"),
+                ("mac_chrome", "Mac · Chrome"), ("mac_safari", "Mac · Safari"), ("firefox", "Firefox"),
+                ("ipad_safari", "iPad · Safari")],
 }
 
 
