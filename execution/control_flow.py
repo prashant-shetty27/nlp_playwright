@@ -857,16 +857,42 @@ def run_lines(lines, page, execute, logger=None, numbered=None, probe=None) -> N
     prog = FlowProgram(lines, evaluate=make_evaluator(page, probe=probe),
                        variables=RUNTIME_VARIABLES,
                        load_rows=datasets.rows, numbered=numbered)
+    import time as _time
+    from execution import group_trace as gt
     from execution.step_flags import IgnoredFailure
     for it in prog.steps():
         if it.kind is None:
+            gt.begin()                      # an inner `call` records into its own list
+            started = _time.perf_counter()
+            row = {"step": it.text, "line": it.line_no}
             try:
                 execute(it.text)
+                row["status"] = "passed"
             except IgnoredFailure as e:
+                row.update(status="ignored", error=str(e))
                 if logger:
                     logger.warning("⚠️ %s — %s", it.text, e)
+            except Exception as e:
+                row.update(status="failed", error=str(e).strip()[:800])
+                row["duration_ms"] = round((_time.perf_counter() - started) * 1000)
+                kids = gt.end()
+                if kids:
+                    row["children"] = kids
+                gt.record(row)
+                # The group stops here: say which of its steps never ran.
+                for rest in prog.items[it.index + 1:]:
+                    if rest.kind is None and rest.text.strip():
+                        gt.record({"step": rest.text, "line": rest.line_no, "status": "skipped",
+                                   "error": "not run — an earlier step in the group failed"})
+                raise
+            row["duration_ms"] = round((_time.perf_counter() - started) * 1000)
+            kids = gt.end()
+            if kids:
+                row["children"] = kids
+            gt.record(row)
         else:
             said = prog.decide(it)
+            gt.record({"step": it.text, "line": it.line_no, "status": "passed", "note": said})
             if logger:
                 logger.info("🔀 %s → %s", it.text, said)
 

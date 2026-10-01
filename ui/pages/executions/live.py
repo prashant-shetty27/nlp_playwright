@@ -397,6 +397,9 @@ class LiveView:
                             f"font-family:{TYPOGRAPHY['mono']};"
                             f"font-size:{TYPOGRAPHY['size_sm']}; color:{colour};"
                             f"word-break:break-all" + ("; opacity:.6" if skipped else ""))
+                    if entry.get("children"):
+                        from ui.components.group_children import render_children
+                        render_children(entry["children"])
                     if entry.get("error") and skipped:
                         ui.label(entry["error"]).style(
                             f"padding:0 8px 6px 3.2rem; color:{COLORS['text_muted']};"

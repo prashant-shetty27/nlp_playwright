@@ -440,7 +440,15 @@ def _run_flow_sync_unlocked(run_id: str, flow_path: str, headless: bool,
                     _publish()
                     continue
 
-                _interpret(step, page)
+                from execution import group_trace as _gt
+                _gt.begin()
+                try:
+                    _interpret(step, page)
+                finally:
+                    _kids = _gt.end()
+                    if _kids:
+                        # A step group: each inner step, so the report can open it.
+                        entry["children"] = _kids
                 entry["status"] = "passed"
                 entry["duration_ms"] = round((time.perf_counter() - started) * 1000)
                 passed += 1
@@ -450,6 +458,8 @@ def _run_flow_sync_unlocked(run_id: str, flow_path: str, headless: bool,
                 # the row that was already recorded.
                 row = report.add_result(step, "passed",
                                         duration_ms=entry["duration_ms"])
+                if entry.get("children"):
+                    row["children"] = entry["children"]
                 _capture(page, entry, step, row)
             except IgnoredFailure as e:
                 # "Ignore result": it failed, the test carries on — amber, not red.
@@ -459,6 +469,8 @@ def _run_flow_sync_unlocked(run_id: str, flow_path: str, headless: bool,
                 ignored_count += 1
                 row = report.add_result(step, "ignored", reason=str(e).strip(),
                                         duration_ms=entry["duration_ms"])
+                if entry.get("children"):
+                    row["children"] = entry["children"]
                 _capture(page, entry, step, row)
             except Exception as e:
                 entry["status"] = "failed"
@@ -467,6 +479,8 @@ def _run_flow_sync_unlocked(run_id: str, flow_path: str, headless: bool,
                 failed += 1
                 row = report.add_result(step, "failed", reason=str(e).strip(),
                                         duration_ms=entry["duration_ms"])
+                if entry.get("children"):
+                    row["children"] = entry["children"]
                 _capture(page, entry, step, row)
                 site_down = _site_did_not_load(step, str(e))
                 if stop_on_failure or site_down:

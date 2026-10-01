@@ -89,6 +89,7 @@ class ReportDetail:
             "reason": r.get("reason") or r.get("error", ""),
             "screenshot": r.get("screenshot", ""),
             "duration_ms": r.get("duration_ms"),
+            "children": r.get("children") or [],
         } for r in rows]
         # Open on the first failure. That is the step you came to look at, and
         # on a forty-step run it saves scrolling to find it.
@@ -222,6 +223,9 @@ class ReportDetail:
             ui.label(_duration(step["duration_ms"])).style(
                 f"color:{COLORS['text_muted']}; font-size:{TYPOGRAPHY['size_xs']};"
                 f"font-family:{TYPOGRAPHY['mono']}; white-space:nowrap")
+        if step.get("children"):
+            from ui.components.group_children import render_children
+            render_children(step["children"], indent="2.6rem")
 
     def _select(self, index: int) -> None:
         self.selected = index
