@@ -1,15 +1,17 @@
 # Platform: mobilesite
 # Story: GJDT-22417 — after opening a photo and coming back from the gallery, the Photos section still shows the 360° icons (AC3)
 # Tags: b2b, pdp, 360, GJDT-22417
+# Params : prot3_pdp_360_photos
+
 open ${prot3_pdp_360_photos}
 wait for page to load
-wait 4 seconds
+wait until element pdp_first_photo is visible
 store count of pdp_photo_360_icon as icons_before
 click pdp_first_photo
-wait 3 seconds
+wait until element gallery_360_icon is visible
 verify element gallery_360_icon is visible
 go back
-wait 3 seconds
+wait until element pdp_photos_heading is visible
 verify element pdp_photos_heading is visible
 verify element pdp_photo_360_icon is visible
 store count of pdp_photo_360_icon as icons_after

@@ -1,9 +1,11 @@
 # Platform: mobilesite
 # Story: GJDT-22417 — deep link straight to the Photos tab shows the 360° icons without visiting the details page first (AC8)
 # Tags: b2b, pdp, 360, GJDT-22417
+# Params : prot3_pdp_360_photos
+
 open ${prot3_pdp_360_photos}
 wait for page to load
-wait 4 seconds
+wait until element pdp_photos_heading is visible
 verify element pdp_photos_heading is visible
 verify element pdp_photo_360_icon is visible
 store count of pdp_photo_tile as photo_tiles

@@ -1,12 +1,14 @@
 # Platform: mobilesite
 # Story: GJDT-22417 — 360° icon on the single-image (gallery) view, checked on the first 4 photos (AC2, AC6 gallery)
 # Tags: b2b, pdp, 360, GJDT-22417
+# Params : prot3_pdp_360_photos
+
 open ${prot3_pdp_360_photos}
 wait for page to load
-wait 4 seconds
+wait until element pdp_first_photo is visible
 verify element pdp_first_photo is visible
 click pdp_first_photo
-wait 3 seconds
+wait until element gallery_360_icon is visible
 verify element gallery_360_icon is visible
 verify element gallery_360_icon is inside gallery_slide_image
 store position of gallery_360_icon in gallery_slide_image as icon_photo_1
