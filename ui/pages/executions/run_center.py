@@ -158,6 +158,19 @@ class RunCenter:
         self.left.clear()
         enabled = self._enabled()
         with self.top:
+            # Like Testsigma's run dialog: pick a saved configuration first (it fills
+            # everything below), and "Save as configuration" sits beside Run.
+            with ui.row().classes("w-full items-center no-wrap gap-2").style("margin-bottom:6px"):
+                self.config_select = ui.select({"": "— none —"}, value="",
+                                               label="Saved configuration",
+                                               on_change=lambda e: self._pick_config(e.value)) \
+                    .props("outlined dense options-dense").style("width:24rem")
+                self.config_del = ui.button(icon="delete_outline",
+                                            on_click=lambda: self._delete_config()) \
+                    .props("flat dense round color=negative").tooltip("Delete this configuration")
+                self.config_del.set_visibility(False)
+                self.config_note = ui.label("").style(muted)
+            ui.timer(0.05, self._load_configs, once=True)
             with ui.row().classes("w-full items-start gap-3").style("flex-wrap:wrap"):
                 self.platform_select = ui.select(
                     {p["name"]: p.get("label", p["name"]) for p in enabled},
@@ -200,22 +213,21 @@ class RunCenter:
                     self.targets_note = ui.label("").style(muted)
                 self._paint_targets()
 
+            # Save as configuration (name it, optionally share) — saved when you
+            # press Run, or straight away with "Save".
+            with ui.row().classes("w-full items-center gap-3").style(
+                    f"flex-wrap:wrap; margin-top:8px; padding-top:8px; border-top:1px solid {COLORS['border']}"):
+                self.save_cfg = ui.checkbox("Save as configuration", value=False).props("dense")
+                self.save_name = ui.input(placeholder="Configuration name, e.g. Live · iPhone + Android") \
+                    .props("outlined dense").style("width:22rem")
+                self.save_shared = ui.checkbox("Share with team", value=False).props("dense")
+                save_now = ui.button("Save", icon="save", on_click=lambda: self._save_inline()) \
+                    .props("flat dense no-caps")
+                for w in (self.save_name, self.save_shared, save_now):
+                    w.bind_visibility_from(self.save_cfg, "value")
+
         with self.left:
             ui.label("Run options").style(head)
-            # Saved configurations: pick one to fill every option; 💾 saves these.
-            with ui.row().classes("w-full items-center no-wrap gap-1"):
-                self.config_select = ui.select({"": "— none —"}, value="",
-                                               label="Saved configuration",
-                                               on_change=lambda e: self._pick_config(e.value)) \
-                    .props("outlined dense options-dense").classes("flex-grow")
-                ui.button(icon="save", on_click=lambda: self._save_config_dialog()) \
-                    .props("flat dense round").tooltip("Save these options (and Run on) under a name")
-                self.config_del = ui.button(icon="delete_outline",
-                                            on_click=lambda: self._delete_config()) \
-                    .props("flat dense round color=negative").tooltip("Delete this configuration")
-                self.config_del.set_visibility(False)
-            self.config_note = ui.label("").style(muted)
-            ui.timer(0.05, self._load_configs, once=True)
 
             with ui.row().classes("w-full gap-x-6 gap-y-1").style("flex-wrap:wrap"):
                 self.headless = ui.switch("Headless", value=False).props("dense") \
@@ -508,6 +520,9 @@ class RunCenter:
         put(getattr(self, "site_env", None), s.get("site_env"))
         put(getattr(self, "auth_select", None), s.get("http_auth_domain"))
         self.config_note.set_text(c.get("summary", ""))
+        if c.get("mine") and getattr(self, "save_name", None) is not None:
+            self.save_name.set_value(c["name"])
+            self.save_shared.set_value(bool(c.get("shared")))
 
     def _save_config_dialog(self) -> None:
         cur = next((x for x in getattr(self, "_configs", [])
@@ -544,6 +559,24 @@ class RunCenter:
                     ui.button("Save", icon="save", on_click=lambda: go(False)).props("unelevated")
         dialog.open()
 
+    async def _save_inline(self, quiet: bool = False) -> bool:
+        name = (self.save_name.value or "").strip()
+        if not name:
+            ui.notify("Give the configuration a name", type="warning")
+            return False
+        cur = next((x for x in getattr(self, "_configs", [])
+                    if x.get("mine") and x["name"].lower() == name.lower()), None)
+        try:
+            res = await api.save_run_config(name, self.platform, self._settings_now(),
+                                            bool(self.save_shared.value), cur["id"] if cur else "")
+        except api.ApiError as e:
+            ui.notify(str(e.detail), type="negative")
+            return False
+        ui.notify(("Updated" if cur else "Saved") + f" configuration '{res['name']}'", type="positive")
+        self.save_cfg.set_value(False)
+        await self._load_configs(res["id"])
+        return True
+
     async def _delete_config(self) -> None:
         cid = self.config_select.value or ""
         if not cid:
@@ -569,6 +602,9 @@ class RunCenter:
             self._launching = False
 
     async def _launch(self) -> None:
+        if getattr(self, "save_cfg", None) is not None and self.save_cfg.value:
+            if not await self._save_inline():
+                return
         typed = {n: (b.value or "").strip() for n, b in self.fields.items()}
         # Only what was actually typed travels as a per-run value. A blank box
         # for a name Test Data supplies means "use the saved one", and sending
