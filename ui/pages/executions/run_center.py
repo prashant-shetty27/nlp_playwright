@@ -286,10 +286,18 @@ class RunCenter:
         if sel is None:
             return
         try:
-            envs = await api.site_environments()
+            # Only the servers this platform runs on — staging2 / stg are Website
+            # servers and are not offered for a Mobile Site run.
+            envs = await api.site_environments(self.platform)
         except api.ApiError:
             envs = []
-        opts = {"": "Default — URL as written in the test"}
+        opens = getattr(self, "_flow_opens", []) or []
+        if opens:
+            names = ", ".join(dict.fromkeys(o["name"] for o in opens))
+            default_label = f"Default — {names} (as written in the test)"
+        else:
+            default_label = "Default — URL as written in the test"
+        opts = {"": default_label}
         for e in envs:
             note = "" if not e.get("needs_login") or e.get("login_saved") else "  (login not saved — ask admin)"
             opts[e["name"]] = f"{e['name']} — {e['host']}{note}"
@@ -299,7 +307,8 @@ class RunCenter:
         def hint(_=None) -> None:
             v = sel.value or ""
             if not v:
-                text = "Every address is used exactly as written in the test."
+                text = ("Every address is used exactly as written in the test"
+                        + (f": {', '.join(o['host'] for o in opens)}." if opens else "."))
             elif v == "live":
                 text = ("prot / prot3 / staging addresses in this test open on www.justdial.com "
                         "(the live site, no login).")
@@ -320,6 +329,7 @@ class RunCenter:
         except api.ApiError:
             info = {}
         hosts = info.get("hosts") or []
+        self._flow_opens = info.get("opens") or []
         opts = {"none": "Not needed / use URL login"}
         opts.update({h: f"Attach saved login for {h}" for h in hosts})
         sug = info.get("suggested") or ""

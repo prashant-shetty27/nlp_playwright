@@ -262,22 +262,28 @@ async def render_edit(plan_id: str = "") -> None:
             # The saved choice is an option from the start: the full list arrives a
             # moment later, and a value missing from the options broke the page.
             _saved_env = ex.get("site_env") or ""
-            _first = {"": "Default — URL as written in the test"}
+            _first = {"": "Default — each test case's own URL (prot3, devx …)"}
             if _saved_env:
                 _first[_saved_env] = ("live — www.justdial.com" if _saved_env == "live" else _saved_env)
             site_env_sel = ui.select(_first, value=_saved_env,
                                      label="Environment (where the test cases run)") \
                 .props("outlined dense").style("min-width:22rem")
             muted("Pick prot / prot3 / devx … to run the whole plan on that host: every www.justdial.com "
-                  "URL in its test cases moves there and the saved login is attached.")
+                  "URL in its test cases moves there and the saved login is attached."
+                  " A Website-only server (staging2, stg) is never used for Mobile Site test cases — "
+                  "they are marked not run with the reason.")
 
             async def _fill_envs() -> None:
                 try:
                     envs = await api.site_environments()
                 except api.ApiError:
                     envs = []
-                opts = {"": "Default — URL as written in the test"}
-                opts.update({e["name"]: f"{e['name']} — {e['host']}" for e in envs})
+                opts = {"": "Default — each test case's own URL (prot3, devx …)"}
+                for e in envs:
+                    only = e.get("platforms") or []
+                    tag = "  (Website only)" if only == ["website"] else \
+                          "  (Mobile Site only)" if only == ["mobilesite"] else ""
+                    opts[e["name"]] = f"{e['name']} — {e['host']}{tag}"
                 site_env_sel.set_options(opts, value=site_env_sel.value if site_env_sel.value in opts else "")
             ui.timer(0.1, _fill_envs, once=True)
 

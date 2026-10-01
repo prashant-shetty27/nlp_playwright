@@ -252,11 +252,26 @@ def apply_to_flow_steps(steps: list, env: dict | None = None) -> list:
     return out
 
 
-def site_environments() -> list[dict]:
+#: Servers that serve only one platform. staging2 / stg are Website (desktop)
+#: servers — a Mobile Site run must never be moved onto them. An environment can
+#: say otherwise with "platforms": ["website", "mobilesite"] in environments.json.
+_PLATFORM_DEFAULTS = {"staging2": ["website"], "stg": ["website"]}
+_URL_PLATFORMS = ("website", "mobilesite")
+
+
+def env_platforms(name: str, env: dict | None = None) -> list[str]:
+    p = (env or {}).get("platforms")
+    if isinstance(p, list) and p:
+        return [str(x).lower() for x in p]
+    return list(_PLATFORM_DEFAULTS.get(name, _URL_PLATFORMS))
+
+
+def site_environments(platform: str | None = None) -> list[dict]:
     """
-    Environments a run can target: [{"name", "host", "needs_login"}], names only
-    — never credentials. From config/environments.json entries that replace
-    www.justdial.com with another host (prot, prot3, devx …).
+    Environments a run can target: [{"name", "host", "needs_login", "platforms"}],
+    names only — never credentials. From config/environments.json entries that
+    replace www.justdial.com with another host (prot, prot3, devx …). With a
+    platform, only the environments that serve it (staging2 is Website-only).
     """
     from urllib.parse import urlparse
     out = []
@@ -268,11 +283,25 @@ def site_environments() -> list[dict]:
         if not host or "example.com" in host:
             continue
         out.append({"name": name, "host": host,
-                    "needs_login": (env.get("auth_type") or "none").lower() == "basic"})
+                    "needs_login": (env.get("auth_type") or "none").lower() == "basic",
+                    "platforms": env_platforms(name, env)})
     out = sorted(out, key=lambda e: e["name"])
     # "live" is always offered and always means www.justdial.com: a test written
     # with prot3 / staging addresses runs on the live site when it is chosen.
     # (Choosing nothing keeps every address exactly as written in the test.)
     if not any(e["host"].lower() == "www.justdial.com" for e in out):
-        out.insert(0, {"name": "live", "host": "www.justdial.com", "needs_login": False})
+        out.insert(0, {"name": "live", "host": "www.justdial.com", "needs_login": False,
+                       "platforms": list(_URL_PLATFORMS)})
+    p = (platform or "").lower()
+    if p in _URL_PLATFORMS:
+        out = [e for e in out if p in e["platforms"]]
     return out
+
+
+def env_name_for_host(host: str) -> str:
+    """'prot3.justdial.com' → 'prot3'; 'www.justdial.com' → 'www'."""
+    h = (host or "").lower()
+    for e in site_environments():
+        if e["host"].lower() == h and e["name"] != "live":
+            return e["name"]
+    return h.split(".")[0] if h.endswith("justdial.com") else h

@@ -490,9 +490,9 @@ async def run(project: str, platform: str, *, headless: bool = True,
     })
 
 
-async def site_environments() -> list[dict]:
-    """[{name, host, needs_login, login_saved}] — targets for the Environment picker."""
-    return await _call("GET", "/tests/site-environments")
+async def site_environments(platform: str = "") -> list[dict]:
+    """[{name, host, needs_login, login_saved, platforms}] — targets for the Environment picker."""
+    return await _call("GET", "/tests/site-environments" + (f"?platform={platform}" if platform else ""))
 
 
 async def auth_domains(flow: str) -> dict:

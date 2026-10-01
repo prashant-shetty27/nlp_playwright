@@ -837,6 +837,14 @@ def _prepare_run(body: "RunRequest", flow_path: str = ""):
         match = [e for e in site_environments() if e["name"] == body.site_env.strip()]
         if not match:
             raise HTTPException(status_code=422, detail=f"Unknown environment '{body.site_env}'.")
+        plat = (body.platform or "").lower()
+        if plat in ("website", "mobilesite") and plat not in match[0].get("platforms", [plat]):
+            only = " / ".join(p.replace("mobilesite", "Mobile Site").replace("website", "Website")
+                              for p in match[0]["platforms"])
+            raise HTTPException(status_code=422, detail=(
+                f"'{match[0]['name']}' ({match[0]['host']}) is a {only} server — "
+                f"{'Mobile Site' if plat == 'mobilesite' else 'Website'} test cases can't run there. "
+                f"Pick another environment or Default."))
         site_env = {"name": match[0]["name"], "host": match[0]["host"]}
     if auth_domain.lower() == "none":
         auth_domain = ""
@@ -1007,12 +1015,12 @@ def _remember_setup(body) -> None:
 
 
 @router.get("/site-environments")
-def list_site_environments():
-    """Environments a run can target (name, host, needs_login) — never credentials."""
+def list_site_environments(platform: str = ""):
+    """Environments a run can target (name, host, needs_login, platforms) — never credentials."""
     from config.environment_manager import site_environments
     from config.settings import get_auth_registry
     reg = get_auth_registry()
-    return [{**e, "login_saved": e["host"] in reg} for e in site_environments()]
+    return [{**e, "login_saved": e["host"] in reg} for e in site_environments(platform or None)]
 
 
 @router.get("/auth-domains/{flow}")
@@ -1031,7 +1039,34 @@ def auth_domains(flow: str):
         suggested = _auth_domain_for(_flow_path(flow))
     except Exception:  # noqa: BLE001
         suggested = ""
-    return {"hosts": hosts, "suggested": suggested}
+    opens: list[str] = []
+    try:
+        opens = _flow_hosts(_flow_path(flow))
+    except Exception:  # noqa: BLE001
+        opens = []
+    from config.environment_manager import env_name_for_host
+    return {"hosts": hosts, "suggested": suggested,
+            "opens": [{"host": h, "name": env_name_for_host(h)} for h in opens]}
+
+
+def _flow_hosts(flow_path: str) -> list[str]:
+    """Every justdial host the flow opens, in order (Test Data links resolved)."""
+    from urllib.parse import urlparse
+    with open(flow_path, "r", encoding="utf-8") as f:
+        text = "\n".join(l for l in f.read().splitlines() if not l.strip().startswith("#"))
+    try:
+        from execution.test_data import resolved
+        values = resolved("")
+        text = re.sub(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}",
+                      lambda m: str(values.get(m.group(1), m.group(0))), text)
+    except Exception:  # noqa: BLE001
+        pass
+    out: list[str] = []
+    for raw in re.findall(r"https?://[^\s\"']+", text):
+        host = urlparse(raw).netloc.split("@")[-1].lower()
+        if host.endswith("justdial.com") and host not in out:
+            out.append(host)
+    return out
 
 
 @router.get("/last-setup/{flow}")

@@ -36,6 +36,21 @@ from ui.layout.topbar import topbar
 from ui.theme import COLORS, TYPOGRAPHY
 
 
+
+def _ist(stamp) -> str:
+    """'2026-09-30T18:40:12' (UTC) → '1 Oct 2026, 12:10 AM IST'."""
+    from datetime import datetime, timedelta, timezone
+    if not stamp:
+        return ""
+    try:
+        t = datetime.fromisoformat(str(stamp).replace("Z", "+00:00"))
+    except ValueError:
+        return str(stamp)[:16].replace("T", " ")
+    if t.tzinfo is None:
+        t = t.replace(tzinfo=timezone.utc)
+    t = t.astimezone(timezone(timedelta(hours=5, minutes=30)))
+    return f"{t.day} {t:%b %Y}, {t.hour % 12 or 12}:{t:%M} {'AM' if t.hour < 12 else 'PM'} IST"
+
 class TestCasesPage:
     def __init__(self, platform: str) -> None:
         self.platform = platform
@@ -1044,52 +1059,63 @@ class TestCasesPage:
             self._groups = {}
         self.right.clear()
         with self.right:
-            with ui.row().classes("w-full items-center gap-2"):
-                ui.label(self.selected or "").style(
-                    f"font-size:{TYPOGRAPHY['size_lg']};"
-                    f"font-weight:{TYPOGRAPHY['weight_bold']};"
-                    f"font-family:{TYPOGRAPHY['mono']}")
-                ui.button(icon="drive_file_rename_outline",
-                          on_click=self.rename_dialog) \
-                    .props("flat dense size=sm").tooltip("Rename this test case")
-                # Bands are annotation, not steps — counting them made a
-                # four-step test claim six.
-                real = sum(1 for st in self.steps
-                           if not st.strip().startswith(self.PURPOSE))
-                ui.label(f"{real} steps").style(
-                    f"color:{COLORS['text_muted']}; font-size:{TYPOGRAPHY['size_sm']}")
-                meta = getattr(self, "meta", {}) or {}
-                if meta.get("updated_by"):
-                    ui.label(f"· edited by {meta['updated_by']} "
-                             f"{(meta.get('updated_at') or '')[:16].replace('T', ' ')} UTC").style(
-                        f"color:{COLORS['text_muted']}; font-size:{TYPOGRAPHY['size_xs']}") \
-                        .tooltip(f"created by {meta.get('created_by', '?')}")
-                if self.dirty:
-                    with ui.row().classes("items-center gap-1") \
-                            .props('data-unsaved="1"').style(
-                            f"background:{COLORS['warning']}1A; border-radius:4px;"
-                            f"padding:1px 8px"):
-                        ui.label("●").style(
-                            f"color:{COLORS['warning']}; font-size:0.6rem")
-                        ui.label("unsaved").style(
-                            f"color:{COLORS['warning']};"
-                            f"font-size:{TYPOGRAPHY['size_xs']}")
-                ui.space()
-                ui.button("Review", icon="auto_fix_high", on_click=self.review) \
-                    .props("flat dense").tooltip(
-                        "Check this test for hardcoded values, fixed waits, "
-                        "missing checks and repeated blocks")
-                ui.button("Save", icon="save", on_click=self.save).props("unelevated dense")
-                ui.button("Extend with AI", icon="auto_awesome",
-                          on_click=lambda: ui.navigate.to(
-                              f"/platform/{self.platform}/draft?extend={quote(self.selected or '', safe='')}")) \
-                    .props("flat dense").tooltip(
-                        "Describe what to add (a ticket link or a sentence) — the drafted "
-                        "steps are appended after the last step of this test case")
-                ui.button(icon="delete_outline", on_click=self.delete_dialog) \
-                    .props("flat dense color=negative").tooltip("Delete this test case")
-                ui.button("Run", icon="play_arrow", on_click=self.run) \
-                    .props("unelevated dense").style(f"background:{COLORS['success']}")
+            # Header: name with "N steps · edited by … IST" as its subtext on the
+            # left; the action buttons pinned on the right. The row never wraps,
+            # so Run stays in the same place whatever the test case is called —
+            # a long name is cut with "…" (full name on hover) instead.
+            with ui.row().classes("w-full items-center no-wrap gap-3"):
+                with ui.column().classes("gap-0").style("flex:1 1 auto; min-width:0"):
+                    with ui.row().classes("items-center no-wrap gap-1 w-full").style("min-width:0"):
+                        ui.label(self.selected or "").style(
+                            f"font-size:{TYPOGRAPHY['size_lg']};"
+                            f"font-weight:{TYPOGRAPHY['weight_bold']};"
+                            f"font-family:{TYPOGRAPHY['mono']};"
+                            "white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"
+                            "min-width:0").tooltip(self.selected or "")
+                        ui.button(icon="drive_file_rename_outline",
+                                  on_click=self.rename_dialog) \
+                            .props("flat dense size=sm").style("flex-shrink:0") \
+                            .tooltip("Rename this test case")
+                        if self.dirty:
+                            with ui.row().classes("items-center gap-1 no-wrap") \
+                                    .props('data-unsaved="1"').style(
+                                    f"background:{COLORS['warning']}1A; border-radius:4px;"
+                                    f"padding:1px 8px; flex-shrink:0"):
+                                ui.label("●").style(
+                                    f"color:{COLORS['warning']}; font-size:0.6rem")
+                                ui.label("unsaved").style(
+                                    f"color:{COLORS['warning']};"
+                                    f"font-size:{TYPOGRAPHY['size_xs']}")
+                    # Bands are annotation, not steps — counting them made a
+                    # four-step test claim six.
+                    real = sum(1 for st in self.steps
+                               if not st.strip().startswith(self.PURPOSE))
+                    meta = getattr(self, "meta", {}) or {}
+                    sub = f"{real} steps"
+                    if meta.get("updated_by"):
+                        when = _ist(meta.get("updated_at"))
+                        sub += f"  ·  Edited by {meta['updated_by']}" + (f" on {when}" if when else "")
+                    sub_lbl = ui.label(sub).style(
+                        f"color:{COLORS['text_muted']}; font-size:{TYPOGRAPHY['size_xs']};"
+                        "white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%")
+                    if meta.get("created_by"):
+                        sub_lbl.tooltip(f"Created by {meta.get('created_by')}")
+                with ui.row().classes("items-center no-wrap gap-1").style("flex-shrink:0"):
+                    ui.button("Review", icon="auto_fix_high", on_click=self.review) \
+                        .props("flat dense").tooltip(
+                            "Check this test for hardcoded values, fixed waits, "
+                            "missing checks and repeated blocks")
+                    ui.button("Save", icon="save", on_click=self.save).props("unelevated dense")
+                    ui.button("Extend with AI", icon="auto_awesome",
+                              on_click=lambda: ui.navigate.to(
+                                  f"/platform/{self.platform}/draft?extend={quote(self.selected or '', safe='')}")) \
+                        .props("flat dense").tooltip(
+                            "Describe what to add (a ticket link or a sentence) — the drafted "
+                            "steps are appended after the last step of this test case")
+                    ui.button(icon="delete_outline", on_click=self.delete_dialog) \
+                        .props("flat dense color=negative").tooltip("Delete this test case")
+                    ui.button("Run", icon="play_arrow", on_click=self.run) \
+                        .props("unelevated dense").style(f"background:{COLORS['success']}")
 
             # Any step that cannot run is surfaced before the operator presses Run,
             # not after — that is the whole point of carrying per-step status.
