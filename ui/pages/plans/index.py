@@ -270,8 +270,9 @@ async def render_edit(plan_id: str = "") -> None:
                 .props("outlined dense").style("min-width:22rem")
             muted("Pick prot / prot3 / devx … to run the whole plan on that host: every www.justdial.com "
                   "URL in its test cases moves there and the saved login is attached."
-                  " A Website-only server (staging2, stg) is never used for Mobile Site test cases — "
-                  "they are marked not run with the reason.")
+                  " Servers are never mixed: staging2 / stg are Website only, prot / prot3 / prot4 / "
+                  "devx / designtest / seo are Mobile Site only — a test case of the other platform "
+                  "is marked not run with the reason.")
 
             async def _fill_envs() -> None:
                 try:

@@ -237,7 +237,7 @@ class RunCenter:
             self.site_env = ui.select({"": "Default — URL as written in the test"},
                                       value="", label="Environment") \
                 .props("outlined dense").classes("w-full") \
-                .tooltip("Pick prot / prot3 / devx … to run this test there without editing any URL.")
+                .tooltip("Pick a server to run this test there without editing any URL — only servers for this platform are listed.")
             self.site_env_hint = ui.label("").style(
                 f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}")
 

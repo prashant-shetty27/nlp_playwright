@@ -252,10 +252,12 @@ def apply_to_flow_steps(steps: list, env: dict | None = None) -> list:
     return out
 
 
-#: Servers that serve only one platform. staging2 / stg are Website (desktop)
-#: servers — a Mobile Site run must never be moved onto them. An environment can
-#: say otherwise with "platforms": ["website", "mobilesite"] in environments.json.
-_PLATFORM_DEFAULTS = {"staging2": ["website"], "stg": ["website"]}
+#: Which platform each server serves — they are never mixed:
+#:   Website (desktop):        staging2, stg
+#:   Mobile Site (Waptouch):   prot, prot3, prot4, devx, designtest, seo (and any new one)
+#:   live (www.justdial.com):  both
+#: An environment can override this with "platforms": [...] in environments.json.
+_WEBSITE_ONLY = {"staging2", "stg"}
 _URL_PLATFORMS = ("website", "mobilesite")
 
 
@@ -263,7 +265,9 @@ def env_platforms(name: str, env: dict | None = None) -> list[str]:
     p = (env or {}).get("platforms")
     if isinstance(p, list) and p:
         return [str(x).lower() for x in p]
-    return list(_PLATFORM_DEFAULTS.get(name, _URL_PLATFORMS))
+    if name == "live" or (env or {}).get("domain_override", "").lower() == "www.justdial.com":
+        return list(_URL_PLATFORMS)
+    return ["website"] if name in _WEBSITE_ONLY else ["mobilesite"]
 
 
 def site_environments(platform: str | None = None) -> list[dict]:
