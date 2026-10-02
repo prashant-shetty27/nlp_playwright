@@ -1248,6 +1248,33 @@ def _mark_slow(page) -> None:
         pass
 
 
+def _touch_scroll_gesture(page, x: float, y: float, dy: float, secs: float = 0.45) -> bool:
+    """A real touch scroll done by the browser itself (Chromium only):
+    Input.synthesizeScrollGesture with gestureSourceType=touch. Unlike sending
+    touchStart/touchMove/touchEnd one by one, Chromium does not wait for the
+    page to acknowledge every move, so a page that is slow to handle touch
+    cannot freeze the run. Returns False when unavailable (WebKit/Firefox)."""
+    try:
+        cdp = page.context.new_cdp_session(page)
+    except Exception:  # noqa: BLE001
+        return False
+    try:
+        speed = max(400, int(abs(dy) / max(secs, 0.1)))
+        cdp.send("Input.synthesizeScrollGesture", {
+            "x": float(x), "y": float(y), "xDistance": 0, "yDistance": float(-dy),
+            "speed": speed, "gestureSourceType": "touch", "preventFling": True,
+            "repeatCount": 1})
+        return True
+    except Exception as e:  # noqa: BLE001
+        logger.debug("synthesizeScrollGesture unavailable: %s", e)
+        return False
+    finally:
+        try:
+            cdp.detach()
+        except Exception:  # noqa: BLE001
+            pass
+
+
 def _finger_drag(page, dy: float, secs: float = 0.45) -> None:
     """One finger drag that moves the page by about `dy` px (positive = down
     the page, i.e. finger moves up). Slow at the end so there is little fling,
@@ -1268,7 +1295,9 @@ def _finger_drag(page, dy: float, secs: float = 0.45) -> None:
         return
     before = page.evaluate("() => window.scrollY")
     t_start = time.time()
-    if engine == "chromium":
+    if engine == "chromium" and _touch_scroll_gesture(page, x, ya, dy, secs):
+        pass
+    elif engine == "chromium":
         cdp = page.context.new_cdp_session(page)
         try:
             cdp.send("Input.dispatchTouchEvent", {"type": "touchStart", "touchPoints": [{"x": x, "y": ya}]})
@@ -1435,7 +1464,9 @@ def swipe_screen(page, span: str = "bottom_top", duration_s: float | None = None
     # ~10 moves are enough for the browser to read a swipe; dozens per gesture
     # only pile up on a page that is slow to handle touch.
     steps = max(6, min(12, int(secs / 0.03)))
-    if touch:
+    if touch and not horizontal and _touch_scroll_gesture(page, xa, ya, ya - yb, secs):
+        pass
+    elif touch:
         # touchstart -> touchmoves -> touchend, as a finger does; the browser
         # then scrolls the page itself, momentum included.
         cdp = page.context.new_cdp_session(page)

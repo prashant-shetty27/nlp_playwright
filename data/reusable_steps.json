@@ -2296,10 +2296,15 @@
   },
   "RFQ_Non_Login_Flow_to_Login_Select_2_Option": {
     "steps": [
+      "wait 2 seconds",
+      "if element rfq_mobile_number_input is not visible",
+      "wait until element rfq_skip_all_button is visible",
+      "js click rfq_skip_all_button",
+      "end if",
       "call SG_Touch_B2B_RFQ_Login_Form"
     ],
     "created_at": "2026-10-01T17:24:27.684899+00:00",
-    "step_count": 1,
+    "step_count": 6,
     "platform": "mobilesite"
   },
   "SG_PDP_Get_Quotes_Submission_Non_Login_Flow": {
