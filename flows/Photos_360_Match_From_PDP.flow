@@ -1,0 +1,32 @@
+# Platform: mobilesite
+# Story: GJDT-22417 — the product image seen on the PDP is found on the seller catalogue Photos tab
+#   (matched by its image file id, so new photos changing the order don't break it) and carries the 360° icon there; the single-image gallery shows NO icon (story: 'Not to be done'); Back keeps the icon.
+# Live data: Eden Enterprises, Chennai (only live listing with 360° photos found on 03-Oct-2026; Office Chair / Tyre / CCTV sellers scanned had none).
+# Tags: b2b, pdp, catalogue, 360, GJDT-22417
+open https://www.justdial.com/jdmart/Chennai/All-Geared-Auto-Feed-Radial-Drilling-Machine-Green-And-Silver-/pid-2233271257/044PXX44-XX44-250214122451-W9P8
+wait until element pdp_main_image is visible
+store attribute src of pdp_main_image as img_src
+store regex "-([a-z0-9]{6,10})\.(?:png|jpe?g|webp)" from img_src as img_id
+store attribute href of pdp_seller_catalogue_link as catalogue_url
+open https://www.justdial.com${catalogue_url}
+wait until url contains "_BZDET"
+wait 3 seconds
+click pdp_tab_photos
+wait until element pdp_photo_tile is visible
+# find the SAME image on the catalogue Photos tab (by file id, not by position)
+scroll to catalogue_photo_tile_matching
+verify element catalogue_photo_tile_matching is visible
+verify element catalogue_photo_tile_matching_360_icon is visible
+verify element catalogue_photo_tile_matching_360_icon is inside catalogue_photo_tile_matching_image
+take screenshot as matched_image_photos_tab
+# single-image gallery: 360 icon must NOT show (GJDT-22417: "single images on the Gallery Page (Not to be done)")
+click catalogue_photo_tile_matching_image
+wait until element gallery_slide_image is visible
+wait 2 seconds
+verify element gallery_360_icon is not visible
+take screenshot as matched_image_gallery_no_icon
+# back on the Photos tab: the same image still carries the 360 icon
+go back
+wait until element pdp_photo_tile is visible
+scroll to catalogue_photo_tile_matching
+verify element catalogue_photo_tile_matching_360_icon is visible

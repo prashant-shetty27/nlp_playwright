@@ -1,0 +1,45 @@
+# Platform: mobilesite
+# Story: GJDT-22417 — from the PRP card, open the product, take its image, and find the SAME image on the seller
+#   catalogue Photos tab (by image file id, not position) with the 360° icon; no icon in the single-image gallery (story: 'Not to be done'); icon again after Back.
+# Live data: Geared Drilling Machine PRP, Chennai -> Eden Enterprises card (sits deep, ~#65; the test scrolls to it by seller name).
+# Tags: b2b, prp, catalogue, 360, GJDT-22417
+open https://www.justdial.com/jdmart/Chennai/Geared-Drilling-Machine/jdm-1381022-ent-2-17682395
+wait 4 seconds
+# This case only needs the product data from the PRP, so the GVS "Save more on … / Get Wholesale Prices" sheet is closed if it shows (it is not under test here)
+repeat until element prp_eden_card is visible (max 60 times)
+click if visible b2b_prp_gvs_popup_skip
+swipe bottom to top
+wait 1 seconds
+end repeat
+click if visible b2b_prp_gvs_popup_skip
+scroll to prp_eden_card_title
+verify element prp_eden_card_title contains "Radial Drilling Machine"
+scroll to prp_eden_card_title
+click prp_eden_card_title
+wait until url contains "/pid-"
+wait until element pdp_main_image is visible
+store attribute src of pdp_main_image as img_src
+store regex "-([a-z0-9]{6,10})\.(?:png|jpe?g|webp)" from img_src as img_id
+store attribute href of pdp_seller_catalogue_link as catalogue_url
+open https://www.justdial.com${catalogue_url}
+wait until url contains "_BZDET"
+wait 3 seconds
+click pdp_tab_photos
+wait until element pdp_photo_tile is visible
+# find the SAME image on the catalogue Photos tab (by file id, not by position)
+scroll to catalogue_photo_tile_matching
+verify element catalogue_photo_tile_matching is visible
+verify element catalogue_photo_tile_matching_360_icon is visible
+verify element catalogue_photo_tile_matching_360_icon is inside catalogue_photo_tile_matching_image
+take screenshot as matched_image_photos_tab
+# single-image gallery: 360 icon must NOT show (GJDT-22417: "single images on the Gallery Page (Not to be done)")
+click catalogue_photo_tile_matching_image
+wait until element gallery_slide_image is visible
+wait 2 seconds
+verify element gallery_360_icon is not visible
+take screenshot as matched_image_gallery_no_icon
+# back on the Photos tab: the same image still carries the 360 icon
+go back
+wait until element pdp_photo_tile is visible
+scroll to catalogue_photo_tile_matching
+verify element catalogue_photo_tile_matching_360_icon is visible

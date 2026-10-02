@@ -1683,5 +1683,16 @@
     "b2b_assist_card_2nd": "((//div[contains(@class,'rfq-chat-history')]/div[.//button[starts-with(@aria-label,'Call ')]])[last()]//div[contains(concat(' ',normalize-space(@class),' '),' rfq-product-card ')])[2]",
     "b2b_assist_card_call_button": "(//div[contains(@class,'rfq-chat-history')]/div[.//button[starts-with(@aria-label,'Call ')]])[last()]//div[contains(concat(' ',normalize-space(@class),' '),' rfq-product-card ')]//button[starts-with(@aria-label,'Call ')]",
     "b2b_assist_fresh_chat_yes": "//button[normalize-space()='Yes, proceed']"
+  },
+  "b2b_360_match": {
+    "pdp_main_image": "(//img[contains(@class,'b2bimgswiper__img')])[1]",
+    "pdp_seller_catalogue_link": "//a[contains(@class,'spvndrlnk')]",
+    "prp_eden_card": "//div[contains(@class,'b2bprdctcel')][.//*[normalize-space(text())='Eden Enterprises']]",
+    "prp_eden_card_image": "(//div[contains(@class,'b2bprdctcel')][.//*[normalize-space(text())='Eden Enterprises']]//img[not(contains(@class,'icon'))])[1]",
+    "prp_eden_card_title": "//div[contains(@class,'b2bprdctcel')][.//*[normalize-space(text())='Eden Enterprises']]//h2",
+    "catalogue_photo_tile_matching": "//div[contains(@class,'photos_tab_imgcontainer')][.//img[contains(@src,'${img_id}') or contains(@data-src,'${img_id}')]]",
+    "catalogue_photo_tile_matching_image": "//div[contains(@class,'photos_tab_imgcontainer')][.//img[contains(@src,'${img_id}') or contains(@data-src,'${img_id}')]]//img",
+    "catalogue_photo_tile_matching_360_icon": "//div[contains(@class,'photos_tab_imgcontainer')][.//img[contains(@src,'${img_id}') or contains(@data-src,'${img_id}')]]//div[contains(@class,'glyimg__img3dicn')]",
+    "b2b_prp_gvs_popup_skip": "//*[contains(@class,'skipbtn')] | //div[contains(@class,'popup') or contains(@class,'sheet')]//*[normalize-space(text())='Skip']"
   }
 }

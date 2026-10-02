@@ -8,8 +8,10 @@ wait for page to load
 wait until element pdp_first_photo is visible
 store count of pdp_photo_360_icon as icons_before
 click pdp_first_photo
-wait until element gallery_360_icon is visible
-verify element gallery_360_icon is visible
+# GJDT-22417 requirement: single images on the Gallery Page get NO 360 icon ("Not to be done") - checked 03-Oct-2026
+wait until element gallery_slide_image is visible
+wait 2 seconds
+verify element gallery_360_icon is not visible
 go back
 wait until element pdp_photos_heading is visible
 verify element pdp_photos_heading is visible
