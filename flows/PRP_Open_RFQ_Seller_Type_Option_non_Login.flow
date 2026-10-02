@@ -21,9 +21,13 @@ verify element prp_open_rfq_seller_type_section contains "Manufacturers"
 verify element prp_open_rfq_seller_type_section contains "Exporters"
 verify element prp_open_rfq_seller_type_section contains "Dealers"
 click prp_open_rfq_seller_type_wholesaler
-click prp_open_rfq_seller_type_submit
+click if visible prp_open_rfq_seller_type_submit
 wait 2 seconds
 call SG_PRP_Request_View_Catalogue_Non_Login_to_Login
+wait 2 seconds
+if element prp_open_rqq_seller_type_post_login_mobile is not visible
+click if visible prp_open_rfq_seller_type_submit
+end if
 wait until element prp_open_rfq_seller_type_toast_msg is visible
 [ignore] verify element prp_open_rfq_seller_type_toast_msg is visible
 wait 1 seconds

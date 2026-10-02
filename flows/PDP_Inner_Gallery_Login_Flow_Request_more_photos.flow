@@ -5,7 +5,7 @@
 #   plus the checks that only pass after it. Switch them on only when a lead is wanted.
 
 call PS_Touch_Location_Popup
-call SG_Touch_Core_Login_9987996046
+call SG_Touch_Core_Login
 open https://www.justdial.com/jdmart/Mumbai/Roller-Lock-Ball-lock-Coated-SS304-4-6mm-width-PRU44-150/pid-2030900705/022PXX22-XX22-180320192332-E1H1?slider=1&initialIndex=0&sellers=0
 wait 3 seconds
 swipe left

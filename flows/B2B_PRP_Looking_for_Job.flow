@@ -6,7 +6,7 @@
 
 [ignore] call Live_Touch_Chrome_Navigate_to_Homepage_setup_Popup
 [ignore] wait for page to load
-call SG_PS_Touch_Home_Login_7738176962
+call SG_PS_Touch_Home_Login
 open https://www.justdial.com/jdmart/Delhi/Job-Placement-Services/jdm-1778102-ent-14-11068585
 wait for page to load
 wait 3 seconds

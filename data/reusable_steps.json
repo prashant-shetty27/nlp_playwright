@@ -208,18 +208,16 @@
   },
   "SG_PRP_Request_View_Catalogue_Non_Login_to_Login": {
     "steps": [
+      "wait until element prp_login_mobile is visible",
       "click prp_login_mobile",
-      "wait 1 seconds",
       "type \"${mobile_9987}\" into prp_login_mobile",
-      "wait 1 seconds",
       "js click prp_login_submit",
-      "wait 1 seconds",
-      "wait until element prp_submit_login_otp is visible",
-      "type \"${otp}\" into prp_login_otp",
-      "wait 1 seconds"
+      "wait until element touch_home_otp_1stfield is visible",
+      "type \"${otp}\" into touch_home_otp_1stfield",
+      "wait 2 seconds"
     ],
     "created_at": "2026-09-28T20:01:27.985108+00:00",
-    "step_count": 9,
+    "step_count": 7,
     "platform": "mobilesite"
   },
   "SG_PRP_Request_Catalogue_Non_Login_to_Login_Flow": {
@@ -287,16 +285,20 @@
   },
   "SG_Touch_Core_Login_Test_Number": {
     "steps": [
+      "wait 2 seconds",
+      "if element rfq_mobile_number_input is not visible",
       "click touch_signin_home_page",
       "click touch_contextual_signin",
+      "end if",
+      "wait until element rfq_mobile_number_input is visible",
       "type \"${mobile_9987}\" into rfq_mobile_number_input",
       "js click allpages_login_mobile_continue",
-      "wait 3 seconds",
+      "wait until element touch_home_otp_1stfield is visible",
       "type \"${otp}\" into touch_home_otp_1stfield",
       "wait 2 seconds"
     ],
     "created_at": "2026-09-29T09:58:28.320263+00:00",
-    "step_count": 7,
+    "step_count": 11,
     "platform": "mobilesite"
   },
   "SG_Service_Category_WA_Removed_Non_Login": {
@@ -389,33 +391,42 @@
     "step_count": 3,
     "platform": "mobilesite"
   },
-  "SG_PS_Touch_Home_Login_${mobile_7738}": {
+  "SG_PS_Touch_Home_Login": {
     "steps": [
       "wait for page to load",
+      "wait 2 seconds",
+      "if element rfq_mobile_number_input is not visible",
       "click ps_touch_home_top_login_icon",
       "wait until element heading_sign_in is visible",
       "click heading_sign_in",
-      "wait 1 seconds",
-      "wait 2 seconds",
-      "js click home_login_with_otp",
-      "type \"537393\" into touch_home_otp_1stfield",
-      "wait 1 seconds"
+      "end if",
+      "wait until element rfq_mobile_number_input is visible",
+      "type \"${mobile_7738}\" into rfq_mobile_number_input",
+      "js click allpages_login_mobile_continue",
+      "wait until element touch_home_otp_1stfield is visible",
+      "type \"${otp}\" into touch_home_otp_1stfield",
+      "wait 2 seconds"
     ],
     "created_at": "2026-10-01T17:23:53.392923+00:00",
-    "step_count": 9,
+    "step_count": 13,
     "platform": "mobilesite"
   },
-  "SG_Touch_Core_Login_${mobile_9987}": {
+  "SG_Touch_Core_Login": {
     "steps": [
+      "wait 2 seconds",
+      "if element rfq_mobile_number_input is not visible",
       "click touch_signin_home_page",
       "click touch_contextual_signin",
-      "js click home_login_with_otp",
-      "wait 3 seconds",
-      "type \"537393\" into touch_home_otp_1stfield",
+      "end if",
+      "wait until element rfq_mobile_number_input is visible",
+      "type \"${mobile_9987}\" into rfq_mobile_number_input",
+      "js click allpages_login_mobile_continue",
+      "wait until element touch_home_otp_1stfield is visible",
+      "type \"${otp}\" into touch_home_otp_1stfield",
       "wait 2 seconds"
     ],
     "created_at": "2026-10-01T17:23:53.404036+00:00",
-    "step_count": 6,
+    "step_count": 11,
     "platform": "mobilesite"
   },
   "SG_If_NCT_looking_for_Login_Popup_Seen_then_click": {

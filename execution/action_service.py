@@ -380,6 +380,22 @@ def open_site(page, url: str):
         raise RuntimeError(f"Navigation Error: Failed to load '{safe_url}'. "
                            f"{_reachability_hint(parsed_url.hostname or '')}"
                            f"Details: {detail}")
+    _raise_if_blocked(page, safe_url)
+
+
+def _raise_if_blocked(page, safe_url: str) -> None:
+    """A CDN bot-block (Akamai "Access Denied") renders a tiny error page; every
+    step after it then failed as "element broken / not found", which sent people
+    chasing locators. Say what actually happened instead."""
+    try:
+        title = (page.title() or "").strip().lower()
+    except Exception:  # noqa: BLE001
+        return
+    if title in ("access denied", "403 forbidden", "request rejected"):
+        raise RuntimeError(
+            f"Site blocked this machine: '{safe_url}' returned '{title.title()}' "
+            "(CDN bot protection). Too many automated visits from this network — "
+            "wait a while, switch network, or run on a test environment (prot / prot3 / devx).")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -469,6 +485,27 @@ def fill_element(page, text, locator_name):
                     return (loc.evaluate("el => el.value ?? el.textContent") or "") == want
                 except PlaywrightError:
                     return False
+
+        # A row of one-digit boxes (OTP / PIN): the first box holds one digit
+        # and the widget moves focus on each key. Filling it put the first digit
+        # in and the rest nowhere; type key by key from the first box instead.
+        try:
+            one_digit = len(want) > 1 and loc.evaluate(
+                "el => el.tagName === 'INPUT' && (el.maxLength === 1 || "
+                "/digit|otp|pin/i.test((el.getAttribute('aria-label') || '') + ' ' + el.className))",
+                timeout=1500)
+        except PlaywrightError:
+            one_digit = False
+        if one_digit:
+            loc.click(timeout=3000)
+            try:
+                loc.fill("", timeout=1000)
+            except PlaywrightError:
+                pass
+            page.keyboard.type(want, delay=120)
+            page.wait_for_timeout(400)
+            logger.info("⌨️ Typed %d characters into the digit boxes of '%s'", len(want), locator_name)
+            return True
 
         try:
             loc.fill(want, timeout=3000)
@@ -1139,6 +1176,19 @@ def refresh_page(page):
     page.reload(wait_until="load")
 
 
+def _wheel(page, dx, dy) -> None:
+    """Scroll by (dx, dy). Mobile WebKit (iPhone/iPad Safari) has no mouse
+    wheel — Playwright raises "Mouse wheel is not supported in mobile WebKit" —
+    so fall back to scrolling the page itself there."""
+    try:
+        page.mouse.wheel(dx, dy)
+    except Exception as e:  # noqa: BLE001
+        if "not supported" not in str(e).lower():
+            raise
+        page.evaluate("([x, y]) => window.scrollBy(x, y)", [float(dx), float(dy)])
+        page.wait_for_timeout(150)
+
+
 def scroll_to_element(page, target: str) -> None:
     """Scroll until the named element is visible in the viewport."""
     from locators.manager import (get_alternate_selectors, get_locator_and_dna,
@@ -1146,12 +1196,117 @@ def scroll_to_element(page, target: str) -> None:
     xpath, _ = get_locator_and_dna(target)
     if not xpath:
         raise Exception(f"Locator '{target}' not found for scroll_to")
-    _get_locator_root(page).locator(xpath).first.scroll_into_view_if_needed(timeout=8000)
+    loc = _get_locator_root(page).locator(xpath).first
+    # On a phone page, get there the way a person does — finger swipes — so
+    # "on scroll" popups, lazy sections and sticky bars react as on a device.
+    # SEO footer links stay a direct jump: the footer is many screens down and
+    # finger-swiping to it only adds minutes, not coverage.
+    name = str(target or "").lower()
+    if _is_touch_page(page) and not ("seo" in name and "footer" in name):
+        if _finger_scroll_to(page, loc):
+            logger.info("👆 Finger-scrolled to element: %s", target)
+            return
+    loc.scroll_into_view_if_needed(timeout=8000)
     logger.info("📜 Scrolled to element: %s", target)
 
 
+def _is_touch_page(page) -> bool:
+    """True for a phone / tablet emulation (touch-enabled context)."""
+    try:
+        return bool(page.evaluate("() => navigator.maxTouchPoints > 0 || 'ontouchstart' in window"))
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def _finger_drag(page, dy: float, secs: float = 0.45) -> None:
+    """One finger drag that moves the page by about `dy` px (positive = down
+    the page, i.e. finger moves up). Slow at the end so there is little fling,
+    which keeps the distance close to what the step asked for."""
+    size = page.viewport_size or page.evaluate("() => ({width: innerWidth, height: innerHeight})")
+    w, h = int(size["width"]), int(size["height"])
+    x = int(w / 2)
+    ya = int(h * (0.78 if dy > 0 else 0.22))
+    yb = int(max(4, min(h - 4, ya - dy)))
+    steps = max(10, int(secs / 0.016))
+    try:
+        engine = page.context.browser.browser_type.name
+    except Exception:  # noqa: BLE001
+        engine = "chromium"
+    before = page.evaluate("() => window.scrollY")
+    if engine == "chromium":
+        cdp = page.context.new_cdp_session(page)
+        try:
+            cdp.send("Input.dispatchTouchEvent", {"type": "touchStart", "touchPoints": [{"x": x, "y": ya}]})
+            for i in range(1, steps + 1):
+                t = i / steps
+                ease = 1 - (1 - t) ** 2                   # decelerate: little momentum
+                cdp.send("Input.dispatchTouchEvent", {"type": "touchMove",
+                         "touchPoints": [{"x": x, "y": ya + (yb - ya) * ease}]})
+                page.wait_for_timeout(int(secs * 1000 / steps))
+            page.wait_for_timeout(60)                     # finger rests: no fling
+            cdp.send("Input.dispatchTouchEvent", {"type": "touchEnd", "touchPoints": []})
+        finally:
+            try:
+                cdp.detach()
+            except Exception:  # noqa: BLE001
+                pass
+    else:
+        # WebKit / Firefox have no touch injection: pointer drag (what touch
+        # listeners on those engines receive), then make sure the page moved.
+        page.mouse.move(x, ya)
+        page.mouse.down()
+        for i in range(1, steps + 1):
+            page.mouse.move(x, ya + (yb - ya) * i / steps, steps=1)
+            page.wait_for_timeout(int(secs * 1000 / steps))
+        page.mouse.up()
+    page.wait_for_timeout(250)
+    moved = page.evaluate("() => window.scrollY") - before
+    # Page did not follow the finger (inner scroller, drag ignored): top up the
+    # remaining distance so the step still lands where it was asked to.
+    if abs(moved) < abs(dy) * 0.5:
+        _wheel(page, 0, dy - moved)
+
+
+def _finger_scroll(page, dy: float) -> None:
+    """Scroll by `dy` px with finger drags of at most ~half a screen each."""
+    size = page.viewport_size or {"height": 800}
+    chunk = max(150, int(int(size["height"]) * 0.5))
+    left = float(dy)
+    while abs(left) > 1:
+        step = max(-chunk, min(chunk, left))
+        _finger_drag(page, step)
+        left -= step
+
+
+def _finger_scroll_to(page, loc, max_swipes: int = 25) -> bool:
+    """Swipe until `loc` sits inside the viewport. False if it never does."""
+    size = page.viewport_size or {"height": 800}
+    h = int(size["height"])
+    for _ in range(max_swipes):
+        try:
+            box = loc.bounding_box(timeout=1500)
+        except Exception:  # noqa: BLE001
+            box = None
+        if box is None:
+            return False                                  # not rendered: let the jump try
+        if 0 <= box["y"] and box["y"] + min(box["height"], h * 0.5) <= h * 0.9:
+            return True
+        delta = box["y"] - h * 0.3                        # bring it to the upper third
+        _finger_drag(page, max(-h * 0.5, min(h * 0.5, delta)))
+    return False
+
+
+def _scroll_by(page, dx, dy) -> None:
+    """Every "scroll by N" goes through here: finger drag on a phone page,
+    mouse wheel on a desktop page (and for sideways scrolling)."""
+    if not dx and _is_touch_page(page):
+        _finger_scroll(page, dy)
+    else:
+        _wheel(page, dx, dy)
+
+
 def vertical_scroll(page_obj, amount=500):
-    page_obj.mouse.wheel(0, int(amount))
+    _scroll_by(page_obj, 0, int(amount))
     logger.info("📜 Scrolled down by %s pixels", amount)
 
 
@@ -1165,7 +1320,7 @@ def scroll_until_text_visible(page, text, max_scrolls=None, scroll_wait=2):
         locator = page.get_by_text(target_text, exact=True)
         if locator.count() > 0 and locator.first.is_visible(timeout=500):
             return True
-        page.mouse.wheel(0, 500)
+        _scroll_by(page, 0, 500)
         scrolls += 1
         if scroll_wait:
             page.wait_for_timeout(float(scroll_wait) * 1000)   # seconds -> ms (was 1500: "wait 1" slept 1.5 s)
@@ -1260,11 +1415,11 @@ def swipe_screen(page, span: str = "bottom_top", duration_s: float | None = None
         page.mouse.up()
         if not horizontal:
             # A drag on a plain page does not scroll it; add the wheel movement.
-            page.mouse.wheel(0, ya - yb)
+            _wheel(page, 0, ya - yb)
     else:
         # Desktop page: the same movement as small wheel steps.
         for _ in range(steps):
-            page.mouse.wheel(0, (ya - yb) / steps)
+            _wheel(page, 0, (ya - yb) / steps)
             page.wait_for_timeout(int(secs * 1000 / steps))
     page.wait_for_timeout(500)               # let the fling settle
     logger.info("👆 Swiped %s (%s, %.1fs)", span.replace("_", " to "), "touch" if touch else "mouse", secs)
@@ -1384,7 +1539,7 @@ def scroll_until_element_visible(page, target: str, pixels=500, direction="down"
             return True
         if i == int(max_scrolls):
             break
-        page.mouse.wheel(dx, dy)
+        _scroll_by(page, dx, dy)
         if scroll_wait:
             page.wait_for_timeout(float(scroll_wait) * 1000)
     raise Exception(

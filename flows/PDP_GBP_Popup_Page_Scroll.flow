@@ -5,7 +5,7 @@
 #   plus the checks that only pass after it. Switch them on only when a lead is wanted.
 
 # OFF: call PS_Touch_Location_Popup
-# OFF: call SG_Touch_Core_Login_9987996046
+# OFF: call SG_Touch_Core_Login
 # OFF: open https://www.justdial.com/jdmart/Mumbai/Skf-Ball-Bearing-Deep-Groove-Single-Row-6205-2Z-1-Nos/pid-272203217/022PXX22-XX22-140307153118-I6K6?idx=0&jdmid=jdm-1008206-ent-4-7192762&alsoserveCity=Mumbai&nid=10034271&slider=0&initialIndex=3&sellers=0&isLogin=1
 # OFF: wait 2 seconds
 # OFF: [ignore 30s] swipe bottom to top until element pdp_gbp_popup is visible, max 15 times, wait 1
