@@ -21,7 +21,7 @@ wait 1 seconds
 verify element catalogue_bd_category_popup is visible
 verify element catalogue_heading_bd_category_pop is visible
 verify element catalogue_get_text_bd_category_pop is visible
-verify element catalogue_checked_bd_category_rfq_pop is visible
+# Live 02-Oct-2026: popup redesigned - no option is pre-checked any more
 verify element catalogue_1st_label_bd_category_pop is visible
 verify element catalogue_label_last_bd_category_pop is visible
 verify element catalogue_get_verified_seller_button_bd_category_pop is visible
