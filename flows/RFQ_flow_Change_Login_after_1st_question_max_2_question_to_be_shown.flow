@@ -4,8 +4,6 @@
 # OFF steps: every step that would send a REAL lead / enquiry / OTP is switched off,
 #   plus the checks that only pass after it. Switch them on only when a lead is wanted.
 
-open https://whatismyipaddress.com/
-wait 10 seconds
 call Live_Touch_Chrome_Navigate_to_Homepage_setup_Popup
 open https://www.justdial.com/jdmart/Mumbai/Skf-Ball-Bearing-Deep-Groove-Single-Row-6205-2Z-1-Nos/pid-272203217/022PXX22-XX22-140307153118-I6K6?idx=0&jdmid=jdm-1008206-ent-4-7192762&alsoserveCity=Mumbai&nid=10034271
 wait 2 seconds
@@ -32,8 +30,7 @@ wait 2 seconds
 store text of ps_b2b_prp_1st_product as prp_1stProduct
 wait until element prp_best_price is visible
 click prp_best_price
-store text of rfq_product_name as rfq_prp_product
-verify stored rfq_prp_product contains "${rfq_prp_product}"
-verify element rfq_quantity_input is visible
-# OFF: call RFQ_Non_Login_Flow_to_Login_and_Continue_Search
-wait 1 seconds
+# Live 02-Oct-2026: PRP Get Best Price opens the B2B Assist AI chat (login first), not the old RFQ form
+wait until element b2b_assist_chat_login_link is visible
+verify element b2b_assist_first_card contains "${prp_1stProduct}"
+verify text "Log in to begin" on page

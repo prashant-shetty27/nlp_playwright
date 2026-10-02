@@ -2650,5 +2650,20 @@
     "platform": "mobilesite",
     "created_at": "2026-10-02T13:40:00+00:00",
     "step_count": 12
+  },
+  "SG_RFQ_Old_Form_Or_Blue_Page_Opened": {
+    "steps": [
+      "wait 4 seconds",
+      "if element rfq_quantity_input is visible",
+      "verify element rfq_product_name is visible",
+      "verify text \"Skip All\" on page",
+      "else",
+      "wait until element rfq_blue_page_1st_option is visible",
+      "verify element rfq_blue_page_question_1st is visible",
+      "end if"
+    ],
+    "platform": "mobilesite",
+    "created_at": "2026-10-02T14:00:00+00:00",
+    "step_count": 8
   }
 }
