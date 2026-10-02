@@ -2670,5 +2670,22 @@
     "platform": "mobilesite",
     "created_at": "2026-10-02T14:00:00+00:00",
     "step_count": 8
+  },
+  "SG_NCT_Scroll_To_Send_Enquiry_Skipping_Job_Sheet": {
+    "steps": [
+      "repeat until element send_enquiry_button_1st is visible (max 20 times)",
+      "click if visible get_best_price_header_back",
+      "scroll down 500",
+      "wait 1 seconds",
+      "end repeat",
+      "click if visible get_best_price_header_back",
+      "scroll to send_enquiry_button_1st",
+      "wait 2 seconds",
+      "click if visible get_best_price_header_back",
+      "scroll to send_enquiry_button_1st"
+    ],
+    "platform": "mobilesite",
+    "created_at": "2026-10-02T15:10:00+00:00",
+    "step_count": 10
   }
 }
