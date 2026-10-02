@@ -6,7 +6,10 @@
 
 call Live_Touch_Chrome_Navigate_to_Homepage_setup_Popup
 call Touch_Core_To_B2B_Landing_via_Hotkey
-type "c" into b2b_search_field
+# Tap the search box first: it opens the search screen where suggestions appear
+click b2b_search_field
+wait 2 seconds
+type "c" into focused field
 wait 3 seconds
 type "c" into focused field
 type "c" into focused field
