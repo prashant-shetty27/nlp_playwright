@@ -14,9 +14,8 @@ create variable pscroll with value "1200"
 verify element catalogue_bd_category_popup is visible
 verify element catalogue_page_category_rfq_popup_looking_for_text is visible
 verify element catalogue_category_rfq_popup_what_type_text is visible
-verify element catalogue_checked_bd_category_rfq_pop is visible
+# Live 02-Oct-2026: popup redesigned - "What are you looking for? / Get tailored quotes instantly!", one option, none pre-checked
 verify element catalogue_1st_label_bd_category_pop is visible
-verify element catalogue_label_last_bd_category_pop is visible
 verify element catalogue_skip_bd_category_pop is visible
 click catalogue_get_verified_seller_button_bd_category_pop
 # OFF: wait until element common_b2b_login_post_mobile_continue is visible

@@ -900,8 +900,8 @@
   },
   "ts_catalogue_category_rfq_popup_non_paid": {
     "_platform": "mobilesite",
-    "catalogue_page_category_rfq_popup_looking_for_text": "//h2[contains(text(),'Looking for Hikvision CCTV?')]",
-    "catalogue_category_rfq_popup_what_type_text": "//p[contains(text(),'What type of CCTV system are you interested in:')]",
+    "catalogue_page_category_rfq_popup_looking_for_text": "//div[contains(@class,'category__popup--wrp')]//h2",
+    "catalogue_category_rfq_popup_what_type_text": "//div[contains(@class,'category__popup--wrp')]//p",
     "common_b2b_login_post_mobile_continue": "//button[text()[normalize-space() = \"Continue\"]]",
     "bd_popup_otp_field": "(//input[@type=\"tel\"])[1]",
     "pdp_otp_login_button": "//button[@type='submit']"
