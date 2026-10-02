@@ -1234,7 +1234,10 @@
       "click catalogue_product_tab_store_search",
       "wait 1 seconds",
       "[ignore] verify element catalogue_product_tab_store_search_box is not visible",
-      "type \"crane service providers\" into catalogue_product_tab_store_search_box",
+      "type \"excavator\" into catalogue_product_tab_store_search_box",
+      "wait 2 seconds",
+      "clear catalogue_product_tab_store_search_box",
+      "type \"excavator\" into focused field",
       "wait 1 seconds",
       "wait 3 seconds",
       "verify element catalogue_product_tab_store_search_category_as is visible",
@@ -1245,7 +1248,7 @@
       "verify element catalogue_product_tab_post_store_search_filter_tab contains \"${store_sr}\""
     ],
     "created_at": "2026-10-01T17:24:11.025168+00:00",
-    "step_count": 13,
+    "step_count": 16,
     "platform": "mobilesite"
   },
   "SG_Direct_URL_City_Validation_Delhi_Ncr": {

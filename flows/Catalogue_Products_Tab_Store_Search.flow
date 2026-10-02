@@ -11,7 +11,12 @@ click b2b_catalogue_tab_product
 wait 1 seconds
 click catalogue_product_tab_store_search
 wait 1 seconds
-type "cctv" into catalogue_product_tab_store_search_box
+# Live 02-Oct-2026: Akash Roofing sells roofing only - "cctv" gives no suggestion; search what it sells
+type "roofing" into catalogue_product_tab_store_search_box
+wait 2 seconds
+clear catalogue_product_tab_store_search_box
+type "roofing" into focused field
+wait 3 seconds
 verify element catalogue_product_tab_store_search_category_as is visible
 store count of catalogue_product_tab_store_search as product_store_search_AS_count
 # OFF: click catalogue_product_tab_1st_store_search_as

@@ -945,7 +945,7 @@
     "b2b_catalogue_card_cta_share": "//span[text()[normalize-space() = \"Share\"]]",
     "b2b_catalogue_send_enquiry_cta_top": "(//span[text()[normalize-space() = \"Send Enquiry\"]])[1]",
     "b2b_catalogue_cta_get_leads": "//p[text()[normalize-space() = \"Get Leads\"]]",
-    "b2b_catalogue_tab_product": "//a[text()[normalize-space() = \"Products\"]]",
+    "b2b_catalogue_tab_product": "//a[normalize-space(text())='Products' or normalize-space(text())='Services']",
     "b2b_catalogue_tab_reviews": "//a[text()[normalize-space() = \"Reviews\"]]",
     "b2b_catalogue_tab_photos": "//a[text()[normalize-space() = \"Photos\"]]",
     "b2b_catalogue_tab_videos": "//a[text()[normalize-space() = \"Videos\"]]",
