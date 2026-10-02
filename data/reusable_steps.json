@@ -2615,5 +2615,40 @@
     "created_at": "2026-10-01T17:24:23.284905+00:00",
     "step_count": 7,
     "platform": "mobilesite"
+  },
+  "SG_B2B_Assist_Login_In_Chat": {
+    "steps": [
+      "wait until element b2b_assist_chat_login_link is visible",
+      "click b2b_assist_chat_login_link",
+      "wait until element rfq_mobile_number_input is visible",
+      "type \"${mobile_7738}\" into rfq_mobile_number_input",
+      "click b2b_assist_login_continue",
+      "wait 3 seconds",
+      "type \"${otp_b2b}\" into focused field",
+      "wait 1 seconds",
+      "click if visible b2b_assist_otp_login_button"
+    ],
+    "platform": "mobilesite",
+    "created_at": "2026-10-02T13:40:00+00:00",
+    "step_count": 9
+  },
+  "SG_B2B_Assist_Answer_Until_Results": {
+    "steps": [
+      "wait until element type_your_message_input is visible",
+      "wait 4 seconds",
+      "repeat until element b2b_assist_result_call_now is visible (max 8 times)",
+      "if element b2b_assist_latest_first_option is visible",
+      "click b2b_assist_latest_first_option",
+      "else",
+      "type \"10\" into type_your_message_input",
+      "click b2b_assist_send",
+      "end if",
+      "wait 5 seconds",
+      "end repeat",
+      "verify element b2b_assist_result_call_now is visible"
+    ],
+    "platform": "mobilesite",
+    "created_at": "2026-10-02T13:40:00+00:00",
+    "step_count": 12
   }
 }

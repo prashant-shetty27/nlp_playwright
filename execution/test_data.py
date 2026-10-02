@@ -42,7 +42,7 @@ _LOCK = threading.Lock()
 
 #: Values the runner fills in by itself — never asked for, never stored.
 #:   otp  static OTP for a test number on this platform, else fetched from the OTP portal
-AUTOMATIC = {"otp"}
+AUTOMATIC = {"otp", "otp_b2b"}
 
 _EMPTY = {"_comment": "Global runtime variables — managed via the Test Data screen",
           "global": {}, "env": {"local": {}, "staging": {}, "cloud": {}},

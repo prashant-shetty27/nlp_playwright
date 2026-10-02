@@ -1577,7 +1577,11 @@
     "button_all_season_best_for_general_use_suitable_for_most_w": "//span[text()[normalize-space() = \"Best for general use, suitable for most weather conditions\"]]",
     "b2b_assist_chat_login_link": "//div[contains(@class,'rfq-chat-history')]//*[normalize-space(text())='Log In' or normalize-space(text())='Login']",
     "b2b_assist_login_continue": "(//button[normalize-space()='Continue'])[last()]",
-    "b2b_assist_otp_login_button": "(//button[normalize-space()='Login'])[last()]"
+    "b2b_assist_otp_login_button": "(//button[normalize-space()='Login'])[last()]",
+    "b2b_assist_latest_first_option": "(//div[contains(@class,'rfq-chat-history')]/div[last()]//button[@aria-pressed='false'])[1]",
+    "b2b_assist_latest_skip": "(//div[contains(@class,'rfq-chat-history')]/div[last()]//button[normalize-space()='Skip'])[1]",
+    "b2b_assist_send": "//button[@aria-label='Send']",
+    "b2b_assist_result_call_now": "(//div[contains(@class,'rfq-chat-history')]//button[starts-with(@aria-label,'Call ')])[1]"
   },
   "ts_pdp_seller_card_new_design": {
     "_platform": "mobilesite",

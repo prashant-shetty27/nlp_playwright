@@ -3309,6 +3309,24 @@ def note_typed_value(value) -> None:
         LAST_MOBILE = v
 
 
+def resolve_otp_b2b() -> str:
+    """${otp_b2b}: static OTP the B2B (jdmart) login sheets accept for the
+    blocked test numbers (STATIC_OTP_B2B in .env). Never logged."""
+    value = (os.getenv("STATIC_OTP_B2B") or "").strip()
+    if not value:
+        try:
+            from dotenv import load_dotenv
+            load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env"))
+            value = (os.getenv("STATIC_OTP_B2B") or "").strip()
+        except Exception:  # noqa: BLE001
+            pass
+    if not value:
+        raise Exception("${otp_b2b}: STATIC_OTP_B2B is not set in .env.")
+    RUNTIME_VARIABLES["otp_b2b"] = value
+    logger.info("🔑 ${otp_b2b}: static B2B OTP for test number")
+    return value
+
+
 def resolve_otp(page) -> str:
     """
     The OTP for the number this test just typed, stored as ${otp}.

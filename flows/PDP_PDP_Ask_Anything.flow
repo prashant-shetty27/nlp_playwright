@@ -1,51 +1,23 @@
 # Platform: mobilesite
 # Imported from Testsigma: PDP & PDP - Ask Anything (test case 4813, run 115613, last result FAILURE)
+# Re-authored 02-Oct-2026 (Claude): B2B Assist now asks for login first, and its questions and
+#   answer buttons are AI-generated (wording changes every run). The test logs in from the chat,
+#   answers each new question with its first option (or a quantity), and checks the outcome:
+#   seller recommendations with Call Now. Uses blocked test number 7738 + ${otp_b2b}.
 # Tags: regression
-# OFF steps: every step that would send a REAL lead / enquiry / OTP is switched off,
-#   plus the checks that only pass after it. Switch them on only when a lead is wanted.
 
 call Live_Touch_Chrome_Navigate_to_Homepage_setup_Popup
 open https://www.justdial.com/jdmart/Mumbai/Tyre/jdm-1113059-ent-2-17609009?jdtracker=internaljd_switchproductview_10505866&ncatid=10505866&sortby=&basedon=&appliedFilter=%7C%7E%7C122%7C%40%7CAll+Brands&pfApplied=1&attrVal=%5B%7B%22e%22%3A%22sellertype%22%2C%22v%22%3A%5B%22Wholesalers%22%5D%7D%2C%7B%22e%22%3A%22brand%22%2C%22v%22%3A%5B%22All+Brands%22%5D%7D%2C%7B%22e%22%3A%22sortby%22%2C%22v%22%3A%5B%22relevance%22%5D%7D%5D&mvVal=%5B%7B%22mv%22%3A5001%2C%22v%22%3A%5B%22Wholesalers%22%5D%7D%2C%7B%22mv%22%3A5005%2C%22v%22%3A%5B%22All+Brands%22%5D%7D%2C%7B%22mv%22%3A5009%2C%22v%22%3A%5B%22relevance%22%5D%7D%5D&fCatId=&actiontype=fltr
 wait 3 seconds
 scroll down 1200
 click ask_me_anything_button
-click passenger_car_for_cars_like_toyota_honda_etc_button
-type "11" into type_your_message_input
-click send_button
-# OFF: type "${mobile_7738}" into mobile_number_input5
-click continue_button5
-type "1" into rfq_otp1
-type "2" into rfq_otp2
-type "3" into rfq_otp3
-type "4" into rfq_otp4
-type "5" into rfq_otp5
-type "6" into rfq_otp6
-click login_button5
-wait 2 seconds
-click button_daily_commuting_for_regular_daily_use_such_as_drivi
-click button_all_season_suitable_for_normal_road_conditions_all
-click edit_answer_button
-click motorcycle_for_motorcycles_and_scooters_button
-click edit_answer_button
-type "20" into type_your_answer_input
-click send_button
-click edit_answer_button
-click button_heavy_duty_work_for_heavy_duty_applications_such_as
-click confirm_send_button
-verify element requirement_verified_your_request_is_live_you_will is visible
+call SG_B2B_Assist_Login_In_Chat
+call SG_B2B_Assist_Answer_Until_Results
 click close_button
+wait 2 seconds
 open https://www.justdial.com/jdmart/Mumbai/Tyre/jdm-1113059-ent-2-17609009?jdtracker=internaljd_switchproductview_10505866&ncatid=10505866&sortby=&basedon=&appliedFilter=%7C%7E%7C122%7C%40%7CAll+Brands&pfApplied=1&attrVal=%5B%7B%22e%22%3A%22sellertype%22%2C%22v%22%3A%5B%22Wholesalers%22%5D%7D%2C%7B%22e%22%3A%22brand%22%2C%22v%22%3A%5B%22All+Brands%22%5D%7D%2C%7B%22e%22%3A%22sortby%22%2C%22v%22%3A%5B%22relevance%22%5D%7D%5D&mvVal=%5B%7B%22mv%22%3A5001%2C%22v%22%3A%5B%22Wholesalers%22%5D%7D%2C%7B%22mv%22%3A5005%2C%22v%22%3A%5B%22All+Brands%22%5D%7D%2C%7B%22mv%22%3A5009%2C%22v%22%3A%5B%22relevance%22%5D%7D%5D&fCatId=&actiontype=fltr
+wait until element ps_b2b_prp_1st_product is visible
 click ps_b2b_prp_1st_product
+wait for page to load
 click ask_me_anything
-verify element i_need_mrf_zapper_nylogrip_tubeless_tyre_for_scooter is visible
-# OFF: click i_need_mrf_zapper_nylogrip_tubeless_tyre_for_scooter
-click suv_for_sport_utility_vehicles_and_crossovers_button
-type "10" into type_your_message_input
-click send_button
-click explain_the_options_button
-click the_primary_use_of_tyres_is_to_provide_traction_sup1
-click what_is_the_primary_use_of_the_tyres
-click button_heavy_duty_work_for_heavy_duty_applications_such_as
-click button_all_season_best_for_general_use_suitable_for_most_w
-click confirm_send_button
-verify element requirement_verified_your_request_is_live_you_will is visible
+call SG_B2B_Assist_Answer_Until_Results

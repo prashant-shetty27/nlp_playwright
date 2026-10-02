@@ -467,6 +467,9 @@ def _interpret_core(step: str, page):
     if "${otp}" in normalized:
         import execution.action_service as _svc
         _svc.resolve_otp(page)
+    if "${otp_b2b}" in normalized:
+        import execution.action_service as _svc
+        _svc.resolve_otp_b2b()
 
     # Variable injection: ${my_var} → value (shared RUNTIME_VARIABLES from action_service)
     try:
