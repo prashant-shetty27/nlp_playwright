@@ -431,10 +431,13 @@
   },
   "SG_If_NCT_looking_for_Login_Popup_Seen_then_click": {
     "steps": [
-      "verify element nct_login_ask_for_price is visible"
+      "if element nct_login_ask_for_price is visible",
+      "click if visible touch_login_popup_may_be_later",
+      "wait 1 seconds",
+      "end if"
     ],
     "created_at": "2026-10-01T17:23:54.059320+00:00",
-    "step_count": 1,
+    "step_count": 4,
     "platform": "mobilesite"
   },
   "High_Call_Negative_Case_ibm": {
@@ -449,10 +452,12 @@
       "swipe bottom to middle",
       "swipe bottom to middle",
       "wait 1 seconds",
-      "verify element b2b_nct_mauli_high_call_pick_up_rate is not visible"
+      "scroll to b2b_nct_shiv_chemicals_seller_name",
+      "verify element b2b_nct_shiv_chemicals_seller_name is visible",
+      "verify element b2b_nct_shiv_chemicals_high_call_pick_up_rate is not visible"
     ],
     "created_at": "2026-10-01T17:23:54.071769+00:00",
-    "step_count": 11,
+    "step_count": 13,
     "platform": "mobilesite"
   },
   "B2B_Common_Non_Login_to_Login_via_Only_Mobile_numb": {

@@ -14,9 +14,10 @@ wait 1 seconds
 swipe bottom to middle
 swipe bottom to middle
 wait 1 seconds
-scroll to b2b_nct_sri_sakthy_acids_high_call_pick_up_rate
-verify element b2b_nct_sri_sakthy_acids_high_call_pick_up_rate is visible
-verify element nct_login_ask_for_price is visible
+# Live 02-Oct-2026: Sri Sakthy Acids no longer listed here -> Navyug Acid Centre (shows the tag)
+call SG_If_NCT_looking_for_Login_Popup_Seen_then_click
+scroll to b2b_nct_navyug_high_call_pick_up_rate
+verify element b2b_nct_navyug_high_call_pick_up_rate is visible
 scroll to high_call_pick_up_rate_text
 verify element high_call_pick_up_rate_text is visible
 call SG_If_NCT_looking_for_Login_Popup_Seen_then_click

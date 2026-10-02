@@ -815,7 +815,11 @@
     "high_call_pick_up_rate_text": "//*[contains(text(),'High call pick up rate')]",
     "nct_quick_response_filter_tab": "(//input[@value='Quick Response']//following::span)[1]",
     "b2b_nct_kbn_high_call_pick_up": "//a[.//span[contains(normalize-space(),'Kbn')]]//following::span[contains(text(),'High')]",
-    "b2b_nct_mauli_high_call_pick_up_rate": "//a[.//span[contains(normalize-space(),'Mauli')]]//following::span[contains(text(),'High')]"
+    "b2b_nct_mauli_high_call_pick_up_rate": "//a[.//span[contains(normalize-space(),'Mauli')]]//following::span[contains(text(),'High')]",
+    "b2b_nct_navyug_high_call_pick_up_rate": "//div[contains(@class,'resultlist__li')][.//span[contains(@class,'resultlist--nametxt')][normalize-space()='Navyug Acid Centre']]//span[contains(text(),'High call pick up rate')]",
+    "b2b_nct_mauli_seller_name": "//a[.//span[contains(normalize-space(),'Mauli')]]",
+    "b2b_nct_shiv_chemicals_seller_name": "//div[contains(@class,'resultlist__li')][.//span[contains(@class,'resultlist--nametxt')][normalize-space()='Shiv Chemicals']]//span[contains(@class,'resultlist--nametxt')]",
+    "b2b_nct_shiv_chemicals_high_call_pick_up_rate": "//div[contains(@class,'resultlist__li')][.//span[contains(@class,'resultlist--nametxt')][normalize-space()='Shiv Chemicals']]//span[contains(text(),'High call pick up rate')]"
   },
   "ts_b2b_prp_grid_view": {
     "_platform": "mobilesite",
