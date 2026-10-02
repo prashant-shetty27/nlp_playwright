@@ -1475,10 +1475,11 @@
       "verify element pdp_whatsapp_login_div_your_are_almos_text is visible",
       "type \"${mobile_9987}\" into pdp_whatsapp_login_div_mobile",
       "js click common_login_div_continue_button",
+      "wait until element pdp_whatsapp_otp_div_cross is visible",
       "js click pdp_whatsapp_otp_div_cross"
     ],
     "created_at": "2026-10-01T17:24:23.038082+00:00",
-    "step_count": 6,
+    "step_count": 7,
     "platform": "mobilesite"
   },
   "SG_PDP_Ask_More_Photos_Button_Top_Gallery": {
