@@ -1267,7 +1267,7 @@
   "ts_paid_actual_number_all_pages": {
     "_platform": "mobilesite",
     "prp_chirag_enterprise": "//div[text()='Chirag Enterprises']",
-    "chirag_enterprises_call_button": "(//div[contains(., 'Chirag Enterprises')]//following::span[contains(., 'Call Now')])[1]",
+    "chirag_enterprises_call_button": "(//a[contains(@class,'jdmrt_rsltgrdwp')][.//div[contains(@class,'b2bprdctcmpy') and normalize-space()='Chirag Enterprises']]//div[contains(@class,'b2bprdcallbtn')])[1]",
     "footer_call_now_button": "//div[@class='b2b_fixbtncel']//button[text()='Call Now']",
     "gallery_footer_call_now_button": "//div[@data-at=\"footer_call\"]"
   },
