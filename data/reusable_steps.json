@@ -1407,6 +1407,7 @@
       "scroll to pdp_header_use_app_button",
       "verify element pdp_header_use_app_button is visible",
       "click ps_pdp_header_search_icon",
+      "wait until element pdp_search_box is visible",
       "scroll to pdp_search_box",
       "verify element pdp_search_box is visible",
       "click catalogue_header_back",
@@ -1417,7 +1418,7 @@
       "[ignore] verify element b2b_prp_gvs_popup_mobile_alert is visible"
     ],
     "created_at": "2026-10-01T17:24:22.996065+00:00",
-    "step_count": 18,
+    "step_count": 19,
     "platform": "mobilesite"
   },
   "SG_PDP_Inner_Gallery": {
