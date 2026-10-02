@@ -2042,7 +2042,7 @@
   },
   "SG_PRP_to_PDP_City_Change_Verification": {
     "steps": [
-      "verify element pdp_city_name contains \"searched_city\"",
+      "verify element pdp_city_name contains \"${searched_city}\"",
       "verify element pdp_city_icon is visible",
       "verify element pdp_city_name is visible",
       "verify element pdp_city_edit_icon is visible",
@@ -2059,7 +2059,7 @@
   },
   "SG_NCT_to_PDP_City_Change_Verification": {
     "steps": [
-      "verify element pdp_city_name contains \"B2B_NCT_CityName\"",
+      "verify element pdp_city_name contains \"${B2B_NCT_CityName}\"",
       "verify element pdp_city_icon is visible",
       "verify element pdp_city_name is visible",
       "verify element pdp_city_edit_icon is visible",
@@ -2085,15 +2085,15 @@
       "click pdp_city_change_1st_autosuggest",
       "wait 2 seconds",
       "verify element prp_search_box_category_name is visible",
-      "verify element prp_city_name_in_search_box contains \"CitySearch\"",
+      "verify element prp_city_name_in_search_box contains \"${CitySearch}\"",
       "verify element prp_result_heading contains \"${CN_Category}\"",
       "verify element prp_result_heading contains \"${CitySearch}\"",
       "verify element prp_search_box_category_name contains \"${CN_Category}\"",
-      "verify text \"CN_Category\" on page",
-      "verify element ps_touch_b2b_city_filter contains \"CitySearch\"",
+      "verify text \"${CN_Category}\" on page",
+      "verify element ps_touch_b2b_city_filter contains \"${CitySearch}\"",
       "click ps_touch_b2b_prp_1st_product",
       "wait 1 seconds",
-      "verify element pdp_city_name contains \"CitySearch\""
+      "verify element pdp_city_name contains \"${CitySearch}\""
     ],
     "created_at": "2026-10-01T17:24:26.504988+00:00",
     "step_count": 18,
@@ -2101,7 +2101,6 @@
   },
   "SG_PDP_Change_City_via_Catalogue": {
     "steps": [
-      "verify element pdp_city_name contains \"${Catalogue_City}\"",
       "verify element pdp_city_icon is visible",
       "verify element pdp_city_name is visible",
       "verify element pdp_city_edit_icon is visible",
@@ -2113,7 +2112,7 @@
       "click touch_city_search_box"
     ],
     "created_at": "2026-10-01T17:24:26.531736+00:00",
-    "step_count": 10,
+    "step_count": 9,
     "platform": "mobilesite"
   },
   "SG_PDP_Change_City_Mumbai_Lixo_Chair": {
@@ -2123,15 +2122,15 @@
       "wait 3 seconds",
       "press key Space",
       "wait 3 seconds",
-      "click pdp_city_autosuggest_1st",
+      "click pdp_city_change_1st_autosuggest",
       "wait 4 seconds",
       "verify element prp_search_box_category_name is visible",
-      "verify element prp_city_name_in_search_box contains \"CitySearch\"",
+      "verify element prp_city_name_in_search_box contains \"${CitySearch}\"",
       "verify element prp_result_heading contains \"${CitySearch}\"",
-      "verify element ps_touch_b2b_city_filter contains \"CitySearch\"",
+      "verify element ps_touch_b2b_city_filter contains \"${CitySearch}\"",
       "click ps_touch_b2b_prp_1st_product",
       "wait 3 seconds",
-      "verify element pdp_city_name contains \"CitySearch\""
+      "verify element pdp_city_name contains \"${CitySearch}\""
     ],
     "created_at": "2026-10-01T17:24:26.559942+00:00",
     "step_count": 14,
@@ -2199,12 +2198,12 @@
       "verify element prp_search_box_category_name is visible",
       "store text of prp_search_box_category_name as ts_element_text",
       "verify stored ts_element_text is not \"\"",
-      "verify element prp_city_name_in_search_box contains \"CitySearch\"",
+      "verify element prp_city_name_in_search_box contains \"${CitySearch}\"",
       "verify element prp_result_heading contains \"${CitySearch}\"",
-      "verify element ps_touch_b2b_city_filter contains \"CitySearch\"",
+      "verify element ps_touch_b2b_city_filter contains \"${CitySearch}\"",
       "click ps_touch_b2b_prp_1st_product",
       "wait 3 seconds",
-      "verify element pdp_city_name contains \"CitySearch\""
+      "verify element pdp_city_name contains \"${CitySearch}\""
     ],
     "created_at": "2026-10-01T17:24:26.647559+00:00",
     "step_count": 18,

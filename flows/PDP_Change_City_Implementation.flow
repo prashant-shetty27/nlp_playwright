@@ -30,20 +30,21 @@ wait 3 seconds
 click pdp_city_change_1st_autosuggest
 wait 4 seconds
 verify element prp_search_box_category_name is visible
-verify element prp_city_name_in_search_box contains "CitySearch"
+verify element prp_city_name_in_search_box contains "${CitySearch}"
 verify element prp_result_heading contains "${CN_Category}"
 verify element prp_result_heading contains "${CitySearch}"
-verify text "CN_Category" on page
-verify element ps_touch_b2b_city_filter contains "CitySearch"
+verify text "${CN_Category}" on page
+verify element ps_touch_b2b_city_filter contains "${CitySearch}"
 click ps_touch_b2b_prp_1st_product
 wait 3 seconds
-verify element pdp_city_name contains "CitySearch"
+verify element pdp_city_name contains "${CitySearch}"
 open https://www.justdial.com/Bangalore/Crane-Manufacturers/nct-10146272?fl=undefined&ismap=undefined&subpage=&searchCase=&term=crane%2520&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=0&stype=category_list&srcterm=Crane%20Manufacturers&trkid=1240815-bangalore
 wait 4 seconds
 call PS_Touch_Consent_Popup
 wait for page to load
 store text of b2b_nct_city_name as B2B_NCT_CityName
-create variable CN_Category with value "Cranes"
+# The product's category is now "Gantry Crane" (results heading: "Top Gantry Crane Products in Pune")
+create variable CN_Category with value "Crane"
 scroll to nct_recommended_products_carousel_section
 click nct_recommended_products_1st_product
 wait 3 seconds
@@ -56,11 +57,13 @@ click catalogue_products_tab
 wait 3 seconds
 scroll to catalogue_products_tab_1st_product
 create variable CitySearch with value "Pune"
-store text of catalogue_city_name as Catalogue_City
+# GJDT-8598 Case-2: opening a catalogue URL directly makes the URL's city the default city
+create variable Catalogue_City with value "Delhi"
 store text of catalogue_products_tab_1st_product as catalogue_popular_product_1st
 click catalogue_products_tab_1st_product
 wait 3 seconds
 verify element pdp_product_name_heading contains "${catalogue_popular_product_1st}"
+verify element pdp_city_name contains "${Catalogue_City}"
 call SG_PDP_Change_City_via_Catalogue
 call SG_PDP_Change_City_Mumbai_Lixo_Chair
 open https://www.justdial.com/jdmart
