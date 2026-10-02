@@ -1,0 +1,42 @@
+# Platform: mobilesite
+# Requirement: GJDT-21824 "Update listing logic on CRFQ" (conversational RFQ / B2B Assist seller results)
+#   Rule 1: each seller has only one product in the results.
+#   Rule 2: ranking = spec match tier, then paid, then the user's city (city paid before other-city paid).
+# Related: GJDT-21929 (Defect, Closed) city not matching; GJDT-21943 (Concern, OPEN) duplicate sellers,
+#   city typed by the user not used ("need chair wholesalers in ahmedabad"), product name not looked up.
+# Not covered in Testsigma (checked 02-Oct-2026). Answers are AI-generated: the test answers each
+#   question with its first option (or a quantity) and checks outcomes, not wording.
+# Uses blocked test number 7738 + ${otp_b2b}.
+# Tags: regression
+
+call Live_Touch_Chrome_Navigate_to_Homepage_setup_Popup
+# --- 1. PRP Get Best Price: chat carries the product, results relate to it, one card per seller ---
+open https://www.justdial.com/jdmart/Mumbai/Tyre/jdm-1113059-ent-2-17609009?jdtracker=internaljd_switchproductview_10505866&ncatid=10505866&sortby=&basedon=&appliedFilter=%7C%7E%7C122%7C%40%7CAll+Brands&pfApplied=1&attrVal=%5B%7B%22e%22%3A%22sellertype%22%2C%22v%22%3A%5B%22Wholesalers%22%5D%7D%2C%7B%22e%22%3A%22brand%22%2C%22v%22%3A%5B%22All+Brands%22%5D%7D%2C%7B%22e%22%3A%22sortby%22%2C%22v%22%3A%5B%22relevance%22%5D%7D%5D&mvVal=%5B%7B%22mv%22%3A5001%2C%22v%22%3A%5B%22Wholesalers%22%5D%7D%2C%7B%22mv%22%3A5005%2C%22v%22%3A%5B%22All+Brands%22%5D%7D%2C%7B%22mv%22%3A5009%2C%22v%22%3A%5B%22relevance%22%5D%7D%5D&fCatId=&actiontype=fltr
+wait 4 seconds
+if element ps_b2b_prp_1st_product is not visible
+refresh page
+end if
+wait until element ps_b2b_prp_1st_product is visible
+store text of ps_b2b_prp_1st_product as prp_product
+click prp_best_price
+wait until element b2b_assist_chat_login_link is visible
+verify element b2b_assist_first_card contains "${prp_product}"
+call SG_B2B_Assist_Login_In_Chat
+call SG_B2B_Assist_Answer_Until_Results
+verify element b2b_assist_card_1st contains "tyre" ignoring case
+# KNOWN (02-Oct-2026, live): fails — same seller on 2-3 cards every run -> GJDT-21943 point 1 (Concern, Open)
+verify all elements b2b_assist_card_call_button have different "aria-label"
+# --- 2. Typed city + product: "executive office chair wholesalers in ahmedabad" ---
+click b2b_assist_refresh_conversation
+wait until element b2b_assist_fresh_chat_yes is visible
+click b2b_assist_fresh_chat_yes
+wait 3 seconds
+wait until element type_your_message_input is visible
+type "need executive office chair wholesalers in ahmedabad" into type_your_message_input
+click b2b_assist_send
+wait 6 seconds
+call SG_B2B_Assist_Answer_Until_Results
+verify element b2b_assist_card_1st contains "chair" ignoring case
+# KNOWN (02-Oct-2026, live): fails — results from Delhi/Pune, typed city ignored -> GJDT-21943 point 3 (Concern, Open)
+verify element b2b_assist_card_1st contains "Ahmedabad"
+verify all elements b2b_assist_card_call_button have different "aria-label"

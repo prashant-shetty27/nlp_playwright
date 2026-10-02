@@ -59,6 +59,11 @@ def parse_step(step: str) -> Command:
     if m:
         on = m.group(1).lower() in ("check", "tick")
         return Command(type="check" if on else "uncheck", target=m.group(2))
+    # verify all elements X have different text | verify all elements X have different "aria-label"
+    m = re.match(r'^verify\s+(?:that\s+)?all\s+(?:the\s+)?(?:elements?\s+)?(\S+)\s+(?:have|show)\s+(?:a\s+)?'
+                 r'(?:different|unique|distinct)\s+(text|"([^"]+)")$', s, re.I)
+    if m:
+        return Command(type="verify_all_different", target=m.group(1), attribute=m.group(3))
     m = re.match(r'^verify\s+(?:that\s+)?' + _E + r'(\S+)\s+is\s+(not\s+)?'
                  r'(checked|ticked|selected|enabled|disabled|editable|read[\s-]?only)$', s, re.I)
     if m:
@@ -681,10 +686,11 @@ def parse_step(step: str) -> Command:
     # VERIFY ELEMENT CONTAINS TEXT
     # verify element <locator> contains "<text>"
     # =============================
-    m = re.match(r'^verify\s+element\s+(\S+)\s+contains\s+"(.*?)"$', s, re.I)
+    m = re.match(r'^verify\s+element\s+(\S+)\s+contains\s+"(.*?)"(\s+(?:ignoring|ignore)\s+case)?$', s, re.I)
     if m:
-        locator, text = m.groups()
-        return Command(type="verify_element_contains", target=locator, text=text)
+        locator, text, ic = m.groups()
+        return Command(type="verify_element_contains", target=locator, text=text,
+                       values=["ignore_case"] if ic else None)
 
     # =============================
     # VERIFY MULTIPLE GLOBAL TEXTS

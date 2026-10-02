@@ -3211,6 +3211,33 @@ def verify_inside(page, inner_name: str, outer_name: str):
     logger.info("✅ '%s' is inside '%s': %s", inner_name, outer_name, _describe(pair, outer))
 
 
+def verify_all_different(page, locator_name, attribute=None):
+    """Every element the locator matches shows a different text (or attribute value).
+    Fails listing each repeated value and how often it appears — e.g. one seller
+    shown on several result cards."""
+    primary_xpath, _ = _resolve_live(page, locator_name)
+    loc = _get_locator_root(page).locator(primary_xpath)
+    n = loc.count()
+    if n == 0:
+        raise AssertionError(f"No element found for '{locator_name}' ({primary_xpath}).")
+    values = []
+    for i in range(n):
+        el = loc.nth(i)
+        v = el.get_attribute(attribute) if attribute else el.inner_text()
+        values.append(" ".join(str(v or "").split()))
+    seen = {}
+    for v in values:
+        key = v.lower()
+        seen[key] = seen.get(key, (v, 0))[0], seen.get(key, (v, 0))[1] + 1
+    dups = [(v, c) for v, c in seen.values() if c > 1]
+    what = f'"{attribute}"' if attribute else "text"
+    if dups:
+        raise AssertionError(
+            f"{len(values)} '{locator_name}' elements, but some {what} repeats: "
+            + "; ".join(f"'{v}' x{c}" for v, c in dups))
+    logger.info(f"✅ All {len(values)} '{locator_name}' elements have a different {what}")
+
+
 def verify_inside_every(page, inner_name: str, outer_name: str):
     """Every <image> on the page (below the fold too) has an <icon> inside it."""
     inners, outers = _boxes(page, inner_name, visible_only=False), _boxes(page, outer_name, visible_only=False)

@@ -239,7 +239,7 @@ def _execute_step_from_command(cmd, page):
         "verify_multiple_texts":     lambda: svc.verify_multiple_global_texts(ep, text),
         # ── Verification — Element ───────────────────────────────────────────
         "verify_element_exact":      lambda: svc.verify_element_exact_text(ep, target, text),
-        "verify_element_contains":   lambda: svc.verify_element_contains_text(ep, target, text),
+        "verify_element_contains":   lambda: svc.verify_element_contains_text(ep, target, text, ignore_case="ignore_case" in (cmd.values or [])),
         # ── Verification — Variables ─────────────────────────────────────────
         "verify_var_contains":       lambda: svc.verify_stored_variable_contains(
                                          target, text, ignore_case="ignore_case" in (cmd.values or [])),
@@ -279,6 +279,7 @@ def _execute_step_from_command(cmd, page):
         # Layout checks (design changes): icon inside / same place / same size
         "verify_inside":             lambda: svc.verify_inside(ep, target, (cmd.values or [""])[0]),
         "verify_inside_every":       lambda: svc.verify_inside_every(ep, target, (cmd.values or [""])[0]),
+        "verify_all_different":      lambda: svc.verify_all_different(ep, target, cmd.attribute),
         "verify_same_place_every":   lambda: svc.verify_same_place_every(ep, target, (cmd.values or [""])[0]),
         "verify_same_size":          lambda: svc.verify_same_size(ep, target, (cmd.values or [""])[0]),
         "store_position":            lambda: svc.store_position(ep, target, (cmd.values or [""])[0], cmd.variable_name),

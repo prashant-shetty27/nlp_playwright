@@ -34,7 +34,7 @@ TARGET_IS_LOCATOR = {
     "wait_for_element", "scroll_to", "scroll_until_element_visible", "clear",
     "verify_element_visible", "verify_element_not_visible", "wait_until_visible",
     "wait_until_text_not", "enter_otp",
-    "verify_inside", "verify_inside_every", "verify_same_place_every", "verify_same_size", "store_position",
+    "verify_inside", "verify_inside_every", "verify_all_different", "verify_same_place_every", "verify_same_size", "store_position",
     "js_click", "js_scroll_to", "js_type", "js_set_value", "js_focus", "js_submit",
     "js_dispatch",
     "swipe_until_visible", "wait_until_not_visible", "select_option",

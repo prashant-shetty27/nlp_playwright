@@ -3,19 +3,22 @@
     "Prashant",
     "Prashant/B2B",
     "Prashant/B2B/Catalogue",
+    "Prashant/B2B/Home_Filter",
+    "Prashant/B2B/NCT",
     "Prashant/B2B/PDP",
     "Prashant/B2B/PRP",
+    "Prashant/B2B/RFQ",
+    "Prashant/B2B/SRP",
     "Prashant/Core",
-    "Prashant/Core/NCT",
     "Trails"
   ],
   "assign": {
     "B2B_Catalogue_Photos_Product_View_Details_Link_Rediretion_to_PDP": "Prashant/B2B/Catalogue",
     "B2B_Manage_Quotes_Page_Loading_Check": "Prashant/Core",
-    "B2B_NCT_High_Call_Rate": "Prashant/Core",
+    "B2B_NCT_High_Call_Rate": "Prashant/B2B/NCT",
     "B2B_PRP_Grid_View": "Prashant/B2B/PRP",
     "B2B_PRP_Looking_for_Job": "Prashant/B2B/PRP",
-    "B2B_Supplier_Result_Page": "Prashant/Core",
+    "B2B_Supplier_Result_Page": "Prashant/B2B/SRP",
     "Catalogue_BD_Category_Popup_non_paid": "Prashant/B2B/Catalogue",
     "Catalogue_Category_RFQ_Popup_non_paid": "Prashant/B2B/Catalogue",
     "Catalogue_Company_single_Brochure_click_redirection": "Prashant/B2B/Catalogue",
@@ -27,14 +30,14 @@
     "Catalogue_Product_Tab_Data_Not_Found_Case": "Prashant/B2B/Catalogue",
     "Catalogue_Products_Tab_Store_Search": "Prashant/B2B/Catalogue",
     "Catalogue_Seller_Call_Popup": "Prashant/B2B/Catalogue",
-    "Direct_URL_B2B_Multiple_Cities_Validation_NCT": "Prashant/Core",
-    "Home_SEO_Footer_All_B2B_Tabs_Redirection": "Prashant/Core",
-    "Intermediate_page_Redirection_Page_Loading": "Prashant/Core",
-    "NCT_Ask_for_Price": "Prashant/Core/NCT",
-    "NCT_Job_related_Questions": "Prashant/Core/NCT",
-    "NCT_Recommended_Open_RFQ_All_Logics": "Prashant/Core/NCT",
-    "Nct_Recommended_Products_For_You_Newlogic": "Prashant/Core/NCT",
-    "PAID_Actual_number_All_PAGES": "Prashant/Core",
+    "Direct_URL_B2B_Multiple_Cities_Validation_NCT": "Prashant/B2B/PRP",
+    "Home_SEO_Footer_All_B2B_Tabs_Redirection": "Prashant/B2B/Home_Filter",
+    "Intermediate_page_Redirection_Page_Loading": "Prashant/B2B/Home_Filter",
+    "NCT_Ask_for_Price": "Prashant/B2B/NCT",
+    "NCT_Job_related_Questions": "Prashant/B2B/NCT",
+    "NCT_Recommended_Open_RFQ_All_Logics": "Prashant/B2B/NCT",
+    "Nct_Recommended_Products_For_You_Newlogic": "Prashant/B2B/NCT",
+    "PAID_Actual_number_All_PAGES": "Prashant/B2B/PRP",
     "PDP_AllSection_New": "Prashant/B2B/PDP",
     "PDP_Buy_a_Sample_New_Flow_ALL_DETAILS": "Prashant/B2B/PDP",
     "PDP_Change_City_Implementation": "Prashant/B2B/PDP",
@@ -58,13 +61,14 @@
     "Photos_360_Icon_Gallery_Single": "Prashant/B2B/Catalogue",
     "Photos_360_Icon_Photos_Section": "Prashant/B2B/Catalogue",
     "RECOMMEDED_PRODUCT_CASES_VIA_JIRA": "Trails",
-    "RFQ_All_Verification": "Prashant/Core",
-    "RFQ_flow_Change_Login_after_1st_question_max_2_question_to_be_shown": "Prashant/Core",
+    "RFQ_All_Verification": "Prashant/B2B/RFQ",
+    "RFQ_flow_Change_Login_after_1st_question_max_2_question_to_be_shown": "Prashant/B2B/RFQ",
     "Recommended_Product_Carousel_Logic": "Trails",
     "Recommended_Product_Carousel_Logic_Live": "Trails",
     "Recommended_Product_City_Preference": "Trails",
     "_Report_Smoke_Fail": "Trails",
-    "_Report_Smoke_Pass": "Trails"
+    "_Report_Smoke_Pass": "Trails",
+    "RFQ_Conversational_City_Product_Preference": "Prashant/B2B/RFQ"
   },
   "modules": {
     "Prashant": [],
@@ -72,6 +76,15 @@
     "Prashant/B2B/Catalogue": [],
     "Prashant/Core": [],
     "Prashant/B2B/PRP": [],
-    "Prashant/B2B/PDP": []
+    "Prashant/B2B/PDP": [],
+    "Prashant/B2B/SRP": [
+      "mobilesite"
+    ],
+    "Prashant/B2B/NCT": [
+      "mobilesite"
+    ],
+    "Prashant/B2B/RFQ": [
+      "mobilesite"
+    ]
   }
 }

@@ -1671,5 +1671,12 @@
   "ts_common_restored": {
     "_platform": "mobilesite",
     "common_b2b_login_only_mobile": "//input[@placeholder=\"Mobile Number\"]"
+  },
+  "ts_b2b_assist_crfq": {
+    "b2b_assist_refresh_conversation": "//button[@aria-label='Refresh conversation']",
+    "b2b_assist_card_1st": "((//div[contains(@class,'rfq-chat-history')]/div[.//button[starts-with(@aria-label,'Call ')]])[last()]//div[contains(concat(' ',normalize-space(@class),' '),' rfq-product-card ')])[1]",
+    "b2b_assist_card_2nd": "((//div[contains(@class,'rfq-chat-history')]/div[.//button[starts-with(@aria-label,'Call ')]])[last()]//div[contains(concat(' ',normalize-space(@class),' '),' rfq-product-card ')])[2]",
+    "b2b_assist_card_call_button": "(//div[contains(@class,'rfq-chat-history')]/div[.//button[starts-with(@aria-label,'Call ')]])[last()]//div[contains(concat(' ',normalize-space(@class),' '),' rfq-product-card ')]//button[starts-with(@aria-label,'Call ')]",
+    "b2b_assist_fresh_chat_yes": "//button[normalize-space()='Yes, proceed']"
   }
 }
