@@ -26,5 +26,6 @@ wait until element catalogue_product_tab_laptop is visible
 wait until element catalogue_product_tab_laptop is visible
 verify element catalogue_product_tab_laptop is visible
 click catalogue_product_tab_laptop
-wait until element catalogue_product_tab_product_data_section_loading is visible
+# Live 02-Oct-2026: products load ~17s after tapping the Laptop filter
+wait until element catalogue_product_tab_product_data_section_loading is visible within 30 seconds
 verify element catalogue_product_tab_product_data_section_loading is visible
