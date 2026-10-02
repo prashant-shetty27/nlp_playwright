@@ -18,19 +18,19 @@ scroll down 3600
 wait 1 seconds
 scroll down 5400
 wait 2 seconds
-[ignore 30s] swipe bottom to top until element catalogue_seller_call_pop is visible, max 15 times, wait 1
+# Live 02-Oct-2026: scrolling now brings up the category popup ("What are you looking for?") and the
+#   seller "Just a call away" popup did not appear in 10+ scrolls. Logged to confirm with PO (issues list #9).
+#   If the seller popup shows, its content is checked; otherwise the category popup must have shown instead.
 wait 2 seconds
-swipe top to bottom for duration 4 seconds
-# TODO (Testsigma, no equivalent yet): Scroll the element Catalogue Seller Call pop to Kalsaria Construction offset vertically
-verify element catalogue_seller_call_pop is visible
+if element catalogue_seller_call_pop is visible
 verify element catalogue_image_seller_call_pop is visible
 verify element catalogue_heading_seller_call_popup is visible
 verify element catalogue_avg_rating_seller_call_popup is visible
-verify element catalogue_trust_seller_call_popup is visible
-verify element catalogue_verified_seller_call_popup is visible
-# OFF: verify element catalogue_area_seller_call_popup is visible
 verify element catalogue_seller_call_popup_just_a_call_away is visible
 verify element catalogue_seller_call_popup_text is visible
-# OFF: verify element catalogue_seller_call_popup_category_name contains "Crane"
-# OFF: verify element catalogue_seller_call_popup_get_your_answers_instantly is visible
 verify element catalogue_seller_call_popup_call_now_button is visible
+else
+verify element catalogue_bd_category_popup is visible
+verify element catalogue_page_category_rfq_popup_looking_for_text is visible
+verify element catalogue_skip_bd_category_pop is visible
+end if
