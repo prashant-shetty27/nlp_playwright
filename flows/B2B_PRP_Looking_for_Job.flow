@@ -1,6 +1,7 @@
 # Platform: mobilesite
 # Imported from Testsigma: B2B PRP Looking for Job (test case 5237, run 115613, last result SUCCESS)
 # Tags: regression
+# Requirement: GJDT-22010 (B2B API GJDT-22124) — Yes: ack + card gone for session; No: RFQ/B2B Assist flow, lead only after completing (pos jobcard_rfq_5)
 # OFF steps: every step that would send a REAL lead / enquiry / OTP is switched off,
 #   plus the checks that only pass after it. Switch them on only when a lead is wanted.
 
