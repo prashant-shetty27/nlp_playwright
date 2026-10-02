@@ -1445,11 +1445,13 @@
       "wait 1 seconds",
       "wait 2 seconds",
       "wait 1 seconds",
-      "repeat until element pdp_top_gallery_skf_image_2nd is visible (max 4 times)",
+      "repeat until element pdp_top_gallery_image_1st is visible (max 4 times)",
       "press back",
       "wait 2 seconds",
       "end repeat",
-      "click pdp_top_gallery_skf_image_2nd",
+      "if element pdp_gallery_inner_header_share is not visible",
+      "click pdp_top_gallery_image_1st",
+      "end if",
       "click pdp_gallery_inner_header_share",
       "wait until element pdp_gallery_inner_share_popup_copy_link is visible",
       "click pdp_gallery_inner_share_popup_copy_link",
@@ -1463,7 +1465,7 @@
       "js click rfq_skip_all_button"
     ],
     "created_at": "2026-10-01T17:24:23.016781+00:00",
-    "step_count": 39,
+    "step_count": 41,
     "platform": "mobilesite"
   },
   "PDP_Common_Login_Enter_OTP_and_Close_Div_without_L": {
@@ -1666,6 +1668,7 @@
       "click more_from_this_seller_1st_gbp",
       "wait 1 seconds",
       "verify text \"${more_from_this_seller_1st_product_name}\" on page",
+      "wait until element rfq_don_t_know_button is visible",
       "js click rfq_don_t_know_button",
       "wait 2 seconds",
       "wait 3 seconds",
@@ -1697,7 +1700,7 @@
       "verify element more_seller_similar_product_icon is not visible"
     ],
     "created_at": "2026-10-01T17:24:23.213270+00:00",
-    "step_count": 57,
+    "step_count": 58,
     "platform": "mobilesite"
   },
   "SG_PDP_More_from_this_Seller": {

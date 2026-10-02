@@ -13,7 +13,7 @@ verify element pdp_product_name_heading is visible
 call SG_PDP_Header_Verifications
 refresh page
 # OFF: wait 1 seconds
-click pdp_top_gallery_skf_image_2nd
+click pdp_top_gallery_image_1st
 wait for page to load
 call SG_PDP_Inner_Gallery
 delete all cookies
@@ -69,16 +69,16 @@ call SG_Popular_categories_Need_assistance_SEO_Footer_B
 # OFF: call SG_Skbw_pdp
 open https://www.justdial.com/jdmart/Mumbai/Bike-Covers-for-Hero-Xtreme-160R/pid-2102058125/022PXX22-XX22-220118134107-L9E8
 call SG_PDP_Non_Piad_Similar_Business_Recommended_Produ
-open https://www.justdial.com/jdmart/Navi-Mumbai/Black-Granite-slabes/pid-2230508250/022PXX22-XX22-220728235640-N6A3?idx=0&jdmid=jdm-1053389-ent-2-6847182&alsoserveCity=Mumbai&searchString=Granite&btype=wholesalers&nid=10235920
+open https://www.justdial.com/jdmart/Thane/Clay-Cuboidal-Red-Brick-9X4X4inch-LXWXH/pid-2224547603/022PXX22-XX22-190915090932-H6G4
 call SG_PDP_Top_Seller_Click_Redirection_to_Catalogue
-open https://www.justdial.com/jdmart/Mumbai/Clay-12x6x8inch-Chira-Red-Brick/pid-2219603338/022PXX22-XX22-180901160442-X6V3?idx=0&jdmid=jdm-1011256-ent-2-17398330&alsoserveCity=Mumbai&nid=10607620
+open https://www.justdial.com/jdmart/Mumbai/Rectangular-Clay-Brick/pid-2216331084/022PXX22-XX22-170719220002-C5M6
 call SG_PDP_Top_Seller_Name_click_verificaiton
 open https://www.justdial.com/jdmart/Mumbai/Premium-Heated-Massage-Chair-1-4-mtr-Velvet/pid-802452491/022PXX22-XX22-101125162001-D9Y7?idx=0&jdmid=jdm-1070639-ent-6-30578745&alsoserveCity=Mumbai&searchString=lixo-massage-chair-li6001b&btype=dealers&img=uk68h0xk.jpg&nid=10313638
 call SG_PDP_Top_Seller_Name_click_verificaiton
-open https://www.justdial.com/jdmart/Bhiwandi/Traditional-Building-Red-Brick-Material/pid-2008726481/022PXX22-XX22-180605213240-N5E3?idx=0&jdmid=jdm-1011256-ent-2-17398330&alsoserveCity=Mumbai&searchString=Brick&btype=manufacturers&nid=10607621
+open https://www.justdial.com/jdmart/Bhiwandi/Eco-friendly-Mud-Block-Sustainable-Construction/pid-2008726478/022PXX22-XX22-180605213240-N5E3
 call SG_PDP_People_Also_Search_for_Section
 delete all cookies
-open https://www.justdial.com/jdmart/Bhiwandi/Traditional-Building-Red-Brick-Material/pid-2008726481/022PXX22-XX22-180605213240-N5E3?idx=0&jdmid=jdm-1011256-ent-2-17398330&alsoserveCity=Mumbai&searchString=Brick&btype=manufacturers&nid=10607621
+open https://www.justdial.com/jdmart/Kalyan/Silica-Brick-Red-/pid-2230876882/022PXX22-XX22-241228152700-D4G2
 wait 2 seconds
 scroll to pdp_heading_send_requirement_on_whatsapp
 swipe bottom to top

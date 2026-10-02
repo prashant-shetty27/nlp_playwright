@@ -1306,7 +1306,7 @@
     "pdp_gallery_request_more_photos_frame": "//div[@class='dtl_photorequest']",
     "pdp_gallery_request_more_photos_button": "//button[text()[normalize-space() = \"Request More Photos\"]]",
     "ps_pdp_top_product_name": "//h1[contains(@class,'prdcthd')]",
-    "pdp_ask_more_photos_top_gallery": "(//span[text()[normalize-space() = \"Ask More Photos\"]])[2]",
+    "pdp_ask_more_photos_top_gallery": "//*[normalize-space(text())='Request More Photos' or normalize-space(text())='Ask More Photos'][ancestor::*[contains(@class,'dtl_photorequest') or contains(@class,'hdraddphoto')]]",
     "top_photos_requested": "(//div[contains(@class,'photoreqwrap')]/following::span[contains(text(),'Photos Requested')])[1]",
     "pdp_post_photo_requested_sent_button": "//button[text()[normalize-space() = \"Sent\"]]",
     "pdp_seller_card_seller_type_tag": "(//span[contains(@class,'comp-manufac-tag')])[1]",
@@ -1481,7 +1481,8 @@
     "pdp_people_also_search_for_last_buttonn_view_products": "(//div[contains(@class,'carousel_view16-button')])[6]",
     "pdp_people_also_search_for_last_img": "(//span[contains(text(),'People Also Search For')]//following::img)[6]",
     "pdp_people_also_search_for_last_product_name": "(//span[contains(text(),'People Also Search For')]//following::span)[6]",
-    "pdp_popular_cat": "//*[@id=\"popularCategories\"]/div/div/div[2]"
+    "pdp_popular_cat": "//*[@id=\"popularCategories\"]/div/div/div[2]",
+    "pdp_top_gallery_image_1st": "(//div[contains(@class,'b2bmorephotos')])[1]"
   },
   "ts_pdp_buy_a_sample_new_flow_all_details": {
     "_platform": "mobilesite",
