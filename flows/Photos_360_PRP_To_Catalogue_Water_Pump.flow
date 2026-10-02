@@ -1,0 +1,60 @@
+# Platform: mobilesite
+# Story: GJDT-22417 — Water Pump PRP (Mumbai): the product carrying the 360° badge on the PRP is followed to its PDP (360° tab) and to the
+#   seller catalogue Photos > Products, where the SAME image (matched by image file id, not position) carries the 360° icon;
+#   the single-image gallery shows NO icon (story: 'Not to be done'); View More Details opens that product with the 360° tab.
+# Data is picked by the 360° badge on the PRP, not by product name or position, so new listings don't break it.
+# Tags: b2b, prp, pdp, catalogue, 360, GJDT-22417
+open https://www.justdial.com/jdmart/Mumbai/Water-Pump/jdm-1118390-ent-2-14741196
+wait 5 seconds
+# PRP: find the first product card whose image carries the 360° badge
+scroll to prp_first_360_card
+verify element prp_first_360_card_badge is visible
+verify element prp_first_360_card_badge is inside prp_first_360_card_image
+store text of prp_first_360_card_title as product_name
+store attribute data-src of prp_first_360_card_image as prp_img_src
+store regex "-([a-z0-9]{6,20})\.(?:png|jpe?g|webp)" from prp_img_src as img_id
+take screenshot as prp_card_with_360_badge
+click prp_first_360_card_title
+wait until url contains "/pid-"
+wait until element pdp_main_image is visible
+store url as pdp_url
+store regex "pid-([0-9]+)" from pdp_url as pid
+# PDP: same product, same image, and a 360° tab in the photo bar that opens the 360° view
+verify element pdp_product_title contains "${product_name}"
+verify element pdp_main_image_matching is visible
+verify element pdp_gallery_360_tab is visible
+click pdp_gallery_360_tab
+wait 2 seconds
+verify element pdp_gallery_360_tab_active is visible
+take screenshot as pdp_360_tab_open
+# Seller catalogue > Photos > Products: the same image carries the 360° icon
+store attribute href of pdp_seller_catalogue_link as catalogue_url
+open https://www.justdial.com${catalogue_url}
+wait until url contains "_BZDET"
+wait 3 seconds
+click pdp_tab_photos
+wait until element pdp_photo_tile is visible
+click catalogue_photos_products_chip
+wait until element catalogue_photo_tile_matching is visible within 30 seconds
+# This case only needs the photos, so the seller's 'Looking for …?' requirement sheet is closed if it shows (not under test here)
+wait 3 seconds
+click if visible catalogue_looking_for_sheet_skip
+scroll to catalogue_photo_tile_matching
+verify element catalogue_photo_tile_matching_360_icon is visible
+verify element catalogue_photo_tile_matching_360_icon is inside catalogue_photo_tile_matching_image
+take screenshot as catalogue_products_matched_tile_360
+# single-image gallery: NO 360° icon (GJDT-22417: "single images on the Gallery Page (Not to be done)")
+click if visible catalogue_looking_for_sheet_skip
+click catalogue_photo_tile_matching_image
+wait until element gallery_slide_image is visible
+wait 2 seconds
+verify element gallery_360_icon is not visible
+verify element gallery_view_more_details_for_product is visible
+take screenshot as gallery_no_360_icon
+# View More Details opens the same product, which shows the 360° tab
+click gallery_view_more_details_for_product
+wait until url contains "pid-${pid}"
+wait until element pdp_main_image is visible
+verify element pdp_product_title contains "${product_name}"
+verify element pdp_gallery_360_tab is visible
+take screenshot as view_more_details_pdp_360_tab

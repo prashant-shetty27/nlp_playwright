@@ -70,7 +70,9 @@
     "_Report_Smoke_Pass": "Trails",
     "RFQ_Conversational_City_Product_Preference": "Prashant/B2B/RFQ",
     "Photos_360_Match_From_PDP": "Prashant/B2B/Catalogue",
-    "Photos_360_Match_From_PRP": "Prashant/B2B/Catalogue"
+    "Photos_360_Match_From_PRP": "Prashant/B2B/Catalogue",
+    "Photos_360_PRP_To_Catalogue_Water_Pump": "Prashant/B2B/Catalogue",
+    "Photos_360_PRP_To_Catalogue_Office_Chair": "Prashant/B2B/Catalogue"
   },
   "modules": {
     "Prashant": [],

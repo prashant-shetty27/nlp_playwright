@@ -160,15 +160,19 @@ class LiveView:
                         ui.label("Waiting for the first step…").style(
                             f"padding:10px; color:{COLORS['text_muted']};"
                             f"font-size:{TYPOGRAPHY['size_sm']}")
-                with ui.column().style("width:30rem; flex:none"):
-                    with ui.tabs().classes("w-full") as tabs:
+                # Kept on screen while the steps list scrolls, so clicking any step
+                # shows its whole screenshot without scrolling the page (Prashant, 03-Oct).
+                with ui.column().classes("gap-0").style(
+                        "width:26rem; flex:none; position:sticky; top:72px;"
+                        "align-self:flex-start"):
+                    with ui.tabs().props("dense").classes("w-full") as tabs:
                         t_log = ui.tab("Log", icon="terminal")
                         t_shot = ui.tab("Screenshots", icon="image")
                     self.tabs, self.t_shot = tabs, t_shot
                     with ui.tab_panels(tabs, value=t_log).classes("w-full"):
                         with ui.tab_panel(t_log):
                             self.log = log_viewer()
-                        with ui.tab_panel(t_shot):
+                        with ui.tab_panel(t_shot).style("padding:4px 0 0"):
                             self.shots = ui.column().classes("w-full gap-1")
                             with self.shots:
                                 ui.label("Screenshots appear here as they are taken.") \
@@ -335,16 +339,21 @@ class LiveView:
             ui.label(f"{'✅' if st == 'passed' else '❌' if st == 'failed' else '⏳'} "
                      f"{entry.get('step', '')}").style(
                 f"font-family:{TYPOGRAPHY['mono']}; font-size:{TYPOGRAPHY['size_xs']};"
-                f"color:{colour}; word-break:break-all")
+                f"color:{colour}; word-break:break-all; max-height:3.2em; overflow-y:auto")
             if entry.get("error"):
+                # capped so a long error never pushes the screenshot off screen
                 ui.label(entry["error"]).style(
                     f"font-family:{TYPOGRAPHY['mono']}; font-size:{TYPOGRAPHY['size_xs']};"
-                    f"color:{COLORS['danger']}; white-space:pre-wrap")
+                    f"color:{COLORS['danger']}; white-space:pre-wrap;"
+                    f"max-height:4.8em; overflow-y:auto")
             # Served by the /screenshots mount (path relative to data/screenshots),
             # the same way the report page shows it.
             src = f"/screenshots/{entry['screenshot'].lstrip('/')}"
-            ui.image(src).style(
-                f"width:100%; border:1px solid {COLORS['border']}; border-radius:6px") \
+            # Whole frame fits the window: height-capped, aspect kept, centred.
+            ui.element("img").props(f'src="{src}"').style(
+                "display:block; margin:0 auto; max-width:100%;"
+                "max-height:calc(100vh - 260px); object-fit:contain;"
+                f"border:1px solid {COLORS['border']}; border-radius:6px") \
                 .on("click", lambda s=src: ui.navigate.to(s, new_tab=True)) \
                 .classes("cursor-pointer").tooltip("Open full size in a new tab")
 

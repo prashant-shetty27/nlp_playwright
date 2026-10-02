@@ -1693,6 +1693,19 @@
     "catalogue_photo_tile_matching": "//div[contains(@class,'photos_tab_imgcontainer')][.//img[contains(@src,'${img_id}') or contains(@data-src,'${img_id}')]]",
     "catalogue_photo_tile_matching_image": "//div[contains(@class,'photos_tab_imgcontainer')][.//img[contains(@src,'${img_id}') or contains(@data-src,'${img_id}')]]//img",
     "catalogue_photo_tile_matching_360_icon": "//div[contains(@class,'photos_tab_imgcontainer')][.//img[contains(@src,'${img_id}') or contains(@data-src,'${img_id}')]]//div[contains(@class,'glyimg__img3dicn')]",
-    "b2b_prp_gvs_popup_skip": "//*[contains(@class,'skipbtn')] | //div[contains(@class,'popup') or contains(@class,'sheet')]//*[normalize-space(text())='Skip']"
+    "b2b_prp_gvs_popup_skip": "//*[contains(@class,'skipbtn')] | //div[contains(@class,'popup') or contains(@class,'sheet')]//*[normalize-space(text())='Skip']",
+    "pdp_gallery_360_tab": "//span[contains(@class,'b2bpswiper__tab')][normalize-space(.)='360°']",
+    "catalogue_photos_products_chip": "//li[starts-with(@data-at,'classification_tab')][.//span[starts-with(normalize-space(.),'Products')]]",
+    "catalogue_photo_tile_with_360": "(//div[contains(@class,'photos_tab_imgcontainer')][.//div[contains(@class,'glyimg__img3dicn')]])[1]",
+    "catalogue_photo_tile_with_360_image": "(//div[contains(@class,'photos_tab_imgcontainer')][.//div[contains(@class,'glyimg__img3dicn')]])[1]//img",
+    "prp_first_360_card": "(//div[contains(@class,'b2bprdct')][.//span[contains(@class,'imgae3Dicon')]])[1]",
+    "prp_first_360_card_badge": "(//div[contains(@class,'b2bprdct')][.//span[contains(@class,'imgae3Dicon')]])[1]//span[contains(@class,'imgae3Dicon')]",
+    "prp_first_360_card_image": "(//div[contains(@class,'b2bprdct')][.//span[contains(@class,'imgae3Dicon')]])[1]//div[contains(@class,'b2bprdctimg')]//img",
+    "prp_first_360_card_title": "(//div[contains(@class,'b2bprdct')][.//span[contains(@class,'imgae3Dicon')]])[1]//h2",
+    "pdp_product_title": "//h1[contains(@class,'prdcthd')]",
+    "pdp_main_image_matching": "(//img[contains(@class,'b2bimgswiper__img')][contains(@src,'${img_id}')])[1]",
+    "pdp_gallery_360_tab_active": "//span[contains(@class,'b2bpswiper__tab') and contains(@class,'active')][normalize-space(.)='360°']",
+    "gallery_view_more_details_for_product": "//a[contains(@class,'vmDetails')][contains(@href,'pid-${pid}')]",
+    "catalogue_looking_for_sheet_skip": "(//div[.//*[starts-with(normalize-space(text()),'Looking for')]]//*[normalize-space(text())='Skip'])[last()]"
   }
 }

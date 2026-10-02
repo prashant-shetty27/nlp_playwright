@@ -116,7 +116,10 @@ class ReportDetail:
                 self.left = ui.column().classes("gap-0").style(
                     f"width:34rem; flex:none; border:1px solid {COLORS['border']};"
                     f"border-radius:6px; max-height:74vh; overflow-y:auto")
-                self.right = ui.column().classes("flex-grow gap-2")
+                # Stays on screen while the step list scrolls, so a clicked step's
+                # whole screenshot is visible without scrolling the page.
+                self.right = ui.column().classes("flex-grow gap-2").style(
+                    "position:sticky; top:72px; align-self:flex-start")
         self._draw_steps()
         self._draw_detail()
 
@@ -262,14 +265,17 @@ class ReportDetail:
                         f"border-radius:4px; padding:6px 10px"):
                     ui.label(step["reason"]).style(
                         f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text']};"
-                        f"white-space:pre-wrap; word-break:break-word")
+                        f"white-space:pre-wrap; word-break:break-word;"
+                        f"max-height:6em; overflow-y:auto")
 
             if step["screenshot"]:
                 # Served by the /screenshots mount; the stored path is relative
                 # to data/screenshots so the report survives being moved.
                 src = f"/screenshots/{step['screenshot'].lstrip('/')}"
-                ui.image(src).style(
-                    f"width:100%; border:1px solid {COLORS['border']};"
+                ui.element("img").props(f'src="{src}"').style(
+                    "display:block; max-width:100%; object-fit:contain;"
+                    "max-height:calc(100vh - 300px);"
+                    f"border:1px solid {COLORS['border']};"
                     f"border-radius:6px").on(
                     "click", lambda s=src: ui.navigate.to(s, new_tab=True)) \
                     .classes("cursor-pointer").tooltip("Open full size")
