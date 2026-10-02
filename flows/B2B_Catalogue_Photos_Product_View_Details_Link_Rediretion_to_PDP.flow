@@ -7,8 +7,10 @@ wait 3 seconds
 scroll to photos_products_tab
 click photos_products_tab
 click catalogue_products_1st_img
-verify element catalogue_product_img_description is visible
+# Live 02-Oct-2026: this product has a name but no description (desc box empty) - check the name instead
+verify element catalogue_product_image_category_name is visible
 store text of catalogue_product_image_category_name as product_img_category_name
 click products_image_view_more_details_link
-wait 5 seconds
+wait until url contains "/pid-"
+wait for page to load
 verify text "${product_img_category_name}" on page
