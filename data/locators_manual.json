@@ -922,7 +922,7 @@
     "b2b_catalogue_searchbox": "//*[@id='hdrinputotr']",
     "b2b_catalogue_image_count": "//span[contains(@class, 'details__title__banner_photo')]",
     "b2b_catalogue_trust_logo": "(//div[contains(@class, 'rowbox')]//img)[1]",
-    "b2b_catalogue_jdverified_logo": "(//span[contains(@class, 'rowbox')])[2]",
+    "b2b_catalogue_jdverified_logo": "//img[@alt='JD Verified']",
     "b2b_catalogue_contract_card_area": "span[class*=\"location_text\"]",
     "b2b_catalogue_card_distance": "//span[contains(text(),'km')]",
     "b2b_catalogue_card_business_type": "//a[@class='elipsis']",
@@ -995,12 +995,12 @@
     "b2b_catalogue_pdf_gallery_cta_send_enquiry": "//div[@data-at='footer_bestdeal']",
     "b2b_catalogue_pdf_gallery_cta_whatsapp": "//div[@data-at='footer_whatsapp']",
     "b2b_catalogue_tab_overview": "//a[text()[normalize-space() = \"Overview\"]]",
-    "b2b_catalogue_photos_heading": "//h2[text()[normalize-space() = \"Photos\"]]",
+    "b2b_catalogue_photos_heading": "//h2[normalize-space(text())='Photo' or normalize-space(text())='Photos']",
     "b2b_catalogue_photos_folder_all_text": "//span[text()[normalize-space() = \"All\"]]",
     "b2b_catalogue_photos_folder_photos_count": "//span[contains(normalize-space(),\"photos\")]",
     "b2b_catalogue_photos_video_text": "//span[text()[normalize-space() = \"Video\"]]",
     "b2b_catalogue_photos_folder_video_count": "//span[text()[normalize-space() = \"videos\"]]",
-    "b2b_catalogue_photos_image": "//a[@data-at=\"photos_tab_0\"]/img",
+    "b2b_catalogue_photos_image": "(//h2[normalize-space(text())='Photo' or normalize-space(text())='Photos']/following::img)[1]",
     "b2b_catalogue_photos_gallery_heading": "//h1[text()[\"Photos\"]]",
     "b2b_catalogue_photos_pdf_gallery_all_tab_count": "//div[contains(text(),\"All\")]",
     "b2b_catalogue_photos_gallery_video_count": "//span[contains(normalize-space(),\"Video\")]",
@@ -1170,7 +1170,8 @@
     "b2b_catalogue_footer_heading_leading_categories_category_1st": "((//details[contains(@class,'seoftr__acrdn')][.//*[normalize-space(text())='Leading Categories']])[1]//a)[1]",
     "b2b_catalogue_footer_heading_leading_categories_category_last": "((//details[contains(@class,'seoftr__acrdn')][.//*[normalize-space(text())='Leading Categories']])[1]//a)[last()]",
     "b2b_catalogue_footer_heading_trending_categories": "(//*[self::h2 or self::span or self::div][normalize-space(text())=\"Trending Categories\"])[1]",
-    "b2b_catalogue_footer_heading_trending_categories_category_last": "((//details[contains(@class,'seoftr__acrdn')][.//*[normalize-space(text())='Trending Categories']])[1]//a)[last()]"
+    "b2b_catalogue_footer_heading_trending_categories_category_last": "((//details[contains(@class,'seoftr__acrdn')][.//*[normalize-space(text())='Trending Categories']])[1]//a)[last()]",
+    "b2b_catalogue_gst_badge": "//span[contains(@class,'gst--wrp')][.//span[normalize-space()='GST']]"
   },
   "ts_catalogue_page_offers_banner": {
     "_platform": "mobilesite",
