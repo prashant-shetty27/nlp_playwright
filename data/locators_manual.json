@@ -1574,7 +1574,10 @@
     "explain_the_options_button": "//button[text()[normalize-space() = \"Explain the options\"]]",
     "the_primary_use_of_tyres_is_to_provide_traction_sup1": "//div[contains(@class, 'rfq-bot-msg') and contains(@class, 'rfq-bot-msg')]",
     "what_is_the_primary_use_of_the_tyres": "//p[text()[normalize-space() = \"What is the primary use of the tyres?\"]]",
-    "button_all_season_best_for_general_use_suitable_for_most_w": "//span[text()[normalize-space() = \"Best for general use, suitable for most weather conditions\"]]"
+    "button_all_season_best_for_general_use_suitable_for_most_w": "//span[text()[normalize-space() = \"Best for general use, suitable for most weather conditions\"]]",
+    "b2b_assist_chat_login_link": "//div[contains(@class,'rfq-chat-history')]//*[normalize-space(text())='Log In' or normalize-space(text())='Login']",
+    "b2b_assist_login_continue": "(//button[normalize-space()='Continue'])[last()]",
+    "b2b_assist_otp_login_button": "(//button[normalize-space()='Login'])[last()]"
   },
   "ts_pdp_seller_card_new_design": {
     "_platform": "mobilesite",
