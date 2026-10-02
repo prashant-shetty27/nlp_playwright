@@ -125,71 +125,68 @@ class LiveView:
         topbar(["Execute", "Live"], quick_run_route="/run",
                platform=self.platform if hasattr(self, "platform") else "",
                current_flow=self.flow if hasattr(self, "flow") else "")
-        with ui.row().classes("w-full items-center gap-3").style("padding:8px 16px 0"):
-            _back_to_test_case(self.flow if hasattr(self, "flow") else "",
-                               self.platform if hasattr(self, "platform") else "website")
-
-        with ui.column().classes("w-full gap-3 p-4"):
-            if getattr(self, "batch", None):
-                self._batch_strip()
-            with ui.row().classes("w-full items-center gap-3"):
-                ui.label(self.flow or "run").style(
-                    f"font-size:{TYPOGRAPHY['size_lg']};"
-                    f"font-weight:{TYPOGRAPHY['weight_bold']};"
-                    f"font-family:{TYPOGRAPHY['mono']}")
-                platform_badge(self.platform)
-                ui.label(self.run_id).style(
-                    f"font-family:{TYPOGRAPHY['mono']};"
-                    f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}")
-                ui.space()
-                self.chip_holder = ui.row()
-                with self.chip_holder:
-                    status_chip("running")
-                self.stop_btn = ui.button("Stop", icon="stop_circle", on_click=self._stop) \
-                    .props("outline dense color=negative") \
-                    .tooltip("Stop after the current step — done steps keep their "
-                             "result, the rest are marked not run, the report is saved")
-
-            with ui.row().classes("w-full no-wrap gap-4"):
-                with ui.column().classes("flex-grow gap-1"):
+        # Two columns from the top of the page: left = back link, title, steps,
+        # progress; right = Log / Screenshots, starting at the top (no blank band
+        # above it) and staying on screen while the steps scroll (Prashant, 03-Oct).
+        with ui.row().classes("w-full no-wrap gap-4").style("padding:8px 16px 16px"):
+            with ui.column().classes("flex-grow gap-3").style("min-width:0"):
+                _back_to_test_case(self.flow if hasattr(self, "flow") else "",
+                                   self.platform if hasattr(self, "platform") else "website")
+                if getattr(self, "batch", None):
+                    self._batch_strip()
+                with ui.row().classes("w-full items-center gap-3"):
+                    ui.label(self.flow or "run").style(
+                        f"font-size:{TYPOGRAPHY['size_lg']};"
+                        f"font-weight:{TYPOGRAPHY['weight_bold']};"
+                        f"font-family:{TYPOGRAPHY['mono']}")
+                    platform_badge(self.platform)
+                    ui.label(self.run_id).style(
+                        f"font-family:{TYPOGRAPHY['mono']};"
+                        f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}")
+                    ui.space()
+                    self.chip_holder = ui.row()
+                    with self.chip_holder:
+                        status_chip("running")
+                    self.stop_btn = ui.button("Stop", icon="stop_circle", on_click=self._stop) \
+                        .props("outline dense color=negative") \
+                        .tooltip("Stop after the current step — done steps keep their "
+                                 "result, the rest are marked not run, the report is saved")
+                with ui.column().classes("w-full gap-1"):
                     ui.label("Steps").style(f"font-weight:{TYPOGRAPHY['weight_bold']}")
                     self.steps_area = ui.column().classes("w-full gap-0").style(
                         f"border:1px solid {COLORS['border']}; border-radius:6px;"
-                        f"max-height:30rem; overflow-y:auto")
+                        f"max-height:calc(100vh - 290px); overflow-y:auto")
                     with self.steps_area:
                         ui.label("Waiting for the first step…").style(
                             f"padding:10px; color:{COLORS['text_muted']};"
                             f"font-size:{TYPOGRAPHY['size_sm']}")
-                # Kept on screen while the steps list scrolls, so clicking any step
-                # shows its whole screenshot without scrolling the page (Prashant, 03-Oct).
-                with ui.column().classes("gap-0").style(
-                        "width:26rem; flex:none; position:sticky; top:72px;"
-                        "align-self:flex-start"):
-                    with ui.tabs().props("dense").classes("w-full") as tabs:
-                        t_log = ui.tab("Log", icon="terminal")
-                        t_shot = ui.tab("Screenshots", icon="image")
-                    self.tabs, self.t_shot = tabs, t_shot
-                    with ui.tab_panels(tabs, value=t_log).classes("w-full"):
-                        with ui.tab_panel(t_log):
-                            self.log = log_viewer()
-                        with ui.tab_panel(t_shot).style("padding:4px 0 0"):
-                            self.shots = ui.column().classes("w-full gap-1")
-                            with self.shots:
-                                ui.label("Screenshots appear here as they are taken.") \
-                                    .style(f"font-size:{TYPOGRAPHY['size_xs']};"
-                                           f"color:{COLORS['text_muted']}")
-
-            with ui.row().classes("w-full items-center gap-3"):
-                self.bar = ui.linear_progress(value=0, show_value=False) \
-                    .classes("flex-grow")
-                self.counter = ui.label("0 / 0").style(
-                    f"font-family:{TYPOGRAPHY['mono']};"
-                    f"font-size:{TYPOGRAPHY['size_sm']}")
-                self.elapsed = ui.label("0s").style(
-                    f"font-family:{TYPOGRAPHY['mono']};"
-                    f"font-size:{TYPOGRAPHY['size_sm']};"
-                    f"color:{COLORS['text_muted']}")
-            self.footer = ui.row().classes("w-full")
+                with ui.row().classes("w-full items-center gap-3"):
+                    self.bar = ui.linear_progress(value=0, show_value=False) \
+                        .classes("flex-grow")
+                    self.counter = ui.label("0 / 0").style(
+                        f"font-family:{TYPOGRAPHY['mono']};"
+                        f"font-size:{TYPOGRAPHY['size_sm']}")
+                    self.elapsed = ui.label("0s").style(
+                        f"font-family:{TYPOGRAPHY['mono']};"
+                        f"font-size:{TYPOGRAPHY['size_sm']};"
+                        f"color:{COLORS['text_muted']}")
+                self.footer = ui.row().classes("w-full")
+            with ui.column().classes("gap-0").style(
+                    "width:26rem; flex:none; position:sticky; top:64px;"
+                    "align-self:flex-start"):
+                with ui.tabs().props("dense inline-label").classes("w-full") as tabs:
+                    t_log = ui.tab("Log", icon="terminal")
+                    t_shot = ui.tab("Screenshots", icon="image")
+                self.tabs, self.t_shot = tabs, t_shot
+                with ui.tab_panels(tabs, value=t_log).classes("w-full"):
+                    with ui.tab_panel(t_log).style("padding:4px 0 0"):
+                        self.log = log_viewer()
+                    with ui.tab_panel(t_shot).style("padding:4px 0 0"):
+                        self.shots = ui.column().classes("w-full gap-1")
+                        with self.shots:
+                            ui.label("Screenshots appear here as they are taken.") \
+                                .style(f"font-size:{TYPOGRAPHY['size_xs']};"
+                                       f"color:{COLORS['text_muted']}")
 
         self.log.push(f"run {self.run_id} started")
         self.missing = 0
@@ -352,7 +349,7 @@ class LiveView:
             # Whole frame fits the window: height-capped, aspect kept, centred.
             ui.element("img").props(f'src="{src}"').style(
                 "display:block; margin:0 auto; max-width:100%;"
-                "max-height:calc(100vh - 260px); object-fit:contain;"
+                "max-height:calc(100vh - 190px); object-fit:contain;"
                 f"border:1px solid {COLORS['border']}; border-radius:6px") \
                 .on("click", lambda s=src: ui.navigate.to(s, new_tab=True)) \
                 .classes("cursor-pointer").tooltip("Open full size in a new tab")
