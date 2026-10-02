@@ -1,0 +1,26 @@
+{
+  "created_by": "prashantshetty",
+  "created_at": "2026-10-01T19:43:51+00:00",
+  "_format": 2,
+  "suite_name": "b2b_prp",
+  "description": "",
+  "platform": "mobilesite",
+  "scripts": [
+    "flows/B2B_PRP_Grid_View.flow",
+    "flows/B2B_PRP_Looking_for_Job.flow",
+    "flows/Direct_URL_B2B_Multiple_Cities_Validation_NCT.flow",
+    "flows/PAID_Actual_number_All_PAGES.flow",
+    "flows/PRP_All_India_City_Popup_GVS_popup.flow",
+    "flows/PRP_Filter_Combinations.flow",
+    "flows/PRP_Open_RFQ_Seller_Type_Option_Login.flow",
+    "flows/PRP_Open_RFQ_Seller_Type_Option_non_Login.flow",
+    "flows/PRP_Sanity_Ball_Bearing.flow",
+    "flows/PRP_View_Catalogue_and_Request_Catalogue.flow",
+    "flows/PRP_WA_removed_in_Non_Login.flow"
+  ],
+  "updated_by": "prashantshetty",
+  "updated_at": "2026-10-01T19:43:51+00:00",
+  "execution": {
+    "stop_on_failure": false
+  }
+}
