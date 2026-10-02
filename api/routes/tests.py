@@ -483,7 +483,12 @@ def _run_flow_sync_unlocked(run_id: str, flow_path: str, headless: bool,
                     row["children"] = entry["children"]
                 _capture(page, entry, step, row)
                 site_down = _site_did_not_load(step, str(e))
-                if stop_on_failure or site_down:
+                # The browser itself is gone (closed by the step watchdog, or it
+                # crashed): nothing after this can run, so stop instead of
+                # failing every remaining step with "browser has been closed".
+                browser_gone = ("stopped responding during this step" in str(e)
+                                or "Target page, context or browser has been closed" in str(e))
+                if stop_on_failure or site_down or browser_gone:
                     log.append(entry)   # (otherwise appended once, below)
                     # Everything after a failure is running against a page that
                     # is not where the test thinks it is. Those steps do not
@@ -492,7 +497,8 @@ def _run_flow_sync_unlocked(run_id: str, flow_path: str, headless: bool,
                     # half-entered data. Stop, and say what was not reached.
                     logger.error("⛔ Step %d failed — stopping. %d step(s) not run.",
                                  line_num, _remaining(lines, line_num))
-                    why = ("not run — the site did not load, so no later step can be checked"
+                    why = ("not run — the browser stopped responding and was closed" if browser_gone
+                           else "not run — the site did not load, so no later step can be checked"
                            if site_down else "not run — an earlier step failed")
                     for skipped_no, skipped in _rest(lines, line_num):
                         log.append({"line": skipped_no, "step": skipped,

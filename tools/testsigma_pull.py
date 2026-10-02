@@ -246,8 +246,20 @@ _DISMISS = re.compile(r"close|cross|cancel|skip|no\s*thanks|may\s*be\s*later|may
 #: Signing in (mobile + OTP) creates no lead. It runs, but only with these
 #: numbers, which the site blocks from reaching clients (28 Sep, Prashant).
 #: TEST_MOBILES in .env replaces the list. A step typing any other mobile is OFF.
-TEST_MOBILES = {n.strip() for n in os.environ.get(
-    "TEST_MOBILES", "").split(",") if n.strip()}
+def _test_mobiles() -> set:
+    """Read at use time, with .env loaded: reading os.environ at import time
+    gave an empty set when the importer ran before .env was loaded, so even the
+    blocked test numbers were switched off — and the "enter mobile" steps went
+    missing from every imported login step group."""
+    try:
+        from dotenv import load_dotenv
+        load_dotenv(os.path.join(BASE_DIR, ".env"), override=False)
+    except Exception:  # noqa: BLE001
+        pass
+    return {n.strip() for n in os.environ.get("TEST_MOBILES", "").split(",") if n.strip()}
+
+
+TEST_MOBILES = _test_mobiles()
 _MOBILE = re.compile(r"(?<!\d)[6-9]\d{9}(?!\d)")
 #: After a lead is sent, the thank-you checks cannot pass with the send switched off.
 _LEAD_AFTER = re.compile(r"acknowledg|thank\s*you|success(fully)?\s*(sent|submitted)|dear\s+\w+|toast", re.I)
@@ -899,7 +911,7 @@ def convert(bundle: dict, *, platform: str = "mobilesite") -> dict:
                     st["lead_sent"] = True
                     st["had_lead"] = True
                 other_mobile = ln.startswith("type ") and any(
-                    m_ not in TEST_MOBILES for m_ in _MOBILE.findall(ln.split(" into ")[0]))
+                    m_ not in _test_mobiles() for m_ in _MOBILE.findall(ln.split(" into ")[0]))
                 if disabled or is_lead or after_lead or other_mobile:
                     why = "disabled in Testsigma" if disabled else (
                         "REAL LEAD" if is_lead else

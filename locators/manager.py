@@ -206,6 +206,19 @@ def promote_selector(locator_name: str, winner: str, winner_type: str = "css") -
 
 
 def get_locator_and_dna(locator_name: str) -> tuple:
+    """Locator for a name, with any ${value} in it filled in (e.g. `[${round}]`
+    inside a `repeat` block) — every step type gets the same resolved XPath."""
+    xpath, dna = _get_locator_and_dna_raw(locator_name)
+    if isinstance(xpath, str) and "${" in xpath:
+        try:
+            from nlp.variable_manager import resolve_variables
+            xpath = resolve_variables(xpath)
+        except Exception:  # noqa: BLE001 — unresolved stays as written; the step reports it
+            pass
+    return xpath, dna
+
+
+def _get_locator_and_dna_raw(locator_name: str) -> tuple:
     """
     Master dispatcher: scans both ML database and manual database.
     Returns: (xpath_string, element_dna_dict | None)

@@ -708,7 +708,7 @@
     "rfq_otp5": "//input[@aria-label=\"otp5\"]",
     "rfq_otp6": "//input[@aria-label=\"otp6\"]",
     "rfq_otp_login_button": "//button[normalize-space()='Login']",
-    "rfq_don_t_know_button": "//span[@aria-label=\"Don't know\"]",
+    "rfq_don_t_know_button": "//*[normalize-space(text())=\"Don't know\"]",
     "rfq_continue_with_search_button": "//button[@aria-label=\"Continue with search\"]"
   },
   "ts_prp_open_rfq_seller_type_option_non_login": {
@@ -1277,7 +1277,7 @@
     "ps_pdp_jd_logo": "//span[contains(@class, 'hdrLogoIcn')]",
     "pdp_header_use_app_button": "//button[contains(@class,'open_app_btn')]",
     "ps_pdp_header_search_icon": "//div[contains(@class, 'iconbox') and contains(@class, 'mvhdrSrchIcn')]",
-    "pdp_search_box": "(//input[@id=\"srchInpId\"])[1]",
+    "pdp_search_box": "//input[@id=\"srchInpId\"]",
     "pdp_header_share": "//div[contains(@class, 'iconbox') and contains(@class, 'hdrMnushare')]",
     "pdp_header_share_copy_link": "//span[text()[normalize-space() = \"Copy Link\"]]",
     "pdp_top_gallery_skf_image_1st": "(//img[contains(@src, \"skf\")])[1]",
@@ -1396,7 +1396,7 @@
     "pdp_last_img_recommended_categories": "(//div[contains(@class,'relatedcat_imgouter')]//img)[last()]",
     "pdp_1st_category_name_recommended_categories": "(//div[contains(@class,'relatedcat_text')])[1]",
     "pdp_last_category_name_recommended_categories": "(//div[contains(@class,'relatedcat_text')])[last()]",
-    "pdp_list_recommended_categories": "(//div[contains(@class,'relatedcat_text')])[@|RC|]",
+    "pdp_list_recommended_categories": "(//div[contains(@class,'relatedcat_text')])[${round}]",
     "prp_result_page_loading_via_pdp_recommended_category_search_flow": "//a[contains(@class,'jdmrt_rsltgrdwp')]",
     "recommended_categories_double_row_deep_groove_ball_b": "//div[contains(@class, 'relatedcat_wrap') and contains(@class, 'topborder')]",
     "roller_bearing": "//img[starts-with(@src, \"https://images.jdmagicbox.com/quickquotes/images_main/dlt_tapper_roller_bearing_\")]",
@@ -1658,5 +1658,9 @@
     "rfq_popular_seller_address": "(//div[contains(@class,'font12 rfq_similar_adrs')])[1]",
     "rfq_popular_seller_call_button": "(//button[contains(@class,'rfq_similar_callbtn')])[1]",
     "rfq_popular_seller_slide_dot": "//ul[@class='slick-dots']"
+  },
+  "ts_common_restored": {
+    "_platform": "mobilesite",
+    "common_b2b_login_only_mobile": "//input[@placeholder=\"Mobile Number\"]"
   }
 }

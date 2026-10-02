@@ -429,7 +429,14 @@ def _interpret(step: str, page):
     """One step; a step marked [ignore] runs with short waits and its failure is
     raised as IgnoredFailure so the caller reports it amber and carries on."""
     from execution.step_flags import run_ignorable
-    run_ignorable(step, lambda text: _interpret_core(text, page))
+    from execution.step_watchdog import guard
+    # A step that only groups others ("call …", loops) is not timed: its
+    # inner steps are, one by one.
+    if step.strip().lower().startswith(("call ", "repeat ", "for each ")):
+        run_ignorable(step, lambda text: _interpret_core(text, page))
+        return
+    with guard(step):
+        run_ignorable(step, lambda text: _interpret_core(text, page))
 
 
 def _interpret_core(step: str, page):

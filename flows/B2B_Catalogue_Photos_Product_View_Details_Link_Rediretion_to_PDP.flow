@@ -11,4 +11,4 @@ verify element catalogue_product_img_description is visible
 store text of catalogue_product_image_category_name as product_img_category_name
 click products_image_view_more_details_link
 wait 5 seconds
-verify text "product img category name" on page
+verify text "${product_img_category_name}" on page

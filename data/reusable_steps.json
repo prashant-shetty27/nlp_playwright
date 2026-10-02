@@ -457,13 +457,14 @@
   },
   "B2B_Common_Non_Login_to_Login_via_Only_Mobile_numb": {
     "steps": [
+      "type \"${mobile_9987}\" into common_b2b_login_only_mobile",
       "js click common_b2b_login_post_mobile_continue",
       "wait 1 seconds",
-      "type \"537393\" into bd_popup_otp_field",
+      "type \"${otp}\" into bd_popup_otp_field",
       "wait 1 seconds"
     ],
     "created_at": "2026-10-01T17:23:58.291236+00:00",
-    "step_count": 4,
+    "step_count": 5,
     "platform": "mobilesite"
   },
   "Prot_Open_Popup_Allow": {
@@ -1212,7 +1213,7 @@
       "js click catalogue_product_store_search_matching_as",
       "wait 2 seconds",
       "verify element catalogue_product_tab_search_result is visible",
-      "verify element catalogue_product_tab_post_store_search_filter_tab contains \"store sr\""
+      "verify element catalogue_product_tab_post_store_search_filter_tab contains \"${store_sr}\""
     ],
     "created_at": "2026-10-01T17:24:11.007283+00:00",
     "step_count": 13,
@@ -1310,7 +1311,7 @@
       "store text of seo_1_leading_categories as SEO_Leading_Categories_50",
       "click seo_1_leading_categories",
       "wait until element b2b_prp_1st_product_card is visible",
-      "verify text \"SEO Leading Categories 1\" on page",
+      "verify text \"${SEO_Leading_Categories_1}\" on page",
       "press back",
       "wait 2 seconds"
     ],
@@ -1374,7 +1375,7 @@
       "store text of b2b_home_seo_footer_recent_category_2 as seo_footer_data_2",
       "click b2b_home_seo_footer_recent_category_2",
       "wait 3 seconds",
-      "verify text \"seo footer data 2\" on page",
+      "verify text \"${seo_footer_data_2}\" on page",
       "press back",
       "wait 2 seconds",
       "scroll to b2b_home_seo_footer_recently_added",
@@ -1383,7 +1384,7 @@
       "store text of b2b_home_seo_footer_recently_added_categories_50 as seo_footer_data_50",
       "click b2b_home_seo_footer_recently_added_categories_50",
       "wait 3 seconds",
-      "verify text \"seo footer data 50\" on page",
+      "verify text \"${seo_footer_data_50}\" on page",
       "press back",
       "wait 2 seconds",
       "call SG_SEO_Footer_Redirection_Leading_Categories",
@@ -1399,9 +1400,10 @@
       "verify element catalogue_header_back is visible",
       "verify element ps_pdp_jd_logo is visible",
       "click ps_pdp_jd_logo",
+      "wait until page url does not contain \"/pid-\"",
       "wait for page to load",
       "press back",
-      "wait for page to load",
+      "wait until element pdp_product_name_heading is visible",
       "scroll to pdp_header_use_app_button",
       "verify element pdp_header_use_app_button is visible",
       "click ps_pdp_header_search_icon",
@@ -1415,7 +1417,7 @@
       "[ignore] verify element b2b_prp_gvs_popup_mobile_alert is visible"
     ],
     "created_at": "2026-10-01T17:24:22.996065+00:00",
-    "step_count": 17,
+    "step_count": 18,
     "platform": "mobilesite"
   },
   "SG_PDP_Inner_Gallery": {
@@ -1436,14 +1438,17 @@
       "js click rfq_skip_all_button",
       "wait until element rfq_mobile_number_input is visible",
       "verify element rfq_mobile_number_input is visible",
+      "type \"${mobile_9987}\" into rfq_mobile_number_input",
       "wait 1 seconds",
       "wait 1 seconds",
       "wait 2 seconds",
       "wait 1 seconds",
       "wait 2 seconds",
       "wait 1 seconds",
-      "refresh page",
-      "wait for page to load",
+      "repeat until element pdp_top_gallery_skf_image_2nd is visible (max 4 times)",
+      "press back",
+      "wait 2 seconds",
+      "end repeat",
       "click pdp_top_gallery_skf_image_2nd",
       "click pdp_gallery_inner_header_share",
       "wait until element pdp_gallery_inner_share_popup_copy_link is visible",
@@ -1458,7 +1463,7 @@
       "js click rfq_skip_all_button"
     ],
     "created_at": "2026-10-01T17:24:23.016781+00:00",
-    "step_count": 36,
+    "step_count": 39,
     "platform": "mobilesite"
   },
   "PDP_Common_Login_Enter_OTP_and_Close_Div_without_L": {
@@ -1466,11 +1471,12 @@
       "verify element pdp_whatsapp_login_div is visible",
       "verify element pdp_whatsapp_login_div_jd_logo is visible",
       "verify element pdp_whatsapp_login_div_your_are_almos_text is visible",
+      "type \"${mobile_9987}\" into pdp_whatsapp_login_div_mobile",
       "js click common_login_div_continue_button",
       "js click pdp_whatsapp_otp_div_cross"
     ],
     "created_at": "2026-10-01T17:24:23.038082+00:00",
-    "step_count": 5,
+    "step_count": 6,
     "platform": "mobilesite"
   },
   "SG_PDP_Ask_More_Photos_Button_Top_Gallery": {
@@ -1481,10 +1487,11 @@
       "wait for page to load",
       "js click pdp_ask_more_photos_top_gallery",
       "wait for page to load",
+      "type \"${mobile_7977}\" into common_b2b_login_only_mobile",
       "wait 1 seconds",
       "js click common_b2b_login_post_mobile_continue",
       "wait 1 seconds",
-      "type \"537393\" into nct_login_otp_field",
+      "type \"${otp}\" into nct_login_otp_field",
       "wait 5 seconds",
       "wait 5 seconds",
       "scroll to top_photos_requested",
@@ -1493,7 +1500,7 @@
       "verify element pdp_post_photo_requested_sent_button is visible"
     ],
     "created_at": "2026-10-01T17:24:23.064166+00:00",
-    "step_count": 16,
+    "step_count": 17,
     "platform": "mobilesite"
   },
   "SG_PDP_Top_Seller_Section_Details_Verification": {
@@ -1571,12 +1578,12 @@
       "verify element pdp_1st_price_customer_also_viewed is visible",
       "verify element pdp_call_now_button_customer_also_viewed is visible",
       "verify element pdp_whatsapp_button_customer_also_viewed is visible",
-      "store text of pdp_1st_seller_name_customer_also_viewed as 1st_seller_name_customer_also_vieee",
+      "store text of pdp_1st_seller_name_customer_also_viewed as seller_name_customer_also_viewed",
       "wait 3 seconds",
       "click pdp_1st_seller_name_customer_also_viewed",
       "wait 3 seconds",
       "wait for page to load",
-      "verify text \"1st seller name customer also vieee\" on page",
+      "verify text \"${seller_name_customer_also_viewed}\" on page",
       "press back",
       "wait for page to load"
     ],
@@ -1658,7 +1665,7 @@
       "scroll to more_from_this_seller_1st_gbp",
       "click more_from_this_seller_1st_gbp",
       "wait 1 seconds",
-      "verify text \"more from this seller 1st product name\" on page",
+      "verify text \"${more_from_this_seller_1st_product_name}\" on page",
       "js click rfq_don_t_know_button",
       "wait 2 seconds",
       "wait 3 seconds",
@@ -1710,7 +1717,7 @@
       "store text of more_from_this_seller_price_dynamic as more_from_this_seller_1st_price",
       "click more_from_this_seller_gbp_dynamic",
       "wait 1 seconds",
-      "verify text \"more from this seller 1st product name\" on page",
+      "verify text \"${more_from_this_seller_1st_product_name}\" on page",
       "click rfq_don_t_know_button",
       "wait 2 seconds",
       "wait 3 seconds",
@@ -1741,25 +1748,12 @@
       "wait until element pdp_whatsapp_login_div_mobile is visible",
       "click pdp_whatsapp_login_div_mobile",
       "wait 3 seconds",
-      "call SG_BD_Login_${mobile_7977}",
+      "call SG_BD_Login",
       "wait for page to load",
       "wait 1 seconds"
     ],
     "created_at": "2026-10-01T17:24:23.261550+00:00",
     "step_count": 19,
-    "platform": "mobilesite"
-  },
-  "SG_BD_Login_${mobile_7977}": {
-    "steps": [
-      "js click common_b2b_login_post_mobile_continue",
-      "wait 1 seconds",
-      "type \"537393\" into bd_popup_otp_field",
-      "wait 5 seconds",
-      "wait 3 seconds",
-      "[ignore] verify element bd_popup_otp_field is visible"
-    ],
-    "created_at": "2026-10-01T17:24:23.284905+00:00",
-    "step_count": 6,
     "platform": "mobilesite"
   },
   "SG_PDP_Recommended_Categories": {
@@ -1779,7 +1773,7 @@
       "click pdp_list_recommended_categories",
       "wait 2 seconds",
       "wait for page to load",
-      "verify text \"RCNAME\" on page",
+      "verify text \"${RCNAME}\" on page",
       "verify element prp_result_page_loading_via_pdp_recommended_category_search_flow is visible",
       "press back",
       "wait for page to load",
@@ -1973,7 +1967,7 @@
       "store text of pdp_top_seller as top_seller",
       "click pdp_top_seller",
       "wait until element catalogue_top_seller_name is visible",
-      "verify text \"top_seller\" on page"
+      "verify text \"${top_seller}\" on page"
     ],
     "created_at": "2026-10-01T17:24:23.490132+00:00",
     "step_count": 5,
@@ -1986,7 +1980,7 @@
       "click pdp_top_seller",
       "wait until element catalogue_top_seller_name is visible",
       "wait 2 seconds",
-      "verify text \"top_seller\" on page"
+      "verify text \"${top_seller}\" on page"
     ],
     "created_at": "2026-10-01T17:24:23.516415+00:00",
     "step_count": 6,
@@ -2032,13 +2026,14 @@
   "PS_Touch_B2B_Common_Non_Login_to_Login": {
     "steps": [
       "click rfq_mobile_number_input",
+      "type \"${mobile_9987}\" into common_b2b_login_only_mobile",
       "js click common_b2b_login_post_mobile_continue",
       "wait 1 seconds",
-      "type \"123456\" into item_1st_otp_b2b_common_login",
+      "type \"${otp}\" into item_1st_otp_b2b_common_login",
       "wait 1 seconds"
     ],
     "created_at": "2026-10-01T17:24:25.038724+00:00",
-    "step_count": 5,
+    "step_count": 6,
     "platform": "mobilesite"
   },
   "SG_PRP_to_PDP_City_Change_Verification": {
@@ -2596,6 +2591,20 @@
     ],
     "created_at": "2026-10-01T17:24:35.760008+00:00",
     "step_count": 11,
+    "platform": "mobilesite"
+  },
+  "SG_BD_Login": {
+    "steps": [
+      "type \"${mobile_7977}\" into focused field",
+      "js click common_b2b_login_post_mobile_continue",
+      "wait 1 seconds",
+      "type \"${otp}\" into bd_popup_otp_field",
+      "wait 5 seconds",
+      "wait 3 seconds",
+      "[ignore] verify element bd_popup_otp_field is visible"
+    ],
+    "created_at": "2026-10-01T17:24:23.284905+00:00",
+    "step_count": 7,
     "platform": "mobilesite"
   }
 }

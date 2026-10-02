@@ -1197,6 +1197,15 @@ def scroll_to_element(page, target: str) -> None:
     if not xpath:
         raise Exception(f"Locator '{target}' not found for scroll_to")
     loc = _get_locator_root(page).locator(xpath).first
+    # Same name matching a hidden copy first (a header search box and the
+    # search screen's box share an id): use the first one that is visible.
+    try:
+        if not loc.is_visible() and _get_locator_root(page).locator(xpath).count() > 1:
+            vis = _get_locator_root(page).locator(xpath).filter(visible=True)
+            if vis.count():
+                loc = vis.first
+    except Exception:  # noqa: BLE001
+        pass
     # On a phone page, get there the way a person does — finger swipes — so
     # "on scroll" popups, lazy sections and sticky bars react as on a device.
     # SEO footer links stay a direct jump: the footer is many screens down and
@@ -1218,6 +1227,27 @@ def _is_touch_page(page) -> bool:
         return False
 
 
+#: Pages that were slow to answer a touch gesture: later finger scrolls on them
+#: move the page directly instead of queueing more touch events (which can
+#: freeze a renderer that is already behind).
+_SLOW_TOUCH: "weakref.WeakSet" = None
+
+
+def _page_slow(page) -> bool:
+    return _SLOW_TOUCH is not None and page in _SLOW_TOUCH
+
+
+def _mark_slow(page) -> None:
+    global _SLOW_TOUCH
+    import weakref
+    if _SLOW_TOUCH is None:
+        _SLOW_TOUCH = weakref.WeakSet()
+    try:
+        _SLOW_TOUCH.add(page)
+    except TypeError:
+        pass
+
+
 def _finger_drag(page, dy: float, secs: float = 0.45) -> None:
     """One finger drag that moves the page by about `dy` px (positive = down
     the page, i.e. finger moves up). Slow at the end so there is little fling,
@@ -1232,7 +1262,12 @@ def _finger_drag(page, dy: float, secs: float = 0.45) -> None:
         engine = page.context.browser.browser_type.name
     except Exception:  # noqa: BLE001
         engine = "chromium"
+    if _page_slow(page):
+        _wheel(page, 0, dy)
+        page.wait_for_timeout(300)
+        return
     before = page.evaluate("() => window.scrollY")
+    t_start = time.time()
     if engine == "chromium":
         cdp = page.context.new_cdp_session(page)
         try:
@@ -1259,6 +1294,10 @@ def _finger_drag(page, dy: float, secs: float = 0.45) -> None:
             page.mouse.move(x, ya + (yb - ya) * i / steps, steps=1)
             page.wait_for_timeout(int(secs * 1000 / steps))
         page.mouse.up()
+    if time.time() - t_start > 3:
+        _mark_slow(page)
+        logger.warning("🐢 A finger scroll took %.1fs — later scrolls on this page move it directly",
+                       time.time() - t_start)
     page.wait_for_timeout(250)
     moved = page.evaluate("() => window.scrollY") - before
     # Page did not follow the finger (inner scroller, drag ignored): top up the
@@ -1289,8 +1328,8 @@ def _finger_scroll_to(page, loc, max_swipes: int = 25) -> bool:
             box = None
         if box is None:
             return False                                  # not rendered: let the jump try
-        if 0 <= box["y"] and box["y"] + min(box["height"], h * 0.5) <= h * 0.9:
-            return True
+        if box["y"] >= 0 and box["y"] < h * 0.92 and box["height"] > 0:
+            return True        # on screen (a bottom sheet counts) — no swipe needed
         delta = box["y"] - h * 0.3                        # bring it to the upper third
         _finger_drag(page, max(-h * 0.5, min(h * 0.5, delta)))
     return False
@@ -1380,13 +1419,22 @@ def swipe_screen(page, span: str = "bottom_top", duration_s: float | None = None
     if engine != "chromium":
         touch = False
     horizontal = span in _SWIPE_SPAN_X
+    if _page_slow(page) and not horizontal:
+        y0, y1 = _SWIPE_SPAN.get(span, _SWIPE_SPAN["bottom_top"])
+        _wheel(page, 0, (y0 - y1) * h)
+        page.wait_for_timeout(500)
+        logger.info("📜 Scrolled instead of swiping (page slow to respond to touch)")
+        return
+    t_gesture = time.time()
     if horizontal:
         x0, x1 = _SWIPE_SPAN_X[span]
         xa, xb, ya, yb = int(x0 * w), int(x1 * w), int(h / 2), int(h / 2)
     else:
         y0, y1 = _SWIPE_SPAN.get(span, _SWIPE_SPAN["bottom_top"])
         xa, xb, ya, yb = int(w / 2), int(w / 2), int(y0 * h), int(y1 * h)
-    steps = max(8, min(120, int(secs / 0.016)))
+    # ~10 moves are enough for the browser to read a swipe; dozens per gesture
+    # only pile up on a page that is slow to handle touch.
+    steps = max(6, min(12, int(secs / 0.03)))
     if touch:
         # touchstart -> touchmoves -> touchend, as a finger does; the browser
         # then scrolls the page itself, momentum included.
@@ -1422,6 +1470,8 @@ def swipe_screen(page, span: str = "bottom_top", duration_s: float | None = None
             _wheel(page, 0, (ya - yb) / steps)
             page.wait_for_timeout(int(secs * 1000 / steps))
     page.wait_for_timeout(500)               # let the fling settle
+    if time.time() - t_gesture > 3.5:
+        _mark_slow(page)
     logger.info("👆 Swiped %s (%s, %.1fs)", span.replace("_", " to "), "touch" if touch else "mouse", secs)
 
 
@@ -1485,6 +1535,7 @@ def swipe_until_element_visible(page, target: str, span: str = "bottom_top",
             return False
         return bool(box) and box["y"] < size["height"] and box["y"] + box["height"] > 0
 
+    sluggish = _page_slow(page)
     for i in range(int(max_swipes) + 1):
         if seen():
             logger.info("👆 '%s' in view after %d swipe(s)", target, i)
@@ -1492,7 +1543,23 @@ def swipe_until_element_visible(page, target: str, span: str = "bottom_top",
         if i == int(max_swipes):
             break
         close_popups()
-        swipe_screen(page, span)
+        if sluggish and span in _SWIPE_SPAN:
+            # The page stopped keeping up with touch input (a sheet with heavy
+            # touch handlers): more touch events only queue up behind it and
+            # can freeze the renderer. Move the page the same distance instead.
+            y0, y1 = _SWIPE_SPAN[span]
+            _wheel(page, 0, (y0 - y1) * size["height"])
+            page.wait_for_timeout(500)
+            logger.info("📜 Scrolled instead of swiping (page slow to respond to touch)")
+        else:
+            t0 = time.time()
+            swipe_screen(page, span)
+            took = time.time() - t0
+            if took > 3:
+                sluggish = True
+                _mark_slow(page)
+                logger.warning("🐢 One swipe took %.1fs — the page is slow to respond to touch; "
+                               "the next moves in this step scroll instead", took)
         if wait_s:
             page.wait_for_timeout(int(float(wait_s) * 1000))
     raise Exception(f"'{target}' did not appear after {max_swipes} swipe(s) {span.replace('_', ' to ')}.")
@@ -2835,7 +2902,7 @@ def js_click(page, target: str) -> None:
     find_js  = _js_selector_script(selector)
     script = (
         f'{find_js} '
-        f'if (!el) throw new Error("JS click: element not found — {selector}"); '
+        f'if (!el) throw new Error(' + _j.dumps("JS click: element not found — " + selector) + '); '
         f'el.click();'
     )
     ep = _get_locator_root(page)
@@ -2908,7 +2975,7 @@ def js_type(page, text: str, target: str) -> None:
     # Use the native input value setter so React's synthetic onChange fires
     script = (
         f'{find_js} '
-        f'if (!el) throw new Error("JS type: element not found — {selector}"); '
+        f'if (!el) throw new Error(' + _j.dumps("JS type: element not found — " + selector) + '); '
         f'var setter = Object.getOwnPropertyDescriptor('
         f'  window.HTMLInputElement.prototype, "value") || '
         f'  Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value"); '
@@ -2959,7 +3026,7 @@ def js_submit(page, target: str) -> None:
     find_js  = _js_selector_script(selector)
     script   = (
         f'{find_js} '
-        f'if (!el) throw new Error("JS submit: element not found — {selector}"); '
+        f'if (!el) throw new Error(' + _j.dumps("JS submit: element not found — " + selector) + '); '
         f'if (typeof el.submit === "function") el.submit(); '
         f'else el.dispatchEvent(new Event("submit", {{bubbles:true, cancelable:true}}));'
     )
@@ -2983,7 +3050,7 @@ def js_dispatch_event(page, event_name: str, target: str) -> None:
     event_safe = _j.dumps(event_name)
     script = (
         f'{find_js} '
-        f'if (!el) throw new Error("JS dispatch: element not found — {selector}"); '
+        f'if (!el) throw new Error(' + _j.dumps("JS dispatch: element not found — " + selector) + '); '
         f'el.dispatchEvent(new Event({event_safe}, {{bubbles:true, cancelable:true}}));'
     )
     ep = _get_locator_root(page)

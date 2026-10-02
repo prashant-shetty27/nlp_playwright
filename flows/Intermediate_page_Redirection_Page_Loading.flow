@@ -15,7 +15,7 @@ if ${i} is at most ${size_of_ele}
 repeat while element b2b_all_categories_page_category is visible (max 50 times)
 store text of b2b_all_categories_page_category as categoryname
 click b2b_all_categories_page_category
-verify text "categoryname" on page
+verify text "${categoryname}" on page
 wait until element full_page_img_element is visible
 store text of intermediate_page_heading as ip_headi
 verify stored categoryname contains "${ip_headi}"
