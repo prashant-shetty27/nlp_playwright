@@ -732,7 +732,7 @@
   },
   "ts_prp_view_catalogue_and_request_catalogue": {
     "_platform": "mobilesite",
-    "prp_request_catalogue_1st": "(//span[contains(@class,'pdf_icontxt')][normalize-space()='Request Catalogue'])[1]",
+    "prp_request_catalogue_1st": "(//span[normalize-space()='Request Catalogue'])[1]",
     "prp_request_catalogue_login_div_text": "//span[contains(text(),'Login to request seller catalogue')]",
     "prp_request_catalogue_toast_msg": "//*[contains(text(),'Your request has been sent to the seller')]",
     "prp_request_catalogue_after_scroll": "//*[contains(text(),'Request Catalogue')]",
@@ -740,7 +740,7 @@
     "pdp_heading_more_from_this_seller": "//h2[text()[normalize-space() = \"More from this seller\"]]",
     "more_from_this_seller_product_list_section": "//div[contains(@class, 'productcard ')]",
     "pdp_seller_brochure_section": "(//div[contains(@class, 'image_carousel')])[1]",
-    "prp_view_catalogue_1st": "(//span[contains(@class,'pdf_icontxt')][normalize-space()='View Catalogue'])[1]",
+    "prp_view_catalogue_1st": "(//span[normalize-space()='View Catalogue'])[1]",
     "prp_product_random_view_catalogue": "//span[contains(text(),'View Catalogue')]/ancestor::div[contains(@class,'b2bprdct')]//h2",
     "prp_view_catalogue_login_div_text": "//span[contains(text(),'Login to view seller catalogue')]",
     "prp_view_catalogue_inner_page": "//div[@class='pdf-left-content']/div[contains(normalize-space(), '1')]"
