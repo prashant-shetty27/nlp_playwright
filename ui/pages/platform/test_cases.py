@@ -1684,6 +1684,14 @@ class TestCasesPage:
                                    "Remove", "delete_outline",
                                    lambda ff=f: self._remove_from_finding(ff),
                                    COLORS["danger"])
+            many = [k for k in (f.get("remove_steps") or []) if 0 < k <= len(self.steps)]
+            if many:
+                rng = f"{many[0]}–{many[-1]}" if len(many) > 1 else str(many[0])
+                self._change_block(f"remove steps {rng}",
+                                   " · ".join(self.steps[k - 1].strip() for k in many)[:160],
+                                   f"Remove {len(many)}", "delete_sweep",
+                                   lambda ff=f: self._remove_many_from_finding(ff),
+                                   COLORS["danger"])
             # Where model-written proposals land, so they appear under the
             # finding that asked for them rather than in a dialog over it.
             if f.get("kind") == "no_assertion":
@@ -1705,6 +1713,23 @@ class TestCasesPage:
             return
         self._confirm(f"Remove step {idx} and save?", [f"{idx}  {self.steps[idx - 1]}"],
                       lambda: self._remove_from_finding_now(idx),
+                      note="Review changes are saved to the test case immediately.")
+
+    async def _remove_many_from_finding(self, f: dict) -> None:
+        """Take out every step a finding lists (e.g. a scroll ladder), after one confirm."""
+        idx = sorted({int(k) for k in (f.get("remove_steps") or []) if 0 < int(k) <= len(self.steps)})
+        if not idx:
+            return
+
+        async def go() -> None:
+            for k in reversed(idx):
+                self.steps.pop(k - 1)
+            self.step_meta = {}
+            self.selection.clear()
+            await self._save_after_review(f"Removed steps {idx[0]}–{idx[-1]}")
+
+        self._confirm(f"Remove {len(idx)} steps and save?",
+                      [f"{k}  {self.steps[k - 1]}" for k in idx], go,
                       note="Review changes are saved to the test case immediately.")
 
     async def _remove_from_finding_now(self, idx: int) -> None:

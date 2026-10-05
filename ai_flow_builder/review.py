@@ -87,6 +87,9 @@ class Finding:
     bucket_note: str = ""
     #: The alternative approaches worth knowing about, best first.
     options: list = field(default_factory=list)
+    #: Several steps to take out together (1-based, file positions after
+    #: _to_raw_positions) — a scroll ladder is one finding, not ten.
+    remove_steps: list = field(default_factory=list)
     #: A replacement with one blank — "{}" — for the element the reviewer could
     #: not work out. The editor asks for the element and fills it in, so a
     #: finding with a clear fix but an unknown target still gets a button.
@@ -147,7 +150,7 @@ def _wait_for(element: str, appium: bool) -> str:
 #: the fixed-wait check and the race check need to answer "what is this step
 #: waiting for?" and a second copy would drift.
 _TARGETED = (
-    re.compile(r"^\s*(?:click|tap|fill|clear|scroll to|hover(?: over)?|double click)"
+    re.compile(r"^\s*(?:js click|click|tap|fill|clear|scroll to|hover(?: over)?|double click)"
                r"(?:\s+(?:if visible|element|on))*\s+([a-z_][a-z0-9_]*)\s*$", re.I),
     re.compile(r"^\s*(?:type|enter)(?:\s+if visible)?\s+\"[^\"]*\"\s+into\s+"
                r"([a-z_][a-z0-9_]*)\s*$", re.I),
@@ -180,9 +183,23 @@ def _to_raw_positions(findings: list[Finding], live_pairs: list[tuple[int, str]]
     test carrying a band, and Apply rewrote a step nobody had complained about.
     """
     n = len(live_pairs)
+
+    def _raw(m):
+        k = int(m.group(1))
+        return str(live_pairs[min(k, n) - 1][0]) if n and k > 0 else m.group(1)
+
     for f in findings:
+        # Step numbers written into the text ({s:N}) follow the editor's numbering too.
+        f.message = re.sub(r"\{s:(\d+)\}", _raw, f.message)
+        f.why = re.sub(r"\{s:(\d+)\}", _raw, f.why)
+        for o in f.options or []:
+            for key in ("approach", "note"):
+                if isinstance(o.get(key), str):
+                    o[key] = re.sub(r"\{s:(\d+)\}", _raw, o[key])
         if f.step_index and n:
             f.step_index = live_pairs[min(f.step_index, n) - 1][0]
+        if f.remove_steps and n:
+            f.remove_steps = [live_pairs[min(k, n) - 1][0] for k in f.remove_steps]
         if f.add_at:
             # Past the last live step means "after everything" — which in the
             # raw list is the end of the file, not the end of the live steps.
@@ -212,6 +229,10 @@ def review(steps: list[str], *, platform: str = "website",
     # ── the senior-reviewer passes ───────────────────────────────────────────
     out += _race_after_navigation(live, appium)
     out += _redundant_waits(live)
+    ladder_out, in_ladder = _scroll_ladders(live, appium)
+    out += ladder_out
+    out += _short_waits(live, appium, skip=in_ladder)
+    out += _js_clicks(live)
     out += _raw_selectors(live)
     out += _assertion_placement(live)
     out += _shadowed_elements(live, platform)
@@ -585,6 +606,144 @@ def _redundant_waits(steps: list[str]) -> list[Finding]:
                 why="Almost certainly one was added while debugging and never "
                     "removed. Combine them, or replace both with a wait for the "
                     "thing you actually need.", fix=""))
+    return out
+
+
+_FIXED_WAIT = re.compile(r"^\s*wait\s+(\d+(?:\.\d+)?)\s*seconds?\s*$", re.I)
+_SCROLL_STEP = re.compile(r"^\s*(scroll|swipe)\s+(down|up|by)\b(?!.*\buntil\b)", re.I)
+_UNTIL_STEP = re.compile(r"^\s*(?:\[ignore[^\]]*\]\s*)?(?:scroll|swipe)\b.*\buntil\s+(?:element\s+)?"
+                         r"([a-z_][a-z0-9_]*)\s+is\s+visible|^\s*scroll\s+to\s+(?:element\s+)?"
+                         r"([a-z_][a-z0-9_]*)\s*$", re.I)
+
+
+def _scroll_ladders(steps: list[str], appium: bool = False) -> tuple[list[Finding], set[int]]:
+    """
+    Three or more fixed scrolls in a row ("scroll down 1200 / wait 2 / scroll
+    down 2400 / …") — a guess at where the element is. If the next step already
+    scrolls or swipes UNTIL the element is visible, the ladder is pure delay
+    (and on a shorter page it overshoots); otherwise one "scroll to X" replaces it.
+    Returns the findings and the 1-based steps that belong to a ladder.
+    """
+    out: list[Finding] = []
+    covered: set[int] = set()
+    i, n = 0, len(steps)
+    while i < n:
+        if not _SCROLL_STEP.match(steps[i]):
+            i += 1
+            continue
+        j = i
+        scrolls = 0
+        while j < n and (_SCROLL_STEP.match(steps[j]) or _FIXED_WAIT.match(steps[j])):
+            scrolls += bool(_SCROLL_STEP.match(steps[j]))
+            j += 1
+        if scrolls >= 3:
+            run = list(range(i + 1, j + 1))          # 1-based
+            covered.update(run)
+            secs = sum(float(_FIXED_WAIT.match(steps[k - 1]).group(1))
+                       for k in run if _FIXED_WAIT.match(steps[k - 1]))
+            until = _UNTIL_STEP.match(steps[j]) if j < n else None
+            target = (until.group(1) or until.group(2)) if until else ""
+            if until:
+                out.append(Finding(
+                    kind="scroll_ladder", severity="medium", step_index=i + 1,
+                    message=f"Steps {{s:{i + 1}}}–{{s:{j}}} scroll in {scrolls} fixed jumps"
+                            + (f" with {int(secs)}s of fixed waits" if secs else "")
+                            + f", then step {{s:{j + 1}}} looks for {target} anyway.",
+                    why=f"Step {{s:{j + 1}}} already scrolls until {target} is visible, so the "
+                        "jumps before it only add time — and on a shorter or longer page "
+                        "they land in the wrong place. Remove them and let that step find it.",
+                    remove_steps=run,
+                    options=[{"approach": f"remove steps {{s:{i + 1}}}–{{s:{j}}}",
+                              "note": f"step {{s:{j + 1}}} does the searching"}]))
+            else:
+                nxt_target = _target_of(steps[j]) if j < n else ""
+                out.append(Finding(
+                    kind="scroll_ladder", severity="medium", step_index=i + 1,
+                    message=f"Steps {{s:{i + 1}}}–{{s:{j}}} scroll in {scrolls} fixed jumps"
+                            + (f" with {int(secs)}s of fixed waits" if secs else "") + ".",
+                    why="Fixed pixel jumps guess where the element is; the guess breaks "
+                        "when the page above it grows or shrinks. One step that scrolls "
+                        "to the element does the same job on any page length.",
+                    fix=f"scroll to {nxt_target}" if nxt_target else "",
+                    fix_template="" if nxt_target else "scroll to {}",
+                    remove_steps=run[1:] if nxt_target else [],
+                    options=[{"approach": f"scroll to {nxt_target or '<element>'}",
+                              "note": "replace the jumps with one step"}]))
+        i = max(j, i + 1)
+    return out, covered
+
+
+def _short_waits(steps: list[str], appium: bool = False, skip: set[int] | None = None) -> list[Finding]:
+    """
+    Waits under 3 s are left alone one at a time (_fixed_waits) — but a wait
+    straight after a click that can name what it is waiting for is still a
+    guess, and a test with many short sleeps adds them up on every run.
+    """
+    out: list[Finding] = []
+    skip = skip or set()
+    short: list[tuple[int, float]] = []
+    for i, step in enumerate(steps, 1):
+        m = _FIXED_WAIT.match(step)
+        if not m or i in skip:
+            continue
+        secs = float(m.group(1))
+        if secs >= 3:
+            continue
+        prev = steps[i - 2] if i >= 2 else ""
+        nxt = steps[i] if i < len(steps) else ""
+        # After a step that already ended with the element visible, the
+        # sleep waits for nothing.
+        if re.search(r"\buntil\s+(?:element\s+)?[a-z_][a-z0-9_]*\s+is\s+visible", prev, re.I) \
+                and not re.match(r"^\s*wait\s+until", prev, re.I):
+            out.append(Finding(
+                kind="redundant_wait", severity="low", step_index=i,
+                message=f"A fixed {secs:g}s wait right after step {{s:{i - 1}}}, which already "
+                        "waited until its element was visible.",
+                why="That step only finishes once the element is on screen, so this "
+                    "sleep adds time and no safety.", remove=True))
+            continue
+        target = _target_of(nxt)
+        if re.match(r"^\s*(?:js\s+)?(click|tap)\b", prev, re.I) and target \
+                and not re.search(r"\bnot\b", nxt, re.I):
+            out.append(Finding(
+                kind="fixed_wait", severity="low", step_index=i,
+                message=f"Fixed {secs:g}s wait after a click, before step {{s:{i + 1}}} uses {target}.",
+                why=f"Wait for {target} itself: the run continues the moment it appears "
+                    "and still waits longer when the site is slow — a fixed sleep is "
+                    "either wasted time or too short.",
+                fix=_wait_for(target, appium)))
+            continue
+        short.append((i, secs))
+    total = sum(s for _, s in short)
+    if len(short) >= 3 and total >= 5:
+        out.append(Finding(
+            kind="fixed_wait", severity="low", step_index=short[0][0],
+            message=f"{len(short)} short fixed waits add {total:g}s to every run "
+                    f"(steps {', '.join('{s:%d}' % i for i, _ in short)}).",
+            why="Each is small, together they are not. Where a step after the wait "
+                "needs an element, wait for that element instead; where nothing "
+                "needs waiting for, remove the sleep."))
+    return out
+
+
+def _js_clicks(steps: list[str]) -> list[Finding]:
+    """`js click` clicks an element a person could not click (hidden, covered)."""
+    out: list[Finding] = []
+    for i, step in enumerate(steps, 1):
+        m = re.match(r"^\s*js\s+click\s+([a-z_][a-z0-9_]*)\s*$", step, re.I)
+        if not m:
+            continue
+        out.append(Finding(
+            kind="js_click", severity="low", step_index=i,
+            message=f"“js click {m.group(1)}” clicks it even when a user could not.",
+            why="A script click works on hidden or covered elements, so the test can "
+                "pass while real users are stuck. Use 'click' (or 'click if visible' "
+                "when the element is optional) unless an overlay you cannot close is "
+                "known to block it — then say so in a comment.",
+            fix=f"click {m.group(1)}",
+            options=[{"approach": f"click {m.group(1)}", "note": "acts like a user"},
+                     {"approach": f"click if visible {m.group(1)}",
+                      "note": "when the element only sometimes appears"}]))
     return out
 
 
