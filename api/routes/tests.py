@@ -156,6 +156,9 @@ class RunRequest(BaseModel):
     site_env: str = ""
     # Names within `parameters` whose values must never be logged or echoed back.
     secret_parameters: list[str] = []
+    #: smoke | sanity | regression | full — run only the steps tagged for that
+    #: type (core/run_types.py). "" = every step, as before.
+    run_type: str = ""
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -806,6 +809,7 @@ def _start_run_thread(run_id: str, flow_path: str, body: RunRequest, caps: dict,
             "screenshot_mode": getattr(body, "screenshot_mode", "all"),
             "screenshot_context": getattr(body, "screenshot_context", 5),
             "triggered_by": triggered_by,
+            "run_type": getattr(body, "run_type", "") or "",
         },
         name=f"flow-run-{run_id}",
         daemon=True,
@@ -1039,6 +1043,7 @@ def _remember_setup(body) -> None:
             "browser": body.browser,
             "environment": getattr(body, "environment", ""),
             "browser_permissions": getattr(body, "browser_permissions", ""),
+            "run_type": getattr(body, "run_type", "") or "",
             # Non-secret values are kept so a repeat is genuinely one click.
             # A secret is recorded by NAME only and must be supplied again.
             "parameters": {k: v for k, v in (body.parameters or {}).items()
@@ -1062,6 +1067,27 @@ def list_site_environments(platform: str = ""):
     from config.settings import get_auth_registry
     reg = get_auth_registry()
     return [{**e, "login_saved": e["host"] in reg} for e in site_environments(platform or None)]
+
+
+@router.get("/run-type-preview/{flow}")
+def run_type_preview(flow: str):
+    """
+    How many steps each run type would execute for this test case, which
+    tagged bands it keeps, and any warning (e.g. nothing tagged for Smoke) —
+    so Run Center can say "Smoke: 7 of 131 steps" before Run is pressed.
+    """
+    from core import run_types as _rt
+    path = _flow_path(flow)
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail=f"Test case '{flow}' not found.")
+    out = {}
+    for rt in _rt.RUN_TYPES:
+        try:
+            out[rt] = _rt.preview(path, rt)
+        except Exception as e:  # noqa: BLE001
+            out[rt] = {"steps": 0, "total": 0, "bands_in": [], "bands_out": [],
+                       "warnings": [f"could not read the test case: {e}"]}
+    return out
 
 
 @router.get("/auth-domains/{flow}")

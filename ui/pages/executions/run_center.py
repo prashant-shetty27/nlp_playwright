@@ -133,6 +133,50 @@ class RunCenter:
                "how long it took.",
     }
 
+    def _run_type_changed(self, rt: str, *, apply_defaults: bool = True) -> None:
+        """Apply the type's default options (still editable) and show what will run."""
+        from core.run_types import DEFAULTS as _RT_DEFAULTS
+        if apply_defaults and rt in _RT_DEFAULTS:
+            d = _RT_DEFAULTS[rt]
+            if getattr(self, "stop_on_failure", None) is not None:
+                self.stop_on_failure.set_value(bool(d.get("stop_on_failure")))
+            if getattr(self, "shot_mode", None) is not None and d.get("screenshot_mode"):
+                self.shot_mode.set_value(d["screenshot_mode"])
+        self._paint_run_type_hint()
+
+    def _paint_run_type_hint(self) -> None:
+        hint = getattr(self, "run_type_hint", None)
+        if hint is None:
+            return
+        rt = (self.run_type.value or "") if getattr(self, "run_type", None) else ""
+        pv = (getattr(self, "_rt_preview", {}) or {}).get(rt) if rt else None
+        if not rt:
+            hint.set_text("All steps run.")
+            hint.style(f"color:{COLORS['text_muted']}")
+            return
+        if not pv:
+            hint.set_text("")
+            return
+        text = f"{pv.get('steps', 0)} of {pv.get('total', 0)} steps"
+        if pv.get("bands_in"):
+            text += " · " + ", ".join(pv["bands_in"][:3]) + (" …" if len(pv["bands_in"]) > 3 else "")
+        warn = (pv.get("warnings") or [""])[0]
+        if not pv.get("steps"):
+            text = f"Nothing tagged for this type — 0 of {pv.get('total', 0)} steps would run"
+        elif warn:
+            text += f" · ⚠ {warn}"
+        hint.set_text(text)
+        hint.style(f"color:{COLORS['danger'] if not pv.get('steps') else COLORS['text_muted']}")
+
+    async def _load_run_type_preview(self, flow: str) -> None:
+        self._rt_preview = {}
+        if flow:
+            try:
+                self._rt_preview = await api.run_type_preview(flow)
+            except api.ApiError:
+                self._rt_preview = {}
+        self._paint_run_type_hint()
+
     def _shot_mode_changed(self, mode: str) -> None:
         self.shot_context.set_visibility(mode == "failure")
         self.shot_note.set_text(self._SHOT_NOTES.get(mode, ""))
@@ -192,6 +236,19 @@ class RunCenter:
                         .tooltip("Pick a server to run this test there without editing any URL "
                                  "— only servers for this platform are listed.")
                     self.site_env_hint = ui.label("").style(muted)
+                with ui.column().classes("gap-0").style("flex:0 1 14rem; min-width:12rem"):
+                    # Smoke / Sanity / Regression / Full — the same tag rules a
+                    # Test Plan uses, for this one test case.
+                    self.run_type = ui.select(
+                        {"": "Full — every step", "smoke": "🔥 Smoke", "sanity": "🎯 Sanity",
+                         "regression": "🔁 Regression", "full": "🧪 Full (tagged [full] too)"},
+                        value=getattr(self, "_wanted_run_type", "") or "", label="Run type",
+                        on_change=lambda e: self._run_type_changed(e.value)) \
+                        .props("outlined dense").classes("w-full") \
+                        .tooltip("Runs only the steps tagged for this type ([smoke] / [sanity] / "
+                                 "[regression] on a '# --- Purpose:' band, or '# Tags:' for the "
+                                 "whole test case). Untagged steps count as regression.")
+                    self.run_type_hint = ui.label("").style(muted)
                 self.run_btn = ui.button("Run now", icon="play_arrow", on_click=self.launch) \
                     .props("unelevated").style(
                         f"background:{COLORS['success']}; height:40px; padding:0 22px")
@@ -395,6 +452,7 @@ class RunCenter:
         self.flow = flow
         self.fields = {}
         self.inputs_area.clear()
+        await self._load_run_type_preview(flow)
         if not flow:
             return
         try:
@@ -602,6 +660,14 @@ class RunCenter:
             self._launching = False
 
     async def _launch(self) -> None:
+        rt = (getattr(self, "run_type", None) and self.run_type.value) or ""
+        pv = (getattr(self, "_rt_preview", {}) or {}).get(rt) if rt else None
+        if pv is not None and not pv.get("steps"):
+            from core.run_types import LABEL as _RTL
+            ui.notify(f"Nothing in this test case is tagged for {_RTL.get(rt, rt)} — tag a "
+                      f"'# --- Purpose:' band with [{rt}] (or add '# Tags: {rt}'), or pick another run type.",
+                      type="warning", timeout=8000)
+            return
         if getattr(self, "save_cfg", None) is not None and self.save_cfg.value:
             if not await self._save_inline():
                 return
@@ -638,6 +704,7 @@ class RunCenter:
                     record_video=bool(getattr(self, "record_video", None) and self.record_video.value),
                     browser_identity=ident,
                     site_env=(getattr(self, "site_env", None) and self.site_env.value) or "",
+                    run_type=(getattr(self, "run_type", None) and self.run_type.value) or "",
                 )
             except api.ApiError as e:
                 ui.notify(f"Could not start ({ident or 'default'}): {e.detail}", type="negative")
@@ -653,9 +720,11 @@ class RunCenter:
 
 async def render(flow: str = "", platform: str = "website", *,
                  device: str = "", browser: str = "", identity: str = "", env: str = "",
-                 config: str = "", autorun: bool = False) -> None:
+                 config: str = "", autorun: bool = False, run_type: str = "") -> None:
+    from core.run_types import normalise as _rt_norm
     page = RunCenter(flow, platform)
     page._wanted_config = config
+    page._wanted_run_type = _rt_norm(run_type) or ""
     await page.load()
     page.render()
     if device and getattr(page, "device_select", None) is not None:
@@ -675,8 +744,18 @@ async def render(flow: str = "", platform: str = "website", *,
         await page._load_inputs(flow)
     # Quick run with a saved configuration: apply it, then start — unless the
     # test still needs a value typed here (then the form stays open for it).
+    # A run type from the URL (editor "Run Smoke", a report's Re-run) applies its
+    # default options, exactly as picking it in the dropdown would.
+    if page._wanted_run_type and getattr(page, "run_type", None) is not None:
+        page._run_type_changed(page._wanted_run_type)
     if config and autorun and flow:
         async def _go() -> None:
             await page._load_configs(config)
+            if page._wanted_run_type and getattr(page, "run_type", None) is not None:
+                page.run_type.set_value(page._wanted_run_type)
             await page.launch()
         ui.timer(1.2, _go, once=True)
+    elif page._wanted_run_type and autorun and flow:
+        # "Run Smoke" from the editor: start straight away — unless the test
+        # still needs a value typed here (launch() keeps the form open then).
+        ui.timer(1.2, page.launch, once=True)

@@ -430,6 +430,11 @@ class LiveView:
         self.footer.clear()
         with self.footer:
             failed = res.get("failed", 0)
+            if res.get("run_type"):
+                from core.run_types import ICON as _RTI, LABEL as _RTL
+                ui.label(f"{_RTI.get(res['run_type'], '')} {_RTL.get(res['run_type'], res['run_type'])}") \
+                    .style(f"background:{COLORS['primary']}14; color:{COLORS['primary']};"
+                           f"border-radius:4px; padding:2px 10px; font-size:{TYPOGRAPHY['size_xs']}")
             ui.label(f"{res.get('passed',0)} passed, {failed} failed"
                      + (f", {res.get('ignored')} ignored" if res.get("ignored") else "")).style(
                 f"font-weight:{TYPOGRAPHY['weight_medium']};"
@@ -443,9 +448,11 @@ class LiveView:
                 ui.button("Review & raise issues", icon="bug_report",
                           on_click=lambda: ui.navigate.to(f"/issues?run_id={self.run_id}")) \
                     .props("unelevated dense").style(f"background:{COLORS['danger']}")
+            rt = res.get("run_type") or ""
             ui.button("Run again", icon="replay",
-                      on_click=lambda: ui.navigate.to(
-                          f"/run?flow={self.flow}&platform={self.platform}")) \
+                      on_click=lambda rt=rt: ui.navigate.to(
+                          f"/run?flow={self.flow}&platform={self.platform}"
+                          + (f"&run_type={rt}" if rt else ""))) \
                 .props("unelevated dense")
 
 

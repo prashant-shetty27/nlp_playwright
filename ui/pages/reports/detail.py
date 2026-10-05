@@ -144,6 +144,14 @@ class ReportDetail:
                 f"background:{colour}1A; color:{colour}; border-radius:4px;"
                 f"padding:2px 10px; font-size:{TYPOGRAPHY['size_xs']};"
                 f"font-family:{TYPOGRAPHY['mono']}")
+            rt = self.report.get("run_type") or ""
+            if rt:
+                from core.run_types import ICON as _RTI, LABEL as _RTL
+                ui.label(f"{_RTI.get(rt, '')} {_RTL.get(rt, rt)}").style(
+                    f"background:{COLORS['primary']}14; color:{COLORS['primary']}; border-radius:4px;"
+                    f"padding:2px 10px; font-size:{TYPOGRAPHY['size_xs']}") \
+                    .tooltip("Only the steps tagged for this run type ran: "
+                             + (", ".join(self.report.get("bands_in") or []) or "—"))
             for label, value, tint in (("passed", passed, COLORS["success"]),
                                        ("failed", failed, COLORS["danger"]),
                                        ("ignored", ignored, COLORS["warning"]),
@@ -186,7 +194,9 @@ class ReportDetail:
                 q = urlencode({k: v for k, v in {"flow": flow, "device": dev.get("device_name", ""),
                                                  "browser": dev.get("browser", ""),
                                                  "identity": dev.get("browser_identity", ""),
-                                                 "env": (self.report.get("site_env") or {}).get("name", "")}.items() if v})
+                                                 "env": (self.report.get("site_env") or {}).get("name", ""),
+                                                 # same run type (Smoke/Sanity/…) as this run
+                                                 "run_type": self.report.get("run_type", "")}.items() if v})
                 ui.button("Re-run", icon="replay",
                           on_click=lambda q=q: ui.navigate.to(f"/run?{q}")) \
                     .props("unelevated dense")

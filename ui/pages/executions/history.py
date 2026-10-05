@@ -142,7 +142,8 @@ def _quick_run_button(flow: str) -> None:
                 device_name=setup.get("device_name", ""),
                 browser=setup.get("browser", ""),
                 parameters=setup.get("parameters", {}),
-                browser_permissions=setup.get("browser_permissions", ""))
+                browser_permissions=setup.get("browser_permissions", ""),
+                run_type=setup.get("run_type", ""))
         except api.ApiError as e:
             ui.notify(f"Could not start: {e.detail}", type="negative", timeout=8000)
             return

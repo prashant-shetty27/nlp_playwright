@@ -31,6 +31,15 @@ def config_menu(get_flow: Callable[[], str], platform: str, *, colour: str = "")
         except api.ApiError:
             configs = []
         with menu:
+            ui.label("Run only the tagged steps").style(
+                f"padding:6px 14px 2px; font-size:{TYPOGRAPHY['size_xs']};"
+                f"color:{COLORS['text_muted']}")
+            for rt, label in (("smoke", "🔥 Run Smoke"), ("sanity", "🎯 Run Sanity"),
+                              ("regression", "🔁 Run Regression"), ("full", "🧪 Run Full")):
+                ui.menu_item(label, on_click=lambda rt=rt: ui.navigate.to(
+                    f"/run?flow={quote(flow, safe='')}&platform={platform}"
+                    f"&run_type={rt}&autorun=1"))
+            ui.separator()
             ui.label("Run with a saved configuration").style(
                 f"padding:6px 14px 2px; font-size:{TYPOGRAPHY['size_xs']};"
                 f"color:{COLORS['text_muted']}")

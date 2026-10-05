@@ -484,9 +484,11 @@ async def run(project: str, platform: str, *, headless: bool = True,
         http_auth_domain: str = "",
         record_video: bool = False,
         browser_identity: str = "",
-        site_env: str = "") -> dict:
+        site_env: str = "",
+        run_type: str = "") -> dict:
     return await _call("POST", "/tests/run", json={
         "site_env": site_env or "",
+        "run_type": run_type or "",
         "record_video": bool(record_video),
         "browser_identity": browser_identity or "",
         # Context-level HTTP Basic login for a staging host ("" = URL-embedded, the default)
@@ -501,6 +503,12 @@ async def run(project: str, platform: str, *, headless: bool = True,
         "screenshot_mode": screenshot_mode,
         "screenshot_context": screenshot_context,
     })
+
+
+async def run_type_preview(flow: str) -> dict:
+    """{smoke|sanity|regression|full: {steps, total, bands_in, bands_out, warnings}}"""
+    from urllib.parse import quote as _q
+    return await _call("GET", f"/tests/run-type-preview/{_q(flow, safe='')}")
 
 
 async def site_environments(platform: str = "") -> list[dict]:
