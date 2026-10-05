@@ -1,6 +1,6 @@
 {
  "version": 1,
- "flow_mtime": 1790960488.1774416,
+ "flow_mtime": 1791215616.3811681,
  "steps": [
   {
    "line": 7,
@@ -16,133 +16,67 @@
   },
   {
    "line": 9,
-   "text": "scroll down 1200",
-   "level": "S",
-   "manual": false
-  },
-  {
-   "line": 10,
-   "text": "wait 2 seconds",
-   "level": "S",
-   "manual": false
-  },
-  {
-   "line": 11,
-   "text": "scroll down 2400",
-   "level": "S",
-   "manual": false
-  },
-  {
-   "line": 12,
-   "text": "wait 2 seconds",
-   "level": "S",
-   "manual": false
-  },
-  {
-   "line": 13,
-   "text": "scroll down 3600",
-   "level": "S",
-   "manual": false
-  },
-  {
-   "line": 14,
-   "text": "wait 2 seconds",
-   "level": "S",
-   "manual": false
-  },
-  {
-   "line": 15,
-   "text": "scroll down 4800",
-   "level": "S",
-   "manual": false
-  },
-  {
-   "line": 16,
-   "text": "wait 2 seconds",
-   "level": "S",
-   "manual": false
-  },
-  {
-   "line": 17,
-   "text": "scroll down 6000",
-   "level": "S",
-   "manual": false
-  },
-  {
-   "line": 18,
-   "text": "wait 2 seconds",
-   "level": "S",
-   "manual": false
-  },
-  {
-   "line": 19,
    "text": "[ignore 30s] swipe bottom to top until element catalogue_bd_category_popup is visible, max 15 times, wait 1",
    "level": "S",
    "manual": false
   },
   {
-   "line": 20,
-   "text": "wait 1 seconds",
-   "level": "S",
-   "manual": false
-  },
-  {
-   "line": 21,
+   "line": 10,
    "text": "verify element catalogue_bd_category_popup is visible",
    "level": "S",
    "manual": false
   },
   {
-   "line": 22,
+   "line": 11,
    "text": "verify element catalogue_heading_bd_category_pop is visible",
    "level": "R",
    "manual": false
   },
   {
-   "line": 23,
+   "line": 12,
    "text": "verify element catalogue_get_text_bd_category_pop is visible",
    "level": "R",
    "manual": false
   },
   {
-   "line": 25,
+   "line": 13,
    "text": "verify element catalogue_1st_label_bd_category_pop is visible",
-   "level": "Sy",
+   "level": "R",
    "manual": false
   },
   {
-   "line": 26,
+   "line": 14,
    "text": "verify element catalogue_label_last_bd_category_pop is visible",
    "level": "R",
    "manual": false
   },
   {
-   "line": 27,
+   "line": 15,
    "text": "verify element catalogue_get_verified_seller_button_bd_category_pop is visible",
    "level": "R",
    "manual": false
   },
   {
-   "line": 28,
+   "line": 16,
    "text": "verify element catalogue_skip_bd_category_pop is visible",
    "level": "R",
    "manual": false
   },
   {
-   "line": 29,
+   "line": 17,
    "text": "click catalogue_get_verified_seller_button_bd_category_pop",
    "level": "R",
    "manual": false
   },
   {
-   "line": 30,
-   "text": "wait 2 seconds",
+   "line": 18,
+   "text": "wait until element rfq_skip_all_button is visible",
    "level": "R",
    "manual": false
   },
   {
-   "line": 32,
-   "text": "js click rfq_skip_all_button",
+   "line": 19,
+   "text": "click rfq_skip_all_button",
    "level": "R",
    "manual": false
   }

@@ -1169,11 +1169,18 @@ class TestCasesPage:
                     if meta.get("updated_by"):
                         when = _ist(meta.get("updated_at"))
                         sub += f"  ·  Edited by {meta['updated_by']}" + (f" on {when}" if when else "")
-                    sub_lbl = ui.label(sub).style(
-                        f"color:{COLORS['text_muted']}; font-size:{TYPOGRAPHY['size_xs']};"
-                        "white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%")
-                    if meta.get("created_by"):
-                        sub_lbl.tooltip(f"Created by {meta.get('created_by')}")
+                    with ui.row().classes("items-center no-wrap gap-2").style("max-width:100%; min-width:0"):
+                        sub_lbl = ui.label(sub).style(
+                            f"color:{COLORS['text_muted']}; font-size:{TYPOGRAPHY['size_xs']};"
+                            "white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0")
+                        if meta.get("created_by"):
+                            sub_lbl.tooltip(f"Created by {meta.get('created_by')}")
+                        # This test case's last run — filled in after the editor
+                        # draws, so a slow logs folder never delays the steps.
+                        self._last_run_box = ui.row().classes("items-center no-wrap") \
+                            .style("flex-shrink:0")
+                        if self.selected and not getattr(self, "_is_new", False):
+                            ui.timer(0.05, self._fill_last_run, once=True)
                 with ui.row().classes("items-center no-wrap gap-1").style("flex-shrink:0"):
                     ui.button("Review", icon="auto_fix_high", on_click=self.review) \
                         .props("flat dense").tooltip(
@@ -2483,6 +2490,117 @@ class TestCasesPage:
         if self.dirty:
             return ln, None
         return ln, getattr(self, "run_tags", {}).get(ln)
+
+    # ── this test case's runs ─────────────────────────────────────────────────
+    @staticmethod
+    def _run_when(stamp: str) -> str:
+        """Report times are the portal machine's local time: '5 Oct, 5:06 PM (2h ago)'."""
+        from datetime import datetime
+        try:
+            t = datetime.fromisoformat(str(stamp)[:19])
+        except ValueError:
+            return str(stamp or "")[:16].replace("T", " ")
+        mins = int((datetime.now() - t).total_seconds() // 60)
+        ago = ("just now" if mins < 1 else f"{mins}m ago" if mins < 60 else
+               f"{mins // 60}h ago" if mins < 1440 else f"{mins // 1440}d ago")
+        return f"{t.day} {t:%b}, {t.hour % 12 or 12}:{t:%M} {'AM' if t.hour < 12 else 'PM'} ({ago})"
+
+    def _run_editor_step(self, line) -> str:
+        """A report's file line as the editor's step number."""
+        fl = list(getattr(self, "file_lines", []) or [])
+        try:
+            return f"step {fl.index(int(line)) + 1}"
+        except (TypeError, ValueError):
+            return f"line {line}" if line else ""
+
+    async def _fill_last_run(self) -> None:
+        box = getattr(self, "_last_run_box", None)
+        name = self.selected
+        if box is None or not name:
+            return
+        try:
+            runs = await api.run_history(limit=15, flow=name)
+        except api.ApiError:
+            return
+        if name != self.selected:
+            return
+        self._runs_cache = runs
+        try:
+            box.clear()
+        except Exception:  # noqa: BLE001 — editor redrawn meanwhile
+            return
+        with box:
+            if not runs:
+                ui.label("Never run").style(
+                    f"color:{COLORS['text_muted']}; font-size:{TYPOGRAPHY['size_xs']};"
+                    f"border:1px dashed {COLORS['border']}; border-radius:10px; padding:0 8px")
+                return
+            r = runs[0]
+            ok = r.get("status") == "passed"
+            col = COLORS["success"] if ok else COLORS["danger"]
+            sm = r.get("summary") or {}
+            rt = (r.get("run_type") or "").title()
+            txt = (f"Last run: {'Passed' if ok else 'Failed'} "
+                   f"{sm.get('passed', 0)}/{sm.get('total', 0)}"
+                   + (f" · {rt}" if rt else "") + f" · {self._run_when(r.get('started_at'))}")
+            chip = ui.row().classes("items-center no-wrap gap-1 cursor-pointer").style(
+                f"background:{col}14; border:1px solid {col}66; border-radius:10px; padding:0 8px")
+            with chip:
+                ui.icon("check_circle" if ok else "cancel").style(f"color:{col}; font-size:14px")
+                ui.label(txt).style(f"color:{col}; font-size:{TYPOGRAPHY['size_xs']}; white-space:nowrap")
+                ui.icon("expand_more").style(f"color:{col}; font-size:14px")
+            chip.on("click", self._runs_dialog)
+            ff = r.get("first_failure") or {}
+            chip.tooltip(("Failed at " + self._run_editor_step(ff.get("line")) + ": "
+                          + (ff.get("step") or "")) if ff else
+                         "Click for this test case's recent runs")
+
+    def _runs_dialog(self) -> None:
+        runs = getattr(self, "_runs_cache", []) or []
+        with self.dialog_host if getattr(self, "dialog_host", None) else ui.element("div"):
+            dialog = ui.dialog()
+            with dialog, ui.card().style("width:min(56rem, 95vw); max-width:95vw"):
+                with ui.row().classes("w-full items-center justify-between no-wrap"):
+                    ui.label(f"Recent runs · {self.selected}").style(
+                        f"font-weight:{TYPOGRAPHY['weight_bold']}; font-family:{TYPOGRAPHY['mono']};"
+                        "overflow:hidden; text-overflow:ellipsis; white-space:nowrap")
+                    ui.button(icon="close", on_click=dialog.close).props("flat dense round")
+                with ui.column().classes("w-full gap-0").style("max-height:70vh; overflow-y:auto"):
+                    for r in runs:
+                        ok = r.get("status") == "passed"
+                        col = COLORS["success"] if ok else COLORS["danger"]
+                        sm = r.get("summary") or {}
+                        ff = r.get("first_failure") or {}
+                        src = "Plan" if r.get("plan_run") else "Manual"
+                        with ui.row().classes("w-full items-start no-wrap gap-3").style(
+                                f"border-bottom:1px solid {COLORS['border']}; padding:6px 4px"):
+                            ui.icon("check_circle" if ok else "cancel").style(
+                                f"color:{col}; font-size:18px; margin-top:2px")
+                            with ui.column().classes("gap-0").style("flex:1; min-width:0"):
+                                head = (f"{'Passed' if ok else 'Failed'}  {sm.get('passed', 0)}/"
+                                        f"{sm.get('total', 0)} steps"
+                                        + (f" · {sm.get('failed')} failed" if sm.get("failed") else "")
+                                        + (f" · {(r.get('run_type') or '').title()}" if r.get("run_type") else "")
+                                        + f" · {src}"
+                                        + (f" · {r.get('triggered_by')}" if r.get("triggered_by") else "")
+                                        + (f" · {r.get('duration_s')}s" if r.get("duration_s") else ""))
+                                ui.label(head).style(f"font-size:{TYPOGRAPHY['size_sm']}; color:{col}")
+                                ui.label(self._run_when(r.get("started_at"))).style(
+                                    f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}")
+                                if ff:
+                                    ui.label(f"Failed at {self._run_editor_step(ff.get('line'))}: "
+                                             f"{ff.get('step', '')}").style(
+                                        f"font-size:{TYPOGRAPHY['size_xs']}; font-family:{TYPOGRAPHY['mono']};"
+                                        "white-space:normal; word-break:break-word")
+                                    if ff.get("error"):
+                                        ui.label(ff["error"]).style(
+                                            f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']};"
+                                            "white-space:normal; word-break:break-word")
+                            ui.button("Report", icon="open_in_new",
+                                      on_click=lambda rid=r.get("run_id"): ui.navigate.to(
+                                          f"/reports/{rid}", new_tab=True)) \
+                                .props("flat dense").style("flex-shrink:0")
+            dialog.open()
 
     async def _reset_run_tags(self) -> None:
         if self.dirty:

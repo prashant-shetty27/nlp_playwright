@@ -1163,7 +1163,7 @@ def last_setup(flow: str):
 
 
 @router.get("/history")
-def run_history(limit: int = 50):
+def run_history(limit: int = 50, flow: str = ""):
     """
     Past runs, newest first, with enough detail to scan them.
 
@@ -1190,6 +1190,11 @@ def run_history(limit: int = 50):
         if fname.startswith("report___") or fname.startswith("report__") \
                 or not fname.startswith("report"):
             continue
+        # One test case's runs only (the editor's "Last run" chip). The file
+        # name is a cheap pre-filter; the report's own name decides, because
+        # Water_Pump is also the start of Water_Pump_2.
+        if flow and not fname.startswith(f"report_{flow}_"):
+            continue
         run_id = fname[:-len(".json")]
         try:
             with open(os.path.join(LOGS_DIR, fname), "r", encoding="utf-8") as f:
@@ -1198,6 +1203,8 @@ def run_history(limit: int = 50):
             # A half-written or hand-edited report must not hide the rest.
             rows.append({"run_id": run_id, "flow": "", "started_at": "",
                          "summary": {}, "status": "unreadable", "steps": 0})
+            continue
+        if flow and data.get("testplan", "") != flow:
             continue
         summary = data.get("summary", {}) or {}
         failed = int(summary.get("failed", 0) or 0)
@@ -1215,6 +1222,15 @@ def run_history(limit: int = 50):
             "plan_run": data.get("plan_run", ""),
             "triggered_by": data.get("triggered_by", ""),
             "platform": (data.get("meta") or {}).get("platform") or _flow_platform(data.get("testplan", "")),
+            "run_type": data.get("run_type") or (data.get("meta") or {}).get("run_type", ""),
+            # First failing step, so a list of runs says WHY without opening each.
+            "first_failure": next(({"step_no": k + 1,
+                                    "line": (data.get("lines") or [None] * (k + 1))[k]
+                                    if k < len(data.get("lines") or []) else None,
+                                    "step": (r.get("test_name") or "")[:120],
+                                    "error": (r.get("reason") or "")[:240]}
+                                   for k, r in enumerate(data.get("results") or [])
+                                   if str(r.get("status", "")).lower() in ("failed", "fail", "error")), None),
         })
         if len(rows) >= limit:
             break

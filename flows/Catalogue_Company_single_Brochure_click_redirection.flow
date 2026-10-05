@@ -7,7 +7,6 @@
 # OFF: call Prot_Open_Popup_Allow
 open https://www.justdial.com/Mumbai/Mitsuba-Systems-India-LLP-Andheri-West/022P1908302_BZDET?catalogueType=pdf_catalogue&galtype=Catalogue+1&pdfCase=true&pdfIdx=1
 wait 3 seconds
-create variable pagescroll with value "100"
 [ignore 30s] scroll until element b2b_catalogue_heading_company_catalogue visible, scroll by 600 pixels, scroll count 15, scroll wait 1
 wait 1 seconds
 click pdf_catalogue_1st_img

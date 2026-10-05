@@ -9,7 +9,6 @@ open https://www.justdial.com/Mumbai/Global-View-Opposite-Raj-Mahal-Hotel-Boriva
 delete all cookies
 refresh page
 wait 2 seconds
-create variable pscroll with value "1200"
 [ignore 30s] scroll until element catalogue_bd_category_popup visible, scroll by 600 pixels, scroll count 15, scroll wait 1
 verify element catalogue_bd_category_popup is visible
 verify element catalogue_page_category_rfq_popup_looking_for_text is visible

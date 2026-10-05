@@ -1,0 +1,96 @@
+{
+ "version": 1,
+ "flow_mtime": 1791215955.5758948,
+ "steps": [
+  {
+   "line": 7,
+   "text": "call Live_Touch_Chrome_Navigate_to_Homepage_setup_Popup",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 8,
+   "text": "open https://www.justdial.com/Mumbai/Global-View-Opposite-Raj-Mahal-Hotel-Borivali-West/022PXX22-XX22-150314191942-T5N6_BZDET?pid=2219566662&nid=&jdmid=",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 9,
+   "text": "delete all cookies",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 10,
+   "text": "refresh page",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 11,
+   "text": "wait 2 seconds",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 12,
+   "text": "[ignore 30s] scroll until element catalogue_bd_category_popup visible, scroll by 600 pixels, scroll count 15, scroll wait 1",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 13,
+   "text": "verify element catalogue_bd_category_popup is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 14,
+   "text": "verify element catalogue_page_category_rfq_popup_looking_for_text is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 15,
+   "text": "verify element catalogue_category_rfq_popup_what_type_text is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 17,
+   "text": "verify element catalogue_1st_label_bd_category_pop is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 18,
+   "text": "verify element catalogue_skip_bd_category_pop is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 19,
+   "text": "click catalogue_get_verified_seller_button_bd_category_pop",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 21,
+   "text": "call B2B_Common_Non_Login_to_Login_via_Only_Mobile_numb",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 22,
+   "text": "verify text \"Dear Jai\" on page",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 24,
+   "text": "wait 1 seconds",
+   "level": "R",
+   "manual": false
+  }
+ ]
+}

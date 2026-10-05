@@ -544,9 +544,13 @@ async def run_result(run_id: str) -> dict:
     return await _call("GET", f"/tests/results/{run_id}")
 
 
-async def run_history(limit: int = 50) -> list[dict]:
-    """Past runs with their summaries. /tests/results returns bare filenames."""
-    r = await _call("GET", "/tests/history", params={"limit": limit})
+async def run_history(limit: int = 50, flow: str = "") -> list[dict]:
+    """Past runs with their summaries. /tests/results returns bare filenames.
+    `flow` = one test case's runs only."""
+    params = {"limit": limit}
+    if flow:
+        params["flow"] = flow
+    r = await _call("GET", "/tests/history", params=params)
     return r.get("runs", [])
 
 

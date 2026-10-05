@@ -233,6 +233,7 @@ def review(steps: list[str], *, platform: str = "website",
     out += ladder_out
     out += _short_waits(live, appium, skip=in_ladder)
     out += _js_clicks(live)
+    out += _unused_variables(live)
     out += _raw_selectors(live)
     out += _assertion_placement(live)
     out += _shadowed_elements(live, platform)
@@ -282,9 +283,21 @@ def _hardcoded_values(steps: list[str], stored: dict) -> list[Finding]:
                 break
         else:
             # Not stored yet, but clearly a value that ought to be.
-            for m in re.finditer(r'"([^"]{4,})"|(?<![\w/.-])(\d{6,12})(?![\w.-])', step):
+            # Digits inside a page address (pid=2219566662, -150314191942-) are
+            # ids, not phone numbers: look only outside URLs.
+            plain = re.sub(r"https?://\S+|www\.\S+", " ", step)
+            if re.match(r"^\s*generate\s+random\b", step, re.I):
+                continue
+            for m in re.finditer(r'"([^"]{4,})"|(?<![\w/.=-])(\d{6,12})(?![\w.-])', step):
                 literal = m.group(1) or m.group(2) or ""
+                if m.group(2) and m.group(2) not in plain:
+                    continue
                 kind = _looks_sensitive(literal)
+                # A 4–8 digit number is only an OTP / PIN when the step says so;
+                # "create variable pscroll with value 1200" is a pixel count.
+                if kind == "an OTP or PIN" and not re.search(
+                        r"otp|pin\b|passcode|verification|\bcode\b", step, re.I):
+                    kind = ""
                 if kind:
                     out.append(Finding(
                         kind="unstored_value", severity="medium", step_index=i,
@@ -723,6 +736,38 @@ def _short_waits(steps: list[str], appium: bool = False, skip: set[int] | None =
             why="Each is small, together they are not. Where a step after the wait "
                 "needs an element, wait for that element instead; where nothing "
                 "needs waiting for, remove the sleep."))
+    return out
+
+
+def _unused_variables(steps: list[str]) -> list[Finding]:
+    """
+    `create variable x with value "…"` (or `store "…" as x`) that no later step
+    and no step group ever reads — usually left behind when the step that used
+    it was changed (e.g. a scroll that once read ${pscroll}).
+    """
+    out: list[Finding] = []
+    try:
+        from core.step_tags import _load_groups
+        group_text = "\n".join("\n".join(v) for v in _load_groups().values())
+    except Exception:  # noqa: BLE001
+        group_text = ""
+    rx = re.compile(r'^\s*(?:create\s+variable\s+([A-Za-z_]\w*)\s+with\s+value\s+"[^"]*"'
+                    r'|store\s+"[^"]*"\s+as\s+([A-Za-z_]\w*))\s*$', re.I)
+    for i, step in enumerate(steps, 1):
+        m = rx.match(step)
+        if not m:
+            continue
+        name = m.group(1) or m.group(2)
+        use = re.compile(r"\$\{%s\}|\bstored\s+%s\b" % (re.escape(name), re.escape(name)))
+        others = "\n".join(x for k, x in enumerate(steps, 1) if k != i)
+        if use.search(others) or use.search(group_text):
+            continue
+        out.append(Finding(
+            kind="unused_variable", severity="low", step_index=i,
+            message=f"${{{name}}} is set here but no step reads it.",
+            why="Nothing in this test case or its step groups uses it, so the step does "
+                "nothing — most likely left over from a step that was changed. Removing "
+                "it changes nothing in the run.", remove=True))
     return out
 
 
