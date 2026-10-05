@@ -4235,6 +4235,33 @@ def verify_stored_variable_not_equals(variable_name, unexpected_text, ignore_cas
                 variable_name, unexpected_text, stored)
 
 
+def wait_until_element_text_stable(page, locator_name, quiet_s: float = 3, timeout_ms: int | None = None,
+                                   placeholders: tuple = ("…", "...", "almost there", "getting things ready",
+                                                          "moving forward", "typing")):
+    """Wait until the element's text has not changed for `quiet_s` seconds and is
+    not a typing placeholder — a chat reply that has finished arriving."""
+    selector = _resolve_locator_or_raise(locator_name, page)
+    timeout = int(timeout_ms or max(settings.ACTION_TIMEOUT_MS, 45000))
+    logger.info("⏳ Waiting up to %dms for '%s' text to settle (%.1fs quiet)", timeout, locator_name, quiet_s)
+    deadline = time.time() + timeout / 1000
+    last, since = None, time.time()
+    while time.time() < deadline:
+        try:
+            cur = (_get_locator_root(page).locator(selector).first.inner_text(timeout=1000) or "").strip()
+        except Exception:  # noqa: BLE001
+            cur = ""
+        if cur != last:
+            last, since = cur, time.time()
+        else:
+            low = cur.lower()
+            placeholder = (not cur) or any(p in low for p in placeholders) and len(cur) < 40
+            if not placeholder and time.time() - since >= quiet_s:
+                logger.info("✅ '%s' text settled: %r", locator_name, cur[:80])
+                return
+        page.wait_for_timeout(300)
+    raise Exception(f"'{locator_name}' text did not settle within {timeout}ms (last: {(last or '')[:120]!r})")
+
+
 def wait_until_element_text_not_contains(page, locator_name, text, timeout_ms: int | None = None):
     """Wait until the element's text no longer CONTAINS `text` (ignoring case) —
     e.g. a chat's 'Almost there…' typing placeholder replaced by the real reply."""

@@ -50,11 +50,12 @@
       "owner": "prashantshetty",
       "opened": "2026-10-06",
       "expires": "2026-10-20",
-      "note": "Catalogue_Page_Whatsapp_Strip needs a claimed catalogue URL as test data.",
+      "note": "Catalogue_Page_Whatsapp_Strip needs a claimed catalogue URL as test data. Passed again 06-Oct 02:10 — listing claimed again; closed.",
       "match": {
         "test_case": "^Catalogue_Page_Whatsapp_Strip",
         "element": "b2b_catalogue_whatsapp_strip_text"
-      }
+      },
+      "closed": true
     },
     {
       "id": "KI-005",
@@ -164,6 +165,19 @@
       "note": "PDP_PDP_Ask_Anything via Ask me anything: typing into 'Type your message' is reset by the page. Confirm manually on live; may be the new chat build.",
       "match": {
         "error": "Could not put .{0,10} into 'type_your_message_input'"
+      }
+    },
+    {
+      "id": "KI-013",
+      "kind": "site-change",
+      "title": "JDMart search autosuggest no longer offers sellers by name (e.g. 'baldev engineering nerul' → only categories, on Products and Suppliers tabs)",
+      "jira": "",
+      "owner": "prashantshetty",
+      "opened": "2026-10-06",
+      "expires": "",
+      "note": "Confirmed manually on live mobile 06-Oct. Catalogue tests open the catalogue URL directly until this is back. Ask PO whether seller search was removed on purpose.",
+      "match": {
+        "error": "b2b_autosuggest_(supplier_tab|baldev_entry)"
       }
     }
   ]

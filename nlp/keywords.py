@@ -323,6 +323,13 @@ KEYWORD_MAP = {
         "template": "wait until element {locator} is visible"
     },
 
+    "wait_until_element_text_stable": {
+        "phrases": ["wait until element text is stable", "wait until reply is complete",
+                    "wait until text stops changing", "wait for typing to finish"],
+        "action": "wait_until_text_stable",
+        "help": "waits until the element's text has not changed for N seconds and is not a typing placeholder (a chat reply that has finished)",
+        "template": "wait until element {locator} text is stable for 3 seconds"
+    },
     "wait_until_element_text_not_contains": {
         "phrases": ["wait until element does not contain", "wait until text goes away",
                     "wait until placeholder is replaced", "wait for loader text to go"],
