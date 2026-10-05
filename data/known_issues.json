@@ -17,7 +17,7 @@
     {
       "id": "KI-002",
       "kind": "product-defect",
-      "title": "B2B Assist: 'rat trap' still offers 'Glue pad' as an option chip",
+      "title": "B2B Assist: 'rat trap' (restricted rodent cluster) starts a campaign / offers 'Glue pad' instead of the restricted alert",
       "jira": "GJDT-22788",
       "owner": "prashantshetty",
       "opened": "2026-10-06",
@@ -25,7 +25,7 @@
       "note": "RC08. Glue pad is a restricted rodent-cluster item; must not be offered.",
       "match": {
         "test_case": "^GJDT22788_RC08",
-        "error": "Glue pad"
+        "error": "Glue pad|start a campaign|help you"
       }
     },
     {

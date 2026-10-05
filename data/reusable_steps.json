@@ -216,11 +216,13 @@
   },
   "SG_PRP_Request_Catalogue_Non_Login_to_Login_Flow": {
     "steps": [
-      "swipe bottom to top until element prp_request_catalogue_1st is visible, closing b2b_prp_gvs_popup_skip, max 15 times, wait 1",
-      "wait 7 seconds"
+      "# the link sits on one of the first product cards — go to it as the page lays it out (popups close on the way)",
+      "click if visible b2b_prp_gvs_popup_skip",
+      "scroll to prp_request_catalogue_1st",
+      "verify element prp_request_catalogue_1st is visible"
     ],
     "created_at": "2026-09-28T20:01:27.973063+00:00",
-    "step_count": 2,
+    "step_count": 4,
     "platform": "mobilesite"
   },
   "SG_PRP_Request_Catalogue_PDP_Seller_Brochure_Not_p": {
@@ -262,7 +264,9 @@
   },
   "SG_PRP_View_Catalogue_Non_Login_to_Login_Flow": {
     "steps": [
-      "[ignore 30s] swipe bottom to top until element prp_request_catalogue_1st is visible, closing b2b_prp_gvs_popup_skip, max 15 times, wait 1",
+      "# the link sits on one of the first product cards — go to it as the page lays it out (popups close on the way)",
+      "click if visible b2b_prp_gvs_popup_skip",
+      "scroll to prp_view_catalogue_1st",
       "wait until element prp_view_catalogue_1st is visible",
       "click prp_view_catalogue_1st",
       "verify element prp_open_rfq_login_pop_jd_logo is visible",
@@ -270,7 +274,7 @@
       "wait 5 seconds"
     ],
     "created_at": "2026-09-28T20:01:28.039361+00:00",
-    "step_count": 6,
+    "step_count": 8,
     "platform": "mobilesite"
   },
   "SG_Touch_Core_Login_Test_Number": {
