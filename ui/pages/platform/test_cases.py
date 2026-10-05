@@ -200,6 +200,7 @@ class TestCasesPage:
         self.steps = [raw_steps[i] for i in keep]
         # Parallel to self.steps, when the API gave file lines.
         self.file_lines = [raw_lines[i] for i in keep] if len(raw_lines) == len(raw_steps) else []
+        self.run_tags = {int(k): v for k, v in (data.get("tags") or {}).items()}
         self.step_meta = {}
         self.dirty = False
         self.compose_at = None
@@ -1147,6 +1148,8 @@ class TestCasesPage:
                                 ui.menu_item("Rename…", on_click=self.rename_dialog)
                                 ui.menu_item("Clone…",
                                              on_click=lambda: self._clone_dialog(self.selected))
+                                ui.menu_item("Reset run-type tags (S / Sy / R / F) to automatic",
+                                             on_click=self._reset_run_tags)
                         if self.dirty:
                             with ui.row().classes("items-center gap-1 no-wrap") \
                                     .props('data-unsaved="1"').style(
@@ -1241,6 +1244,7 @@ class TestCasesPage:
                 stored = set(self._vars.get("stored", []))
                 made: dict = self._vars.get("defined", {}) or {}
                 token_queue: list = []
+                self._run_tag_slots = {}
                 lay = _block_layout(self.steps)
                 has_blocks = any(d["kind"] for d in lay)
                 fold_until = -1
@@ -1267,7 +1271,11 @@ class TestCasesPage:
                     holder = self._block_holder(i, block) if block else None
                     if holder is not None:
                         holder.__enter__()
+                    _rt_line, _rt_tag = self._run_tag_for(i)
                     step_row(i, shown, action=meta.get("action", ""),
+                             run_tag=_rt_tag, run_tag_line=_rt_line,
+                             run_tag_slots=self._run_tag_slots,
+                             on_run_tag=self._click_run_tag,
                              platform=self.platform,
                              target=meta.get("locator", ""), status=meta.get("status", ""),
                              note=meta.get("note", ""), selector=meta.get("selector", ""),
@@ -2434,6 +2442,61 @@ class TestCasesPage:
             raise
         self.file_mtime = (res or {}).get("mtime", getattr(self, "file_mtime", None))
         self._is_new = False
+        # Saving rebuilds the run-type tags (new steps get automatic ones,
+        # clicked ones are kept) — pick up the new lines and tags.
+        lines = list((res or {}).get("lines") or [])
+        if len(lines) == len(self.steps):
+            self.file_lines = lines
+            self.run_tags = {int(k): v for k, v in ((res or {}).get("tags") or {}).items()}
+
+    def _run_tag_for(self, i: int) -> tuple[int, dict | None]:
+        """(file line, tag) for editor step i (1-based); tag None while unsaved."""
+        fl = getattr(self, "file_lines", []) or []
+        if not self.selected or len(fl) != len(self.steps):
+            return 0, None
+        ln = fl[i - 1]
+        if self.dirty:
+            return ln, None
+        return ln, getattr(self, "run_tags", {}).get(ln)
+
+    async def _reset_run_tags(self) -> None:
+        if self.dirty:
+            ui.notify("Save the test case first.", type="warning")
+            return
+        try:
+            res = await api.rebuild_step_tags(self.selected)
+        except api.ApiError as e:
+            ui.notify(f"Could not rebuild the tags: {e.detail}", type="negative")
+            return
+        self.run_tags = {int(k): v.get("level") and v for k, v in (res.get("tags") or {}).items()}
+        for ln, draw in list(getattr(self, "_run_tag_slots", {}).items()):
+            try:
+                draw(self.run_tags.get(ln))
+            except Exception:  # noqa: BLE001
+                pass
+        ui.notify(res.get("message", "Tags rebuilt"), type="positive")
+
+    async def _click_run_tag(self, line: int, tag: str) -> None:
+        if self.dirty:
+            ui.notify("Save the test case first — tags follow the saved steps.", type="warning")
+            return
+        try:
+            res = await api.toggle_step_tag(self.selected, line, tag)
+        except api.ApiError as e:
+            ui.notify(f"Could not change the tag: {e.detail}", type="negative")
+            return
+        self.run_tags = {int(k): v for k, v in (res.get("tags") or {}).items()}
+        for ln, draw in list(getattr(self, "_run_tag_slots", {}).items()):
+            try:
+                draw(self.run_tags.get(ln))
+            except Exception:  # noqa: BLE001 — a row scrolled away / redrawn
+                pass
+        # The server speaks in file lines; the editor numbers steps.
+        import re as _re
+        fl = list(getattr(self, "file_lines", []) or [])
+        msg = _re.sub(r"^Line (\d+)", lambda m: f"Step {fl.index(int(m.group(1))) + 1}"
+                      if int(m.group(1)) in fl else m.group(0), res.get("message", "Tag updated"))
+        ui.notify(msg, type="info" if res.get("changed") else "positive")
 
     def _conflict_dialog(self, detail: str) -> None:
         with self.dialog_host if getattr(self, "dialog_host", None) else ui.element("div"):

@@ -326,7 +326,7 @@ def _run_flow_sync_unlocked(run_id: str, flow_path: str, headless: bool,
         with open(flow_path, "r", encoding="utf-8") as _f:
             flow_lines = _f.readlines()
         if _rt.normalise(run_type):
-            selection = _rt.select(flow_lines, run_type)
+            selection = _rt.select_flow(flow_path, run_type, flow_lines)
             if selection["run"] is not None:
                 flow_lines = [ln if (n in selection["run"] or not ln.strip()
                                      or ln.strip().startswith("#")) else "\n"

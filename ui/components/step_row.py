@@ -79,7 +79,11 @@ def step_row(index: int, nlp_text: str, *, action: str = "", target: str = "",
              on_drop: Callable[[int, int], None] | None = None,
              token_queue: list | None = None,
              group_steps: dict[str, list[str]] | None = None,
-             on_edit_group: Callable[[str], None] | None = None) -> ui.element:
+             on_edit_group: Callable[[str], None] | None = None,
+             run_tag: dict | None = None,
+             run_tag_line: int = 0,
+             run_tag_slots: dict | None = None,
+             on_run_tag: Callable[[int, str], None] | None = None) -> ui.element:
     """
     ``token_queue``: when given, the step's token renderer is appended to it
     instead of being scheduled on its own timer, so the caller can draw a long
@@ -256,6 +260,15 @@ def step_row(index: int, nlp_text: str, *, action: str = "", target: str = "",
         if status:
             mapping_chip(status, note=note)
 
+        # Run-type chips (S / Sy / R / F): which run types execute this step.
+        # One click switches a tag; the server keeps the dependent steps in step.
+        if run_tag_line and not disabled:
+            tag_box = ui.row().classes("items-center no-wrap").style("gap:2px")
+            if run_tag_slots is not None:
+                run_tag_slots[run_tag_line] = lambda t, b=tag_box, ln=run_tag_line: \
+                    run_tag_chips(b, t, ln, on_run_tag)
+            run_tag_chips(tag_box, run_tag, run_tag_line, on_run_tag)
+
         async def start_edit_form() -> None:
             """Pencil: the form when the step type has one, else the text box."""
             if editing["on"] or not on_edit:
@@ -375,6 +388,44 @@ def step_row(index: int, nlp_text: str, *, action: str = "", target: str = "",
         fold.on("click", _toggle_fold)
 
     return row
+
+
+RUN_TAGS = (("S", "Smoke", "#16a34a"), ("Sy", "Sanity", "#2563eb"),
+            ("R", "Regression", "#7c3aed"), ("F", "Full", "#64748b"))
+_RT_IDX = {"S": 0, "Sy": 1, "R": 2, "F": 3}
+
+
+def run_tag_chips(box, tag: dict | None, line: int,
+                  on_click: Callable[[int, str], None] | None) -> None:
+    """Draw the four chips into `box`. A filled chip = this step runs in that
+    run type (levels are cumulative: a Smoke step also runs in Sanity,
+    Regression and Full). `tag` = {"level": "S"|"Sy"|"R"|"F", "manual": bool};
+    None = tags are being rebuilt (shown greyed, not clickable)."""
+    box.clear()
+    with box:
+        level = (tag or {}).get("level")
+        manual = bool((tag or {}).get("manual"))
+        for code, name, color in RUN_TAGS:
+            on = level is not None and _RT_IDX[level] <= _RT_IDX[code]
+            style = (f"font-size:10px; line-height:14px; padding:0 4px; border-radius:7px;"
+                     f"font-weight:600; user-select:none; min-width:16px; text-align:center;"
+                     f"border:1px solid {color};"
+                     + (f"background:{color}; color:#fff;" if on else
+                        f"background:transparent; color:{color}; opacity:0.45;"))
+            chip = ui.label(code).style(style + ("cursor:pointer;" if on_click and level else ""))
+            if level is None:
+                chip.tooltip("Save the test case to update its run-type tags")
+                continue
+            src = "set by you" if manual else "automatic"
+            if code == "F":
+                tip = "Full: every step runs in a Full run"
+            elif on:
+                tip = f"{name}: ON ({src}) — click to switch off (steps that need this one switch off too)"
+            else:
+                tip = f"{name}: off — click to switch on (the steps this one needs switch on too)"
+            chip.tooltip(tip)
+            if on_click:
+                chip.on("click", lambda _e=None, c=code, ln=line: on_click(ln, c))
 
 
 def _called_group(text: str) -> str:

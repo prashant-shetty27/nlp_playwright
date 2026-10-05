@@ -168,12 +168,38 @@ def select(lines: list[str], run_type: str | None) -> dict:
             "warnings": sorted(set(warnings))}
 
 
+def select_flow(flow_path: str, run_type: str | None, lines: list[str] | None = None) -> dict:
+    """
+    select() for a test case file, using its per-step tags (core/step_tags.py:
+    S / Sy / R / F chips, built automatically on save, dependency-safe).
+    Falls back to the band-only select() if the tags cannot be read.
+    """
+    if lines is None:
+        with open(flow_path, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+    rt = normalise(run_type)
+    if not rt or rt == "full":
+        return {"run": None, "bands_in": [], "bands_out": [], "warnings": []}
+    try:
+        from core import step_tags
+        run = step_tags.select_lines(flow_path, rt)
+    except Exception:  # noqa: BLE001
+        return select(lines, run_type)
+    a = analyse(lines)
+    bands_in = [b["name"] for b in a["bands"] if run is None or set(b["lines"]) & run]
+    bands_out = [b["name"] for b in a["bands"] if b["name"] not in bands_in]
+    warnings = []
+    if run is not None and not run:
+        warnings.append(f"no step of this test case is tagged {LABEL[rt]}")
+    return {"run": run, "bands_in": bands_in, "bands_out": bands_out, "warnings": warnings}
+
+
 def preview(flow_path: str, run_type: str | None) -> dict:
     """Step counts for a flow under a run type — for the plan editor."""
     with open(flow_path, "r", encoding="utf-8") as f:
         lines = f.readlines()
     total = sum(1 for ln in lines if ln.strip() and not ln.strip().startswith("#"))
-    sel = select(lines, run_type)
+    sel = select_flow(flow_path, run_type, lines)
     n = total if sel["run"] is None else len(sel["run"])
     return {"steps": n, "total": total, "bands_in": sel["bands_in"],
             "bands_out": sel["bands_out"], "warnings": sel["warnings"]}

@@ -1,0 +1,168 @@
+{
+ "version": 1,
+ "flow_mtime": 1790951595.519722,
+ "steps": [
+  {
+   "line": 12,
+   "text": "call Live_Touch_Chrome_Navigate_to_Homepage_setup_Popup",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 14,
+   "text": "open https://www.justdial.com/jdmart/Mumbai/Tyre/jdm-1113059-ent-2-17609009?jdtracker=internaljd_switchproductview_10505866&ncatid=10505866&sortby=&basedon=&appliedFilter=%7C%7E%7C122%7C%40%7CAll+Brands&pfApplied=1&attrVal=%5B%7B%22e%22%3A%22sellertype%22%2C%22v%22%3A%5B%22Wholesalers%22%5D%7D%2C%7B%22e%22%3A%22brand%22%2C%22v%22%3A%5B%22All+Brands%22%5D%7D%2C%7B%22e%22%3A%22sortby%22%2C%22v%22%3A%5B%22relevance%22%5D%7D%5D&mvVal=%5B%7B%22mv%22%3A5001%2C%22v%22%3A%5B%22Wholesalers%22%5D%7D%2C%7B%22mv%22%3A5005%2C%22v%22%3A%5B%22All+Brands%22%5D%7D%2C%7B%22mv%22%3A5009%2C%22v%22%3A%5B%22relevance%22%5D%7D%5D&fCatId=&actiontype=fltr",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 15,
+   "text": "wait 4 seconds",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 16,
+   "text": "if element ps_b2b_prp_1st_product is not visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 17,
+   "text": "refresh page",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 18,
+   "text": "end if",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 19,
+   "text": "wait until element ps_b2b_prp_1st_product is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 20,
+   "text": "store text of ps_b2b_prp_1st_product as prp_product",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 21,
+   "text": "click prp_best_price",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 22,
+   "text": "wait until element b2b_assist_chat_login_link is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 23,
+   "text": "verify element b2b_assist_first_card contains \"${prp_product}\"",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 24,
+   "text": "call SG_B2B_Assist_Login_In_Chat",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 25,
+   "text": "call SG_B2B_Assist_Answer_Until_Results",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 26,
+   "text": "verify element b2b_assist_card_1st contains \"tyre\" ignoring case",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 28,
+   "text": "verify all elements b2b_assist_card_call_button have different \"aria-label\"",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 30,
+   "text": "click b2b_assist_refresh_conversation",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 31,
+   "text": "wait until element b2b_assist_fresh_chat_yes is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 32,
+   "text": "click b2b_assist_fresh_chat_yes",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 33,
+   "text": "wait 3 seconds",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 34,
+   "text": "wait until element type_your_message_input is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 35,
+   "text": "type \"need executive office chair wholesalers in ahmedabad\" into type_your_message_input",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 36,
+   "text": "click b2b_assist_send",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 37,
+   "text": "wait 6 seconds",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 38,
+   "text": "call SG_B2B_Assist_Answer_Until_Results",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 39,
+   "text": "verify element b2b_assist_card_1st contains \"chair\" ignoring case",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 41,
+   "text": "verify element b2b_assist_card_1st contains \"Ahmedabad\"",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 42,
+   "text": "verify all elements b2b_assist_card_call_button have different \"aria-label\"",
+   "level": "R",
+   "manual": false
+  }
+ ]
+}

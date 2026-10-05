@@ -1,0 +1,294 @@
+{
+ "version": 1,
+ "flow_mtime": 1790974473.3344095,
+ "steps": [
+  {
+   "line": 7,
+   "text": "open https://www.justdial.com/jdmart/Mumbai/Water-Pump/jdm-1118390-ent-2-14741196",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 8,
+   "text": "wait 5 seconds",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 10,
+   "text": "scroll to prp_first_360_card",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 11,
+   "text": "verify element prp_first_360_card_badge is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 12,
+   "text": "verify element prp_first_360_card_badge is inside prp_first_360_card_image",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 13,
+   "text": "store text of prp_first_360_card_title as product_name",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 14,
+   "text": "store attribute data-src of prp_first_360_card_image as prp_img_src",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 15,
+   "text": "store regex \"-([a-z0-9]{6,20})\\.(?:png|jpe?g|webp)\" from prp_img_src as img_id",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 16,
+   "text": "take screenshot as prp_card_with_360_badge",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 17,
+   "text": "click prp_first_360_card_title",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 18,
+   "text": "wait until url contains \"/pid-\"",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 19,
+   "text": "wait until element pdp_main_image is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 20,
+   "text": "store url as pdp_url",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 21,
+   "text": "store regex \"pid-([0-9]+)\" from pdp_url as pid",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 23,
+   "text": "verify element pdp_product_title contains \"${product_name}\"",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 24,
+   "text": "verify element pdp_main_image_matching is visible",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 25,
+   "text": "verify element pdp_gallery_360_tab is visible",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 26,
+   "text": "click pdp_gallery_360_tab",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 27,
+   "text": "wait 2 seconds",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 28,
+   "text": "verify element pdp_gallery_360_tab_active is visible",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 29,
+   "text": "take screenshot as pdp_360_tab_open",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 31,
+   "text": "store attribute href of pdp_seller_catalogue_link as catalogue_url",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 32,
+   "text": "open https://www.justdial.com${catalogue_url}",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 33,
+   "text": "wait until url contains \"_BZDET\"",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 34,
+   "text": "wait 3 seconds",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 35,
+   "text": "click pdp_tab_photos",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 36,
+   "text": "wait until element pdp_photo_tile is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 37,
+   "text": "click catalogue_photos_products_chip",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 38,
+   "text": "wait until element catalogue_photo_tile_matching is visible within 30 seconds",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 40,
+   "text": "wait 3 seconds",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 41,
+   "text": "click if visible catalogue_looking_for_sheet_skip",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 42,
+   "text": "scroll to catalogue_photo_tile_matching",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 43,
+   "text": "verify element catalogue_photo_tile_matching_360_icon is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 44,
+   "text": "verify element catalogue_photo_tile_matching_360_icon is inside catalogue_photo_tile_matching_image",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 45,
+   "text": "take screenshot as catalogue_products_matched_tile_360",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 47,
+   "text": "click if visible catalogue_looking_for_sheet_skip",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 48,
+   "text": "click catalogue_photo_tile_matching_image",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 49,
+   "text": "wait until element gallery_slide_image is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 50,
+   "text": "wait 2 seconds",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 51,
+   "text": "verify element gallery_360_icon is not visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 52,
+   "text": "verify element gallery_view_more_details_for_product is visible",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 53,
+   "text": "take screenshot as gallery_no_360_icon",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 55,
+   "text": "click gallery_view_more_details_for_product",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 56,
+   "text": "wait until url contains \"pid-${pid}\"",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 57,
+   "text": "wait until element pdp_main_image is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 58,
+   "text": "verify element pdp_product_title contains \"${product_name}\"",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 59,
+   "text": "verify element pdp_gallery_360_tab is visible",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 60,
+   "text": "take screenshot as view_more_details_pdp_360_tab",
+   "level": "F",
+   "manual": false
+  }
+ ]
+}

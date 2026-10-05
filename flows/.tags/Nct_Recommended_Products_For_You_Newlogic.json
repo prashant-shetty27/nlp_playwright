@@ -1,0 +1,1176 @@
+{
+ "version": 1,
+ "flow_mtime": 1790955859.089921,
+ "steps": [
+  {
+   "line": 12,
+   "text": "open ${live_url_steel_merchants}",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 13,
+   "text": "wait for result page load",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 14,
+   "text": "click if visible login_prompt_skip",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 15,
+   "text": "wait until element rp_carousel_heading is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 16,
+   "text": "verify element rp_carousel_heading is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 17,
+   "text": "verify element rp_carousel_heading has text \"Recommended Products For You\"",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 18,
+   "text": "verify element rp_product_1st is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 20,
+   "text": "open ${live_url_bulk_sms_services}",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 21,
+   "text": "wait for result page load",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 22,
+   "text": "click if visible login_prompt_skip",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 23,
+   "text": "wait until element rp_carousel_heading is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 24,
+   "text": "verify element rp_carousel_heading is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 25,
+   "text": "verify element rp_carousel_heading contains \"Recommended\"",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 26,
+   "text": "verify element rp_carousel_heading contains \"For You\"",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 27,
+   "text": "verify element rp_product_1st is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 29,
+   "text": "open ${live_url_steel_merchants}",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 30,
+   "text": "wait for result page load",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 31,
+   "text": "click if visible login_prompt_skip",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 32,
+   "text": "wait until element rp_carousel_heading is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 33,
+   "text": "verify element rp_carousel_heading is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 34,
+   "text": "call store_prp_url_city_nctid_queryparam_api_pass",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 35,
+   "text": "store json apiResp1 path results.data.0.display_name1 as api1_name1",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 36,
+   "text": "store json apiResp1 path results.data.1.display_name1 as api1_name2",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 37,
+   "text": "store json apiResp1 path results.data.2.display_name1 as api1_name3",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 38,
+   "text": "store text of rp_product_1st_name as page1_name1",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 39,
+   "text": "store text of rp_product_2nd_name as page1_name2",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 40,
+   "text": "store text of rp_product_3rd_name as page1_name3",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 43,
+   "text": "store json apiResp1 path results.data.3.display_name1 as api1_name4",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 44,
+   "text": "store json apiResp1 path results.data.4.display_name1 as api1_name5",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 45,
+   "text": "store \"${api1_name1} || ${api1_name2} || ${api1_name3} || ${api1_name4} || ${api1_name5}\" as api1_top3",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 46,
+   "text": "verify stored api1_top3 contains \"${page1_name1}\"",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 47,
+   "text": "verify stored api1_top3 contains \"${page1_name2}\"",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 48,
+   "text": "verify stored api1_top3 contains \"${page1_name3}\"",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 50,
+   "text": "open ${live_url_bulk_sms_services}",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 51,
+   "text": "wait for result page load",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 52,
+   "text": "click if visible login_prompt_skip",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 53,
+   "text": "wait until element rp_carousel_heading is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 54,
+   "text": "verify element rp_carousel_heading is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 55,
+   "text": "store regex \"justdial\\.com/([^/]+)/\" from page url as city2",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 56,
+   "text": "store regex \"justdial\\.com/[^/]+/([^/?]+)/nct-\" from page url as query2",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 57,
+   "text": "store regex \"nct-(\\d+)\" from page url as ncatid2",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 58,
+   "text": "api get \"${rp_api_base_live}&city=${city2}&ncatid=${ncatid2}&query=${query2}\" as apiResp2",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 59,
+   "text": "store json apiResp2 path results.data.0.display_name1 as apiName2",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 60,
+   "text": "store text of rp_product_1st_name as uiName2",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 61,
+   "text": "verify stored apiResp2 contains \"${uiName2}\"",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 62,
+   "text": "store json apiResp2 path results.data.0.display_name1 as api2_name1",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 63,
+   "text": "store json apiResp2 path results.data.1.display_name1 as api2_name2",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 64,
+   "text": "store json apiResp2 path results.data.2.display_name1 as api2_name3",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 65,
+   "text": "store text of rp_product_1st_name as page2_name1",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 66,
+   "text": "store text of rp_product_2nd_name as page2_name2",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 67,
+   "text": "store text of rp_product_3rd_name as page2_name3",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 70,
+   "text": "store json apiResp2 path results.data.3.display_name1 as api2_name4",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 71,
+   "text": "store json apiResp2 path results.data.4.display_name1 as api2_name5",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 72,
+   "text": "store \"${api2_name1} || ${api2_name2} || ${api2_name3} || ${api2_name4} || ${api2_name5}\" as api2_top3",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 73,
+   "text": "verify stored api2_top3 contains \"${page2_name1}\"",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 74,
+   "text": "verify stored api2_top3 contains \"${page2_name2}\"",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 75,
+   "text": "verify stored api2_top3 contains \"${page2_name3}\"",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 77,
+   "text": "open ${prod_Hotel_Equipment_Manufacturers}",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 78,
+   "text": "wait for result page load",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 79,
+   "text": "click if visible login_prompt_skip",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 80,
+   "text": "wait until element rp_carousel_heading is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 81,
+   "text": "verify element rp_carousel_heading is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 82,
+   "text": "store count of rp_carousel_cards as productCount",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 83,
+   "text": "verify stored productCount is greater than 0",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 84,
+   "text": "store count of rp_carousel_360_badge as badgeCount",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 85,
+   "text": "call store_prp_url_city_nctid_queryparam_api_pass",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 86,
+   "text": "store json apiResp1 path results.data.0.display_name1 as api360_name1",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 87,
+   "text": "store json apiResp1 path results.data.1.display_name1 as api360_name2",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 88,
+   "text": "store json apiResp1 path results.data.2.display_name1 as api360_name3",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 89,
+   "text": "store text of rp_product_1st_name as page360_name1",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 90,
+   "text": "store text of rp_product_2nd_name as page360_name2",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 91,
+   "text": "store text of rp_product_3rd_name as page360_name3",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 94,
+   "text": "store json apiResp1 path results.data.3.display_name1 as api360_name4",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 95,
+   "text": "store json apiResp1 path results.data.4.display_name1 as api360_name5",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 96,
+   "text": "store \"${api360_name1} || ${api360_name2} || ${api360_name3} || ${api360_name4} || ${api360_name5}\" as api360_top3",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 97,
+   "text": "verify stored api360_top3 contains \"${page360_name1}\"",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 98,
+   "text": "verify stored api360_top3 contains \"${page360_name2}\"",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 99,
+   "text": "verify stored api360_top3 contains \"${page360_name3}\"",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 101,
+   "text": "open ${prod_Screw_Importers}",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 102,
+   "text": "wait for result page load",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 103,
+   "text": "click if visible login_prompt_skip",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 104,
+   "text": "wait until element rp_carousel_heading is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 105,
+   "text": "verify element rp_carousel_heading is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 106,
+   "text": "store regex \"justdial\\.com/([^/]+)/\" from page url as city11",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 107,
+   "text": "store regex \"justdial\\.com/[^/]+/([^/?]+)/nct-\" from page url as query11",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 108,
+   "text": "store regex \"nct-(\\d+)\" from page url as ncatid11",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 109,
+   "text": "api get \"${rp_api_base_live}&city=${city11}&ncatid=${ncatid11}&query=${query11}\" as apiResp11",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 110,
+   "text": "store json apiResp11 path results.data.0.display_name1 as api11_name1",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 111,
+   "text": "store json apiResp11 path results.data.1.display_name1 as api11_name2",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 112,
+   "text": "store json apiResp11 path results.data.2.display_name1 as api11_name3",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 113,
+   "text": "store text of rp_product_1st_name as page11_name1",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 114,
+   "text": "store text of rp_product_2nd_name as page11_name2",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 115,
+   "text": "store text of rp_product_3rd_name as page11_name3",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 118,
+   "text": "store json apiResp11 path results.data.3.display_name1 as api11_name4",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 119,
+   "text": "store json apiResp11 path results.data.4.display_name1 as api11_name5",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 120,
+   "text": "store \"${api11_name1} || ${api11_name2} || ${api11_name3} || ${api11_name4} || ${api11_name5}\" as api11_top3",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 121,
+   "text": "verify stored api11_top3 contains \"${page11_name1}\"",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 122,
+   "text": "verify stored api11_top3 contains \"${page11_name2}\"",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 123,
+   "text": "verify stored api11_top3 contains \"${page11_name3}\"",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 124,
+   "text": "open ${live_url_pani_puri_making_machine}",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 125,
+   "text": "wait for result page load",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 126,
+   "text": "click if visible login_prompt_skip",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 127,
+   "text": "wait until element rp_carousel_heading is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 128,
+   "text": "verify element rp_carousel_heading is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 129,
+   "text": "store regex \"justdial\\.com/([^/]+)/\" from page url as city12",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 130,
+   "text": "store regex \"justdial\\.com/[^/]+/([^/?]+)/nct-\" from page url as query12",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 131,
+   "text": "store regex \"nct-(\\d+)\" from page url as ncatid12",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 132,
+   "text": "api get \"${rp_api_base_live}&city=${city12}&ncatid=${ncatid12}&query=${query12}\" as apiResp12",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 133,
+   "text": "store json apiResp12 path results.data.0.display_name1 as api12_name1",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 134,
+   "text": "store json apiResp12 path results.data.1.display_name1 as api12_name2",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 135,
+   "text": "store json apiResp12 path results.data.2.display_name1 as api12_name3",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 136,
+   "text": "store text of rp_product_1st_name as page12_name1",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 137,
+   "text": "store text of rp_product_2nd_name as page12_name2",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 138,
+   "text": "store text of rp_product_3rd_name as page12_name3",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 141,
+   "text": "store json apiResp12 path results.data.3.display_name1 as api12_name4",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 142,
+   "text": "store json apiResp12 path results.data.4.display_name1 as api12_name5",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 143,
+   "text": "store \"${api12_name1} || ${api12_name2} || ${api12_name3} || ${api12_name4} || ${api12_name5}\" as api12_top3",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 144,
+   "text": "verify stored api12_top3 contains \"${page12_name1}\"",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 145,
+   "text": "verify stored api12_top3 contains \"${page12_name2}\"",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 146,
+   "text": "verify stored api12_top3 contains \"${page12_name3}\"",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 147,
+   "text": "open ${live_url_school_bag_manufacturers}",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 148,
+   "text": "wait for result page load",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 149,
+   "text": "click if visible login_prompt_skip",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 150,
+   "text": "wait until element rp_carousel_heading is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 151,
+   "text": "verify element rp_carousel_heading is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 152,
+   "text": "store regex \"justdial\\.com/([^/]+)/\" from page url as city13",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 153,
+   "text": "store regex \"justdial\\.com/[^/]+/([^/?]+)/nct-\" from page url as query13",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 154,
+   "text": "store regex \"nct-(\\d+)\" from page url as ncatid13",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 155,
+   "text": "api get \"${rp_api_base_live}&city=${city13}&ncatid=${ncatid13}&query=${query13}\" as apiResp13",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 156,
+   "text": "store json apiResp13 path results.data.0.display_name1 as api13_name1",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 157,
+   "text": "store json apiResp13 path results.data.1.display_name1 as api13_name2",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 158,
+   "text": "store json apiResp13 path results.data.2.display_name1 as api13_name3",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 159,
+   "text": "store text of rp_product_1st_name as page13_name1",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 160,
+   "text": "store text of rp_product_2nd_name as page13_name2",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 161,
+   "text": "store text of rp_product_3rd_name as page13_name3",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 164,
+   "text": "store json apiResp13 path results.data.3.display_name1 as api13_name4",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 165,
+   "text": "store json apiResp13 path results.data.4.display_name1 as api13_name5",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 166,
+   "text": "store \"${api13_name1} || ${api13_name2} || ${api13_name3} || ${api13_name4} || ${api13_name5}\" as api13_top3",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 167,
+   "text": "verify stored api13_top3 contains \"${page13_name1}\"",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 168,
+   "text": "verify stored api13_top3 contains \"${page13_name2}\"",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 169,
+   "text": "verify stored api13_top3 contains \"${page13_name3}\"",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 171,
+   "text": "open ${live_url_carpet_wholesalers}",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 172,
+   "text": "wait for result page load",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 173,
+   "text": "click if visible login_prompt_skip",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 174,
+   "text": "wait until element rp_carousel_heading is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 175,
+   "text": "verify element rp_carousel_heading is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 176,
+   "text": "store regex \"justdial\\.com/([^/]+)/\" from page url as city3",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 177,
+   "text": "store regex \"justdial\\.com/[^/]+/([^/?]+)/nct-\" from page url as query3",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 178,
+   "text": "store regex \"nct-(\\d+)\" from page url as ncatid3",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 179,
+   "text": "api get \"${rp_api_base_live}&city=${city3}&ncatid=${ncatid3}&query=${query3}\" as apiResp3",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 180,
+   "text": "store json apiResp3 path results.data.0.display_name1 as api3_name1",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 181,
+   "text": "store json apiResp3 path results.data.1.display_name1 as api3_name2",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 182,
+   "text": "store json apiResp3 path results.data.2.display_name1 as api3_name3",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 183,
+   "text": "store text of rp_product_1st_name as page3_name1",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 184,
+   "text": "store text of rp_product_2nd_name as page3_name2",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 185,
+   "text": "store text of rp_product_3rd_name as page3_name3",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 188,
+   "text": "store json apiResp3 path results.data.3.display_name1 as api3_name4",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 189,
+   "text": "store json apiResp3 path results.data.4.display_name1 as api3_name5",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 190,
+   "text": "store \"${api3_name1} || ${api3_name2} || ${api3_name3} || ${api3_name4} || ${api3_name5}\" as api3_top3",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 191,
+   "text": "verify stored api3_top3 contains \"${page3_name1}\"",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 192,
+   "text": "verify stored api3_top3 contains \"${page3_name2}\"",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 193,
+   "text": "verify stored api3_top3 contains \"${page3_name3}\"",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 195,
+   "text": "open ${Prod_Brick_Wholesalers}",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 196,
+   "text": "wait for result page load",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 197,
+   "text": "click if visible login_prompt_skip",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 198,
+   "text": "wait until element rp_carousel_heading is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 199,
+   "text": "verify element rp_carousel_heading is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 200,
+   "text": "verify element rp_carousel_price_on_request is not visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 201,
+   "text": "open ${Prod_Carpet_Wholesalers}",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 202,
+   "text": "wait for result page load",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 203,
+   "text": "click if visible login_prompt_skip",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 204,
+   "text": "wait until element rp_carousel_heading is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 205,
+   "text": "verify element rp_carousel_heading is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 206,
+   "text": "verify element rp_carousel_price_on_request is not visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 208,
+   "text": "open ${Prod_Umbrella_Distributors}",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 209,
+   "text": "wait for result page load",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 210,
+   "text": "click if visible login_prompt_skip",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 211,
+   "text": "wait until element rp_carousel_heading is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 212,
+   "text": "verify element rp_carousel_heading is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 213,
+   "text": "verify element rp_carousel_call_now_cta is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 214,
+   "text": "verify element rp_carousel_call_now_cta contains \"Call Now\"",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 215,
+   "text": "verify element rp_carousel_view_details is not visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 216,
+   "text": "open ${live_url_steel_merchants}",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 217,
+   "text": "wait for result page load",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 218,
+   "text": "click if visible login_prompt_skip",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 219,
+   "text": "wait until element rp_carousel_heading is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 220,
+   "text": "verify element rp_carousel_heading is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 221,
+   "text": "verify element rp_carousel_call_now_cta is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 222,
+   "text": "verify element rp_carousel_call_now_cta contains \"Call Now\"",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 223,
+   "text": "verify element rp_carousel_view_details is not visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 225,
+   "text": "open ${prod_Bat_Distributors_MRF}",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 226,
+   "text": "wait for result page load",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 227,
+   "text": "click if visible login_prompt_skip",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 228,
+   "text": "wait 3 seconds",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 229,
+   "text": "verify element rp_carousel_heading is not visible",
+   "level": "Sy",
+   "manual": false
+  }
+ ]
+}

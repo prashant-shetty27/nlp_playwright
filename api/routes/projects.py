@@ -87,6 +87,26 @@ def _read_steps_with_lines(path: str) -> list[tuple[str, int]]:
     return out
 
 
+def _tags_after_save(path: str) -> dict:
+    """Per-step run-type tags (S / Sy / R / F), rebuilt automatically whenever a
+    test case is written: new steps get the automatic level, steps the author
+    clicked keep theirs. {file line: level}. Never blocks a save."""
+    try:
+        from core import step_tags
+        return {e["line"]: e["level"] for e in step_tags.build(path).get("steps", [])}
+    except Exception:  # noqa: BLE001
+        return {}
+
+
+def _tags_of(path: str) -> dict:
+    try:
+        from core import step_tags
+        return {e["line"]: {"level": e["level"], "manual": bool(e.get("manual"))}
+                for e in step_tags.ensure(path).get("steps", [])}
+    except Exception:  # noqa: BLE001
+        return {}
+
+
 _PARAMS_LINE = re.compile(r"^#\s*Params\s*:", re.I)
 _PLATFORM_LINE = re.compile(r"^#\s*Platform\s*:", re.I)
 
@@ -241,6 +261,7 @@ def create_project(body: ProjectCreate, user: str = Depends(acting_user)):
         raise HTTPException(status_code=409, detail=f"Project '{body.name}' already exists.")
     with open(path, "w", encoding="utf-8") as f:
         f.write(_compose(body.steps, platform=body.platform))
+    _tags_after_save(path)
     audit.touch(os.path.basename(path)[:-5], user, created=True)
     return {"message": f"Project '{body.name}' created.", "path": path}
 
@@ -258,6 +279,8 @@ def get_project(name: str):
             # lines in the file make the two differ).
             "lines": [n for _, n in pairs],
             "meta": audit.get(name),
+            # Run-type chip of each runnable step, by file line (core/step_tags.py).
+            "tags": _tags_of(path),
             "mtime": os.path.getmtime(path)}
 
 
@@ -276,9 +299,56 @@ def update_project(name: str, body: ProjectUpdate, user: str = Depends(acting_us
     header = _read_header(path)
     with open(path, "w", encoding="utf-8") as f:
         f.write(_compose(body.steps, header, platform=body.platform))
+    _tags_after_save(path)
     audit.touch(name, user)
     return {"message": f"Project '{name}' updated.", "steps": body.steps,
+            "lines": [n for _, n in _read_steps_with_lines(path)],
+            "tags": _tags_of(path),
             "mtime": os.path.getmtime(path)}
+
+
+class TagToggle(BaseModel):
+    line: int          # file line of the step (as in get_project "lines")
+    tag: str           # S | Sy | R | F
+
+
+@router.post("/{name}/tags/toggle")
+def toggle_tag(name: str, body: TagToggle, user: str = Depends(acting_user)):
+    """
+    One click on a step's S / Sy / R / F chip. Dependency-safe: ON also turns
+    the tag on for the steps this one needs; OFF also turns it off for the
+    steps that need this one (core/step_tags.toggle). The flow file is not
+    touched, so an open editor stays in sync.
+    """
+    require(user, "write")
+    from core import step_tags
+    path = _flow_path_or_422(name)
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail=f"Test case '{name}' not found.")
+    data = step_tags.ensure(path)
+    idx = next((i for i, e in enumerate(data.get("steps", [])) if e["line"] == body.line), None)
+    if idx is None:
+        raise HTTPException(status_code=422, detail="That line is not a runnable step "
+                            "(switched-off steps and comments have no run type) — save first if you just added it.")
+    try:
+        res = step_tags.toggle(path, idx, body.tag)
+    except (ValueError, IndexError) as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
+    return {"message": res["message"], "changed": res["changed"],
+            "tags": {e["line"]: {"level": e["level"], "manual": bool(e.get("manual"))}
+                     for e in res["steps"]}}
+
+
+@router.post("/{name}/tags/rebuild")
+def rebuild_tags(name: str, user: str = Depends(acting_user)):
+    """Back to the automatic tags (drops every manual click)."""
+    require(user, "write")
+    from core import step_tags
+    path = _flow_path_or_422(name)
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail=f"Test case '{name}' not found.")
+    step_tags.build(path, keep_manual=False)
+    return {"message": "Run-type tags rebuilt automatically.", "tags": _tags_of(path)}
 
 
 class RenameBody(BaseModel):
@@ -323,6 +393,14 @@ def rename_project(name: str, body: RenameBody, user: str = Depends(acting_user)
     try:
         res = rename_flow(name, body.new_name, apply=body.apply)
         if body.apply:
+            try:
+                from core import step_tags
+                old_p = _flow_path(name)
+                new_p = _flow_path(res.get("new_name") or body.new_name)
+                if os.path.exists(step_tags.sidecar_path(old_p)):
+                    os.replace(step_tags.sidecar_path(old_p), step_tags.sidecar_path(new_p))
+            except Exception:  # noqa: BLE001
+                pass
             audit.rename(name, res.get("new_name") or body.new_name)
             audit.touch(res.get("new_name") or body.new_name, user)
             from core import folders
@@ -376,6 +454,15 @@ def clone_project(name: str, body: CloneBody, user: str = Depends(acting_user)):
     if os.path.exists(side_src):
         import shutil
         shutil.copyfile(side_src, side_dst)
+    try:  # carry the clicked run-type tags over to the copy (re-aligned by step text)
+        import shutil
+        from core import step_tags
+        if os.path.exists(step_tags.sidecar_path(src)):
+            os.makedirs(os.path.dirname(step_tags.sidecar_path(dst)), exist_ok=True)
+            shutil.copyfile(step_tags.sidecar_path(src), step_tags.sidecar_path(dst))
+    except Exception:  # noqa: BLE001
+        pass
+    _tags_after_save(dst)
     audit.touch(new, user, created=True)
     from core import folders
     target = folders.folder_of(stem) if body.folder is None else body.folder
@@ -406,6 +493,12 @@ def delete_project(name: str, user: str = Depends(acting_user)):
     sidecar = path[:-len(".flow")] + ".map.json"
     if os.path.exists(sidecar):
         os.remove(sidecar)
+    try:
+        from core import step_tags
+        if os.path.exists(step_tags.sidecar_path(path)):
+            os.remove(step_tags.sidecar_path(path))
+    except Exception:  # noqa: BLE001
+        pass
     from core import folders
     folders.on_delete(name)
     try:

@@ -412,6 +412,15 @@ async def save_project(name: str, steps: list[str], platform: str = "", *,
                            json={"name": name, "steps": steps, "platform": platform})
 
 
+async def toggle_step_tag(name: str, line: int, tag: str) -> dict:
+    """One click on a step's S / Sy / R / F chip (dependency-safe on the server)."""
+    return await _call("POST", f"/projects/{name}/tags/toggle", json={"line": line, "tag": tag})
+
+
+async def rebuild_step_tags(name: str) -> dict:
+    return await _call("POST", f"/projects/{name}/tags/rebuild")
+
+
 # ── Execution ────────────────────────────────────────────────────────────────
 async def check_flow_name(name: str) -> dict:
     """What a typed test-case name will be saved as."""
