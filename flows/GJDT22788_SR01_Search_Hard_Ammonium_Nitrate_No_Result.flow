@@ -1,0 +1,14 @@
+# Platform: mobilesite
+# Requirement: GJDT-22788 — restricted category handling on B2B search ("Current Handlings on Live" table, Prashant 05-Oct-2026)
+# Case SR01: Hard category (hardcoded) — Ammonium Nitrate shows "No Result Found"
+# Expected: "No results found!" on the B2B result page, no product listing
+# Tags: b2b, search, restricted, GJDT-22788, sanity
+# Ammonium Nitrate in Mumbai -> no results
+store "Mumbai" as city
+store "Ammonium Nitrate" as search_term
+call SG_22788_Freetext_Search_In_City
+wait until url contains "/jdmart/${city}"
+verify element b2b_search_no_results is visible
+verify element b2b_search_no_results contains "No results found" ignoring case
+verify element prp_first_product_title is not visible
+take screenshot as mumbai_ammoniumnitrate

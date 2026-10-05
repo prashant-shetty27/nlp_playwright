@@ -1718,12 +1718,17 @@
     "jdmart_search_product_suggestion": "(//div[contains(@class,'b2bautosgtwpr')]//ul[contains(@class,'rntsrchs')]//*[contains(@class,'prdname')][translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')=translate('${category}','ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')])[1]",
     "prp_rfq_floater": "//*[contains(@class,'ama__strip')]",
     "pdp_ask_me_anything_fab": "//*[contains(@class,'ai-fab-wrapper')]",
-    "jdmart_city_option": "(//span[contains(@class,'mvdtname')][normalize-space(.)='${city}'])[1]",
+    "jdmart_city_option": "(//span[contains(@class,'mvdtname')][normalize-space(.)='${city}' or starts-with(normalize-space(.),'${city}-')])[1]",
     "b2b_assist_login_gate": "//div[contains(@class,'rfq-login-gate-card')]",
     "b2b_assist_last_bot_reply": "(//div[contains(@class,'rfq-chat-history')]/div[not(.//div[contains(@class,'rfq-user-msg')])])[last()]",
     "b2b_assist_last_user_message": "(//div[contains(@class,'rfq-user-msg__bubble')])[last()]",
     "b2b_assist_typing_loader": "//*[not(*)][contains(normalize-space(.),'Getting things ready') or contains(normalize-space(.),'Almost there')]",
     "prp_first_product_title": "(//div[contains(@class,'b2bprdctcel')]//h2)[1]",
-    "jdmart_search_first_product_suggestion": "(//div[contains(@class,'b2bautosgtwpr')]//ul[contains(@class,'rntsrchs')]//*[contains(@class,'prdname')])[1]"
+    "jdmart_search_first_product_suggestion": "(//div[contains(@class,'b2bautosgtwpr')]//ul[contains(@class,'rntsrchs')]//*[contains(@class,'prdname')])[1]",
+    "b2b_search_no_results": "//div[contains(@class,'notfound-result')]//*[contains(@class,'notfound-main-text')]",
+    "prp_city_filter": "//li[contains(@class,'filterChipItem')]//span[@id='5003']",
+    "prp_city_filter_input": "//div[@id='5003_popup']//input[@id='srchInpId']",
+    "prp_city_filter_option": "(//div[@id='5003_popup']//span[contains(@class,'mvdtname')][normalize-space(.)='${city}' or starts-with(normalize-space(.),'${city}-')])[1]",
+    "prp_header_search_box": "//div[contains(@class,'hdrSearchMain')]//span[contains(@class,'hdrvend')]"
   }
 }

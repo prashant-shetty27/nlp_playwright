@@ -10,6 +10,7 @@
     "Prashant/B2B/RFQ",
     "Prashant/B2B/RFQ/GJDT-22788 Normal",
     "Prashant/B2B/RFQ/GJDT-22788 Restricted",
+    "Prashant/B2B/RFQ/GJDT-22788 Search",
     "Prashant/B2B/SRP",
     "Prashant/Core",
     "Trails"
@@ -115,7 +116,16 @@
     "GJDT22788_NC06_Genuine_look_alikes_for_pest_glue_must_NOT_be_blocked": "Prashant/B2B/RFQ/GJDT-22788 Normal",
     "GJDT22788_RC20_Gun_powder_blocked_PDP": "Prashant/B2B/RFQ/GJDT-22788 Restricted",
     "GJDT22788_NC11_Logged_out_user_sees_login_gate_no_RFQ": "Prashant/B2B/RFQ/GJDT-22788 Normal",
-    "GJDT22788_NC04_Genuine_look_alike_ammonium_sulphate_fertilizer_allowed": "Prashant/B2B/RFQ/GJDT-22788 Normal"
+    "GJDT22788_NC04_Genuine_look_alike_ammonium_sulphate_fertilizer_allowed": "Prashant/B2B/RFQ/GJDT-22788 Normal",
+    "GJDT22788_RC11_Surat_Other_Gujarat_cities_rodent_glue_pad_data_driven": "Prashant/B2B/RFQ/GJDT-22788 Restricted",
+    "GJDT22788_SR04_Search_Gujarat_Glue_No_Result_Gandhinagar": "Prashant/B2B/RFQ/GJDT-22788 Search",
+    "GJDT22788_SR04_Search_Gujarat_Glue_Mumbai_Has_Results": "Prashant/B2B/RFQ/GJDT-22788 Search",
+    "GJDT22788_SR04_Search_Gujarat_Glue_No_Result_Vadodara": "Prashant/B2B/RFQ/GJDT-22788 Search",
+    "GJDT22788_SR02_Search_Hard_Ammonium_Nitrate_Misspelt_No_Result": "Prashant/B2B/RFQ/GJDT-22788 Search",
+    "GJDT22788_SR04_Search_Gujarat_Glue_No_Result_Ahmedabad": "Prashant/B2B/RFQ/GJDT-22788 Search",
+    "GJDT22788_SR01_Search_Hard_Ammonium_Nitrate_No_Result": "Prashant/B2B/RFQ/GJDT-22788 Search",
+    "GJDT22788_SR04_Search_Gujarat_Glue_No_Result_Surat": "Prashant/B2B/RFQ/GJDT-22788 Search",
+    "GJDT22788_SR04_Search_Gujarat_Glue_No_Result_Rajkot": "Prashant/B2B/RFQ/GJDT-22788 Search"
   },
   "modules": {
     "Prashant": [],

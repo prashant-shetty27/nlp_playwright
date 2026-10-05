@@ -2743,19 +2743,8 @@
   },
   "SG_22788_Search_Product_In_City": {
     "steps": [
-      "# JDMart search as a user: pick ${city} in the search header, then the ${category} product suggestion -> PRP",
-      "open https://www.justdial.com/jdmart",
-      "wait until element jdmart_home_search_box is visible within 20 seconds",
-      "click jdmart_home_search_box",
-      "wait until element jdmart_search_city is visible",
-      "click jdmart_search_city",
-      "click jdmart_search_input",
-      "type \"${city}\" into focused field",
-      "wait until element jdmart_city_option is visible within 15 seconds",
-      "click jdmart_city_option",
-      "wait until element jdmart_home_search_box is visible within 15 seconds",
-      "click jdmart_home_search_box",
-      "click jdmart_search_input",
+      "# JDMart search as a user: ${category} product suggestion in ${city} -> PRP",
+      "call SG_22788_Open_Search_In_City",
       "type \"${category}\" into focused field",
       "wait 3 seconds",
       "wait until element jdmart_search_first_product_suggestion is visible within 15 seconds",
@@ -2765,12 +2754,12 @@
       "else",
       "click jdmart_search_first_product_suggestion",
       "end if",
-      "wait until url contains \"/jdmart/${city}/\"",
+      "wait until url contains \"/jdmart/${city}\"",
       "wait 4 seconds"
     ],
     "platform": "mobilesite",
     "created_at": "2026-10-05T10:38:45+00:00",
-    "step_count": 24
+    "step_count": 13
   },
   "SG_22788_Open_PRP_Floater": {
     "steps": [
@@ -2832,5 +2821,65 @@
     "platform": "mobilesite",
     "created_at": "2026-10-05T10:38:45+00:00",
     "step_count": 24
+  },
+  "SG_22788_Freetext_Search_In_City": {
+    "steps": [
+      "# JDMart free-text search as a user: ${search_term} + Enter in ${city} -> result page",
+      "call SG_22788_Open_Search_In_City",
+      "type \"${search_term}\" into focused field",
+      "wait 2 seconds",
+      "press key Enter",
+      "wait 6 seconds",
+      "click if visible b2b_prp_gvs_popup_skip"
+    ],
+    "platform": "mobilesite",
+    "created_at": "2026-10-05T12:20:02+00:00",
+    "step_count": 7
+  },
+  "SG_22788_Open_Search_In_City": {
+    "steps": [
+      "# Picks ${city} the way a user can: from the search header's city list when it offers the city,",
+      "# otherwise (the header only lists popular cities) from a result page's city filter. Ends on a page whose search box searches in ${city}.",
+      "open https://www.justdial.com/jdmart",
+      "wait until element jdmart_home_search_box is visible within 20 seconds",
+      "click jdmart_home_search_box",
+      "wait until element jdmart_search_city is visible",
+      "click jdmart_search_city",
+      "click jdmart_search_input",
+      "type \"${city}\" into focused field",
+      "wait 4 seconds",
+      "if element jdmart_city_option is visible",
+      "click jdmart_city_option",
+      "wait until element jdmart_home_search_box is visible within 15 seconds",
+      "click jdmart_home_search_box",
+      "else",
+      "open https://www.justdial.com/jdmart",
+      "wait until element jdmart_home_search_box is visible within 20 seconds",
+      "click jdmart_home_search_box",
+      "click jdmart_search_input",
+      "type \"Roofing Sheets\" into focused field",
+      "wait 2 seconds",
+      "press key Enter",
+      "wait until url contains \"/jdmart/\"",
+      "wait 4 seconds",
+      "click if visible b2b_prp_gvs_popup_skip",
+      "click prp_city_filter",
+      "wait until element prp_city_filter_input is visible",
+      "click prp_city_filter_input",
+      "type \"${city}\" into focused field",
+      "wait until element prp_city_filter_option is visible within 15 seconds",
+      "click prp_city_filter_option",
+      "wait until url contains \"/jdmart/${city}\"",
+      "wait 3 seconds",
+      "click if visible b2b_prp_gvs_popup_skip",
+      "click prp_header_search_box",
+      "end if",
+      "wait until element jdmart_search_input is visible",
+      "clear jdmart_search_input",
+      "click jdmart_search_input"
+    ],
+    "platform": "mobilesite",
+    "created_at": "2026-10-05T10:38:45+00:00",
+    "step_count": 39
   }
 }

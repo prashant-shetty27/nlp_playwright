@@ -1,0 +1,59 @@
+# Platform: mobilesite
+# Requirement: GJDT-22788 — restricted category handling on B2B search ("Current Handlings on Live" table, Prashant 05-Oct-2026)
+# Case SR02: Hard category — misspelt / variant free text of Ammonium Nitrate shows "No Result Found"
+# Variants from the GJDT-22788 sheet (spacing, case, hyphen, typo, formula, trade abbreviation)
+# Tags: b2b, search, restricted, GJDT-22788, sanity
+# amonium nitrat in Mumbai -> no results
+store "Mumbai" as city
+store "amonium nitrat" as search_term
+call SG_22788_Freetext_Search_In_City
+wait until url contains "/jdmart/${city}"
+verify element b2b_search_no_results is visible
+verify element b2b_search_no_results contains "No results found" ignoring case
+verify element prp_first_product_title is not visible
+take screenshot as mumbai_amoniumnitrat
+# ammonium  nitrate in Mumbai -> no results
+store "Mumbai" as city
+store "ammonium  nitrate" as search_term
+call SG_22788_Freetext_Search_In_City
+wait until url contains "/jdmart/${city}"
+verify element b2b_search_no_results is visible
+verify element b2b_search_no_results contains "No results found" ignoring case
+verify element prp_first_product_title is not visible
+take screenshot as mumbai_ammoniumnitrate
+# AMMONIUM NITRATE in Mumbai -> no results
+store "Mumbai" as city
+store "AMMONIUM NITRATE" as search_term
+call SG_22788_Freetext_Search_In_City
+wait until url contains "/jdmart/${city}"
+verify element b2b_search_no_results is visible
+verify element b2b_search_no_results contains "No results found" ignoring case
+verify element prp_first_product_title is not visible
+take screenshot as mumbai_ammoniumnitrate
+# Ammonium-Nitrate in Mumbai -> no results
+store "Mumbai" as city
+store "Ammonium-Nitrate" as search_term
+call SG_22788_Freetext_Search_In_City
+wait until url contains "/jdmart/${city}"
+verify element b2b_search_no_results is visible
+verify element b2b_search_no_results contains "No results found" ignoring case
+verify element prp_first_product_title is not visible
+take screenshot as mumbai_ammoniumnitrate
+# NH4NO3 in Mumbai -> no results
+store "Mumbai" as city
+store "NH4NO3" as search_term
+call SG_22788_Freetext_Search_In_City
+wait until url contains "/jdmart/${city}"
+verify element b2b_search_no_results is visible
+verify element b2b_search_no_results contains "No results found" ignoring case
+verify element prp_first_product_title is not visible
+take screenshot as mumbai_nh4no3
+# AN prills in Mumbai -> no results
+store "Mumbai" as city
+store "AN prills" as search_term
+call SG_22788_Freetext_Search_In_City
+wait until url contains "/jdmart/${city}"
+verify element b2b_search_no_results is visible
+verify element b2b_search_no_results contains "No results found" ignoring case
+verify element prp_first_product_title is not visible
+take screenshot as mumbai_anprills

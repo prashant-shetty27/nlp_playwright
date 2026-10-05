@@ -1,0 +1,36 @@
+# Platform: mobilesite
+# Requirement: GJDT-22791 (story GJDT-22788) — Conversational RFQ / B2B Assist, restricted category
+# Case RC11: Other Gujarat cities – rodent/glue pad (data-driven) | P2 | Negative | entry PRP | Surat / Roofing Sheets | English
+# Expected: Each blocked in every Gujarat city
+# Last staging result in the sheet: Not run
+# Restricted handling is still in testing (05-Oct-2026) — verify on live once GJDT-22788 is taken live.
+# Rodent / glue-pad cluster: Prashant 05-Oct — blocked in Gujarat cities AND pan-India.
+# AI replies: assertions use the regex families from the sheet (Test Data rfq22788_*), not exact text.
+# Tags: b2b, rfq, b2b-assist, GJDT-22788, restricted, P2
+store "Surat" as city
+store "Roofing Sheets" as category
+store "(set by the chat step group)" as bot_reply
+call SG_22788_Open_PRP_Floater
+# opening reply for a genuine page category starts the campaign
+verify ${bot_reply} matches "${rfq22788_campaign_started}" ignoring case
+# (BLOCK) rat trap black
+store "rat trap black" as message
+call SG_22788_Send_Message
+verify ${bot_reply} matches "${rfq22788_restricted_alert}" ignoring case
+verify ${bot_reply} does not match "${rfq22788_campaign_or_suggestion}" ignoring case
+# (BLOCK) Glue Pad Insect Killer Wholesalers
+store "Glue Pad Insect Killer Wholesalers" as message
+call SG_22788_Send_Message
+verify ${bot_reply} matches "${rfq22788_restricted_alert}" ignoring case
+verify ${bot_reply} does not match "${rfq22788_campaign_or_suggestion}" ignoring case
+# (BLOCK) Rat Glue Pad Distributors
+store "Rat Glue Pad Distributors" as message
+call SG_22788_Send_Message
+verify ${bot_reply} matches "${rfq22788_restricted_alert}" ignoring case
+verify ${bot_reply} does not match "${rfq22788_campaign_or_suggestion}" ignoring case
+# (BLOCK) rodent cage trap
+store "rodent cage trap" as message
+call SG_22788_Send_Message
+verify ${bot_reply} matches "${rfq22788_restricted_alert}" ignoring case
+verify ${bot_reply} does not match "${rfq22788_campaign_or_suggestion}" ignoring case
+take screenshot as rc11_transcript
