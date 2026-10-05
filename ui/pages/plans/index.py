@@ -252,6 +252,13 @@ async def render_edit(plan_id: str = "") -> None:
                               value=ex.get("screenshot_mode") or "all", label="Screenshots") \
                 .props("outlined dense").style("min-width:22rem")
             muted("Steps switched off in a test case (# OFF, e.g. lead submission) never run in a plan.")
+            parallel = ui.select({1: "1 — one test case at a time", 2: "2 at a time", 3: "3 at a time",
+                                  4: "4 at a time (recommended on this Mac)", 5: "5 at a time",
+                                  6: "6 at a time"},
+                                 value=int(ex.get("parallel") or 1), label="Run test cases in parallel") \
+                .props("outlined dense").style("min-width:22rem")
+            muted("Each parallel test case is its own browser (~1 CPU core, ~0.7 GB). Slowest test "
+                  "cases start first. Live step view is per test case report while running in parallel.")
 
             # Device / browser matrix — a design change has to be seen on the
             # browsers people actually use, not only on the platform default.
@@ -450,7 +457,8 @@ async def render_edit(plan_id: str = "") -> None:
                          "stop_on_failure": bool(stop_step.value),
                          "stop_on_first_failure": bool(stop_plan.value),
                          "devices": [DEVICE_PROFILES[k] for k in (devices.value or []) if k in DEVICE_PROFILES],
-                         "site_env": site_env_sel.value or ""}
+                         "site_env": site_env_sel.value or "",
+                         "parallel": int(parallel.value or 1)}
             notify = {"slack": bool(slack.value), "channel": (channel.value or "").strip(),
                       "when": when.value, "email": bool(email_on.value),
                       "email_to": (email_to.value or "").strip()}

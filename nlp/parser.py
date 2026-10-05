@@ -77,11 +77,13 @@ def parse_step(step: str) -> Command:
     if m:
         return Command(type="verify_url", values=[re.sub(r"\s+", " ", m.group(1).lower())], text=m.group(2))
     m = re.match(r'^wait\s+(?:for\s+|until\s+)?(?:the\s+)?(?:current\s+|page\s+)?(?:url|address)\s+'
-                 r'(?:to\s+)?(does\s+not\s+contain|doesn\'t\s+contain|not\s+contain|contains?|containing|is|to\s+be|be|starts\s+with|ends\s+with)\s+"(.*?)"'
+                 r'(?:to\s+)?(does\s+not\s+contain|doesn\'t\s+contain|not\s+contain|contains?|containing|is\s+not|changes?\s+from|is|to\s+be|be|starts\s+with|ends\s+with)\s+"(.*?)"'
                  r'(?:\s+(?:within|for)\s+(\d+)\s*(?:s|sec|secs|seconds?))?$', s, re.I)
     if m:
         op = m.group(1).lower()
-        op = ("does not contain" if "not" in op or "n't" in op else
+        op = re.sub(r"\s+", " ", op)
+        op = ("is not" if op in ("is not", "change from", "changes from") else
+              "does not contain" if "not" in op or "n't" in op else
               "contains" if op.startswith("contain") else ("is" if op in ("is", "to be", "be") else op))
         return Command(type="wait_for_url", values=[op], text=m.group(2),
                        wait=float(m.group(3)) if m.group(3) else None)

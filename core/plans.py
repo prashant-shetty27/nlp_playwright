@@ -195,7 +195,9 @@ def _view(plan_id: str, d: dict) -> dict:
                           # Device / browser matrix: every test case runs once per
                           # entry. [] = the platform's default device only.
                           "devices": [d for d in (ex.get("devices") or []) if isinstance(d, dict)],
-                          "site_env": ex.get("site_env") or ""},
+                          "site_env": ex.get("site_env") or "",
+                          # Test cases run this many at a time (separate processes).
+                          "parallel": max(1, min(int(ex.get("parallel") or 1), 6))},
             "schedule": sched, "schedule_text": describe_schedule(sched),
             "next_run": d.get("next_run", ""),
             "notify": d.get("notify") or {"slack": False, "channel": DEFAULT_CHANNEL, "when": "always"},

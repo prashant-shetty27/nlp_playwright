@@ -26,9 +26,12 @@ from config.settings import DATA_DIR
 
 logger = logging.getLogger(__name__)
 RUNS_DIR = os.path.join(DATA_DIR, "plan_runs")
+LOGS_DIR = os.path.join(DATA_DIR, "logs")
 _exec_lock = threading.Lock()          # one plan executes at a time
 _file_lock = threading.Lock()
 _abort: set[str] = set()
+#: "Stop now" (not "after the current test case") — parallel workers are terminated.
+_abort_now: set[str] = set()
 
 
 def _now() -> str:
@@ -88,6 +91,7 @@ def request_stop(run_id: str, now: bool = False) -> None:
     """Stop after the current test case — or, with now=True, at the next step."""
     _abort.add(run_id)
     if now:
+        _abort_now.add(run_id)
         try:
             rec = get_run(run_id)
         except (OSError, ValueError):
@@ -336,6 +340,7 @@ def _execute(rec: dict) -> None:
             _save(rec)
         finally:
             _abort.discard(rec["id"])
+            _abort_now.discard(rec["id"])
     try:
         from core import plans
         plans.record_run(rec["plan_id"], rec)
@@ -364,6 +369,190 @@ def _execute(rec: dict) -> None:
         _save(rec)
 
 
+def _run_item(rec: dict, item: dict, ex: dict) -> None:
+    """One test case of a plan run, with its retries — used by the sequential
+    loop and by execution/plan_worker.py (one process per test case)."""
+    from fastapi import HTTPException
+
+    from api.routes import tests as T
+    from core import suites
+
+    attempts = 1 + (1 if ex.get("retry_failed") else 0)
+    retry_mode = ex.get("retry_mode") or "flaky"      # flaky | always
+    for attempt in range(1, attempts + 1):
+        dev = item.get("device") or {}
+        body = T.RunRequest(project=item["test_case"], headless=bool(ex.get("headless", False)),
+                            platform=item.get("platform") or "website",
+                            stop_on_failure=bool(ex.get("stop_on_failure", False)),
+                            screenshot_mode=ex.get("screenshot_mode") or "all",
+                            device_name=dev.get("device_name") or "",
+                            browser=dev.get("browser") or "",
+                            browser_identity=dev.get("browser_identity") or "",
+                            site_env=ex.get("site_env") or "")
+        item.update(status="running", attempt=attempt, started_at=_now())
+        _save(rec)
+        try:
+            flow_path, caps, *_ = T._prepare_run(body, suites.script_path(item["script"]))
+        except HTTPException as e:
+            item.update(status="not_run", reason=str(e.detail), finished_at=_now())
+            break
+        except Exception as e:  # noqa: BLE001
+            item.update(status="not_run", reason=str(e)[:300], finished_at=_now())
+            break
+        run_id = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S_%f")
+        item["run_id"] = run_id
+        item.setdefault("run_ids", []).append(run_id)
+        _save(rec)
+        T._remember(run_id, {"status": "running", "result": None})
+        summary = T._run_flow_sync(run_id, flow_path, body.headless, capabilities=caps,
+                                   triggered_by=rec["triggered_by"], plan_run=rec["id"],
+                                   stop_on_failure=body.stop_on_failure,
+                                   screenshot_mode=ex.get("screenshot_mode") or "all",
+                                   run_type=rec.get("run_type") or "")
+        try:
+            item["duration_s"] = int((datetime.now(timezone.utc)
+                                      - datetime.fromisoformat(item["started_at"])).total_seconds())
+            item.setdefault("attempts_s", []).append(item["duration_s"])
+        except (KeyError, ValueError):
+            pass
+        T._cancelled.discard(run_id)
+        # Keep every attempt: the row shows the last one, but the first
+        # attempt's report and failure are not lost to a retry.
+        item.setdefault("attempts", []).append({
+            "attempt": attempt, "run_id": run_id,
+            "passed": summary.get("passed", 0), "failed": summary.get("failed", 0),
+            "report_file": os.path.basename(summary.get("report_file") or ""),
+            "first_failure": next((f"line {e.get('line')}: {e.get('step')} — {e.get('error', '')}"[:400]
+                                   for e in summary.get("log", []) if e.get("status") == "failed"), "")})
+        item.update(passed_steps=summary.get("passed", 0), failed_steps=summary.get("failed", 0),
+                    skipped_steps=summary.get("skipped", 0), finished_at=_now(),
+                    report_file=os.path.basename(summary.get("report_file") or ""),
+                    first_failure=next((f"line {e.get('line')}: {e.get('step')} — {e.get('error', '')}"[:400]
+                                        for e in summary.get("log", [])
+                                        if e.get("status") == "failed"), ""))
+        ok = summary.get("failed", 0) == 0 and summary.get("passed", 0) > 0
+        stopped = rec["id"] in _abort or bool(summary.get("stopped_early"))
+        if ok and stopped:
+            # "Stop now" cut the run short with no failure yet. That is
+            # not a pass — 3 of 10 steps ran — and it is not a defect.
+            item["status"] = "not_run"
+            item["reason"] = (f"stopped by user after step "
+                              f"{summary.get('passed', 0)}")
+            ok = False
+        elif summary.get("total", 0) == 0:
+            # Nothing runnable (every line is "# OFF:" or a comment) —
+            # not a failure, and nothing a retry could change.
+            item.update(status="not_run", out_of_scope=True,
+                        reason="no runnable step (all lines are # OFF / comments)")
+            _save(rec)
+            break
+        else:
+            item["status"] = "passed" if ok else "failed"
+        if ok and attempt > 1:
+            item["note"] = "passed on retry"
+        _save(rec)
+        if ok or stopped:
+            break
+        if attempt < attempts and retry_mode != "always" and not _looks_flaky(summary):
+            # A check that ran and found wrong data fails the same way on a
+            # re-run — re-running a 129-step test case for it cost 7 min.
+            item["note"] = "not retried — a check failed on real data, not a timeout / network error"
+            _save(rec)
+            break
+
+
+#: Upper bound for execution.parallel — each lane is a browser (~1 core, ~0.7 GB).
+MAX_PARALLEL = 6
+
+
+def _expected_seconds(item: dict) -> float:
+    """Median of this test case's recent report durations (unknown -> 60 s)."""
+    import glob
+    import json as _json
+    import statistics
+    name = item.get("test_case") or ""
+    vals = []
+    for f in sorted(glob.glob(os.path.join(LOGS_DIR, f"report_{name}_*.json")))[-6:]:
+        try:
+            with open(f, encoding="utf-8") as fh:
+                d = _json.load(fh)
+        except (OSError, ValueError):
+            continue
+        if d.get("testplan") != name:
+            continue
+        t = (d.get("timing") or {}).get("total_s")
+        if t:
+            vals.append(float(t))
+    return statistics.median(vals) if vals else 60.0
+
+
+def _run_parallel(rec: dict, ex: dict, lanes: int) -> None:
+    """
+    Run the plan's test cases `lanes` at a time, each in its own process
+    (execution/plan_worker.py). Processes, not threads: a run keeps
+    process-wide state (HEADLESS, runtime variables, the last typed mobile for
+    ${otp}, caches) that two runs in one process would overwrite. Slowest test
+    cases start first so the run is not left waiting on one long test at the end.
+    """
+    import json as _json
+    import subprocess
+    import sys
+    import time
+
+    base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    lane_dir = os.path.join(RUNS_DIR, rec["id"] + "_lanes")
+    os.makedirs(lane_dir, exist_ok=True)
+    todo = [i for i, it in enumerate(rec["items"]) if it["status"] == "pending"]
+    todo.sort(key=lambda i: -_expected_seconds(rec["items"][i]))
+    rec["parallel"] = lanes
+    _save(rec)
+    running: dict[int, tuple] = {}            # item index -> (Popen, out path, log handle)
+    stop_rest = False
+
+    def _merge(i: int, out: str) -> None:
+        try:
+            with open(out, encoding="utf-8") as fh:
+                rec["items"][i].update(_json.load(fh))
+        except (OSError, ValueError):
+            pass
+
+    while todo or running:
+        aborted = rec["id"] in _abort or stop_rest
+        while todo and len(running) < lanes and not aborted:
+            i = todo.pop(0)
+            out = os.path.join(lane_dir, f"item_{i}.json")
+            log = open(os.path.join(lane_dir, f"item_{i}.log"), "w", encoding="utf-8")
+            proc = subprocess.Popen([sys.executable, "-m", "execution.plan_worker", rec["id"], str(i), out],
+                                    cwd=base, stdout=log, stderr=subprocess.STDOUT)
+            rec["items"][i].update(status="running", started_at=_now(), lane_pid=proc.pid)
+            running[i] = (proc, out, log)
+        if aborted:
+            for i in todo:
+                rec["items"][i].update(status="not_run", reason=(
+                    "plan stopped by user" if rec["id"] in _abort
+                    else "an earlier test case failed (stop on first failure)"))
+            todo = []
+        for i, (proc, out, log) in list(running.items()):
+            if proc.poll() is None:
+                _merge(i, out)                 # attempt / run_id while it runs
+                if rec["id"] in _abort and rec["id"] in _abort_now:
+                    proc.terminate()
+                continue
+            log.close()
+            _merge(i, out)
+            it = rec["items"][i]
+            if it.get("status") in ("running", "pending"):
+                it.update(status="not_run", finished_at=_now(),
+                          reason=("stopped by user" if rec["id"] in _abort
+                                  else f"worker exited with code {proc.returncode} — see {os.path.basename(out)[:-5]}.log"))
+            it.pop("lane_pid", None)
+            del running[i]
+            if it.get("status") == "failed" and ex.get("stop_on_first_failure"):
+                stop_rest = True
+        _save(rec)
+        time.sleep(1.5)
+
+
 def _run(rec: dict) -> None:
     from fastapi import HTTPException
 
@@ -376,7 +565,10 @@ def _run(rec: dict) -> None:
     _save(rec)
     logger.info("📋 Plan run %s — %s (%d test cases)", rec["id"], rec["plan_name"], len(rec["items"]))
     stop_rest = False
-    for item in rec["items"]:
+    lanes = max(1, min(int(ex.get("parallel") or 1), MAX_PARALLEL))
+    if lanes > 1:
+        _run_parallel(rec, ex, lanes)
+    for item in rec["items"] if lanes == 1 else []:
         if item["status"] != "pending":
             continue
         if rec["id"] in _abort:
@@ -385,88 +577,7 @@ def _run(rec: dict) -> None:
         if stop_rest:
             item.update(status="not_run", reason="an earlier test case failed (stop on first failure)")
             continue
-        attempts = 1 + (1 if ex.get("retry_failed") else 0)
-        retry_mode = ex.get("retry_mode") or "flaky"      # flaky | always
-        for attempt in range(1, attempts + 1):
-            dev = item.get("device") or {}
-            body = T.RunRequest(project=item["test_case"], headless=bool(ex.get("headless", False)),
-                                platform=item.get("platform") or "website",
-                                stop_on_failure=bool(ex.get("stop_on_failure", False)),
-                                screenshot_mode=ex.get("screenshot_mode") or "all",
-                                device_name=dev.get("device_name") or "",
-                                browser=dev.get("browser") or "",
-                                browser_identity=dev.get("browser_identity") or "",
-                                site_env=ex.get("site_env") or "")
-            item.update(status="running", attempt=attempt, started_at=_now())
-            _save(rec)
-            try:
-                flow_path, caps, *_ = T._prepare_run(body, suites.script_path(item["script"]))
-            except HTTPException as e:
-                item.update(status="not_run", reason=str(e.detail), finished_at=_now())
-                break
-            except Exception as e:  # noqa: BLE001
-                item.update(status="not_run", reason=str(e)[:300], finished_at=_now())
-                break
-            run_id = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S_%f")
-            item["run_id"] = run_id
-            item.setdefault("run_ids", []).append(run_id)
-            _save(rec)
-            T._remember(run_id, {"status": "running", "result": None})
-            summary = T._run_flow_sync(run_id, flow_path, body.headless, capabilities=caps,
-                                       triggered_by=rec["triggered_by"], plan_run=rec["id"],
-                                       stop_on_failure=body.stop_on_failure,
-                                       screenshot_mode=ex.get("screenshot_mode") or "all",
-                                       run_type=rec.get("run_type") or "")
-            try:
-                item["duration_s"] = int((datetime.now(timezone.utc)
-                                          - datetime.fromisoformat(item["started_at"])).total_seconds())
-                item.setdefault("attempts_s", []).append(item["duration_s"])
-            except (KeyError, ValueError):
-                pass
-            T._cancelled.discard(run_id)
-            # Keep every attempt: the row shows the last one, but the first
-            # attempt's report and failure are not lost to a retry.
-            item.setdefault("attempts", []).append({
-                "attempt": attempt, "run_id": run_id,
-                "passed": summary.get("passed", 0), "failed": summary.get("failed", 0),
-                "report_file": os.path.basename(summary.get("report_file") or ""),
-                "first_failure": next((f"line {e.get('line')}: {e.get('step')} — {e.get('error', '')}"[:400]
-                                       for e in summary.get("log", []) if e.get("status") == "failed"), "")})
-            item.update(passed_steps=summary.get("passed", 0), failed_steps=summary.get("failed", 0),
-                        skipped_steps=summary.get("skipped", 0), finished_at=_now(),
-                        report_file=os.path.basename(summary.get("report_file") or ""),
-                        first_failure=next((f"line {e.get('line')}: {e.get('step')} — {e.get('error', '')}"[:400]
-                                            for e in summary.get("log", [])
-                                            if e.get("status") == "failed"), ""))
-            ok = summary.get("failed", 0) == 0 and summary.get("passed", 0) > 0
-            stopped = rec["id"] in _abort or bool(summary.get("stopped_early"))
-            if ok and stopped:
-                # "Stop now" cut the run short with no failure yet. That is
-                # not a pass — 3 of 10 steps ran — and it is not a defect.
-                item["status"] = "not_run"
-                item["reason"] = (f"stopped by user after step "
-                                  f"{summary.get('passed', 0)}")
-                ok = False
-            elif summary.get("total", 0) == 0:
-                # Nothing runnable (every line is "# OFF:" or a comment) —
-                # not a failure, and nothing a retry could change.
-                item.update(status="not_run", out_of_scope=True,
-                            reason="no runnable step (all lines are # OFF / comments)")
-                _save(rec)
-                break
-            else:
-                item["status"] = "passed" if ok else "failed"
-            if ok and attempt > 1:
-                item["note"] = "passed on retry"
-            _save(rec)
-            if ok or stopped:
-                break
-            if attempt < attempts and retry_mode != "always" and not _looks_flaky(summary):
-                # A check that ran and found wrong data fails the same way on a
-                # re-run — re-running a 129-step test case for it cost 7 min.
-                item["note"] = "not retried — a check failed on real data, not a timeout / network error"
-                _save(rec)
-                break
+        _run_item(rec, item, ex)
         if item["status"] == "failed" and ex.get("stop_on_first_failure"):
             stop_rest = True
     t = rec["totals"]

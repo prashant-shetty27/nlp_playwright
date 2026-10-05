@@ -1364,13 +1364,57 @@ def _finger_scroll_to(page, loc, max_swipes: int = 25) -> bool:
     return False
 
 
+
+#: Classes that mean "content is still coming": spinners, loaders, skeleton shimmers.
+_BUSY_JS = r"""() => {
+  const rx = /(^|[\s_-])(loader|loading|spinner|spin|shimmer|skeleton|progress)([\s_-]|$)/i;
+  const vh = window.innerHeight, vw = window.innerWidth;
+  for (const el of document.querySelectorAll('[class*="load"],[class*="spin"],[class*="shimmer"],[class*="skeleton"],[role="progressbar"],[aria-busy="true"]')) {
+    const c = (typeof el.className === 'string' ? el.className : (el.getAttribute('class') || ''));
+    if (!(rx.test(c) || el.getAttribute('role') === 'progressbar' || el.getAttribute('aria-busy') === 'true')) continue;
+    const r = el.getBoundingClientRect();
+    if (r.width < 8 || r.height < 8 || r.bottom < 0 || r.top > vh || r.right < 0 || r.left > vw) continue;
+    const st = getComputedStyle(el);
+    if (st.visibility === 'hidden' || st.display === 'none' || parseFloat(st.opacity) === 0) continue;
+    return false;
+  }
+  return true;
+}"""
+
+
+def _settle_after_scroll(page, max_ms: int | None = None) -> None:
+    """
+    After a scroll or swipe: wait until no loader / spinner / skeleton is on
+    screen and the network is quiet — content loaded by the scroll (infinite
+    lists, lazy sections) is in place before the next step looks at the page.
+    Condition-based, bounded (SCROLL_SETTLE_MS, default 8 s), never fails a step.
+    """
+    budget = int(max_ms if max_ms is not None else getattr(settings, "SCROLL_SETTLE_MS", 8000))
+    if budget <= 0:
+        return
+    started = time.perf_counter()
+    try:
+        page.wait_for_timeout(150)            # let the scroll fire its lazy-load request
+        page.wait_for_function(_BUSY_JS, timeout=budget)
+    except Exception:  # noqa: BLE001 — still loading at the budget: carry on, the next step decides
+        logger.info("⏳ A loader was still on screen after %d ms of scrolling settle", budget)
+    left = budget - int((time.perf_counter() - started) * 1000)
+    if left > 0:
+        try:
+            page.wait_for_load_state("networkidle", timeout=min(left, 2500))
+        except Exception:  # noqa: BLE001
+            pass
+
 def _scroll_by(page, dx, dy) -> None:
     """Every "scroll by N" goes through here: finger drag on a phone page,
-    mouse wheel on a desktop page (and for sideways scrolling)."""
+    mouse wheel on a desktop page (and for sideways scrolling). Then waits for
+    whatever the scroll started loading (see _settle_after_scroll)."""
     if not dx and _is_touch_page(page):
         _finger_scroll(page, dy)
     else:
         _wheel(page, dx, dy)
+    if not dx:
+        _settle_after_scroll(page)
 
 
 def vertical_scroll(page_obj, amount=500):
@@ -1386,6 +1430,10 @@ def scroll_until_text_visible(page, text, max_scrolls=None, scroll_wait=2):
 
     while scrolls < int(max_scrolls):
         locator = page.get_by_text(target_text, exact=True)
+        if locator.count() == 0:
+            # "verify text … on page" matches part of a text; finding it by
+            # scrolling must work for the same words.
+            locator = page.get_by_text(target_text, exact=False)
         if locator.count() > 0 and locator.first.is_visible(timeout=500):
             return True
         _scroll_by(page, 0, 500)
@@ -1500,7 +1548,9 @@ def swipe_screen(page, span: str = "bottom_top", duration_s: float | None = None
         for _ in range(steps):
             _wheel(page, 0, (ya - yb) / steps)
             page.wait_for_timeout(int(secs * 1000 / steps))
-    page.wait_for_timeout(500)               # let the fling settle
+    page.wait_for_timeout(300)               # let the fling finish moving
+    if not any(w in str(span).lower() for w in ("left", "right")):
+        _settle_after_scroll(page)           # and whatever it started loading
     if time.time() - t_gesture > 3.5:
         _mark_slow(page)
     logger.info("👆 Swiped %s (%s, %.1fs)", span.replace("_", " to "), "touch" if touch else "mouse", secs)
@@ -1631,9 +1681,36 @@ def scroll_until_element_visible(page, target: str, pixels=500, direction="down"
         return (0 <= box["y"] < viewport["height"] - 1 and box["y"] + box["height"] > 0
                 and 0 <= box["x"] < viewport["width"] - 1 and box["x"] + box["width"] > 0)
 
+    def _jump_if_rendered() -> bool:
+        """The element is already on the page, just off screen: go straight to it
+        (finger swipes on a phone page) instead of guessing more pixel steps."""
+        if dx:
+            return False
+        loc = page.locator(xpath).first
+        try:
+            if loc.count() == 0:
+                return False
+            box = loc.bounding_box(timeout=300)
+        except Exception:  # noqa: BLE001
+            return False
+        if not box or not ((dy > 0 and box["y"] >= viewport["height"]) or (dy < 0 and box["y"] < 0)):
+            return False
+        try:
+            if _is_touch_page(page):
+                _finger_scroll_to(page, loc)
+            else:
+                loc.scroll_into_view_if_needed(timeout=5000)
+        except Exception:  # noqa: BLE001
+            return False
+        _settle_after_scroll(page)
+        return _in_viewport()
+
     for i in range(int(max_scrolls) + 1):
         if _in_viewport():
             logger.info("📜 '%s' is in view after %d scroll(s) of %dpx %s", target, i, px, direction)
+            return True
+        if _jump_if_rendered():
+            logger.info("📜 '%s' was on the page below the fold — scrolled straight to it", target)
             return True
         if i == int(max_scrolls):
             break

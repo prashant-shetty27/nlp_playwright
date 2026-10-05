@@ -67,6 +67,8 @@ WAIT_TIMEOUT_MS: int = int(os.getenv("WAIT_TIMEOUT_MS", str(_ctrl("browser.wait_
 #: Configured (in .env or the control file): that exact value is used as a
 #: fixed wait — a number you set by hand is honoured as written.
 STEP_SETTLE_MS: int = int(os.getenv("STEP_SETTLE_MS", str(_ctrl("browser.step_settle_ms", 1500))))
+#: After a scroll/swipe: max wait for loaders / spinners to clear (condition-based).
+SCROLL_SETTLE_MS: int = int(os.getenv("SCROLL_SETTLE_MS", str(_ctrl("browser.scroll_settle_ms", 8000))))
 STEP_SETTLE_FIXED: bool = bool(os.getenv("STEP_SETTLE_MS")) or _ctrl("browser.step_settle_ms") is not None
 SEARCH_MODAL_WAIT_MS: int = int(os.getenv("SEARCH_MODAL_WAIT_MS", str(_ctrl("browser.search_modal_wait_ms", 6000))))
 SEARCH_MODAL_WAIT_FIXED: bool = bool(os.getenv("SEARCH_MODAL_WAIT_MS")) or _ctrl("browser.search_modal_wait_ms") is not None
