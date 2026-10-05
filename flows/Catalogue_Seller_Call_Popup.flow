@@ -17,11 +17,10 @@ wait 1 seconds
 scroll down 3600
 wait 1 seconds
 scroll down 5400
-wait 2 seconds
+wait 4 seconds
 # Live 02-Oct-2026: scrolling now brings up the category popup ("What are you looking for?") and the
 #   seller "Just a call away" popup did not appear in 10+ scrolls. Logged to confirm with PO (issues list #9).
 #   If the seller popup shows, its content is checked; otherwise the category popup must have shown instead.
-wait 2 seconds
 if element catalogue_seller_call_pop is visible
 verify element catalogue_image_seller_call_pop is visible
 verify element catalogue_heading_seller_call_popup is visible

@@ -1,0 +1,48 @@
+{
+ "version": 1,
+ "flow_mtime": 1791221399.679137,
+ "steps": [
+  {
+   "line": 7,
+   "text": "[ignore] call Location_Popup",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 8,
+   "text": "open https://www.justdial.com/jdmart/Kadi/Sanitizer/pid-2030572139/9999P2762-2762-210524104439-X9W9",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 9,
+   "text": "wait until element pdp_seller_info_view_more_tab is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 10,
+   "text": "scroll to pdp_seller_info_view_more_tab",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 11,
+   "text": "verify element pdp_seller_info_view_more_tab is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 12,
+   "text": "click pdp_seller_info_view_more_tab",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 13,
+   "text": "click pdp_website_1st_link",
+   "level": "R",
+   "manual": false
+  }
+ ]
+}

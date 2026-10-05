@@ -1,0 +1,24 @@
+{
+ "version": 1,
+ "flow_mtime": 1791221399.663206,
+ "steps": [
+  {
+   "line": 7,
+   "text": "open https://www.justdial.com/jdmart/Thane/High-Performance-Spherical-Plain-Bearing-1-5-in/pid-801321625/022PXX22-XX22-091011181025-V8E3?idx=0&jdmid=jdm-1100190-ent-2-6849543&alsoserveCity=Mumbai&searchString=Spherical-Plain-Bearing&btype=dealers&img=q28556ho.jpg&nid=10447286",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 8,
+   "text": "wait until element pdp_top_get_quotes is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 9,
+   "text": "call SG_PDP_Get_Quotes_Submission_Non_Login_Flow",
+   "level": "S",
+   "manual": false
+  }
+ ]
+}

@@ -2550,6 +2550,24 @@ class TestCasesPage:
                 ui.label(txt).style(f"color:{col}; font-size:{TYPOGRAPHY['size_xs']}; white-space:nowrap")
                 ui.icon("expand_more").style(f"color:{col}; font-size:14px")
             chip.on("click", self._runs_dialog)
+            # Trend over recent runs: pass rate, streak, the step that usually fails.
+            try:
+                ins = await api.flow_insight(name)
+            except api.ApiError:
+                ins = {}
+            if ins.get("runs"):
+                pr = ins.get("pass_rate")
+                tcol = COLORS["success"] if (pr or 0) >= 80 else COLORS["warning"] if (pr or 0) >= 50 else COLORS["danger"]
+                txt2 = f"{pr}% pass in last {ins['runs']}"
+                if ins.get("fail_streak", 0) >= 2:
+                    txt2 += f" · failing {ins['fail_streak']} in a row"
+                if ins.get("median_duration_s"):
+                    txt2 += f" · ~{int(ins['median_duration_s'])}s"
+                tl = ui.label(txt2).style(f"color:{tcol}; font-size:{TYPOGRAPHY['size_xs']}; white-space:nowrap;"
+                                          f"border:1px solid {tcol}66; border-radius:10px; padding:0 8px")
+                tf = ins.get("top_failing_step")
+                if tf:
+                    tl.tooltip(f"Usually fails at: {tf[0]} ({tf[1]}x)")
             ff = r.get("first_failure") or {}
             chip.tooltip(("Failed at " + self._run_editor_step(ff.get("line")) + ": "
                           + (ff.get("step") or "")) if ff else

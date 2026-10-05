@@ -1,4 +1,5 @@
 # Platform: mobilesite
+# Serial: b2b_assist_9987   (chat cases share one test login — run one at a time)
 # Requirement: GJDT-22791 (story GJDT-22788) — Conversational RFQ / B2B Assist, restricted category
 # Case RC08: Rat trap must not offer "Glue pad" option chip | P1 | Negative | entry PRP | Ahmedabad / Roofing Sheets | English
 # Expected: Blocked OR (if rat trap allowed by policy) option chips must NOT contain "Glue pad"

@@ -1,0 +1,126 @@
+{
+ "version": 1,
+ "flow_mtime": 1791221399.6455443,
+ "steps": [
+  {
+   "line": 7,
+   "text": "call Live_Touch_Chrome_Navigate_to_Homepage_setup_Popup",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 8,
+   "text": "call Touch_Core_To_B2B_Landing_via_Hotkey",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 10,
+   "text": "click b2b_search_field",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 11,
+   "text": "wait 2 seconds",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 12,
+   "text": "type \"c\" into focused field",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 13,
+   "text": "wait 3 seconds",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 14,
+   "text": "type \"c\" into focused field",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 15,
+   "text": "type \"c\" into focused field",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 16,
+   "text": "type \"v\" into focused field",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 17,
+   "text": "wait 1 seconds",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 18,
+   "text": "clear b2b_search_field",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 19,
+   "text": "type \"cctv\" into focused field",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 20,
+   "text": "wait until element b2b_as_cctv is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 21,
+   "text": "wait until element b2b_as_cctv is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 22,
+   "text": "click b2b_as_cctv",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 23,
+   "text": "wait until element ps_touch_b2b_prp_1st_product is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 24,
+   "text": "scroll to prp_royal_securitycamera_contract",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 25,
+   "text": "click prp_royal_securitycamera_contract",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 26,
+   "text": "wait 3 seconds",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 29,
+   "text": "open https://www.justdial.com/jdmart/Mumbai/Aditya-Birla-Cement-50-kg/pid-2227957773/022PXX22-XX22-131231120443-E6D7",
+   "level": "S",
+   "manual": false
+  }
+ ]
+}

@@ -1,0 +1,234 @@
+{
+ "version": 1,
+ "flow_mtime": 1791224776.6854339,
+ "steps": [
+  {
+   "line": 7,
+   "text": "store \"Mumbai\" as city",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 8,
+   "text": "store \"amonium nitrat\" as search_term",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 9,
+   "text": "call SG_22788_Freetext_Search_In_City",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 10,
+   "text": "wait until url contains \"/jdmart/${city}\"",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 11,
+   "text": "verify element b2b_search_no_results is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 12,
+   "text": "verify element b2b_search_no_results contains \"No results found\" ignoring case",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 13,
+   "text": "verify element prp_first_product_title is not visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 14,
+   "text": "take screenshot as mumbai_amoniumnitrat",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 16,
+   "text": "store \"ammonium  nitrate\" as search_term",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 17,
+   "text": "call SG_22788_Search_Again_On_Result_Page",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 18,
+   "text": "verify element b2b_search_no_results is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 19,
+   "text": "verify element b2b_search_no_results contains \"No results found\" ignoring case",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 20,
+   "text": "verify element prp_first_product_title is not visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 21,
+   "text": "take screenshot as mumbai_ammoniumnitrate",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 23,
+   "text": "store \"AMMONIUM NITRATE\" as search_term",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 24,
+   "text": "call SG_22788_Search_Again_On_Result_Page",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 25,
+   "text": "verify element b2b_search_no_results is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 26,
+   "text": "verify element b2b_search_no_results contains \"No results found\" ignoring case",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 27,
+   "text": "verify element prp_first_product_title is not visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 28,
+   "text": "take screenshot as mumbai_ammoniumnitrate_2",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 30,
+   "text": "store \"Ammonium-Nitrate\" as search_term",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 31,
+   "text": "call SG_22788_Search_Again_On_Result_Page",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 32,
+   "text": "verify element b2b_search_no_results is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 33,
+   "text": "verify element b2b_search_no_results contains \"No results found\" ignoring case",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 34,
+   "text": "verify element prp_first_product_title is not visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 35,
+   "text": "take screenshot as mumbai_ammoniumnitrate_3",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 37,
+   "text": "store \"NH4NO3\" as search_term",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 38,
+   "text": "call SG_22788_Search_Again_On_Result_Page",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 39,
+   "text": "verify element b2b_search_no_results is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 40,
+   "text": "verify element b2b_search_no_results contains \"No results found\" ignoring case",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 41,
+   "text": "verify element prp_first_product_title is not visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 42,
+   "text": "take screenshot as mumbai_nh4no3",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 44,
+   "text": "store \"AN prills\" as search_term",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 45,
+   "text": "call SG_22788_Search_Again_On_Result_Page",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 46,
+   "text": "verify element b2b_search_no_results is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 47,
+   "text": "verify element b2b_search_no_results contains \"No results found\" ignoring case",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 48,
+   "text": "verify element prp_first_product_title is not visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 49,
+   "text": "take screenshot as mumbai_anprills",
+   "level": "Sy",
+   "manual": false
+  }
+ ]
+}

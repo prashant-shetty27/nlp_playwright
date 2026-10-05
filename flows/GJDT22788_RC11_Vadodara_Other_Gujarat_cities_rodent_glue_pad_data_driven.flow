@@ -1,4 +1,5 @@
 # Platform: mobilesite
+# Serial: b2b_assist_9987   (chat cases share one test login — run one at a time)
 # Requirement: GJDT-22791 (story GJDT-22788) — Conversational RFQ / B2B Assist, restricted category
 # Case RC11: Other Gujarat cities – rodent/glue pad (data-driven) | P2 | Negative | entry PRP | Vadodara / Roofing Sheets | English
 # Expected: Each blocked in every Gujarat city

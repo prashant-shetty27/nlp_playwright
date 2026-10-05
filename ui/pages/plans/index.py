@@ -321,9 +321,57 @@ async def render_edit(plan_id: str = "") -> None:
                                        if isinstance(d, dict) and d.get("browser_identity") in DEVICE_PROFILES],
                                 label="Browsers / devices (Mobile Site test cases)") \
                 .props("outlined dense use-chips").classes("w-full")
-            muted("Nothing ticked = the platform's default device (Pixel 7 / Chrome). Chrome Android and "
-                  "Safari iPhone run the whole suite; 'positive cases only' browsers run just the test "
-                  "cases tagged smoke / sanity (their '# Tags:' line). Website test cases ignore this.")
+            muted("Nothing ticked = the platform's default device (Pixel 7 / Chrome). For each ticked "
+                  "browser choose below what it runs: the whole suite, only the test cases you pick "
+                  "(e.g. one per page type), or only the smoke / sanity-tagged ones. Website test cases ignore this.")
+
+            # Per-browser coverage: what each ticked browser runs. Saved on the
+            # device entry ("coverage" + "only"), so nothing is fixed in code.
+            _saved_dev = {d.get("browser_identity"): d for d in (ex.get("devices") or []) if isinstance(d, dict)}
+            _cov_box = ui.column().classes("w-full gap-1")
+            _cov_widgets: dict[str, tuple] = {}
+            _tc_options: dict[str, str] = {}
+
+            async def _plan_test_cases() -> dict[str, str]:
+                out: dict[str, str] = {}
+                for sid in (chosen.value or []):
+                    try:
+                        for tc in (await api.suite(sid)).get("test_cases") or []:
+                            out[tc["name"]] = tc["name"]
+                    except api.ApiError:
+                        pass
+                return out
+
+            async def _draw_coverage(_=None) -> None:
+                _tc_options.clear()
+                _tc_options.update(await _plan_test_cases())
+                prev = {k: (c.value, o.value) for k, (c, o) in _cov_widgets.items()}
+                _cov_widgets.clear()
+                _cov_box.clear()
+                with _cov_box:
+                    for key in (devices.value or []):
+                        prof = DEVICE_PROFILES.get(key) or {}
+                        saved = _saved_dev.get(key) or {}
+                        cov0, only0 = prev.get(key, (saved.get("coverage") or prof.get("coverage") or "full",
+                                                     list(saved.get("only") or [])))
+                        with ui.row().classes("w-full items-start gap-2 no-wrap"):
+                            ui.label(prof.get("label", key).split(" — ")[0]).style(
+                                f"min-width:16rem; font-size:{TYPOGRAPHY['size_sm']}; padding-top:10px")
+                            cov = ui.select({"full": "Full suite", "sample": "Only the test cases I pick",
+                                             "positive": "Smoke / sanity-tagged cases only"},
+                                            value=cov0 if cov0 in ("full", "sample", "positive") else "full",
+                                            label="Runs") \
+                                .props("outlined dense").style("min-width:17rem")
+                            only = ui.select(_tc_options, multiple=True,
+                                             value=[t for t in only0 if t in _tc_options],
+                                             label="Test cases on this browser") \
+                                .props("outlined dense use-chips use-input input-debounce=0").classes("flex-grow")
+                            only.bind_visibility_from(cov, "value", backward=lambda v: v == "sample")
+                        _cov_widgets[key] = (cov, only)
+
+            ui.timer(0.15, _draw_coverage, once=True)
+            devices.on_value_change(_draw_coverage)
+            chosen.on_value_change(_draw_coverage)
 
             # Fill these settings from a saved run configuration (Run Center 💾).
             cfg_sel = ui.select({"": "—"}, value="", label="Fill from a saved run configuration") \
@@ -456,7 +504,16 @@ async def render_edit(plan_id: str = "") -> None:
                          "screenshot_mode": shots.value or "all",
                          "stop_on_failure": bool(stop_step.value),
                          "stop_on_first_failure": bool(stop_plan.value),
-                         "devices": [DEVICE_PROFILES[k] for k in (devices.value or []) if k in DEVICE_PROFILES],
+                         "devices": [{**DEVICE_PROFILES[k],
+                                      "coverage": (_cov_widgets[k][0].value if k in _cov_widgets
+                                                   else DEVICE_PROFILES[k].get("coverage", "full")),
+                                      "only": (list(_cov_widgets[k][1].value or []) if k in _cov_widgets
+                                               and _cov_widgets[k][0].value == "sample" else []),
+                                      "label": DEVICE_PROFILES[k]["label"].split(" — ")[0] + " — " + {
+                                          "full": "full suite", "sample": "picked test cases",
+                                          "positive": "positive cases only"}.get(
+                                          _cov_widgets[k][0].value if k in _cov_widgets else "full", "full suite")}
+                                     for k in (devices.value or []) if k in DEVICE_PROFILES],
                          "site_env": site_env_sel.value or "",
                          "parallel": int(parallel.value or 1)}
             notify = {"slack": bool(slack.value), "channel": (channel.value or "").strip(),

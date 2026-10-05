@@ -103,6 +103,14 @@ def plan_run(run_id: str):
     except (OSError, ValueError) as e:
         raise HTTPException(status_code=404, detail=f"No plan run '{run_id}'.") from e
     rec["health"] = plan_engine.health(rec)
+    # What the run means: known-issue marks + failure clusters (core/run_insights).
+    try:
+        from core import known_issues, run_insights
+        if rec.get("status") != "running":
+            known_issues.annotate(rec.get("items") or [])
+        rec["insights"] = run_insights.cluster(rec.get("items") or [])
+    except Exception:  # noqa: BLE001
+        rec["insights"] = []
     return rec
 
 
@@ -271,7 +279,9 @@ def delete_plan(plan_id: str, user: str = Depends(acting_user)):
 
 
 @router.post("/testplans/{plan_id}/run", status_code=202)
-def run_plan(plan_id: str, run_type: str = "", user: str = Depends(acting_user)):
+def run_plan(plan_id: str, run_type: str = "", only_failed_from: str = "",
+             user: str = Depends(acting_user)):
+    """only_failed_from=<run id>: re-run just the failed / not-run test cases of that run."""
     require(user, "run")
     from execution import plan_engine
     try:
@@ -279,6 +289,7 @@ def run_plan(plan_id: str, run_type: str = "", user: str = Depends(acting_user))
     except plans.PlanError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
     busy = plan_engine.active_run()
-    rec = plan_engine.start(plan_id, trigger="manual", user=user, run_type=run_type)
+    rec = plan_engine.start(plan_id, trigger="manual", user=user, run_type=run_type,
+                            only_failed_from=only_failed_from)
     return {"run_id": rec["id"], "status": rec["status"],
             "queued_behind": busy or None}

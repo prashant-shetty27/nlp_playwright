@@ -1,0 +1,156 @@
+{
+ "version": 1,
+ "flow_mtime": 1791221399.5237088,
+ "steps": [
+  {
+   "line": 8,
+   "text": "open https://www.justdial.com/Mumbai/Kalsaria-Construction-Near-Dada-Dadi-Park-Malad-East/022PXX22-XX22-200622123529-Q9J8_BZDET?catid=&checkin=&checkout=&vpfs=&stxt=Kalsaria%20Construction&nid=&stype=company_list&search=Kalsaria-Construction&area=Near%20Dada%20Dadi%20Park%20Malad%20East&type=Excavators%20On%20Rent-JCB&totalJdReviews=undefined&bdmsgtype=&bdcaptiontype=&bdpage=rsltpge&slectedDimgTag=&show_open_abd=0&isb2b=&thumbnail_tag=&jdmartId=&overrideNid=&overrideCatName=&trkid=4307301662",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 9,
+   "text": "wait 1 seconds",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 10,
+   "text": "delete all cookies",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 11,
+   "text": "refresh page",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 12,
+   "text": "wait until element b2b_catalogue_company_name is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 13,
+   "text": "scroll down 1200",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 14,
+   "text": "wait 1 seconds",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 15,
+   "text": "scroll down 2400",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 16,
+   "text": "wait 1 seconds",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 17,
+   "text": "scroll down 3600",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 18,
+   "text": "wait 1 seconds",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 19,
+   "text": "scroll down 5400",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 20,
+   "text": "wait 4 seconds",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 24,
+   "text": "if element catalogue_seller_call_pop is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 25,
+   "text": "verify element catalogue_image_seller_call_pop is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 26,
+   "text": "verify element catalogue_heading_seller_call_popup is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 27,
+   "text": "verify element catalogue_avg_rating_seller_call_popup is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 28,
+   "text": "verify element catalogue_seller_call_popup_just_a_call_away is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 29,
+   "text": "verify element catalogue_seller_call_popup_text is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 30,
+   "text": "verify element catalogue_seller_call_popup_call_now_button is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 31,
+   "text": "else",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 32,
+   "text": "verify element catalogue_bd_category_popup is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 33,
+   "text": "verify element catalogue_page_category_rfq_popup_looking_for_text is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 34,
+   "text": "verify element catalogue_skip_bd_category_pop is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 35,
+   "text": "end if",
+   "level": "S",
+   "manual": false
+  }
+ ]
+}

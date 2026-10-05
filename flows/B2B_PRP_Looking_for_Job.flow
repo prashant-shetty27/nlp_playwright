@@ -11,8 +11,7 @@ call SG_PS_Touch_Home_Login
 open https://www.justdial.com/jdmart/Delhi/Job-Placement-Services/jdm-1778102-ent-14-11068585
 wait for page to load
 wait 3 seconds
-scroll down 500
-scroll down 1100
+scroll until element job_card_b2b_prp visible, scroll by 600 pixels, scroll count 20, scroll wait 1
 # OFF: scroll down 1600
 # OFF: scroll down 2100
 # OFF: scroll down 2700
@@ -24,15 +23,14 @@ wait 2 seconds
 verify element job_card_b2b_prp is not visible
 refresh page
 wait for page to load
-wait 3 seconds
+wait until element grid_view_icon is visible
 click grid_view_icon
-scroll down 1100
+scroll until element job_card_b2b_prp visible, scroll by 600 pixels, scroll count 20, scroll wait 1
 # OFF: scroll down 500
 verify element job_card_b2b_prp is visible
 click no_job_card_b2b_prp
 wait for page to load
 verify text "B2B Assist" on page
 click close_b2b_assist
-wait 1 seconds
+wait until element yes_proceed_on_b2b_assist is visible
 click yes_proceed_on_b2b_assist
-wait 2 seconds

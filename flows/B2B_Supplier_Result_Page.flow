@@ -8,14 +8,14 @@ open https://www.justdial.com/
 wait 2 seconds
 [ignore] click maybe_later
 click b2b1
-wait 2 seconds
+wait until element b2b_search_field is visible
 click b2b_search_field
 click b2b_search_field_2
 click suppliers_tab
 click b2b_search_field_2
 type "cctv" into b2b_search_field_2
 click cctv_1st_autosuggest
-wait 2 seconds
+wait until element ps_touch_b2b_prp_sller_type_filter is visible
 click ps_touch_b2b_prp_sller_type_filter
 click ps_touch_b2b_prp_business_filter_wholesalers
 # Live 02-Oct-2026: filter bar no longer scrolls (Filter / city / Seller Type / Map / Sort By all visible)
@@ -28,7 +28,7 @@ click srp_heading_all_india
 click srp_change_location
 click srp_heading_delhi
 click srp_filter_icon
-wait 5 seconds
+wait until element srp_filter_page_clear_all is visible
 click srp_filter_page_clear_all
 click filter_div_apply_button
 # Live 02-Oct-2026: cities are picked from the city sheet (tap the city chip first)
@@ -40,7 +40,7 @@ if element srp_city_bangalore is not visible
 click srp_city_filter
 end if
 click srp_city_bangalore
-wait 3 seconds
+wait until element srp_1st_result is visible
 click srp_1st_result
 click catalogue_header_back
 click srp_filter_icon
@@ -69,7 +69,7 @@ verify element srp_seller_type_option is visible
 verify element srp_seller_gbp_button is visible
 verify element srp_seller_type_banner_submit is visible
 click srp_seller_gbp_button
-wait 3 seconds
+wait until element rfq_skip_all_button is visible
 # OFF: click rfq_skip_all_button
 js click rfq_skip_all_button
 # OFF: call RFQ_Non_Login_Flow_to_Login_and_Continue_Search

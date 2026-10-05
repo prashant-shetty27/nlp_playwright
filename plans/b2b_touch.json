@@ -6,7 +6,7 @@
   "description": "",
   "platform": "mobilesite",
   "selected_suites": [
-    "suites/b2b_prp.json"
+    "suites/b2b_mobilesite_regression.json"
   ],
   "execution": {
     "headless": false,
@@ -18,14 +18,31 @@
     "stop_on_first_failure": false,
     "devices": [
       {
-        "label": "Safari on iPhone (iPhone 15, WebKit) — full suite",
+        "label": "Chrome on Android (Pixel 7) — full suite",
+        "device_name": "Pixel 7",
+        "browser": "chromium",
+        "browser_identity": "android_chrome",
+        "coverage": "full"
+      },
+      {
+        "label": "Safari on iPhone (iPhone 15, WebKit) — one case per page type",
         "device_name": "iPhone 15",
         "browser": "webkit",
         "browser_identity": "ios_safari",
-        "coverage": "full"
+        "coverage": "sample",
+        "only": [
+          "Catalogue_Page_All_Sections_Verification",
+          "PDP_Seller_Card_New_Design",
+          "B2B_PRP_Grid_View",
+          "B2B_NCT_High_Call_Rate",
+          "Home_SEO_Footer_All_B2B_Tabs_Redirection",
+          "GJDT22788_NC01_Genuine_category_opens_campaign_from_PRP_floater",
+          "GJDT22788_SR01_Search_Hard_Ammonium_Nitrate_No_Result"
+        ]
       }
     ],
-    "site_env": ""
+    "site_env": "",
+    "parallel": 4
   },
   "schedule": {
     "enabled": false,
@@ -50,5 +67,5 @@
     "email_to": ""
   },
   "updated_by": "prashantshetty",
-  "updated_at": "2026-10-01T19:45:50+00:00"
+  "updated_at": "2026-10-05T16:43:16+00:00"
 }

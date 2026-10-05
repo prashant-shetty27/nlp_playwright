@@ -6,7 +6,7 @@
 
 call Live_Touch_Chrome_Navigate_to_Homepage_setup_Popup
 open https://www.justdial.com/jdmart/Bangalore/Hardic-Engineering-Refractory-Brick/pid-2220109969/080PXX80-XX80-190716164616-X6B6?idx=0&jdmid=jdm-1011256-ent-2-17398330&alsoserveCity=Bangalore&nid=15676215
-wait 2 seconds
+wait until element pdp_seller_info_section is visible
 scroll to pdp_seller_info_section
 scroll to pdp_seller_info_heading
 verify element pdp_seller_info_heading is visible
@@ -30,7 +30,7 @@ scroll to pdp_seller_info_address_text
 verify element pdp_seller_info_address_text is visible
 verify element pdp_seller_info_address_details is visible
 open http://justdial.com/jdmart/Delhi/footballs-jersey-with-shorts/pid-2231521559/011PXX11-XX11-241010154419-R5H7?idx=0&jdmid=jdm-1063601-ent-15-1063601&alsoserveCity=Delhi&searchString=Jersey&btype=wholesalers&nid=10280724
-wait 3 seconds
+wait until element pdp_seller_info_view_more_tab is visible
 click pdp_seller_info_view_more_tab
 scroll to pdp_seller_info_heading
 verify element pdp_seller_info_heading is visible
@@ -57,7 +57,7 @@ verify element pdp_seller_info_call_vn_text_call_for_help is visible
 verify element pdp_seller_info_view_more_tab is visible
 verify element pdp_seller_info_arrow_down is visible
 open https://www.justdial.com/jdmart/Gurgaon/Large-Power-System/pid-2023660834/011PXX11-XX11-210528140220-G9W6
-wait 2 seconds
+wait until element pdp_seller_info_section is visible
 scroll to pdp_seller_info_section
 click pdp_seller_info_view_more_tab
 verify element pdp_seller_info_paid_thumb_icon is not visible

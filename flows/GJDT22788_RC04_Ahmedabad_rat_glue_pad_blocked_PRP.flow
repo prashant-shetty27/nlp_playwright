@@ -1,7 +1,8 @@
 # Platform: mobilesite
+# Serial: b2b_assist_9987   (chat cases share one test login — run one at a time)
 # Requirement: GJDT-22791 (story GJDT-22788) — Conversational RFQ / B2B Assist, restricted category
 # Case RC04: Ahmedabad – rat glue pad blocked (PRP) | P0 | Negative | entry PRP | Ahmedabad / Roofing Sheets | English
-# Expected: Restricted alert; no campaign
+# Expected: Restricted alert; no campaign — for both rat-glue categories (rat glue pad, mouse glue trap)
 # Last staging result in the sheet: PARTIAL (05-Oct) – generic "couldn't find any results"
 # Restricted handling is still in testing (05-Oct-2026) — verify on live once GJDT-22788 is taken live.
 # AI replies: assertions use the regex families from the sheet (Test Data rfq22788_*), not exact text.
@@ -14,6 +15,11 @@ call SG_22788_Open_PRP_Floater
 verify ${bot_reply} matches "${rfq22788_campaign_started}" ignoring case
 # (BLOCK) i need rat glue pad
 store "i need rat glue pad" as message
+call SG_22788_Send_Message
+verify ${bot_reply} matches "${rfq22788_restricted_alert}" ignoring case
+verify ${bot_reply} does not match "${rfq22788_campaign_or_suggestion}" ignoring case
+# (BLOCK) mouse glue trap — 2nd rat-glue category, same chat (no need to reopen the page)
+store "mouse glue trap" as message
 call SG_22788_Send_Message
 verify ${bot_reply} matches "${rfq22788_restricted_alert}" ignoring case
 verify ${bot_reply} does not match "${rfq22788_campaign_or_suggestion}" ignoring case

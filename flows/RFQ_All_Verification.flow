@@ -18,7 +18,6 @@ click close_button
 wait 2 seconds
 # --- Catalogue Send Enquiry -> old blue RFQ page ---
 open https://www.justdial.com/Thane/Bhavani-Tiles-Oppposite-to-Deepak-Hospital-Mira-Road-East/022PXX22-XX22-120225035322-Q5G7_BZDET?catid=&checkin=&checkout=&vpfs=&stxt=%20Tile%20Wholesalers&nid=10482503&stype=category_list&search=Tile-Wholesalers&area=Oppposite%20To%20Deepak%20Hospital%20Mira%20Road%20East&type=Ceramic%20Tile%20Dealers&totalJdReviews=undefined&bdmsgtype=2&bdcaptiontype=4&bdpage=rsltpge&slectedDimgTag=&show_open_abd=0&isb2b=1&thumbnail_tag=
-wait 3 seconds
 verify element b2b_catalogue_send_enquiry_cta_top is visible
 click b2b_catalogue_send_enquiry_cta_top
 call SG_RFQ_Old_Form_Or_Blue_Page_Opened
@@ -44,7 +43,6 @@ call SG_RFQ_Old_Form_Or_Blue_Page_Opened
 # OFF: answering and submitting sends a real enquiry
 delete all cookies
 refresh page
-wait 1 seconds
 # --- Catalogue (Lixo Healthcare) Send Enquiry -> blue RFQ page ---
 open https://www.justdial.com/Noida/Lixo-Healthcare-Equipment-Pvt-Ltd-Noida-Sector-38/011PXX11-XX11-180704154533-X1Y3_BZDET
 wait until element b2b_catalogue_send_enquiry_cta_top is visible

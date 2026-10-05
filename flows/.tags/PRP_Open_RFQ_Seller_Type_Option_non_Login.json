@@ -1,0 +1,168 @@
+{
+ "version": 1,
+ "flow_mtime": 1791224957.9493678,
+ "steps": [
+  {
+   "line": 7,
+   "text": "open https://www.justdial.com/jdmart/Mumbai/CCTV/jdm-1016209-ent-2-13630321?fl=undefined&ismap=undefined&subpage=&searchCase=&term=cctv&searchLocUpdate=0&stype=category_list&srcterm=CCTV",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 8,
+   "text": "wait 3 seconds",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 9,
+   "text": "swipe bottom to top until element prp_open_rfq_seller_type_section is visible, max 10 times, wait 1",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 10,
+   "text": "verify element prp_open_rfq_seller_type_section is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 11,
+   "text": "verify element prp_open_rfq_seller_type_section contains \"All\"",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 12,
+   "text": "verify element prp_open_rfq_seller_type_section contains \"Wholesalers\"",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 13,
+   "text": "verify element prp_open_rfq_seller_type_section contains \"Importers\"",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 14,
+   "text": "verify element prp_open_rfq_seller_type_section contains \"Distributors\"",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 15,
+   "text": "verify element prp_open_rfq_seller_type_section contains \"Manufacturers\"",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 16,
+   "text": "verify element prp_open_rfq_seller_type_section contains \"Exporters\"",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 17,
+   "text": "verify element prp_open_rfq_seller_type_section contains \"Dealers\"",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 18,
+   "text": "click prp_open_rfq_seller_type_wholesaler",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 19,
+   "text": "click if visible prp_open_rfq_seller_type_submit",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 20,
+   "text": "wait 2 seconds",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 21,
+   "text": "call SG_PRP_Request_View_Catalogue_Non_Login_to_Login",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 22,
+   "text": "wait 2 seconds",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 23,
+   "text": "if element prp_open_rqq_seller_type_post_login_mobile is not visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 24,
+   "text": "click if visible prp_open_rfq_seller_type_submit",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 25,
+   "text": "end if",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 26,
+   "text": "wait until element prp_open_rfq_seller_type_toast_msg is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 27,
+   "text": "[ignore] verify element prp_open_rfq_seller_type_toast_msg is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 28,
+   "text": "wait until element prp_open_rqq_seller_type_post_login_mobile is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 29,
+   "text": "scroll to prp_open_rqq_seller_type_post_login_mobile",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 30,
+   "text": "store value of prp_open_rqq_seller_type_post_login_mobile as ts_field_value",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 31,
+   "text": "verify stored ts_field_value equals \"${mobile_9987}\"",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 32,
+   "text": "verify element prp_bd5_banner_img is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 33,
+   "text": "delete all cookies",
+   "level": "R",
+   "manual": false
+  }
+ ]
+}

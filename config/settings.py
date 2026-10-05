@@ -69,6 +69,27 @@ WAIT_TIMEOUT_MS: int = int(os.getenv("WAIT_TIMEOUT_MS", str(_ctrl("browser.wait_
 STEP_SETTLE_MS: int = int(os.getenv("STEP_SETTLE_MS", str(_ctrl("browser.step_settle_ms", 1500))))
 #: After a scroll/swipe: max wait for loaders / spinners to clear (condition-based).
 SCROLL_SETTLE_MS: int = int(os.getenv("SCROLL_SETTLE_MS", str(_ctrl("browser.scroll_settle_ms", 8000))))
+#: "scroll until …" without "scroll by": pixels per scroll step.
+DEFAULT_SCROLL_PIXELS: int = int(os.getenv("DEFAULT_SCROLL_PIXELS", str(_ctrl("browser.default_scroll_pixels", 600))))
+#: "swipe … until …" without "max N times".
+DEFAULT_SWIPE_COUNT: int = int(os.getenv("DEFAULT_SWIPE_COUNT", str(_ctrl("browser.default_swipe_count", 15))))
+
+
+def live(key: str, default):
+    """Current value of a browser.* setting from config/controllers.json (edited in
+    Settings → Execution defaults), falling back to the value loaded at start.
+    Env variables still win, as everywhere else in this file."""
+    env = {"scroll_settle_ms": "SCROLL_SETTLE_MS", "default_scroll_count": "DEFAULT_SCROLL_COUNT",
+           "default_scroll_pixels": "DEFAULT_SCROLL_PIXELS", "default_swipe_count": "DEFAULT_SWIPE_COUNT",
+           "step_settle_ms": "STEP_SETTLE_MS", "action_timeout_ms": "ACTION_TIMEOUT_MS"}.get(key)
+    if env and os.getenv(env):
+        return type(default)(os.getenv(env))
+    try:
+        with open(CONTROLLERS_FILE, "r", encoding="utf-8") as f:
+            v = (json.load(f).get("browser") or {}).get(key)
+        return type(default)(v) if v is not None else default
+    except Exception:  # noqa: BLE001
+        return default
 STEP_SETTLE_FIXED: bool = bool(os.getenv("STEP_SETTLE_MS")) or _ctrl("browser.step_settle_ms") is not None
 SEARCH_MODAL_WAIT_MS: int = int(os.getenv("SEARCH_MODAL_WAIT_MS", str(_ctrl("browser.search_modal_wait_ms", 6000))))
 SEARCH_MODAL_WAIT_FIXED: bool = bool(os.getenv("SEARCH_MODAL_WAIT_MS")) or _ctrl("browser.search_modal_wait_ms") is not None

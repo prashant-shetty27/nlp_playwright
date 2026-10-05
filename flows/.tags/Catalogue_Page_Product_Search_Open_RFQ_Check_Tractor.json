@@ -1,0 +1,18 @@
+{
+ "version": 1,
+ "flow_mtime": 1790875448.0613496,
+ "steps": [
+  {
+   "line": 8,
+   "text": "open https://www.justdial.com/jdmart/Navi-Mumbai/Baldev-Engineering-Opposite-D-Y-Patil-Stadium-MIDC-Industrial-Area-Nerul/022PXX22-XX22-131219124833-X3Z1_BZDET/catalogue?pid=272540839&nid=10933710&jdmid=jdm-1109417-ent-2-6537772",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 9,
+   "text": "call SG_Catalogue_Page_Open_RFQ_Banner_Category_Flow_Tr",
+   "level": "S",
+   "manual": false
+  }
+ ]
+}

@@ -1,0 +1,60 @@
+{
+ "version": 1,
+ "flow_mtime": 1790963187.9554698,
+ "steps": [
+  {
+   "line": 9,
+   "text": "open https://www.justdial.com/jdmart/Dibrugarh/Mandal-Co-Chowkidingee/9999PX373-X373-190610132456-H1N5_BZDET/catalogue",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 16,
+   "text": "wait for page to load",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 24,
+   "text": "click products",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 25,
+   "text": "wait until element catalogue_product_tab_laptop is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 26,
+   "text": "wait until element catalogue_product_tab_laptop is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 27,
+   "text": "verify element catalogue_product_tab_laptop is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 28,
+   "text": "click catalogue_product_tab_laptop",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 30,
+   "text": "wait until element catalogue_product_tab_product_data_section_loading is visible within 30 seconds",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 31,
+   "text": "verify element catalogue_product_tab_product_data_section_loading is visible",
+   "level": "Sy",
+   "manual": false
+  }
+ ]
+}

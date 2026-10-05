@@ -544,6 +544,10 @@ async def run_result(run_id: str) -> dict:
     return await _call("GET", f"/tests/results/{run_id}")
 
 
+async def flow_insight(flow: str) -> dict:
+    return await _call("GET", f"/tests/insight/{flow}")
+
+
 async def run_history(limit: int = 50, flow: str = "") -> list[dict]:
     """Past runs with their summaries. /tests/results returns bare filenames.
     `flow` = one test case's runs only."""
@@ -558,6 +562,34 @@ async def run_history(limit: int = 50, flow: str = "") -> list[dict]:
 async def system_info() -> dict:
     """Where this process serves, and whether a run is in flight."""
     return await _call("GET", "/system/info")
+
+
+async def known_issues() -> dict:
+    return await _call("GET", "/system/known-issues")
+
+
+async def save_known_issue(issue: dict) -> dict:
+    return await _call("PUT", "/system/known-issues", json={"issue": issue})
+
+
+async def delete_known_issue(issue_id: str) -> dict:
+    return await _call("DELETE", f"/system/known-issues/{issue_id}")
+
+
+async def pages_kb() -> dict:
+    return await _call("GET", "/system/pages")
+
+
+async def save_pages_kb(pages: dict) -> dict:
+    return await _call("PUT", "/system/pages", json={"pages": pages})
+
+
+async def exec_defaults() -> dict:
+    return await _call("GET", "/system/exec-defaults")
+
+
+async def save_exec_defaults(values: dict) -> dict:
+    return await _call("PUT", "/system/exec-defaults", json={"values": values})
 
 
 async def sync_status() -> dict:
@@ -655,9 +687,13 @@ async def delete_plan(plan_id: str) -> dict:
     return await _call("DELETE", f"/testplans/{plan_id}")
 
 
-async def run_plan(plan_id: str, run_type: str = "") -> dict:
-    return await _call("POST", f"/testplans/{plan_id}/run",
-                       params={"run_type": run_type} if run_type else None)
+async def run_plan(plan_id: str, run_type: str = "", only_failed_from: str = "") -> dict:
+    params = {}
+    if run_type:
+        params["run_type"] = run_type
+    if only_failed_from:
+        params["only_failed_from"] = only_failed_from
+    return await _call("POST", f"/testplans/{plan_id}/run", params=params or None)
 
 
 async def preview_plan(plan_id: str) -> dict:

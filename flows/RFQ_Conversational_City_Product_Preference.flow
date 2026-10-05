@@ -30,11 +30,10 @@ verify all elements b2b_assist_card_call_button have different "aria-label"
 click b2b_assist_refresh_conversation
 wait until element b2b_assist_fresh_chat_yes is visible
 click b2b_assist_fresh_chat_yes
-wait 3 seconds
 wait until element type_your_message_input is visible
 type "need executive office chair wholesalers in ahmedabad" into type_your_message_input
 click b2b_assist_send
-wait 6 seconds
+wait until element type_your_message_input is visible
 call SG_B2B_Assist_Answer_Until_Results
 verify element b2b_assist_card_1st contains "chair" ignoring case
 # KNOWN (02-Oct-2026, live): fails — results from Delhi/Pune, typed city ignored -> GJDT-21943 point 3 (Concern, Open)

@@ -1,0 +1,72 @@
+{
+ "version": 1,
+ "flow_mtime": 1791199123.810223,
+ "steps": [
+  {
+   "line": 7,
+   "text": "store \"Mumbai\" as city",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 8,
+   "text": "store \"Roofing Sheets\" as category",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 9,
+   "text": "store \"(set by the chat step group)\" as bot_reply",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 10,
+   "text": "call SG_22788_Open_PRP_Floater",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 11,
+   "text": "store regex \"smartver=([0-9]+)\" from chat_url as prp_smartver",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 12,
+   "text": "take screenshot as prp_floater_chat",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 13,
+   "text": "call SG_22788_Open_PDP_FAB",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 14,
+   "text": "store regex \"smartver=([0-9]+)\" from chat_url as pdp_smartver",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 15,
+   "text": "take screenshot as pdp_fab_chat",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 17,
+   "text": "verify ${prp_smartver} equals ${pdp_smartver}",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 18,
+   "text": "take screenshot as nc10_transcript",
+   "level": "F",
+   "manual": false
+  }
+ ]
+}

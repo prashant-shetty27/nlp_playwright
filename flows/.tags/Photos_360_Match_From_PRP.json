@@ -1,0 +1,192 @@
+{
+ "version": 1,
+ "flow_mtime": 1791223332.4237075,
+ "steps": [
+  {
+   "line": 6,
+   "text": "open https://www.justdial.com/jdmart/Chennai/Geared-Drilling-Machine/jdm-1381022-ent-2-17682395",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 8,
+   "text": "swipe bottom to top until element prp_eden_card is visible, closing b2b_prp_gvs_popup_skip, max 60 times, wait 0.5",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 9,
+   "text": "click if visible b2b_prp_gvs_popup_skip",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 10,
+   "text": "scroll to prp_eden_card_title",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 11,
+   "text": "verify element prp_eden_card_title contains \"Radial Drilling Machine\"",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 12,
+   "text": "scroll to prp_eden_card_title",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 13,
+   "text": "click prp_eden_card_title",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 14,
+   "text": "wait until url contains \"/pid-\"",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 15,
+   "text": "wait until element pdp_main_image is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 16,
+   "text": "store attribute src of pdp_main_image as img_src",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 17,
+   "text": "store regex \"-([a-z0-9]{6,10})\\.(?:png|jpe?g|webp)\" from img_src as img_id",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 18,
+   "text": "store attribute href of pdp_seller_catalogue_link as catalogue_url",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 19,
+   "text": "open https://www.justdial.com${catalogue_url}",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 20,
+   "text": "wait until url contains \"_BZDET\"",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 21,
+   "text": "wait until element pdp_tab_photos is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 22,
+   "text": "click pdp_tab_photos",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 23,
+   "text": "wait until element pdp_photo_tile is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 25,
+   "text": "scroll to catalogue_photo_tile_matching",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 26,
+   "text": "verify element catalogue_photo_tile_matching is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 27,
+   "text": "verify element catalogue_photo_tile_matching_360_icon is visible",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 28,
+   "text": "verify element catalogue_photo_tile_matching_360_icon is inside catalogue_photo_tile_matching_image",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 29,
+   "text": "take screenshot as matched_image_photos_tab",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 31,
+   "text": "click catalogue_photo_tile_matching_image",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 32,
+   "text": "wait until element gallery_slide_image is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 33,
+   "text": "wait 2 seconds",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 34,
+   "text": "verify element gallery_360_icon is not visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 35,
+   "text": "take screenshot as matched_image_gallery_no_icon",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 37,
+   "text": "go back",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 38,
+   "text": "wait until element pdp_photo_tile is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 39,
+   "text": "scroll to catalogue_photo_tile_matching",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 40,
+   "text": "verify element catalogue_photo_tile_matching_360_icon is visible",
+   "level": "Sy",
+   "manual": false
+  }
+ ]
+}

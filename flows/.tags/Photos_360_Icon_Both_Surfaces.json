@@ -1,0 +1,60 @@
+{
+ "version": 1,
+ "flow_mtime": 1790972130.2532518,
+ "steps": [
+  {
+   "line": 6,
+   "text": "open ${prot3_pdp_360_photos}",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 7,
+   "text": "wait for page to load",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 8,
+   "text": "wait until element pdp_first_photo is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 9,
+   "text": "store position of pdp_photo_360_icon in pdp_photo_tile_image as grid_icon_position",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 10,
+   "text": "click pdp_first_photo",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 11,
+   "text": "wait until element gallery_slide_image is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 12,
+   "text": "wait 2 seconds",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 13,
+   "text": "verify element gallery_360_icon is not visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 14,
+   "text": "take screenshot as both_surfaces_gallery",
+   "level": "F",
+   "manual": false
+  }
+ ]
+}

@@ -6,10 +6,9 @@
 
 [ignore] call Location_Popup
 open https://www.justdial.com/jdmart/Kadi/Sanitizer/pid-2030572139/9999P2762-2762-210524104439-X9W9
-wait 2 seconds
+wait until element pdp_seller_info_view_more_tab is visible
 scroll to pdp_seller_info_view_more_tab
 verify element pdp_seller_info_view_more_tab is visible
 click pdp_seller_info_view_more_tab
 click pdp_website_1st_link
-wait 5 seconds
 # OFF: verify text "Shako" on page

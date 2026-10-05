@@ -1,0 +1,198 @@
+{
+ "version": 1,
+ "flow_mtime": 1791204624.7436244,
+ "steps": [
+  {
+   "line": 7,
+   "text": "store \"Gandhinagar\" as city",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 8,
+   "text": "store \"rat glue pad\" as search_term",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 9,
+   "text": "call SG_22788_Freetext_Search_In_City",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 10,
+   "text": "wait until url contains \"/jdmart/${city}\"",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 11,
+   "text": "verify element b2b_search_no_results is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 12,
+   "text": "verify element b2b_search_no_results contains \"No results found\" ignoring case",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 13,
+   "text": "verify element prp_first_product_title is not visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 14,
+   "text": "take screenshot as gandhinagar_ratgluepad",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 16,
+   "text": "store \"Gandhinagar\" as city",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 17,
+   "text": "store \"rodent glue board\" as search_term",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 18,
+   "text": "call SG_22788_Freetext_Search_In_City",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 19,
+   "text": "wait until url contains \"/jdmart/${city}\"",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 20,
+   "text": "verify element b2b_search_no_results is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 21,
+   "text": "verify element b2b_search_no_results contains \"No results found\" ignoring case",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 22,
+   "text": "verify element prp_first_product_title is not visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 23,
+   "text": "take screenshot as gandhinagar_rodentglueboard",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 25,
+   "text": "store \"Gandhinagar\" as city",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 26,
+   "text": "store \"mouse glue trap\" as search_term",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 27,
+   "text": "call SG_22788_Freetext_Search_In_City",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 28,
+   "text": "wait until url contains \"/jdmart/${city}\"",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 29,
+   "text": "verify element b2b_search_no_results is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 30,
+   "text": "verify element b2b_search_no_results contains \"No results found\" ignoring case",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 31,
+   "text": "verify element prp_first_product_title is not visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 32,
+   "text": "take screenshot as gandhinagar_mousegluetrap",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 34,
+   "text": "store \"Gandhinagar\" as city",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 35,
+   "text": "store \"Glue Pad Insect Killer\" as search_term",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 36,
+   "text": "call SG_22788_Freetext_Search_In_City",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 37,
+   "text": "wait until url contains \"/jdmart/${city}\"",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 38,
+   "text": "verify element b2b_search_no_results is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 39,
+   "text": "verify element b2b_search_no_results contains \"No results found\" ignoring case",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 40,
+   "text": "verify element prp_first_product_title is not visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 41,
+   "text": "take screenshot as gandhinagar_gluepadinsectkiller",
+   "level": "Sy",
+   "manual": false
+  }
+ ]
+}

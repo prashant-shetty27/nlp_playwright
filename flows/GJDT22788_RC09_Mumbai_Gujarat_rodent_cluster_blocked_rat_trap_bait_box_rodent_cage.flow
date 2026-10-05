@@ -1,4 +1,5 @@
 # Platform: mobilesite
+# Serial: b2b_assist_9987   (chat cases share one test login — run one at a time)
 # Requirement: GJDT-22791 (story GJDT-22788) — Conversational RFQ / B2B Assist, restricted category
 # Case RC09: Gujarat rodent cluster blocked: rat trap bait box / rodent cage trap / RAT KILL | P1 | Negative | entry PRP | Mumbai / Roofing Sheets | English
 # Expected: Each blocked

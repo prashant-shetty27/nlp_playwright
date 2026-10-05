@@ -1,0 +1,144 @@
+{
+ "version": 1,
+ "flow_mtime": 1791221399.7531002,
+ "steps": [
+  {
+   "line": 7,
+   "text": "call Live_Touch_Chrome_Navigate_to_Homepage_setup_Popup",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 8,
+   "text": "open https://www.justdial.com/jdmart/Mumbai/Skf-Ball-Bearing-Deep-Groove-Single-Row-6205-2Z-1-Nos/pid-272203217/022PXX22-XX22-140307153118-I6K6?idx=0&jdmid=jdm-1008206-ent-4-7192762&alsoserveCity=Mumbai&nid=10034271",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 9,
+   "text": "wait 2 seconds",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 10,
+   "text": "store text of ps_pdp_top_product_name as pdp_productname",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 11,
+   "text": "click pdp_gallery_inner_get_best_price_button",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 12,
+   "text": "wait 2 seconds",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 13,
+   "text": "store text of rfq_product_name as rfq_productname",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 14,
+   "text": "verify stored rfq_productname contains \"${pdp_productname}\"",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 15,
+   "text": "type \"2\" into rfq_quantity_input",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 16,
+   "text": "js click rfq_next_button",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 23,
+   "text": "delete all cookies",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 24,
+   "text": "wait 2 seconds",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 25,
+   "text": "open https://www.justdial.com/jdmart/Mumbai/",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 26,
+   "text": "wait for page to load",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 27,
+   "text": "call PS_consent_popup",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 28,
+   "text": "open https://www.justdial.com/jdmart/Mumbai/CCTV/jdm-1016209-ent-2-13630321?fl=undefined&ismap=undefined&subpage=&searchCase=&term=cctv&searchLocUpdate=0&stype=category_list&srcterm=CCTV",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 29,
+   "text": "wait 2 seconds",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 30,
+   "text": "store text of ps_b2b_prp_1st_product as prp_1stProduct",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 31,
+   "text": "wait until element prp_best_price is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 32,
+   "text": "click prp_best_price",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 34,
+   "text": "wait until element b2b_assist_chat_login_link is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 35,
+   "text": "verify element b2b_assist_first_card contains \"${prp_1stProduct}\"",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 36,
+   "text": "verify text \"Log in to begin\" on page",
+   "level": "R",
+   "manual": false
+  }
+ ]
+}

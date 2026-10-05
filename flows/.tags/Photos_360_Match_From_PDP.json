@@ -1,0 +1,150 @@
+{
+ "version": 1,
+ "flow_mtime": 1791221399.7224138,
+ "steps": [
+  {
+   "line": 6,
+   "text": "open https://www.justdial.com/jdmart/Chennai/All-Geared-Auto-Feed-Radial-Drilling-Machine-Green-And-Silver-/pid-2233271257/044PXX44-XX44-250214122451-W9P8",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 7,
+   "text": "wait until element pdp_main_image is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 8,
+   "text": "store attribute src of pdp_main_image as img_src",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 9,
+   "text": "store regex \"-([a-z0-9]{6,10})\\.(?:png|jpe?g|webp)\" from img_src as img_id",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 10,
+   "text": "store attribute href of pdp_seller_catalogue_link as catalogue_url",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 11,
+   "text": "open https://www.justdial.com${catalogue_url}",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 12,
+   "text": "wait until url contains \"_BZDET\"",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 13,
+   "text": "wait until element pdp_tab_photos is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 14,
+   "text": "click pdp_tab_photos",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 15,
+   "text": "wait until element pdp_photo_tile is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 17,
+   "text": "scroll to catalogue_photo_tile_matching",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 18,
+   "text": "verify element catalogue_photo_tile_matching is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 19,
+   "text": "verify element catalogue_photo_tile_matching_360_icon is visible",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 20,
+   "text": "verify element catalogue_photo_tile_matching_360_icon is inside catalogue_photo_tile_matching_image",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 21,
+   "text": "take screenshot as matched_image_photos_tab",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 23,
+   "text": "click catalogue_photo_tile_matching_image",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 24,
+   "text": "wait until element gallery_slide_image is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 25,
+   "text": "wait 2 seconds",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 26,
+   "text": "verify element gallery_360_icon is not visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 27,
+   "text": "take screenshot as matched_image_gallery_no_icon",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 29,
+   "text": "go back",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 30,
+   "text": "wait until element pdp_photo_tile is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 31,
+   "text": "scroll to catalogue_photo_tile_matching",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 32,
+   "text": "verify element catalogue_photo_tile_matching_360_icon is visible",
+   "level": "Sy",
+   "manual": false
+  }
+ ]
+}

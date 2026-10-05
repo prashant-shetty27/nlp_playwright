@@ -23,7 +23,7 @@ js click rfq_next_button
 delete all cookies
 wait 2 seconds
 open https://www.justdial.com/jdmart/Mumbai/
-wait 2 seconds
+wait for page to load
 call PS_consent_popup
 open https://www.justdial.com/jdmart/Mumbai/CCTV/jdm-1016209-ent-2-13630321?fl=undefined&ismap=undefined&subpage=&searchCase=&term=cctv&searchLocUpdate=0&stype=category_list&srcterm=CCTV
 wait 2 seconds

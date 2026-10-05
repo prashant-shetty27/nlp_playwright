@@ -6,13 +6,7 @@ open https://www.justdial.com/jdmart/Mumbai/CCTV/jdm-1016209-ent-2-13630321
 wait for page to load
 click grid_view_icon
 wait for page to load
-scroll down 200
-scroll down 500
-scroll down 800
-scroll down 1100
-scroll down 1500
-scroll down 1900
-scroll down 2100
+scroll until element grid_view_listing visible, scroll by 600 pixels, scroll count 20, scroll wait 1
 verify element grid_view_listing is visible
 verify element item_1st_grid_image is visible
 verify element item_1st_grid_title is visible

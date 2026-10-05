@@ -10,7 +10,7 @@ store regex "-([a-z0-9]{6,10})\.(?:png|jpe?g|webp)" from img_src as img_id
 store attribute href of pdp_seller_catalogue_link as catalogue_url
 open https://www.justdial.com${catalogue_url}
 wait until url contains "_BZDET"
-wait 3 seconds
+wait until element pdp_tab_photos is visible
 click pdp_tab_photos
 wait until element pdp_photo_tile is visible
 # find the SAME image on the catalogue Photos tab (by file id, not by position)

@@ -1,0 +1,30 @@
+{
+ "version": 1,
+ "flow_mtime": 1790875447.290283,
+ "steps": [
+  {
+   "line": 5,
+   "text": "call Live_Touch_Chrome_Navigate_to_Homepage_setup_Popup",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 6,
+   "text": "open https://www.justdial.com/Bangalore/ZXY-Prashant-B2b-Store-Chikkanahalli/080PXX80-XX80-230417160552-Z2S6_BZDET?auto=1&trkid=&term=",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 7,
+   "text": "wait for page to load",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 8,
+   "text": "call SG_Catalogue_Page_Offers_Banner",
+   "level": "S",
+   "manual": false
+  }
+ ]
+}

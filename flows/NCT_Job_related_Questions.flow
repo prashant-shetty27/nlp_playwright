@@ -9,7 +9,7 @@
 #   until an option is chosen (no 'Please select one option' text); three pop-up checks near the top are also OFF.
 
 open https://www.justdial.com/Mumbai/Multinational-Companies-in-Link-Road-Malad-West/nct-10332493?fl=undefined&ismap=undefined&subpage=&searchCase=&term=multinat&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Multinational%20Companies&trkid=13116826-mumbai
-wait 3 seconds
+wait for page to load
 call PS_Touch_Consent_Popup
 # Live 02-Oct-2026: the 'Are you looking for job?' sheet pops up on scroll (GJDT-22010) - group skips it
 call SG_NCT_Scroll_To_Send_Enquiry_Skipping_Job_Sheet
@@ -47,16 +47,14 @@ click enquiry_form_no
 click send_enquiry_back_ps
 open https://www.justdial.com/Mumbai/Corporate-Companies-in-Link-Road-Malad-West/nct-10138533?fl=undefined&ismap=undefined&subpage=&searchCase=&term=corporate%2520com&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Corporate%20Companies&trkid=13702-mumbai
 wait 4 seconds
-scroll down 1000
+scroll until text "Placement Services" visible, scroll count 20, scroll wait 1
 verify text "Placement Services" on page
-scroll down 2000
 scroll until text "Get Best Price" visible, scroll count 10, scroll wait 1
 click if visible enquiry_seller_pop_skip
 scroll to gbp_button_11
 js click gbp_button_11
-wait 2 seconds
+wait until element get_best_price_any_button is visible
 js click get_best_price_any_button
-wait 2 seconds
 verify element gbp_sheet_heading is visible
 # OFF: click gbp_submit_now_button
 # OFF: verify text "Please select one option" on page
@@ -67,7 +65,7 @@ wait 1 seconds
 click if visible get_best_price_header_back
 click if visible enquiry_seller_pop_skip
 open https://www.justdial.com/Mumbai/Multinational-Companies-in-Link-Road-Malad-West/nct-10332493?fl=undefined&ismap=undefined&subpage=&searchCase=&term=multinat&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Multinational%20Companies&trkid=13116826-mumbai
-wait 3 seconds
+wait for page to load
 # Live 02-Oct-2026: the 'Are you looking for job?' sheet pops up on scroll (GJDT-22010) - group skips it
 call SG_NCT_Scroll_To_Send_Enquiry_Skipping_Job_Sheet
 click send_enquiry_button_1st

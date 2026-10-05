@@ -1,4 +1,5 @@
 # Platform: mobilesite
+# Serial: b2b_assist_9987   (chat cases share one test login — run one at a time)
 # Requirement: GJDT-22788 — Conversational RFQ / B2B Assist
 # Case NC10: Entry-point parity: PRP & PDP use same chatbot build | P2 | Config | Mumbai / Roofing Sheets
 # Expected: smartver URL param identical for PRP floater and PDP FAB

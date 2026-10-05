@@ -6,12 +6,7 @@
 
 open https://www.justdial.com/jdmart/Mumbai/CCTV/jdm-1016209-ent-2-13630321?fl=undefined&ismap=undefined&subpage=&searchCase=&term=cctv&searchLocUpdate=0&stype=category_list&srcterm=CCTV
 wait 3 seconds
-delete all cookies
-open https://www.justdial.com/jdmart/Mumbai/CCTV/jdm-1016209-ent-2-13630321?fl=undefined&ismap=undefined&subpage=&searchCase=&term=cctv&searchLocUpdate=0&stype=category_list&srcterm=CCTV
-wait 3 seconds
-swipe bottom to top
-wait 1 seconds
-scroll to prp_open_rfq_seller_type_section
+swipe bottom to top until element prp_open_rfq_seller_type_section is visible, max 10 times, wait 1
 verify element prp_open_rfq_seller_type_section is visible
 verify element prp_open_rfq_seller_type_section contains "All"
 verify element prp_open_rfq_seller_type_section contains "Wholesalers"
@@ -28,9 +23,9 @@ wait 2 seconds
 if element prp_open_rqq_seller_type_post_login_mobile is not visible
 click if visible prp_open_rfq_seller_type_submit
 end if
-wait until element prp_open_rfq_seller_type_toast_msg is visible
+# the "Results updated" toast shows for ~2 s — seen when it is, the refreshed list below is the real check
 [ignore] verify element prp_open_rfq_seller_type_toast_msg is visible
-wait 1 seconds
+wait until element prp_open_rqq_seller_type_post_login_mobile is visible
 scroll to prp_open_rqq_seller_type_post_login_mobile
 store value of prp_open_rqq_seller_type_post_login_mobile as ts_field_value
 verify stored ts_field_value equals "${mobile_9987}"

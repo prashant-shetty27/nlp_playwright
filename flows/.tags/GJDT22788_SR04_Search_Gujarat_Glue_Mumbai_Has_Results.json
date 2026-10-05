@@ -1,0 +1,72 @@
+{
+ "version": 1,
+ "flow_mtime": 1791224746.426511,
+ "steps": [
+  {
+   "line": 7,
+   "text": "store \"Mumbai\" as city",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 8,
+   "text": "store \"rat glue pad\" as search_term",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 9,
+   "text": "call SG_22788_Freetext_Search_In_City",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 11,
+   "text": "verify element b2b_search_no_results is not visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 12,
+   "text": "verify page does not contain \"No results found\"",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 13,
+   "text": "take screenshot as mumbai_ratgluepad",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 15,
+   "text": "store \"mouse glue trap\" as search_term",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 16,
+   "text": "call SG_22788_Search_Again_On_Result_Page",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 18,
+   "text": "verify element b2b_search_no_results is not visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 19,
+   "text": "verify page does not contain \"No results found\"",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 20,
+   "text": "take screenshot as mumbai_mousegluetrap",
+   "level": "Sy",
+   "manual": false
+  }
+ ]
+}

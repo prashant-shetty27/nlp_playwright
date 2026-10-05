@@ -1,0 +1,170 @@
+{
+  "issues": [
+    {
+      "id": "KI-001",
+      "kind": "product-defect",
+      "title": "B2B Assist: restricted category replies 'couldn't find any results' instead of the agreed restricted alert (GJDT-22788 live)",
+      "jira": "GJDT-22788",
+      "owner": "prashantshetty",
+      "opened": "2026-10-06",
+      "expires": "",
+      "note": "Rat glue pad / ammonium nitrate / gun powder etc. get the generic no-results text on live. Story says restricted alert. Raised with dev.",
+      "match": {
+        "test_case": "^GJDT22788_(RC|NC0[4-9])",
+        "error": "couldn.{0,3}t find any results|koi results nahi"
+      }
+    },
+    {
+      "id": "KI-002",
+      "kind": "product-defect",
+      "title": "B2B Assist: 'rat trap' still offers 'Glue pad' as an option chip",
+      "jira": "GJDT-22788",
+      "owner": "prashantshetty",
+      "opened": "2026-10-06",
+      "expires": "",
+      "note": "RC08. Glue pad is a restricted rodent-cluster item; must not be offered.",
+      "match": {
+        "test_case": "^GJDT22788_RC08",
+        "error": "Glue pad"
+      }
+    },
+    {
+      "id": "KI-003",
+      "kind": "product-defect",
+      "title": "B2B Assist: 'gun powder' is turned into a 'powder coating gun' substitute",
+      "jira": "GJDT-22788",
+      "owner": "prashantshetty",
+      "opened": "2026-10-06",
+      "expires": "",
+      "note": "RC19. Restricted item must get the alert, not a substitute suggestion.",
+      "match": {
+        "test_case": "^GJDT22788_RC19",
+        "error": "powder coating gun"
+      }
+    },
+    {
+      "id": "KI-004",
+      "kind": "site-change",
+      "title": "Catalogue 'Six India' is now an unclaimed listing — no WhatsApp strip",
+      "jira": "",
+      "owner": "prashantshetty",
+      "opened": "2026-10-06",
+      "expires": "2026-10-20",
+      "note": "Catalogue_Page_Whatsapp_Strip needs a claimed catalogue URL as test data.",
+      "match": {
+        "test_case": "^Catalogue_Page_Whatsapp_Strip",
+        "element": "b2b_catalogue_whatsapp_strip_text"
+      }
+    },
+    {
+      "id": "KI-005",
+      "kind": "site-change",
+      "title": "Tyre PDP no longer shows the 'Ask me anything' button",
+      "jira": "",
+      "owner": "prashantshetty",
+      "opened": "2026-10-06",
+      "expires": "2026-10-20",
+      "note": "PDP_PDP_Ask_Anything: confirm with PO whether the button was removed or the product changed.",
+      "match": {
+        "test_case": "^PDP_PDP_Ask_Anything",
+        "error": "ask_me_anything"
+      }
+    },
+    {
+      "id": "KI-006",
+      "kind": "site-change",
+      "title": "Multinational Companies NCT shows Ask for Price / Get Best Price cards, no 'Send Enquiry'",
+      "jira": "",
+      "owner": "prashantshetty",
+      "opened": "2026-10-06",
+      "expires": "2026-10-20",
+      "note": "NCT_Job_related_Questions: the send-enquiry flow needs a category that still has Send Enquiry.",
+      "match": {
+        "test_case": "^NCT_Job_related_Questions",
+        "element": "send_enquiry_button_1st"
+      }
+    },
+    {
+      "id": "KI-007",
+      "kind": "environment",
+      "title": "Internal recommendation API 192.168.8.27:8082 not reachable from the run machine (VPN off for live)",
+      "jira": "",
+      "owner": "prashantshetty",
+      "opened": "2026-10-06",
+      "expires": "",
+      "note": "Nct_Recommended_Products_For_You_Newlogic API checks need the VPN; live site needs it off. Split the API bands into a VPN plan.",
+      "match": {
+        "error": "HTTPConnectionPool\\(host='192\\.168\\."
+      }
+    },
+    {
+      "id": "KI-008",
+      "kind": "data",
+      "title": "SR02 'AN prills' free-text shows unrelated listings (trade abbreviation not in the misspelling rule)",
+      "jira": "GJDT-22788",
+      "owner": "prashantshetty",
+      "opened": "2026-10-05",
+      "expires": "",
+      "note": "Confirm with PO whether abbreviations are in scope.",
+      "match": {
+        "test_case": "^GJDT22788_SR02",
+        "step": "b2b_search_no_results"
+      }
+    },
+    {
+      "id": "KI-009",
+      "kind": "data",
+      "title": "PDP city change: catalogue flow shows Pune where Delhi is expected",
+      "jira": "",
+      "owner": "prashantshetty",
+      "opened": "2026-10-05",
+      "expires": "2026-10-20",
+      "note": "PDP_Change_City_Implementation line 64 — check whether the Delhi catalogue now serves Pune.",
+      "match": {
+        "test_case": "^PDP_Change_City_Implementation",
+        "error": "Actual value: Pune"
+      }
+    },
+    {
+      "id": "KI-010",
+      "kind": "product-defect",
+      "title": "B2B Assist results: the same seller card repeats (Call New Neha Tyres x2, Call Tyre Villa x2)",
+      "jira": "",
+      "owner": "prashantshetty",
+      "opened": "2026-10-06",
+      "expires": "",
+      "note": "RFQ_Conversational_City_Product_Preference. Raise with the chat team: result cards should be unique sellers.",
+      "match": {
+        "test_case": "^RFQ_Conversational",
+        "error": "aria-label.{0,5} repeats"
+      }
+    },
+    {
+      "id": "KI-011",
+      "kind": "product-defect",
+      "title": "B2B Assist: city preference not applied — Ahmedabad asked, Pune results shown",
+      "jira": "",
+      "owner": "prashantshetty",
+      "opened": "2026-10-06",
+      "expires": "",
+      "note": "RFQ_Conversational_City_Product_Preference 'verify card contains Ahmedabad' sees Pune sellers.",
+      "match": {
+        "test_case": "^RFQ_Conversational",
+        "error": "expected to contain text 'Ahmedabad'"
+      }
+    },
+    {
+      "id": "KI-012",
+      "kind": "product-defect",
+      "title": "B2B Assist chat input does not accept typed quantity ('10') — value resets",
+      "jira": "",
+      "owner": "prashantshetty",
+      "opened": "2026-10-06",
+      "expires": "2026-10-20",
+      "note": "PDP_PDP_Ask_Anything via Ask me anything: typing into 'Type your message' is reset by the page. Confirm manually on live; may be the new chat build.",
+      "match": {
+        "error": "Could not put .{0,10} into 'type_your_message_input'"
+      }
+    }
+  ]
+}

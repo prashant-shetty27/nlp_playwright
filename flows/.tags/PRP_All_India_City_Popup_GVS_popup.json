@@ -1,0 +1,66 @@
+{
+ "version": 1,
+ "flow_mtime": 1790666868.437621,
+ "steps": [
+  {
+   "line": 7,
+   "text": "call PS_Touch_Location_Popup",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 8,
+   "text": "open https://www.justdial.com/india/Brick?ismap=&srcterm=Brick",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 9,
+   "text": "wait for page to load",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 10,
+   "text": "delete all cookies",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 11,
+   "text": "refresh page",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 12,
+   "text": "call PS_consent_popup",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 13,
+   "text": "scroll to prp_bd7_banner_section",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 14,
+   "text": "verify element prp_bd7_banner_section is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 15,
+   "text": "swipe bottom to top until element b2b_prp_gvs_popup is visible, closing b2b_prp_all_india_location_pop_cross, max 10 times, wait 0.5",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 16,
+   "text": "run javascript \"document.querySelector('[class*=\"skipbtn\"]').click();\"",
+   "level": "R",
+   "manual": false
+  }
+ ]
+}

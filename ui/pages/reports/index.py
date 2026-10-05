@@ -98,6 +98,8 @@ async def render(module: str = "") -> None:
     with ui.column().classes("w-full gap-3 p-4").style("max-width:90rem"):
         with ui.row().classes("w-full items-center"):
             ui.label("Reports").style(f"font-size:{TYPOGRAPHY['size_lg']}; font-weight:{TYPOGRAPHY['weight_bold']}")
+            ui.button("Known issues", icon="rule", on_click=lambda: ui.navigate.to("/known-issues")) \
+                .props("flat dense").tooltip("Failures the team already knows about — shown as KNOWN on plan reports")
             ui.space()
             muted("Plan reports come as a web page and a PDF (the same PDF goes to Slack / email).")
         with ui.row().classes("w-full gap-3"):

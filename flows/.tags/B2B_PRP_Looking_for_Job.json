@@ -1,0 +1,156 @@
+{
+ "version": 1,
+ "flow_mtime": 1791224249.672458,
+ "steps": [
+  {
+   "line": 8,
+   "text": "[ignore] call Live_Touch_Chrome_Navigate_to_Homepage_setup_Popup",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 9,
+   "text": "[ignore] wait for page to load",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 10,
+   "text": "call SG_PS_Touch_Home_Login",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 11,
+   "text": "open https://www.justdial.com/jdmart/Delhi/Job-Placement-Services/jdm-1778102-ent-14-11068585",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 12,
+   "text": "wait for page to load",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 13,
+   "text": "wait 3 seconds",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 14,
+   "text": "scroll until element job_card_b2b_prp visible, scroll by 600 pixels, scroll count 20, scroll wait 1",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 18,
+   "text": "verify element job_card_b2b_prp is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 19,
+   "text": "click yes_on_job_card_on_b2b_prp",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 20,
+   "text": "wait 1 seconds",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 21,
+   "text": "verify text \"Dear\" on page",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 22,
+   "text": "wait 2 seconds",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 23,
+   "text": "verify element job_card_b2b_prp is not visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 24,
+   "text": "refresh page",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 25,
+   "text": "wait for page to load",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 26,
+   "text": "wait until element grid_view_icon is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 27,
+   "text": "click grid_view_icon",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 28,
+   "text": "scroll until element job_card_b2b_prp visible, scroll by 600 pixels, scroll count 20, scroll wait 1",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 30,
+   "text": "verify element job_card_b2b_prp is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 31,
+   "text": "click no_job_card_b2b_prp",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 32,
+   "text": "wait for page to load",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 33,
+   "text": "verify text \"B2B Assist\" on page",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 34,
+   "text": "click close_b2b_assist",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 35,
+   "text": "wait until element yes_proceed_on_b2b_assist is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 36,
+   "text": "click yes_proceed_on_b2b_assist",
+   "level": "R",
+   "manual": false
+  }
+ ]
+}

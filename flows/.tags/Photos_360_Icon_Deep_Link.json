@@ -1,0 +1,60 @@
+{
+ "version": 1,
+ "flow_mtime": 1790793602.2271144,
+ "steps": [
+  {
+   "line": 6,
+   "text": "open ${prot3_pdp_360_photos}",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 7,
+   "text": "wait for page to load",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 8,
+   "text": "wait until element pdp_photos_heading is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 9,
+   "text": "verify element pdp_photos_heading is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 10,
+   "text": "verify element pdp_photo_360_icon is visible",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 11,
+   "text": "store count of pdp_photo_tile as photo_tiles",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 12,
+   "text": "store count of pdp_photo_360_icon as icons_360",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 13,
+   "text": "verify element pdp_photo_360_icon is inside every pdp_photo_tile_image",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 14,
+   "text": "take screenshot as deep_link_photos",
+   "level": "F",
+   "manual": false
+  }
+ ]
+}

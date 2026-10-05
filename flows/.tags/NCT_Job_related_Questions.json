@@ -1,0 +1,300 @@
+{
+ "version": 1,
+ "flow_mtime": 1791224250.0821488,
+ "steps": [
+  {
+   "line": 11,
+   "text": "open https://www.justdial.com/Mumbai/Multinational-Companies-in-Link-Road-Malad-West/nct-10332493?fl=undefined&ismap=undefined&subpage=&searchCase=&term=multinat&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Multinational%20Companies&trkid=13116826-mumbai",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 12,
+   "text": "wait for page to load",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 13,
+   "text": "call PS_Touch_Consent_Popup",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 15,
+   "text": "call SG_NCT_Scroll_To_Send_Enquiry_Skipping_Job_Sheet",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 16,
+   "text": "click send_enquiry_button_1st",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 17,
+   "text": "verify element heading_send_enquiry_ps is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 18,
+   "text": "verify text \"Get the free contact details in seconds for Multinational Companies\" on page",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 19,
+   "text": "verify element heading_free_contact_details_ps is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 23,
+   "text": "click send_enquiry_back_ps",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 24,
+   "text": "wait 3 seconds",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 25,
+   "text": "verify element call_popup_seller_name is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 26,
+   "text": "verify element seller_call_pop_image is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 27,
+   "text": "verify element seller_call_pop_rating is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 28,
+   "text": "verify element seller_call_pop_area is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 29,
+   "text": "verify element seller_call_pop_heading_just_a_call_away is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 30,
+   "text": "verify element seller_call_pop_get_your_answers_instantly is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 31,
+   "text": "verify element seller_user_details_form is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 32,
+   "text": "verify element enquiry_default_text is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 33,
+   "text": "click enquiry_seller_pop_skip",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 34,
+   "text": "wait 1 seconds",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 36,
+   "text": "call SG_NCT_Scroll_To_Send_Enquiry_Skipping_Job_Sheet",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 37,
+   "text": "click send_enquiry_button_1st",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 38,
+   "text": "wait 1 seconds",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 40,
+   "text": "type \"${mobile_7738}\" into enquiry_form_mobile",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 41,
+   "text": "click enquiry_form_no",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 47,
+   "text": "click send_enquiry_back_ps",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 48,
+   "text": "open https://www.justdial.com/Mumbai/Corporate-Companies-in-Link-Road-Malad-West/nct-10138533?fl=undefined&ismap=undefined&subpage=&searchCase=&term=corporate%2520com&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Corporate%20Companies&trkid=13702-mumbai",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 49,
+   "text": "wait 4 seconds",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 50,
+   "text": "scroll until text \"Placement Services\" visible, scroll count 20, scroll wait 1",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 51,
+   "text": "verify text \"Placement Services\" on page",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 52,
+   "text": "scroll until text \"Get Best Price\" visible, scroll count 10, scroll wait 1",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 53,
+   "text": "click if visible enquiry_seller_pop_skip",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 54,
+   "text": "scroll to gbp_button_11",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 55,
+   "text": "js click gbp_button_11",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 56,
+   "text": "wait until element get_best_price_any_button is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 57,
+   "text": "js click get_best_price_any_button",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 58,
+   "text": "verify element gbp_sheet_heading is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 64,
+   "text": "wait 1 seconds",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 65,
+   "text": "click if visible get_best_price_header_back",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 66,
+   "text": "click if visible enquiry_seller_pop_skip",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 67,
+   "text": "open https://www.justdial.com/Mumbai/Multinational-Companies-in-Link-Road-Malad-West/nct-10332493?fl=undefined&ismap=undefined&subpage=&searchCase=&term=multinat&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Multinational%20Companies&trkid=13116826-mumbai",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 68,
+   "text": "wait for page to load",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 70,
+   "text": "call SG_NCT_Scroll_To_Send_Enquiry_Skipping_Job_Sheet",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 71,
+   "text": "click send_enquiry_button_1st",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 72,
+   "text": "wait 3 seconds",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 73,
+   "text": "verify element heading_send_enquiry_ps is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 74,
+   "text": "verify text \"Get the free contact details in seconds for Multinational Companies\" on page",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 75,
+   "text": "verify element heading_free_contact_details_ps is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 76,
+   "text": "verify page does not contain \"Need Immediate Assistance\"",
+   "level": "R",
+   "manual": false
+  }
+ ]
+}

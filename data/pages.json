@@ -1,0 +1,142 @@
+{
+  "_doc": "Page knowledge base (Settings → Pages). What every page type is, how to tell it rendered, which popups appear on it and how to close them, and its sections top→bottom. Used by: open <url> (waits for the landmark), scroll/swipe-until (closes the page's popups on the way), Review (warns when a test re-does what the page already knows). Elements are names from Elements. Edit freely; the engine reads it live. Popups must be the SKIP/CLOSE controls only — never a sheet a test may be checking.",
+  "pages": {
+    "home": {
+      "label": "B2B / JDMart home",
+      "detect": {
+        "url": [
+          "^https?://[^/]*justdial\\.com/jdmart/?(\\?.*)?$",
+          "^https?://[^/]*justdial\\.com/?(\\?.*)?$"
+        ]
+      },
+      "landmark": [
+        "jdmart_home_search_box",
+        "home_top_all_categories_section"
+      ],
+      "popups": [
+        "touch_login_popup_may_be_later",
+        "login_prompt_skip"
+      ],
+      "sections": [
+        "home_top_all_categories_section",
+        "b2b_home_people_looking_for_video_heading",
+        "b2b_home_seo_footer_recently_added"
+      ]
+    },
+    "prp": {
+      "label": "Product result page (PRP)",
+      "detect": {
+        "url": [
+          "/jdmart/[^/]+/[^/]+/jdm-\\d+",
+          "/jdmart/[^/]+/cct\\?",
+          "/jdmart/[^/]+/[^/?]+\\?.*stype=company_list"
+        ]
+      },
+      "landmark": [
+        "ps_touch_b2b_prp_1st_product",
+        "b2b_prp_1st_product_card",
+        "prp_first_product_title",
+        "b2b_search_no_results"
+      ],
+      "popups": [
+        "b2b_prp_gvs_popup_skip",
+        "srp_seller_type_banner_skip",
+        "touch_login_popup_may_be_later"
+      ],
+      "sections": [
+        "b2b_prp_1st_product_card",
+        "prp_rfq_floater",
+        "prp_open_rfq_seller_type_section"
+      ]
+    },
+    "pdp": {
+      "label": "Product detail page (PDP)",
+      "detect": {
+        "url": [
+          "/jdmart/.*/pid-\\d+"
+        ]
+      },
+      "landmark": [
+        "pdp_main_image",
+        "ps_pdp_top_product_name",
+        "pdp_product_title"
+      ],
+      "popups": [
+        "gbp_popup_skip",
+        "catalogue_skip_bd_category_pop",
+        "touch_login_popup_may_be_later"
+      ],
+      "sections": [
+        "pdp_main_image",
+        "pdp_seller_info_section",
+        "pdp_need_assistance_section",
+        "pdp_customer_also_viewed_section",
+        "pdp_similar_business_section",
+        "pdp_people_also_search_for_heading",
+        "pdp_popular_cat"
+      ]
+    },
+    "catalogue": {
+      "label": "Seller catalogue page",
+      "detect": {
+        "url": [
+          "_BZDET"
+        ]
+      },
+      "landmark": [
+        "b2b_catalogue_company_name"
+      ],
+      "popups": [
+        "catalogue_skip_bd_category_pop",
+        "srp_seller_type_banner_skip",
+        "touch_login_popup_may_be_later"
+      ],
+      "sections": [
+        "b2b_catalogue_company_name",
+        "b2b_catalogue_tab_product",
+        "b2b_catalogue_need_assistance_company_banner_text",
+        "b2b_catalogue_footer_heading_business_information",
+        "b2b_catalogue_footer_heading_jd_verticals"
+      ]
+    },
+    "nct": {
+      "label": "Category result page (NCT)",
+      "detect": {
+        "url": [
+          "/nct-\\d+"
+        ]
+      },
+      "landmark": [
+        "result_heading_title",
+        "nct_result_card_only_details",
+        "result_card_area_nct"
+      ],
+      "popups": [
+        "enquiry_seller_pop_skip",
+        "get_best_price_header_back",
+        "touch_login_popup_may_be_later"
+      ],
+      "sections": [
+        "result_heading_title",
+        "rp_carousel_heading",
+        "nct_open_rfq_section",
+        "send_enquiry_button_1st"
+      ]
+    },
+    "chat": {
+      "label": "B2B Assist (conversational RFQ)",
+      "detect": {
+        "url": [
+          "bestdeals_chatbot"
+        ]
+      },
+      "landmark": [
+        "b2b_assist_last_bot_reply"
+      ],
+      "popups": [
+        "rfq_skip_all_button"
+      ],
+      "sections": []
+    }
+  }
+}

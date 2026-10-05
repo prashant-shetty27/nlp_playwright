@@ -1,0 +1,192 @@
+{
+ "version": 1,
+ "flow_mtime": 1791224250.0086856,
+ "steps": [
+  {
+   "line": 8,
+   "text": "open https://www.justdial.com/jdmart?jdtracker=internaljd_mainhmpge_b2bhotkey-wap2",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 9,
+   "text": "wait for page to load",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 10,
+   "text": "call PS_Touch_Consent_Popup",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 11,
+   "text": "wait until element home_top_all_categories_section is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 12,
+   "text": "scroll until element b2b_home_seo_footer_recently_added visible, scroll by 600 pixels, scroll count 20, scroll wait 1",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 14,
+   "text": "swipe bottom to top until element b2b_home_seo_footer_recently_added is visible, max 15 times, wait 1",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 15,
+   "text": "click b2b_home_seo_footer_recently_added",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 16,
+   "text": "scroll to b2b_home_seo_footer_recently_added",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 17,
+   "text": "verify element b2b_home_seo_footer_recently_added is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 18,
+   "text": "store text of b2b_home_seo_footer_recent_category_2 as seo_footer_data_2",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 19,
+   "text": "remove \"&\" from \"${seo_footer_data_2}\" and store as New_SEOFooter_Category",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 20,
+   "text": "click b2b_home_seo_footer_recent_category_2",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 21,
+   "text": "wait for page to load",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 22,
+   "text": "wait until element b2b_prp_1st_product_card is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 25,
+   "text": "press back",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 26,
+   "text": "wait until element b2b_home_seo_footer_recently_added is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 27,
+   "text": "scroll to b2b_home_seo_footer_recently_added",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 28,
+   "text": "verify element b2b_home_seo_footer_recently_added is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 29,
+   "text": "click b2b_home_seo_footer_recently_added",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 30,
+   "text": "scroll to b2b_home_seo_footer_recently_added_categories_50",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 31,
+   "text": "verify element b2b_home_seo_footer_recently_added_categories_50 is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 32,
+   "text": "store text of b2b_home_seo_footer_recently_added_categories_50 as seo_footer_data_50",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 33,
+   "text": "click b2b_home_seo_footer_recently_added_categories_50",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 35,
+   "text": "wait until element b2b_prp_1st_product_card is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 37,
+   "text": "store text of prp_search_box_category_name as category_N",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 38,
+   "text": "[ignore] verify stored seo_footer_data_50 contains \"${category_N}\" ignoring case",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 39,
+   "text": "press back",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 40,
+   "text": "wait until element seo_leading_categories_tab is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 41,
+   "text": "call SG_SEO_Footer_Redirection_Leading_Categories",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 42,
+   "text": "call SG_SEO_Footer_Redirection_Trending_Categories",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 43,
+   "text": "call SG_SEO_Footer_Redirection_Top_Ranked_Categories",
+   "level": "R",
+   "manual": false
+  }
+ ]
+}

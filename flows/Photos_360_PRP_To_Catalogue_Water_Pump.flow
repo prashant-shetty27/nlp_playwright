@@ -5,7 +5,7 @@
 # Data is picked by the 360° badge on the PRP, not by product name or position, so new listings don't break it.
 # Tags: b2b, prp, pdp, catalogue, 360, GJDT-22417
 open https://www.justdial.com/jdmart/Mumbai/Water-Pump/jdm-1118390-ent-2-14741196
-wait 5 seconds
+wait until element prp_first_360_card is visible
 # PRP: find the first product card whose image carries the 360° badge
 scroll to prp_first_360_card
 verify element prp_first_360_card_badge is visible
@@ -24,14 +24,13 @@ verify element pdp_product_title contains "${product_name}"
 verify element pdp_main_image_matching is visible
 verify element pdp_gallery_360_tab is visible
 click pdp_gallery_360_tab
-wait 2 seconds
 verify element pdp_gallery_360_tab_active is visible
 take screenshot as pdp_360_tab_open
 # Seller catalogue > Photos > Products: the same image carries the 360° icon
 store attribute href of pdp_seller_catalogue_link as catalogue_url
 open https://www.justdial.com${catalogue_url}
 wait until url contains "_BZDET"
-wait 3 seconds
+wait until element pdp_tab_photos is visible
 click pdp_tab_photos
 wait until element pdp_photo_tile is visible
 click catalogue_photos_products_chip

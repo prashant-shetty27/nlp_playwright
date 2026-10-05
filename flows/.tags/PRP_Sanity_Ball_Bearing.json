@@ -1,0 +1,192 @@
+{
+ "version": 1,
+ "flow_mtime": 1791221399.702109,
+ "steps": [
+  {
+   "line": 8,
+   "text": "open https://www.justdial.com/jdmart/Mumbai/Ball-Bearing/jdm-1006849-ent-2-5519629?fl=undefined&ismap=undefined&subpage=&searchCase=&term=ball%2520beari&searchLocUpdate=0&newSearch=1&stype=category_list&srcterm=Ball%20Bearing",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 9,
+   "text": "wait for page to load",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 10,
+   "text": "call PS_Touch_Consent_Popup",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 11,
+   "text": "store text of ps_touch_b2b_prp_searchbox_city as PRP_SearchBox_City",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 12,
+   "text": "store text of ps_touch_b2b_city_filter as PRP_City_Filter",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 13,
+   "text": "verify stored PRP_City_Filter equals \"${PRP_SearchBox_City}\"",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 14,
+   "text": "verify element ps_touch_b2b_prp_sller_type_filter is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 15,
+   "text": "click ps_touch_b2b_prp_sller_type_filter",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 16,
+   "text": "wait until element ps_touch_b2b_prp_business_filter_wholesalers is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 17,
+   "text": "verify element ps_touch_b2b_prp_business_filter_wholesalers is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 18,
+   "text": "click ps_touch_b2b_prp_business_filter_wholesalers",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 19,
+   "text": "wait for page to load",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 20,
+   "text": "store page url as current_url",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 21,
+   "text": "verify stored current_url contains \"Wholesalers\"",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 22,
+   "text": "verify element ps_touch_b2b_prp_brand_filter is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 23,
+   "text": "click ps_touch_b2b_prp_brand_filter",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 24,
+   "text": "wait until element ps_touch_b2b_prp_brand_filter_skf is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 25,
+   "text": "click ps_touch_b2b_prp_brand_filter_skf",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 26,
+   "text": "wait for page to load",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 27,
+   "text": "store text of ps_touch_b2b_prp_brand_filter_skf as Selected_Brand_Filter_SKF",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 28,
+   "text": "store text of ps_touch_b2b_prp_1st_product as PRP_1st_Product",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 29,
+   "text": "verify element ps_touch_b2b_prp_brand_filter_by_id contains \"SKF\"",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 30,
+   "text": "verify stored PRP_1st_Product contains \"${Selected_Brand_Filter_SKF}\"",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 32,
+   "text": "scroll to ps_touch_prp_10th_result",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 33,
+   "text": "verify element ps_touch_prp_10th_result is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 34,
+   "text": "scroll to prp_9th_result_touch",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 35,
+   "text": "verify element prp_9th_result_touch is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 36,
+   "text": "wait 2 seconds",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 37,
+   "text": "call SG_PRP_GVS_Popup",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 38,
+   "text": "swipe bottom to top until element b2b_prp_watch_related_videos_heading is visible, max 15 times, wait 1",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 39,
+   "text": "call SG_PRP_Watch_Related_Video",
+   "level": "R",
+   "manual": false
+  }
+ ]
+}

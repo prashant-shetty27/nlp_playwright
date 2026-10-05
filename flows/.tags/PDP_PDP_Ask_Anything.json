@@ -1,0 +1,96 @@
+{
+ "version": 1,
+ "flow_mtime": 1791224250.3357668,
+ "steps": [
+  {
+   "line": 9,
+   "text": "call Live_Touch_Chrome_Navigate_to_Homepage_setup_Popup",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 10,
+   "text": "open https://www.justdial.com/jdmart/Mumbai/Tyre/jdm-1113059-ent-2-17609009?jdtracker=internaljd_switchproductview_10505866&ncatid=10505866&sortby=&basedon=&appliedFilter=%7C%7E%7C122%7C%40%7CAll+Brands&pfApplied=1&attrVal=%5B%7B%22e%22%3A%22sellertype%22%2C%22v%22%3A%5B%22Wholesalers%22%5D%7D%2C%7B%22e%22%3A%22brand%22%2C%22v%22%3A%5B%22All+Brands%22%5D%7D%2C%7B%22e%22%3A%22sortby%22%2C%22v%22%3A%5B%22relevance%22%5D%7D%5D&mvVal=%5B%7B%22mv%22%3A5001%2C%22v%22%3A%5B%22Wholesalers%22%5D%7D%2C%7B%22mv%22%3A5005%2C%22v%22%3A%5B%22All+Brands%22%5D%7D%2C%7B%22mv%22%3A5009%2C%22v%22%3A%5B%22relevance%22%5D%7D%5D&fCatId=&actiontype=fltr",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 11,
+   "text": "wait 3 seconds",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 12,
+   "text": "scroll until element ask_me_anything_button visible, scroll by 600 pixels, scroll count 20, scroll wait 1",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 13,
+   "text": "click ask_me_anything_button",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 14,
+   "text": "call SG_B2B_Assist_Login_In_Chat",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 15,
+   "text": "call SG_B2B_Assist_Answer_Until_Results",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 16,
+   "text": "click close_button",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 17,
+   "text": "wait 2 seconds",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 18,
+   "text": "open https://www.justdial.com/jdmart/Mumbai/Tyre/jdm-1113059-ent-2-17609009?jdtracker=internaljd_switchproductview_10505866&ncatid=10505866&sortby=&basedon=&appliedFilter=%7C%7E%7C122%7C%40%7CAll+Brands&pfApplied=1&attrVal=%5B%7B%22e%22%3A%22sellertype%22%2C%22v%22%3A%5B%22Wholesalers%22%5D%7D%2C%7B%22e%22%3A%22brand%22%2C%22v%22%3A%5B%22All+Brands%22%5D%7D%2C%7B%22e%22%3A%22sortby%22%2C%22v%22%3A%5B%22relevance%22%5D%7D%5D&mvVal=%5B%7B%22mv%22%3A5001%2C%22v%22%3A%5B%22Wholesalers%22%5D%7D%2C%7B%22mv%22%3A5005%2C%22v%22%3A%5B%22All+Brands%22%5D%7D%2C%7B%22mv%22%3A5009%2C%22v%22%3A%5B%22relevance%22%5D%7D%5D&fCatId=&actiontype=fltr",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 19,
+   "text": "wait until element ps_b2b_prp_1st_product is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 20,
+   "text": "click ps_b2b_prp_1st_product",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 21,
+   "text": "wait for page to load",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 22,
+   "text": "click ask_me_anything",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 23,
+   "text": "call SG_B2B_Assist_Answer_Until_Results",
+   "level": "S",
+   "manual": false
+  }
+ ]
+}

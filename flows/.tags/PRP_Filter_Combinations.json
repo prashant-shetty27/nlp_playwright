@@ -1,0 +1,228 @@
+{
+ "version": 1,
+ "flow_mtime": 1791224957.9317958,
+ "steps": [
+  {
+   "line": 7,
+   "text": "call Live_Touch_Chrome_Navigate_to_Homepage_setup_Popup",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 8,
+   "text": "create variable searchTerm1 with value \"Chilli\"",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 9,
+   "text": "create variable searchTerm2 with value \"Onions\"",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 10,
+   "text": "open https://www.justdial.com/jdmart",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 11,
+   "text": "wait until element home_top_all_categories_section is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 12,
+   "text": "click b2b_search_field",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 13,
+   "text": "wait until element b2b_search_field is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 14,
+   "text": "type \"${searchTerm1}\" into b2b_search_field",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 15,
+   "text": "call SG_B2B_AS_1st_Selection",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 16,
+   "text": "call SG_PRP_Brand_Filter",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 17,
+   "text": "call SG_Seller_Type_Filter_Apply_verify",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 19,
+   "text": "click prp_header_search_box",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 20,
+   "text": "wait until element jdmart_search_input is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 21,
+   "text": "clear jdmart_search_input",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 22,
+   "text": "click jdmart_search_input",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 23,
+   "text": "type \"${searchTerm2}\" into focused field",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 24,
+   "text": "call SG_B2B_AS_1st_Selection",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 25,
+   "text": "wait until element all_brands_filter_tab is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 26,
+   "text": "call SG_PRP_Brand_Filter",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 27,
+   "text": "call SG_Seller_Type_Filter_Apply_verify",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 29,
+   "text": "click prp_header_search_box",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 30,
+   "text": "wait until element jdmart_search_input is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 31,
+   "text": "clear jdmart_search_input",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 32,
+   "text": "click jdmart_search_input",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 33,
+   "text": "type \"${searchTerm1}\" into focused field",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 34,
+   "text": "call SG_B2B_AS_1st_Selection",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 35,
+   "text": "wait until element b2b_prp_filter_tab is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 36,
+   "text": "call SG_Filter_Div_Brand_Filter_Apply",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 37,
+   "text": "open https://www.justdial.com/Mumbai/Chilli-Wholesalers-in-Link-Road-Malad-West/nct-10097187?fl=undefined&ismap=undefined&subpage=&searchCase=&term=chilli%2520whole&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Chilli%20Wholesalers&trkid=192771-mumbai",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 38,
+   "text": "wait for page to load",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 39,
+   "text": "call SG_NCT_Scroll_to_Recommended_Produt_section_click",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 40,
+   "text": "call SG_PRP_Brand_Filter",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 42,
+   "text": "open https://www.justdial.com/Mumbai/Chilli-Wholesalers-in-Link-Road-Malad-West/nct-10097187?fl=undefined&ismap=undefined&subpage=&searchCase=&term=chilli%2520whole&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Chilli%20Wholesalers&trkid=192771-mumbai",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 43,
+   "text": "wait for page to load",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 44,
+   "text": "call SG_NCT_Scroll_to_Recommended_Produt_section_click",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 45,
+   "text": "call SG_Filter_Div_Brand_Filter_Apply",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 46,
+   "text": "call SG_Seller_Type_Filter_Apply_verify",
+   "level": "S",
+   "manual": false
+  }
+ ]
+}

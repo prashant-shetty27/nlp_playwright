@@ -1,6 +1,6 @@
 {
  "version": 1,
- "flow_mtime": 1791215955.5758948,
+ "flow_mtime": 1791221399.4965026,
  "steps": [
   {
    "line": 7,
@@ -28,68 +28,56 @@
   },
   {
    "line": 11,
-   "text": "wait 2 seconds",
-   "level": "S",
-   "manual": false
-  },
-  {
-   "line": 12,
    "text": "[ignore 30s] scroll until element catalogue_bd_category_popup visible, scroll by 600 pixels, scroll count 15, scroll wait 1",
    "level": "S",
    "manual": false
   },
   {
-   "line": 13,
+   "line": 12,
    "text": "verify element catalogue_bd_category_popup is visible",
    "level": "S",
    "manual": false
   },
   {
-   "line": 14,
+   "line": 13,
    "text": "verify element catalogue_page_category_rfq_popup_looking_for_text is visible",
    "level": "R",
    "manual": false
   },
   {
-   "line": 15,
+   "line": 14,
    "text": "verify element catalogue_category_rfq_popup_what_type_text is visible",
    "level": "R",
    "manual": false
   },
   {
-   "line": 17,
+   "line": 16,
    "text": "verify element catalogue_1st_label_bd_category_pop is visible",
    "level": "Sy",
    "manual": false
   },
   {
-   "line": 18,
+   "line": 17,
    "text": "verify element catalogue_skip_bd_category_pop is visible",
    "level": "R",
    "manual": false
   },
   {
-   "line": 19,
+   "line": 18,
    "text": "click catalogue_get_verified_seller_button_bd_category_pop",
    "level": "Sy",
    "manual": false
   },
   {
-   "line": 21,
+   "line": 20,
    "text": "call B2B_Common_Non_Login_to_Login_via_Only_Mobile_numb",
    "level": "Sy",
    "manual": false
   },
   {
-   "line": 22,
+   "line": 21,
    "text": "verify text \"Dear Jai\" on page",
    "level": "Sy",
-   "manual": false
-  },
-  {
-   "line": 24,
-   "text": "wait 1 seconds",
-   "level": "R",
    "manual": false
   }
  ]

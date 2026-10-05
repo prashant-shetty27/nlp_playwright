@@ -13,46 +13,36 @@ verify element b2b_search_no_results contains "No results found" ignoring case
 verify element prp_first_product_title is not visible
 take screenshot as mumbai_amoniumnitrat
 # ammonium  nitrate in Mumbai -> no results
-store "Mumbai" as city
 store "ammonium  nitrate" as search_term
-call SG_22788_Freetext_Search_In_City
-wait until url contains "/jdmart/${city}"
+call SG_22788_Search_Again_On_Result_Page
 verify element b2b_search_no_results is visible
 verify element b2b_search_no_results contains "No results found" ignoring case
 verify element prp_first_product_title is not visible
 take screenshot as mumbai_ammoniumnitrate
 # AMMONIUM NITRATE in Mumbai -> no results
-store "Mumbai" as city
 store "AMMONIUM NITRATE" as search_term
-call SG_22788_Freetext_Search_In_City
-wait until url contains "/jdmart/${city}"
+call SG_22788_Search_Again_On_Result_Page
 verify element b2b_search_no_results is visible
 verify element b2b_search_no_results contains "No results found" ignoring case
 verify element prp_first_product_title is not visible
-take screenshot as mumbai_ammoniumnitrate
+take screenshot as mumbai_ammoniumnitrate_2
 # Ammonium-Nitrate in Mumbai -> no results
-store "Mumbai" as city
 store "Ammonium-Nitrate" as search_term
-call SG_22788_Freetext_Search_In_City
-wait until url contains "/jdmart/${city}"
+call SG_22788_Search_Again_On_Result_Page
 verify element b2b_search_no_results is visible
 verify element b2b_search_no_results contains "No results found" ignoring case
 verify element prp_first_product_title is not visible
-take screenshot as mumbai_ammoniumnitrate
+take screenshot as mumbai_ammoniumnitrate_3
 # NH4NO3 in Mumbai -> no results
-store "Mumbai" as city
 store "NH4NO3" as search_term
-call SG_22788_Freetext_Search_In_City
-wait until url contains "/jdmart/${city}"
+call SG_22788_Search_Again_On_Result_Page
 verify element b2b_search_no_results is visible
 verify element b2b_search_no_results contains "No results found" ignoring case
 verify element prp_first_product_title is not visible
 take screenshot as mumbai_nh4no3
 # AN prills in Mumbai -> no results
-store "Mumbai" as city
 store "AN prills" as search_term
-call SG_22788_Freetext_Search_In_City
-wait until url contains "/jdmart/${city}"
+call SG_22788_Search_Again_On_Result_Page
 verify element b2b_search_no_results is visible
 verify element b2b_search_no_results contains "No results found" ignoring case
 verify element prp_first_product_title is not visible

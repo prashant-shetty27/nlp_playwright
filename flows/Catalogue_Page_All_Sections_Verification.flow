@@ -16,7 +16,7 @@ call SG_Catalogue_Page_Popular_Product_Overview
 # OFF: call SG_Catalogue_Page_Product_Categories_Overview
 call SG_Catalogue_Page_PDF_Catalogue_Images_Overview
 click b2b_catalogue_tab_overview
-wait 2 seconds
+wait until element b2b_catalogue_photos_heading is visible
 call SG_Catalogue_Page_Photos_Overview
 call SG_Catalogue_Page_Open_VN_Number_Overview
 call SG_Catalogue_Page_QuickInfo_Overview

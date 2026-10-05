@@ -3,7 +3,6 @@
 # Tags: regression
 
 open https://www.justdial.com/Navi-Mumbai/Skbw-Manufacturing-Pvt-Ltd-New-Panvel/022PXX22-XX22-190526121014-J8Y4_BZDET/photos?trkid=4306908139&newAddress=Next%2520To%2520Grampanchyat%2520Office%2520New%2520Panvel&galtype=All&cname=Skbw+Manufacturing+Pvt+Ltd&paid=1&ds=0&datacity=&catalogueType=
-wait 3 seconds
 wait until element photos_products_tab is visible
 scroll to photos_products_tab
 click photos_products_tab

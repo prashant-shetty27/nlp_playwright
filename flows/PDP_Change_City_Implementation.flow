@@ -6,7 +6,6 @@
 
 call PS_Touch_Location_Popup
 open https://www.justdial.com/jdmart/Mumbai/Tiles/jdm-1107294-ent-4-48734?srcterm=Tiles
-wait 4 seconds
 wait for page to load
 store text of prp_search_box_city_name as searched_city
 create variable CN_Category with value "Tiles"
@@ -26,9 +25,8 @@ create variable CitySearch with value "Bangalore"
 type "${CitySearch}" into focused field
 wait 3 seconds
 press key Space
-wait 3 seconds
+wait until element pdp_city_change_1st_autosuggest is visible
 click pdp_city_change_1st_autosuggest
-wait 4 seconds
 verify element prp_search_box_category_name is visible
 verify element prp_city_name_in_search_box contains "${CitySearch}"
 verify element prp_result_heading contains "${CN_Category}"
@@ -39,7 +37,7 @@ click ps_touch_b2b_prp_1st_product
 wait 3 seconds
 verify element pdp_city_name contains "${CitySearch}"
 open https://www.justdial.com/Bangalore/Crane-Manufacturers/nct-10146272?fl=undefined&ismap=undefined&subpage=&searchCase=&term=crane%2520&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=0&stype=category_list&srcterm=Crane%20Manufacturers&trkid=1240815-bangalore
-wait 4 seconds
+wait for page to load
 call PS_Touch_Consent_Popup
 wait for page to load
 store text of b2b_nct_city_name as B2B_NCT_CityName
@@ -51,10 +49,10 @@ wait 3 seconds
 call SG_NCT_to_PDP_City_Change_Verification
 call SG_PDP_Change_City_Pune_Cranes
 open https://www.justdial.com/Delhi/Robocura-Opp-Pillar-No-119-Ghitorni/011PXX11-XX11-190725175424-B1S6_BZDET?pid=219902361&nid=12408409&jdmid=jdm-1572310-ent-4-13136228
-wait 4 seconds
+wait until element catalogue_products_tab is visible
 scroll to catalogue_products_tab
 click catalogue_products_tab
-wait 3 seconds
+wait until element catalogue_products_tab_1st_product is visible
 scroll to catalogue_products_tab_1st_product
 create variable CitySearch with value "Pune"
 # GJDT-8598 Case-2: opening a catalogue URL directly makes the URL's city the default city

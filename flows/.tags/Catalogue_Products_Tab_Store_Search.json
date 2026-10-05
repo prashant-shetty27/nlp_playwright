@@ -1,0 +1,210 @@
+{
+ "version": 1,
+ "flow_mtime": 1791221399.5202165,
+ "steps": [
+  {
+   "line": 7,
+   "text": "wait 2 seconds",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 8,
+   "text": "open https://www.justdial.com/Bangalore/Akash-Roofing-Solution-Opposite-Nava-Jeevan-Ashram-and-Bheema-Jewelres-Kalyan-Nagar/080PXX80-XX80-121203203315-K8I2_BZDET?pid=2223047492&nid=10413490&jdmid=jdm-1092649-ent-2-13734943&jdmart=1&search=Roofing-Sheets",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 9,
+   "text": "wait until element b2b_catalogue_tab_product is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 10,
+   "text": "click b2b_catalogue_tab_product",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 11,
+   "text": "wait until element catalogue_product_tab_store_search is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 12,
+   "text": "click catalogue_product_tab_store_search",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 13,
+   "text": "wait until element catalogue_product_tab_store_search_box is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 15,
+   "text": "type \"roofing\" into catalogue_product_tab_store_search_box",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 16,
+   "text": "wait 2 seconds",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 17,
+   "text": "clear catalogue_product_tab_store_search_box",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 18,
+   "text": "type \"roofing\" into focused field",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 19,
+   "text": "wait 3 seconds",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 20,
+   "text": "verify element catalogue_product_tab_store_search_category_as is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 21,
+   "text": "store count of catalogue_product_tab_store_search as product_store_search_AS_count",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 23,
+   "text": "js click catalogue_product_tab_store_search_category_as",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 24,
+   "text": "wait 2 seconds",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 26,
+   "text": "open https://www.justdial.com/Navi-Mumbai/Baldev-Engineering-Nerul/022PXX22-XX22-131219124833-X3Z1_BZDET?showSearch=0",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 27,
+   "text": "wait until element b2b_catalogue_tab_product is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 28,
+   "text": "call SG_Product_Store_Search_Tempo_Traveller",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 29,
+   "text": "open https://www.justdial.com/Mumbai/Kalsaria-Construction-Malad-East/022PXX22-XX22-200622123529-Q9J8_BZDET",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 30,
+   "text": "wait until element b2b_catalogue_tab_product is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 31,
+   "text": "call SG_Product_Store_Search_Crane_Services",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 32,
+   "text": "open https://www.justdial.com/Hyderabad/A-S-Industries-Kukatpally/040PXX40-XX40-240221201317-Y9N6_BZDET?pid=800932973&nid=11074360&jdmid=jdm-1078482-ent-6-22730456",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 33,
+   "text": "wait until element b2b_catalogue_tab_product is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 34,
+   "text": "click b2b_catalogue_tab_product",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 35,
+   "text": "verify element catalogue_product_tab_store_search is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 36,
+   "text": "open https://www.justdial.com/Mumbai/Mitsuba-Systems-India-LLP-Factory-Outlet-Andheri-West/022P1908302_BZDET/products?trkid=4300141751&showSearch=0&nid=10384011&tabNid=",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 37,
+   "text": "wait until element b2b_catalogue_tab_product is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 38,
+   "text": "click b2b_catalogue_tab_product",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 39,
+   "text": "verify element catalogue_product_tab_store_search is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 40,
+   "text": "click catalogue_product_tab_1st_category_filter",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 41,
+   "text": "verify element catalogue_product_tab_store_search is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 42,
+   "text": "click catalogue_product_tab_store_search_all_filter_tab",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 43,
+   "text": "verify element catalogue_product_tab_store_search is visible",
+   "level": "R",
+   "manual": false
+  }
+ ]
+}

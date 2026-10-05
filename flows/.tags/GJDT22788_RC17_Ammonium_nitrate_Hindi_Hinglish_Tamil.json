@@ -1,0 +1,132 @@
+{
+ "version": 1,
+ "flow_mtime": 1791199124.4923882,
+ "steps": [
+  {
+   "line": 9,
+   "text": "store \"Ahmedabad\" as city",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 10,
+   "text": "store \"Roofing Sheets\" as category",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 11,
+   "text": "store \"(set by the chat step group)\" as bot_reply",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 12,
+   "text": "call SG_22788_Open_PRP_Floater",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 14,
+   "text": "verify ${bot_reply} matches \"${rfq22788_campaign_started}\" ignoring case",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 16,
+   "text": "store \"अमोनियम नाइट्रेट चाहिए\" as message",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 17,
+   "text": "call SG_22788_Send_Message",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 18,
+   "text": "verify ${bot_reply} matches \"${rfq22788_restricted_alert}\" ignoring case",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 19,
+   "text": "verify ${bot_reply} does not match \"${rfq22788_campaign_or_suggestion}\" ignoring case",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 20,
+   "text": "verify ${bot_reply} does not match \"${rfq22788_substitute_product}\" ignoring case",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 22,
+   "text": "store \"mujhe ammonium nitrate chahiye\" as message",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 23,
+   "text": "call SG_22788_Send_Message",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 24,
+   "text": "verify ${bot_reply} matches \"${rfq22788_restricted_alert}\" ignoring case",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 25,
+   "text": "verify ${bot_reply} does not match \"${rfq22788_campaign_or_suggestion}\" ignoring case",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 26,
+   "text": "verify ${bot_reply} does not match \"${rfq22788_substitute_product}\" ignoring case",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 28,
+   "text": "store \"எனக்கு அம்மோனியம் நைட்ரேட் 50 கிலோ வேண்டும்\" as message",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 29,
+   "text": "call SG_22788_Send_Message",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 30,
+   "text": "verify ${bot_reply} matches \"${rfq22788_restricted_alert}\" ignoring case",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 31,
+   "text": "verify ${bot_reply} does not match \"${rfq22788_campaign_or_suggestion}\" ignoring case",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 32,
+   "text": "verify ${bot_reply} does not match \"${rfq22788_substitute_product}\" ignoring case",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 33,
+   "text": "take screenshot as rc17_transcript",
+   "level": "F",
+   "manual": false
+  }
+ ]
+}

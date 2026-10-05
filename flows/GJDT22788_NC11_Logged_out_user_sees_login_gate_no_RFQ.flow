@@ -9,11 +9,7 @@ store "Roofing Sheets" as category
 store "(set by the chat step group)" as bot_reply
 call SG_22788_Search_Product_In_City
 # The 'Save more on ...' mobile-number sheet is not under test here; it is closed only so the floater can be reached
-repeat until element prp_rfq_floater is visible (max 10 times)
-click if visible b2b_prp_gvs_popup_skip
-swipe bottom to top
-wait 2 seconds
-end repeat
+swipe bottom to top until element prp_rfq_floater is visible, closing b2b_prp_gvs_popup_skip, max 10 times, wait 0.5
 click if visible b2b_prp_gvs_popup_skip
 click prp_rfq_floater
 wait until url contains "bestdeals_chatbot"

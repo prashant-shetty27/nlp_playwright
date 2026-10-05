@@ -367,6 +367,15 @@ def open_site(page, url: str):
                                      timeout=int(os.getenv("OPEN_IDLE_TIMEOUT_MS", "5000")))
         except Exception:
             pass  # networkidle timeout is non-fatal
+        # Known page (data/pages.json): wait until its landmark is on screen, so
+        # the next step never looks at a half-rendered page.
+        try:
+            from core import pages as _pages
+            key = _pages.wait_for_page(page, page.url or sanitized_url)
+            if key:
+                logger.info("📄 Page recognised as '%s' — landmark visible", key)
+        except Exception:  # noqa: BLE001
+            pass
     except Exception as e:
         # Playwright reports a failure with the URL it was GIVEN, credentials
         # and all. This line built a safe_url for its own text and then pasted
@@ -1317,12 +1326,28 @@ def _finger_drag(page, dy: float, secs: float = 0.45) -> None:
     else:
         # WebKit / Firefox have no touch injection: pointer drag (what touch
         # listeners on those engines receive), then make sure the page moved.
-        page.mouse.move(x, ya)
-        page.mouse.down()
-        for i in range(1, steps + 1):
-            page.mouse.move(x, ya + (yb - ya) * i / steps, steps=1)
-            page.wait_for_timeout(int(secs * 1000 / steps))
-        page.mouse.up()
+        # A pointer drag selects text as it goes (the page lit up blue while
+        # scrolling). Turn selection off for the drag, then clear any that
+        # slipped through.
+        _NOSEL = "() => { document.documentElement.style.webkitUserSelect='none'; document.documentElement.style.userSelect='none'; }"
+        _RESEL = ("() => { document.documentElement.style.webkitUserSelect=''; document.documentElement.style.userSelect=''; "
+                  "try { window.getSelection().removeAllRanges(); } catch (e) {} }")
+        try:
+            page.evaluate(_NOSEL)
+        except PlaywrightError:
+            pass
+        try:
+            page.mouse.move(x, ya)
+            page.mouse.down()
+            for i in range(1, steps + 1):
+                page.mouse.move(x, ya + (yb - ya) * i / steps, steps=1)
+                page.wait_for_timeout(int(secs * 1000 / steps))
+            page.mouse.up()
+        finally:
+            try:
+                page.evaluate(_RESEL)
+            except PlaywrightError:
+                pass
     if time.time() - t_start > 3:
         _mark_slow(page)
         logger.warning("🐢 A finger scroll took %.1fs — later scrolls on this page move it directly",
@@ -1389,7 +1414,7 @@ def _settle_after_scroll(page, max_ms: int | None = None) -> None:
     lists, lazy sections) is in place before the next step looks at the page.
     Condition-based, bounded (SCROLL_SETTLE_MS, default 8 s), never fails a step.
     """
-    budget = int(max_ms if max_ms is not None else getattr(settings, "SCROLL_SETTLE_MS", 8000))
+    budget = int(max_ms if max_ms is not None else settings.live("scroll_settle_ms", settings.SCROLL_SETTLE_MS))
     if budget <= 0:
         return
     started = time.perf_counter()
@@ -1567,6 +1592,15 @@ def swipe_until_element_visible(page, target: str, span: str = "bottom_top",
     if not xpath:
         raise Exception(f"Locator '{target}' not found")
     close_xpaths = []
+    # The page's own popups (data/pages.json) are closed on the way too, so a
+    # test does not have to list the GVS sheet / category popup on every swipe.
+    try:
+        from core import pages as _pages
+        for c in _pages.popups(_pages.detect(page.url or "")):
+            if c not in (closers or []):
+                closers = list(closers or []) + [c]
+    except Exception:  # noqa: BLE001
+        pass
     for c in closers or []:
         cx, _ = get_locator_and_dna(c)
         if not cx:
@@ -1579,8 +1613,11 @@ def swipe_until_element_visible(page, target: str, span: str = "bottom_top",
     # on screen costs anything more (the click).
     _WHICH_VISIBLE = """(xps) => xps.map((xp, i) => {
         try {
-            const r = document.evaluate(xp, document, null,
-                XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+            // a locator may be XPath (starts with / or () or a CSS selector
+            const isXp = xp.trim().startsWith("/") || xp.trim().startsWith("(");
+            const r = isXp ? document.evaluate(xp, document, null,
+                XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue
+                           : document.querySelector(xp);
             if (!r || !(r instanceof Element)) return -1;
             const cs = getComputedStyle(r);
             if (cs.display === 'none' || cs.visibility === 'hidden' || cs.opacity === '0') return -1;
@@ -1646,7 +1683,7 @@ def swipe_until_element_visible(page, target: str, span: str = "bottom_top",
     raise Exception(f"'{target}' did not appear after {max_swipes} swipe(s) {span.replace('_', ' to ')}.")
 
 
-def scroll_until_element_visible(page, target: str, pixels=500, direction="down",
+def scroll_until_element_visible(page, target: str, pixels=None, direction="down",
                                  max_scrolls=None, scroll_wait=1) -> bool:
     """
     Scroll by a fixed number of pixels until the named element is inside the
@@ -1663,7 +1700,7 @@ def scroll_until_element_visible(page, target: str, pixels=500, direction="down"
     xpath, _ = get_locator_and_dna(target)
     if not xpath:
         raise Exception(f"Locator '{target}' not found for scroll_until_element_visible")
-    px = int(pixels or 500)
+    px = int(pixels or settings.live("default_scroll_pixels", settings.DEFAULT_SCROLL_PIXELS))
     dx, dy = {"down": (0, px), "up": (0, -px), "right": (px, 0), "left": (-px, 0)}.get(
         str(direction or "down").lower(), (0, px))
     viewport = page.viewport_size or {"width": 1280, "height": 720}
@@ -1705,7 +1742,31 @@ def scroll_until_element_visible(page, target: str, pixels=500, direction="down"
         _settle_after_scroll(page)
         return _in_viewport()
 
+    # The page's popups (data/pages.json) are closed between scrolls, as a
+    # user would tap Skip on a sheet that covers the list.
+    _closers = []
+    try:
+        from core import pages as _pages
+        for c in _pages.popups(_pages.detect(page.url or "")):
+            cx, _ = get_locator_and_dna(c)
+            if cx:
+                _closers.append((c, cx))
+    except Exception:  # noqa: BLE001
+        pass
+
+    def _close_page_popups() -> None:
+        for name, cx in _closers:
+            try:
+                loc = page.locator(cx).first
+                if loc.count() and loc.is_visible(timeout=150):
+                    loc.click(timeout=1500)
+                    logger.info("✖️ Closed '%s' while scrolling", name)
+                    page.wait_for_timeout(250)
+            except Exception:  # noqa: BLE001
+                pass
+
     for i in range(int(max_scrolls) + 1):
+        _close_page_popups()
         if _in_viewport():
             logger.info("📜 '%s' is in view after %d scroll(s) of %dpx %s", target, i, px, direction)
             return True

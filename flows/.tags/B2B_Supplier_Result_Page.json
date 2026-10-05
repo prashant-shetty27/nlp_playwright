@@ -1,0 +1,390 @@
+{
+ "version": 1,
+ "flow_mtime": 1791221399.49032,
+ "steps": [
+  {
+   "line": 7,
+   "text": "open https://www.justdial.com/",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 8,
+   "text": "wait 2 seconds",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 9,
+   "text": "[ignore] click maybe_later",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 10,
+   "text": "click b2b1",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 11,
+   "text": "wait until element b2b_search_field is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 12,
+   "text": "click b2b_search_field",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 13,
+   "text": "click b2b_search_field_2",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 14,
+   "text": "click suppliers_tab",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 15,
+   "text": "click b2b_search_field_2",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 16,
+   "text": "type \"cctv\" into b2b_search_field_2",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 17,
+   "text": "click cctv_1st_autosuggest",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 18,
+   "text": "wait until element ps_touch_b2b_prp_sller_type_filter is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 19,
+   "text": "click ps_touch_b2b_prp_sller_type_filter",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 20,
+   "text": "click ps_touch_b2b_prp_business_filter_wholesalers",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 22,
+   "text": "click srp_sort_by_tab",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 23,
+   "text": "click srp_sort_by_relevance_popularity",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 24,
+   "text": "click srp_map_tab",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 25,
+   "text": "click srp_list_view_tab",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 26,
+   "text": "click srp_city_filter",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 27,
+   "text": "click srp_heading_all_india",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 28,
+   "text": "click srp_change_location",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 29,
+   "text": "click srp_heading_delhi",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 30,
+   "text": "click srp_filter_icon",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 31,
+   "text": "wait until element srp_filter_page_clear_all is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 32,
+   "text": "click srp_filter_page_clear_all",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 33,
+   "text": "click filter_div_apply_button",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 35,
+   "text": "click srp_city_filter",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 36,
+   "text": "click srp_city_delhi",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 37,
+   "text": "wait 3 seconds",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 39,
+   "text": "if element srp_city_bangalore is not visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 40,
+   "text": "click srp_city_filter",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 41,
+   "text": "end if",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 42,
+   "text": "click srp_city_bangalore",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 43,
+   "text": "wait until element srp_1st_result is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 44,
+   "text": "click srp_1st_result",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 45,
+   "text": "click catalogue_header_back",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 46,
+   "text": "click srp_filter_icon",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 47,
+   "text": "click srp_filter_page_verified_toggle_icon",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 48,
+   "text": "click srp_filter_page_trust_toggle_icon",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 49,
+   "text": "click filter_div_apply_button",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 50,
+   "text": "click srp_filter_icon",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 51,
+   "text": "type \"10\" into min_order_quantity_input",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 52,
+   "text": "click filter_div_apply_button",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 53,
+   "text": "scroll to srp_seller_type_banner",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 54,
+   "text": "verify element srp_seller_type_banner is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 55,
+   "text": "click srp_seller_type_banner_manufacturer",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 56,
+   "text": "click srp_seller_type_banner_skip",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 57,
+   "text": "verify element srp_seller_img is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 58,
+   "text": "verify element srp_seller_paid_icon is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 59,
+   "text": "verify element srp_1st_seller_name is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 60,
+   "text": "verify element srp_seller_area is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 61,
+   "text": "verify element srp_seller_rating is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 62,
+   "text": "verify element srp_seller_verified is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 63,
+   "text": "verify element srp_seller_trust_icon is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 64,
+   "text": "verify element srp_seller_yrs is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 65,
+   "text": "verify element srp_call_now_button is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 66,
+   "text": "verify element srp_seller_gbp_button is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 67,
+   "text": "scroll to srp_seller_type_option",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 68,
+   "text": "verify element srp_seller_type_option is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 69,
+   "text": "verify element srp_seller_gbp_button is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 70,
+   "text": "verify element srp_seller_type_banner_submit is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 71,
+   "text": "click srp_seller_gbp_button",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 72,
+   "text": "wait until element rfq_skip_all_button is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 74,
+   "text": "js click rfq_skip_all_button",
+   "level": "R",
+   "manual": false
+  }
+ ]
+}

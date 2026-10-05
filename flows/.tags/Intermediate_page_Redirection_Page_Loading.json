@@ -1,0 +1,126 @@
+{
+ "version": 1,
+ "flow_mtime": 1790935467.2104568,
+ "steps": [
+  {
+   "line": 8,
+   "text": "open https://www.justdial.com/jdmart",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 9,
+   "text": "wait until element all_categories is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 10,
+   "text": "click all_categories",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 11,
+   "text": "wait until element b2b_all_categories_page_category_count is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 12,
+   "text": "store count of b2b_all_categories_page_category_count as size_of_ele",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 13,
+   "text": "create variable i with value \"1\"",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 14,
+   "text": "if ${i} is at most ${size_of_ele}",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 15,
+   "text": "repeat while element b2b_all_categories_page_category is visible (max 50 times)",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 16,
+   "text": "store text of b2b_all_categories_page_category as categoryname",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 17,
+   "text": "click b2b_all_categories_page_category",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 18,
+   "text": "verify text \"${categoryname}\" on page",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 19,
+   "text": "wait until element full_page_img_element is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 20,
+   "text": "store text of intermediate_page_heading as ip_headi",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 21,
+   "text": "verify stored categoryname contains \"${ip_headi}\"",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 22,
+   "text": "verify element full_page_img_element is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 23,
+   "text": "click intermediate_page_header_back",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 24,
+   "text": "wait until element b2b_all_categories_page_category is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 26,
+   "text": "increase i by 1",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 27,
+   "text": "end repeat",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 28,
+   "text": "end if",
+   "level": "S",
+   "manual": false
+  }
+ ]
+}

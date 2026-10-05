@@ -11,5 +11,4 @@ wait 3 seconds
 swipe left
 [ignore 30s] swipe bottom to top until element inner_gallery_request_more_photos is visible, max 15 times, wait 1
 # OFF: click inner_gallery_request_more_photos
-wait 2 seconds
 # OFF: verify element inner_gallery_product_name is visible

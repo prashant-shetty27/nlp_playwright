@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 import subprocess
 import sys
 import threading
@@ -214,6 +215,136 @@ def restart(body: RestartRequest, user: str = Depends(acting_user)):
 # ── Team sync (git without git) ──────────────────────────────────────────────
 class ShareRequest(BaseModel):
     message: str = ""
+
+
+# ── execution defaults (config/controllers.json → "browser") ─────────────────
+#: key → (label, help, min, max). Edited in Settings; read live by the engine.
+EXEC_DEFAULTS = {
+    "scroll_settle_ms": ("After a scroll / swipe: wait for loaders to clear (ms, max)",
+                         "Condition-based: continues the moment no loader / spinner / skeleton is on "
+                         "screen and the network is quiet. 0 = off.", 0, 60000),
+    "default_scroll_pixels": ("'scroll until …' step size (px)",
+                              "Used when the step does not say 'scroll by N pixels'.", 100, 5000),
+    "default_scroll_count": ("'scroll until …' max scrolls",
+                             "Used when the step does not say 'scroll count N'.", 1, 200),
+    "default_swipe_count": ("'swipe … until …' max swipes",
+                            "Used when the step does not say 'max N times'.", 1, 200),
+    "step_settle_ms": ("After a click: settle budget (ms)",
+                       "Max wait for the page to go quiet after a click.", 0, 30000),
+    "action_timeout_ms": ("Element timeout (ms)",
+                          "How long 'click X', 'verify X is visible', 'wait until X …' wait for X. "
+                          "Applies from the next browser launch.", 1000, 120000),
+}
+
+
+@router.get("/exec-defaults")
+def exec_defaults():
+    from config import settings as S
+    cur = {k: S.live(k, getattr(S, k.upper(), 0)) for k in EXEC_DEFAULTS}
+    return {"values": cur, "fields": {k: {"label": v[0], "help": v[1], "min": v[2], "max": v[3]}
+                                      for k, v in EXEC_DEFAULTS.items()}}
+
+
+class ExecDefaults(BaseModel):
+    values: dict
+
+
+@router.put("/exec-defaults")
+def set_exec_defaults(body: ExecDefaults, user: str = Depends(acting_user)):
+    require(user, "write")
+    import json as _json
+    from config.settings import CONTROLLERS_FILE
+    try:
+        with open(CONTROLLERS_FILE, "r", encoding="utf-8") as f:
+            data = _json.load(f)
+    except (OSError, ValueError):
+        data = {}
+    br = data.setdefault("browser", {})
+    for k, v in (body.values or {}).items():
+        if k not in EXEC_DEFAULTS:
+            continue
+        lo, hi = EXEC_DEFAULTS[k][2], EXEC_DEFAULTS[k][3]
+        br[k] = max(lo, min(hi, int(v)))
+    tmp = CONTROLLERS_FILE + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        _json.dump(data, f, indent=2)
+    os.replace(tmp, CONTROLLERS_FILE)
+    return {"message": "Execution defaults saved — they apply to the next step that uses them.",
+            "values": br}
+
+
+# ── known issues register ─────────────────────────────────────────────────────
+@router.get("/known-issues")
+def known_issues_list():
+    from core import known_issues
+    return {"issues": known_issues.load(), "kinds": list(known_issues.KINDS)}
+
+
+class KnownIssueBody(BaseModel):
+    issue: dict
+
+
+@router.put("/known-issues")
+def known_issue_save(body: KnownIssueBody, user: str = Depends(acting_user)):
+    """Create or replace one entry (by id). New entries get the next KI-nnn id."""
+    require(user, "write")
+    from core import known_issues
+    issues = known_issues.load()
+    e = dict(body.issue or {})
+    if e.get("kind") not in known_issues.KINDS:
+        raise HTTPException(status_code=422, detail=f"kind must be one of {', '.join(known_issues.KINDS)}")
+    if not (e.get("title") or "").strip():
+        raise HTTPException(status_code=422, detail="A title is needed.")
+    m = e.get("match") or {}
+    if not any((m.get(k) or "").strip() for k in ("test_case", "step", "error", "element")):
+        raise HTTPException(status_code=422, detail="At least one match rule (test case / step / error / element) is needed.")
+    if not e.get("id"):
+        nums = [int(x["id"][3:]) for x in issues if str(x.get("id", "")).startswith("KI-") and x["id"][3:].isdigit()]
+        e["id"] = f"KI-{(max(nums) + 1) if nums else 1:03d}"
+        e.setdefault("opened", __import__("datetime").date.today().isoformat())
+        e.setdefault("owner", user)
+    issues = [x for x in issues if x.get("id") != e["id"]] + [e]
+    issues.sort(key=lambda x: x.get("id", ""))
+    known_issues.save(issues)
+    return {"message": f"{e['id']} saved", "issue": e}
+
+
+@router.delete("/known-issues/{issue_id}")
+def known_issue_delete(issue_id: str, user: str = Depends(acting_user)):
+    require(user, "write")
+    from core import known_issues
+    issues = [x for x in known_issues.load() if x.get("id") != issue_id]
+    known_issues.save(issues)
+    return {"message": f"{issue_id} removed"}
+
+
+# ── page knowledge base ───────────────────────────────────────────────────────
+@router.get("/pages")
+def pages_list():
+    from core import pages
+    return {"pages": pages.load()}
+
+
+class PagesBody(BaseModel):
+    pages: dict
+
+
+@router.put("/pages")
+def pages_save(body: PagesBody, user: str = Depends(acting_user)):
+    require(user, "write")
+    from core import pages
+    clean = {}
+    for key, p in (body.pages or {}).items():
+        k = re.sub(r"[^a-z0-9_]", "", str(key).lower())
+        if not k:
+            continue
+        clean[k] = {"label": str(p.get("label") or k),
+                    "detect": {"url": [u for u in (p.get("detect") or {}).get("url", []) if u]},
+                    "landmark": [x for x in p.get("landmark") or [] if x],
+                    "popups": [x for x in p.get("popups") or [] if x],
+                    "sections": [x for x in p.get("sections") or [] if x]}
+    pages.save(clean)
+    return {"message": "Pages saved — the next open / scroll uses them.", "pages": clean}
 
 
 @router.get("/sync/status")

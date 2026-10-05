@@ -8,7 +8,6 @@ call Live_Touch_Chrome_Navigate_to_Homepage_setup_Popup
 open https://www.justdial.com/Mumbai/Global-View-Opposite-Raj-Mahal-Hotel-Borivali-West/022PXX22-XX22-150314191942-T5N6_BZDET?pid=2219566662&nid=&jdmid=
 delete all cookies
 refresh page
-wait 2 seconds
 [ignore 30s] scroll until element catalogue_bd_category_popup visible, scroll by 600 pixels, scroll count 15, scroll wait 1
 verify element catalogue_bd_category_popup is visible
 verify element catalogue_page_category_rfq_popup_looking_for_text is visible
@@ -21,4 +20,3 @@ click catalogue_get_verified_seller_button_bd_category_pop
 call B2B_Common_Non_Login_to_Login_via_Only_Mobile_numb
 verify text "Dear Jai" on page
 # OFF: verify text "Dear Prashant" on page
-wait 1 seconds

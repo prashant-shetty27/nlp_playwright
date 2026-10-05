@@ -1,0 +1,66 @@
+{
+ "version": 1,
+ "flow_mtime": 1791199123.9393206,
+ "steps": [
+  {
+   "line": 9,
+   "text": "store \"Mumbai\" as city",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 10,
+   "text": "store \"PVC Pipes\" as category",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 11,
+   "text": "store \"(set by the chat step group)\" as bot_reply",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 12,
+   "text": "call SG_22788_Open_PDP_FAB",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 14,
+   "text": "verify ${bot_reply} matches \"${rfq22788_campaign_started}\" ignoring case",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 16,
+   "text": "store \"Rentokil rat glue pad\" as message",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 17,
+   "text": "call SG_22788_Send_Message",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 18,
+   "text": "verify ${bot_reply} matches \"${rfq22788_restricted_alert}\" ignoring case",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 19,
+   "text": "verify ${bot_reply} does not match \"${rfq22788_campaign_or_suggestion}\" ignoring case",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 20,
+   "text": "take screenshot as rc03_transcript",
+   "level": "F",
+   "manual": false
+  }
+ ]
+}

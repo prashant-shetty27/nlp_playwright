@@ -1,0 +1,132 @@
+{
+ "version": 1,
+ "flow_mtime": 1790972130.2470589,
+ "steps": [
+  {
+   "line": 6,
+   "text": "open ${prot3_pdp_360_photos}",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 7,
+   "text": "wait for page to load",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 8,
+   "text": "wait until element pdp_first_photo is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 9,
+   "text": "verify element pdp_first_photo is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 10,
+   "text": "click pdp_first_photo",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 11,
+   "text": "wait until element gallery_slide_image is visible",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 12,
+   "text": "wait 2 seconds",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 13,
+   "text": "verify element gallery_360_icon is not visible",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 14,
+   "text": "take screenshot as gallery_photo_1",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 15,
+   "text": "swipe left",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 16,
+   "text": "wait 2 seconds",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 17,
+   "text": "verify element gallery_360_icon is not visible",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 18,
+   "text": "take screenshot as gallery_photo_2",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 19,
+   "text": "swipe left",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 20,
+   "text": "wait 2 seconds",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 21,
+   "text": "verify element gallery_360_icon is not visible",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 22,
+   "text": "take screenshot as gallery_photo_3",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 23,
+   "text": "swipe left",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 24,
+   "text": "wait 2 seconds",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 25,
+   "text": "verify element gallery_360_icon is not visible",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 26,
+   "text": "take screenshot as gallery_photo_4",
+   "level": "F",
+   "manual": false
+  }
+ ]
+}

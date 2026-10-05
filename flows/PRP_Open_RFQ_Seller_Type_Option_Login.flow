@@ -11,10 +11,8 @@ wait 2 seconds
 js click allpages_login_mobile_continue
 wait until element touch_home_otp_1stfield is visible
 type if visible "${otp}" into touch_home_otp_1stfield
-wait 1 seconds
-wait 1 seconds
-open https://www.justdial.com/jdmart/Delhi/Scrap/jdm-1094774-ent-15-1094774?fl=undefined&ismap=undefined&subpage=&searchCase=&term=scrap&searchLocUpdate=0&stype=category_list&srcterm=Scrap
 wait 2 seconds
+open https://www.justdial.com/jdmart/Delhi/Scrap/jdm-1094774-ent-15-1094774?fl=undefined&ismap=undefined&subpage=&searchCase=&term=scrap&searchLocUpdate=0&stype=category_list&srcterm=Scrap
 scroll until element prp_what_are_you_looking_for_seller_type_banner visible, scroll by 600 pixels, scroll count 15, scroll wait 1
 scroll to prp_what_are_you_looking_for_seller_type_banner
 scroll to prp_open_rfq_seller_type_section

@@ -1,0 +1,186 @@
+{
+ "version": 1,
+ "flow_mtime": 1791221399.6186492,
+ "steps": [
+  {
+   "line": 8,
+   "text": "call Live_Touch_Chrome_Navigate_to_Homepage_setup_Popup",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 9,
+   "text": "open https://www.justdial.com/Mumbai/Cranes-On-Rent-in-Link-Road-Malad-West/nct-10146502?fl=undefined&ismap=undefined&subpage=&searchCase=&term=crane&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Cranes%20On%20Rent&trkid=21263-mumbai",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 10,
+   "text": "wait for page to load",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 11,
+   "text": "call PS_Touch_Consent_Popup",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 12,
+   "text": "swipe bottom to top until element nct_ask_for_price is visible, max 15 times, wait 1",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 13,
+   "text": "verify text \"Ask for Price\" on page",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 14,
+   "text": "click nct_ask_for_price",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 15,
+   "text": "verify element nct_login_ask_for_price is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 16,
+   "text": "verify element prp_open_rfq_login_pop_jd_logo is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 17,
+   "text": "verify element nct_login_text_ask_for_price is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 18,
+   "text": "click touch_login_popup_may_be_later",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 19,
+   "text": "click nct_ask_for_price",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 20,
+   "text": "type \"${mobile_9987}\" into prp_login_mobile",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 21,
+   "text": "js click nct_login_pop_continue_button",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 22,
+   "text": "type \"${otp}\" into nct_login_otp_field",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 23,
+   "text": "verify element nct_ask_for_price_acknowledgement_toast_msg is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 24,
+   "text": "delete all cookies",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 25,
+   "text": "open https://www.justdial.com/",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 26,
+   "text": "wait for page to load",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 27,
+   "text": "call PS_Touch_Location_Popup",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 28,
+   "text": "click touch_signin_home_page",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 29,
+   "text": "wait 1 seconds",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 30,
+   "text": "click touch_home_english_tab",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 31,
+   "text": "wait until element touch_home_hindi_langauge is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 32,
+   "text": "click touch_home_hindi_langauge",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 33,
+   "text": "wait 2 seconds",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 34,
+   "text": "open https://www.justdial.com/Mumbai/Cranes-On-Rent-in-Link-Road-Malad-West/nct-10146502?fl=undefined&ismap=undefined&subpage=&searchCase=&term=crane&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Cranes%20On%20Rent&trkid=21263-mumbai",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 35,
+   "text": "wait until element text_ask_price_in_hindi is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 36,
+   "text": "click text_ask_price_in_hindi",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 37,
+   "text": "call SG_Ask_for_Price_Non_Login_to_Login_Hindi",
+   "level": "R",
+   "manual": false
+  }
+ ]
+}

@@ -1,6 +1,6 @@
 {
  "version": 1,
- "flow_mtime": 1791209470.2288053,
+ "flow_mtime": 1791221399.4748855,
  "steps": [
   {
    "line": 5,
@@ -10,66 +10,60 @@
   },
   {
    "line": 6,
-   "text": "wait 3 seconds",
-   "level": "S",
-   "manual": false
-  },
-  {
-   "line": 7,
    "text": "wait until element photos_products_tab is visible",
    "level": "S",
    "manual": false
   },
   {
-   "line": 8,
+   "line": 7,
    "text": "scroll to photos_products_tab",
    "level": "S",
    "manual": false
   },
   {
-   "line": 9,
+   "line": 8,
    "text": "click photos_products_tab",
    "level": "S",
    "manual": false
   },
   {
-   "line": 10,
+   "line": 9,
    "text": "click catalogue_products_1st_img",
    "level": "S",
    "manual": false
   },
   {
-   "line": 11,
+   "line": 10,
    "text": "verify element catalogue_product_image_category_name is visible",
    "level": "S",
    "manual": false
   },
   {
-   "line": 12,
+   "line": 11,
    "text": "store text of catalogue_product_image_category_name as product_img_category_name",
    "level": "R",
    "manual": false
   },
   {
-   "line": 13,
+   "line": 12,
    "text": "click products_image_view_more_details_link",
    "level": "R",
    "manual": false
   },
   {
-   "line": 14,
+   "line": 13,
    "text": "wait until url contains \"/pid-\"",
    "level": "R",
    "manual": false
   },
   {
-   "line": 15,
+   "line": 14,
    "text": "wait for page to load",
    "level": "R",
    "manual": false
   },
   {
-   "line": 16,
+   "line": 15,
    "text": "verify text \"${product_img_category_name}\" on page",
    "level": "R",
    "manual": false

@@ -1,0 +1,42 @@
+{
+ "version": 1,
+ "flow_mtime": 1791221399.666919,
+ "steps": [
+  {
+   "line": 7,
+   "text": "call PS_Touch_Location_Popup",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 8,
+   "text": "call SG_Touch_Core_Login",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 9,
+   "text": "open https://www.justdial.com/jdmart/Mumbai/Roller-Lock-Ball-lock-Coated-SS304-4-6mm-width-PRU44-150/pid-2030900705/022PXX22-XX22-180320192332-E1H1?slider=1&initialIndex=0&sellers=0",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 10,
+   "text": "wait 3 seconds",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 11,
+   "text": "swipe left",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 12,
+   "text": "[ignore 30s] swipe bottom to top until element inner_gallery_request_more_photos is visible, max 15 times, wait 1",
+   "level": "S",
+   "manual": false
+  }
+ ]
+}

@@ -12,30 +12,10 @@ verify element b2b_search_no_results is visible
 verify element b2b_search_no_results contains "No results found" ignoring case
 verify element prp_first_product_title is not visible
 take screenshot as ahmedabad_ratgluepad
-# rodent glue board in Ahmedabad -> no results
-store "Ahmedabad" as city
-store "rodent glue board" as search_term
-call SG_22788_Freetext_Search_In_City
-wait until url contains "/jdmart/${city}"
-verify element b2b_search_no_results is visible
-verify element b2b_search_no_results contains "No results found" ignoring case
-verify element prp_first_product_title is not visible
-take screenshot as ahmedabad_rodentglueboard
 # mouse glue trap in Ahmedabad -> no results
-store "Ahmedabad" as city
 store "mouse glue trap" as search_term
-call SG_22788_Freetext_Search_In_City
-wait until url contains "/jdmart/${city}"
+call SG_22788_Search_Again_On_Result_Page
 verify element b2b_search_no_results is visible
 verify element b2b_search_no_results contains "No results found" ignoring case
 verify element prp_first_product_title is not visible
 take screenshot as ahmedabad_mousegluetrap
-# Glue Pad Insect Killer in Ahmedabad -> no results
-store "Ahmedabad" as city
-store "Glue Pad Insect Killer" as search_term
-call SG_22788_Freetext_Search_In_City
-wait until url contains "/jdmart/${city}"
-verify element b2b_search_no_results is visible
-verify element b2b_search_no_results contains "No results found" ignoring case
-verify element prp_first_product_title is not visible
-take screenshot as ahmedabad_gluepadinsectkiller

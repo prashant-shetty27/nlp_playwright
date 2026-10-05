@@ -10,31 +10,37 @@ create variable searchTerm2 with value "Onions"
 open https://www.justdial.com/jdmart
 wait until element home_top_all_categories_section is visible
 click b2b_search_field
-wait 2 seconds
+wait until element b2b_search_field is visible
 type "${searchTerm1}" into b2b_search_field
 call SG_B2B_AS_1st_Selection
 call SG_PRP_Brand_Filter
 call SG_Seller_Type_Filter_Apply_verify
-open https://www.justdial.com/jdmart/
-call SG_Autosuggest_Search_Home_to_PRP
+# next search term from this result page's own search box (same city; a new search starts without the old filters)
+click prp_header_search_box
+wait until element jdmart_search_input is visible
+clear jdmart_search_input
+click jdmart_search_input
 type "${searchTerm2}" into focused field
 call SG_B2B_AS_1st_Selection
-wait 2 seconds
+wait until element all_brands_filter_tab is visible
 call SG_PRP_Brand_Filter
 call SG_Seller_Type_Filter_Apply_verify
-open https://www.justdial.com/jdmart/
-call SG_Autosuggest_Search_Home_to_PRP
+# next search term from this result page's own search box (same city; a new search starts without the old filters)
+click prp_header_search_box
+wait until element jdmart_search_input is visible
+clear jdmart_search_input
+click jdmart_search_input
 type "${searchTerm1}" into focused field
 call SG_B2B_AS_1st_Selection
-wait 3 seconds
+wait until element b2b_prp_filter_tab is visible
 call SG_Filter_Div_Brand_Filter_Apply
 open https://www.justdial.com/Mumbai/Chilli-Wholesalers-in-Link-Road-Malad-West/nct-10097187?fl=undefined&ismap=undefined&subpage=&searchCase=&term=chilli%2520whole&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Chilli%20Wholesalers&trkid=192771-mumbai
-wait 3 seconds
+wait for page to load
 call SG_NCT_Scroll_to_Recommended_Produt_section_click
 call SG_PRP_Brand_Filter
 # OFF: call SG_Seller_Type_Filter_Apply_verify
 open https://www.justdial.com/Mumbai/Chilli-Wholesalers-in-Link-Road-Malad-West/nct-10097187?fl=undefined&ismap=undefined&subpage=&searchCase=&term=chilli%2520whole&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Chilli%20Wholesalers&trkid=192771-mumbai
-wait 3 seconds
+wait for page to load
 call SG_NCT_Scroll_to_Recommended_Produt_section_click
 call SG_Filter_Div_Brand_Filter_Apply
 call SG_Seller_Type_Filter_Apply_verify

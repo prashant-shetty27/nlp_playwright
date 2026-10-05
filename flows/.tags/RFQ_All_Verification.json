@@ -1,0 +1,252 @@
+{
+ "version": 1,
+ "flow_mtime": 1791221399.7401993,
+ "steps": [
+  {
+   "line": 8,
+   "text": "call Live_Touch_Chrome_Navigate_to_Homepage_setup_Popup",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 10,
+   "text": "open https://www.justdial.com/jdmart/Mumbai/CCTV/jdm-1016209-ent-2-13630321?fl=undefined&ismap=undefined&subpage=&searchCase=&term=&searchLocUpdate=0&stype=category_list&srcterm=CCTV",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 11,
+   "text": "wait 3 seconds",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 12,
+   "text": "store text of ps_b2b_prp_1st_product as prp_1stProduct",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 13,
+   "text": "click prp_best_price",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 14,
+   "text": "wait until element b2b_assist_chat_login_link is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 15,
+   "text": "verify element b2b_assist_first_card contains \"${prp_1stProduct}\"",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 16,
+   "text": "verify text \"Log in to begin\" on page",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 17,
+   "text": "click close_button",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 18,
+   "text": "wait 2 seconds",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 20,
+   "text": "open https://www.justdial.com/Thane/Bhavani-Tiles-Oppposite-to-Deepak-Hospital-Mira-Road-East/022PXX22-XX22-120225035322-Q5G7_BZDET?catid=&checkin=&checkout=&vpfs=&stxt=%20Tile%20Wholesalers&nid=10482503&stype=category_list&search=Tile-Wholesalers&area=Oppposite%20To%20Deepak%20Hospital%20Mira%20Road%20East&type=Ceramic%20Tile%20Dealers&totalJdReviews=undefined&bdmsgtype=2&bdcaptiontype=4&bdpage=rsltpge&slectedDimgTag=&show_open_abd=0&isb2b=1&thumbnail_tag=",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 21,
+   "text": "verify element b2b_catalogue_send_enquiry_cta_top is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 22,
+   "text": "click b2b_catalogue_send_enquiry_cta_top",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 23,
+   "text": "call SG_RFQ_Old_Form_Or_Blue_Page_Opened",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 24,
+   "text": "delete all cookies",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 25,
+   "text": "refresh page",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 28,
+   "text": "open https://www.justdial.com/jdmart/Mumbai/Bulk-SMS-Services/jdm-1156173-ent-14-10970459?fl=undefined&ismap=undefined&subpage=&searchCase=&term=bulk%2520sms&searchLocUpdate=0&stype=category_list&srcterm=Bulk%20SMS%20Services",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 29,
+   "text": "wait 3 seconds",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 30,
+   "text": "store text of ps_b2b_prp_1st_product as sms_1stProduct",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 31,
+   "text": "click prp_best_price",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 32,
+   "text": "wait until element b2b_assist_chat_login_link is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 33,
+   "text": "verify element b2b_assist_first_card contains \"${sms_1stProduct}\"",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 34,
+   "text": "click close_button",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 35,
+   "text": "wait 1 seconds",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 36,
+   "text": "delete all cookies",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 37,
+   "text": "refresh page",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 39,
+   "text": "open https://www.justdial.com/Mumbai/Union-Pumps-Company-Near-Bombay-Stock-Exchange-Fort/022PXX22-XX22-091217091909-E3F1_BZDET?trkid=&term=&ncatid=10531207&area=Marol%20Naka%20Andheri%20East&search=Popular%20Water%20Pump%20Dealers%20Crompton%20Greaves%20in%20Marol%20Naka%20Andheri%20East,%20Mumbai&mncatname=Water%20Pump%20Dealers-Crompton%20Greaves&ftterm=&csell=&oncatid=10531207&abd_btn=&abd_heading=&bd=1&cat_b2b_flag=1&searchfrom=lst&thumbnail=crompton-greaves-water-pump-27o6por",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 40,
+   "text": "wait until element b2b_catalogue_send_enquiry_cta_top is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 41,
+   "text": "click b2b_catalogue_send_enquiry_cta_top",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 42,
+   "text": "call SG_RFQ_Old_Form_Or_Blue_Page_Opened",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 44,
+   "text": "delete all cookies",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 45,
+   "text": "refresh page",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 47,
+   "text": "open https://www.justdial.com/Noida/Lixo-Healthcare-Equipment-Pvt-Ltd-Noida-Sector-38/011PXX11-XX11-180704154533-X1Y3_BZDET",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 48,
+   "text": "wait until element b2b_catalogue_send_enquiry_cta_top is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 49,
+   "text": "click b2b_catalogue_send_enquiry_cta_top",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 50,
+   "text": "call SG_RFQ_Old_Form_Or_Blue_Page_Opened",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 51,
+   "text": "delete all cookies",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 53,
+   "text": "open https://www.justdial.com/Mumbai/Asian-Paints-Ltd-Head-Office-Shanti-Nagar-Santacruz-East/022PXX22-XX22-000613948179-C9P2_BZDET",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 54,
+   "text": "wait until element b2b_catalogue_send_enquiry_cta_top is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 55,
+   "text": "click b2b_catalogue_send_enquiry_cta_top",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 56,
+   "text": "call SG_RFQ_Old_Form_Or_Blue_Page_Opened",
+   "level": "R",
+   "manual": false
+  }
+ ]
+}

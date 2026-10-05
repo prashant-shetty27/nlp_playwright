@@ -1,0 +1,108 @@
+{
+ "version": 1,
+ "flow_mtime": 1791223332.4206364,
+ "steps": [
+  {
+   "line": 7,
+   "text": "store \"Mumbai\" as city",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 8,
+   "text": "store \"Roofing Sheets\" as category",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 9,
+   "text": "store \"(set by the chat step group)\" as bot_reply",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 10,
+   "text": "call SG_22788_Search_Product_In_City",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 12,
+   "text": "swipe bottom to top until element prp_rfq_floater is visible, closing b2b_prp_gvs_popup_skip, max 10 times, wait 0.5",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 13,
+   "text": "click if visible b2b_prp_gvs_popup_skip",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 14,
+   "text": "click prp_rfq_floater",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 15,
+   "text": "wait until url contains \"bestdeals_chatbot\"",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 16,
+   "text": "wait until element b2b_assist_login_gate is visible within 20 seconds",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 17,
+   "text": "verify page contains \"Log in to begin!\"",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 18,
+   "text": "verify element b2b_assist_chat_login_link is visible",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 20,
+   "text": "verify element type_your_message_input is not enabled",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 21,
+   "text": "take screenshot as login_gate",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 22,
+   "text": "click b2b_assist_chat_login_link",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 24,
+   "text": "wait until element rfq_mobile_number_input is visible within 15 seconds",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 25,
+   "text": "take screenshot as login_sheet_open",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 26,
+   "text": "take screenshot as nc11_transcript",
+   "level": "F",
+   "manual": false
+  }
+ ]
+}

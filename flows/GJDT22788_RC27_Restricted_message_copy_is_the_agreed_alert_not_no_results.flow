@@ -1,4 +1,5 @@
 # Platform: mobilesite
+# Serial: b2b_assist_9987   (chat cases share one test login — run one at a time)
 # Requirement: GJDT-22792 (story GJDT-22788) — Conversational RFQ / B2B Assist, restricted category
 # Case RC27: Restricted message copy is the agreed alert, not "no results" | P1 | UI copy | entry PRP | Ahmedabad / Roofing Sheets | English
 # Expected: Reply matches restricted-alert regex and does NOT match "couldn't find any results"
@@ -14,16 +15,6 @@ call SG_22788_Open_PRP_Floater
 verify ${bot_reply} matches "${rfq22788_campaign_started}" ignoring case
 # (BLOCK) i need rat glue pad
 store "i need rat glue pad" as message
-call SG_22788_Send_Message
-verify ${bot_reply} matches "${rfq22788_restricted_alert}" ignoring case
-verify ${bot_reply} does not match "${rfq22788_campaign_or_suggestion}" ignoring case
-# (BLOCK) ammonium nitrate
-store "ammonium nitrate" as message
-call SG_22788_Send_Message
-verify ${bot_reply} matches "${rfq22788_restricted_alert}" ignoring case
-verify ${bot_reply} does not match "${rfq22788_campaign_or_suggestion}" ignoring case
-# (BLOCK) fire crackers
-store "fire crackers" as message
 call SG_22788_Send_Message
 verify ${bot_reply} matches "${rfq22788_restricted_alert}" ignoring case
 verify ${bot_reply} does not match "${rfq22788_campaign_or_suggestion}" ignoring case

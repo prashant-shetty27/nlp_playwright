@@ -1,0 +1,90 @@
+{
+ "version": 1,
+ "flow_mtime": 1790875469.6268044,
+ "steps": [
+  {
+   "line": 8,
+   "text": "open https://www.justdial.com/jdmart/Navi-Mumbai/SKBW-Rectangular-Paver-Block/pid-2020258866/022PXX22-XX22-190526121014-J8Y4",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 9,
+   "text": "call SG_Need_Assistance_Paid_VN",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 10,
+   "text": "open https://www.justdial.com/jdmart/Udaipur-Rajasthan/Crompton-V-6-Borewell-Submersible-Pumps/pid-2183812439/9999PX294-X294-101122091036-N2E7",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 11,
+   "text": "call SG_Need_Assistance_Paid_AN",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 12,
+   "text": "open https://www.justdial.com/jdmart/Mumbai/Sky-Dance-%7C-Berry-Blue-12x12-inches-Geometric-Square-Porcelain-Matte/pid-2037519045/022PXX22-XX22-000613948179-C9P2",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 13,
+   "text": "call SG_Need_Assistance_Paid_DVN_Without_Whatsapp",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 14,
+   "text": "open https://www.justdial.com/jdmart/Mumbai/Zodiac-Kingcrest-Slim-Minimals-Dark-Red-Polyester-Tie/pid-240955082/022PK028779?idx=0&jdmid=jdm-2276813-ent-2-23046272&flow=result&searchfrom=b2b_prsltpg",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 15,
+   "text": "call SG_Need_Assistance_Non_Paid_AN",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 16,
+   "text": "open https://www.justdial.com/jdmart/Ahmedabad/Brass-Cricket-Trophy/pid-2016310325/022P1235582692R5G4C4?search=Brass%20Cricket%20Trophy&catId=&city=Ahmedabad&nearme=0&sortby=pop&basedon=&nid=10322632&jdmid=jdm-1072402-ent-2-13262891&show=false&bc=&srcterm=Brass%20Cricket%20Trophy",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 17,
+   "text": "call SG_Need_Assistance_Non_Paid_DVN_with_LG",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 18,
+   "text": "open https://www.justdial.com/jdmart/Mangalore/SMALL-SNACKING-FOOD-CART-CHICKEN-STEAKS-CARTS/pid-2024815201/0824PX824-X824-210622152012-Z5K3?search=SMALL%20SNACKING%20FOOD%20CART%20CHICKEN%20STEAKS%20CARTS&catId=&city=&nearme=0&sortby=pop&basedon=&show=false&docid=0824PX824.X824.210622152012.Z5K3&catlgType=&srcterm=SMALL%20SNACKING%20FOOD%20CART%20CHICKEN%20STEAKS%20CARTS",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 19,
+   "text": "call SG_Touch_PDP_No_Call_Popular_Categories_Section_Ve",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 20,
+   "text": "open https://www.justdial.com/jdmart/Satara/Ceramic-Fritted-Glass/pid-2028575527/9999P2162-2162-130903110952-H1Y5?idx=0&jdmid=jdm-1481499-ent-2-17711107&alsoserveCity=Mumbai&searchString=Ceramic-Frit&btype=manufacturers&nid=12031944",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 21,
+   "text": "call SG_Touch_PDP_No_Call_Popular_Categories_Section_Ve",
+   "level": "S",
+   "manual": false
+  }
+ ]
+}

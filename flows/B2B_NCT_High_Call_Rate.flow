@@ -5,15 +5,7 @@
 #   plus the checks that only pass after it. Switch them on only when a lead is wanted.
 
 open https://www.justdial.com/Mumbai/Chemical-Manufacturers/nct-10094098?fl=undefined&ismap=undefined&subpage=&searchCase=&term=chemical%2520man&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Chemical%2520Manufacturers&trkid=192759-mumbai&mvVal=%5B%7B%22mv%22:%221102%22,%22v%22:%5B%22TGQR%22,%22JDV01%22,%22JDT01%22%5D%7D%5D&attrVal=%5B%7B%22e%22:%224%22,%22v%22:%5B%22TGQR%22,%22JDV01%22,%22JDT01%22%5D%7D%5D&fCatId=&appliedFilter=&pfApplied=1
-wait 2 seconds
-swipe bottom to middle
-wait 1 seconds
-swipe bottom to middle
-swipe bottom to middle
-wait 1 seconds
-swipe bottom to middle
-swipe bottom to middle
-wait 1 seconds
+swipe bottom to top until element b2b_nct_navyug_high_call_pick_up_rate is visible, closing touch_login_popup_may_be_later, max 15 times, wait 0.5
 # Live 02-Oct-2026: Sri Sakthy Acids no longer listed here -> Navyug Acid Centre (shows the tag)
 call SG_If_NCT_looking_for_Login_Popup_Seen_then_click
 scroll to b2b_nct_navyug_high_call_pick_up_rate
@@ -23,12 +15,12 @@ verify element high_call_pick_up_rate_text is visible
 call SG_If_NCT_looking_for_Login_Popup_Seen_then_click
 verify text "High call pick up rate" on page
 open https://www.justdial.com/Mumbai/Scrap-Merchants-in-Link-Road-Malad-West/nct-10423532?fl=undefined&ismap=undefined&subpage=&searchCase=&term=%2520Scrap%2520Merchants%2520&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Scrap%2520Merchants&trkid=87106-mumbai&mvVal=%5B%5D&attrVal=%5B%5D&fCatId=&appliedFilter=&pfApplied=1
-wait 3 seconds
+wait until element nct_quick_response_filter_tab is visible
 click nct_quick_response_filter_tab
 wait 2 seconds
 verify text "High call pick up rate" on page
 open https://www.justdial.com/Mumbai/Cranes-On-Rent-in-Lotus-Colony-Govandi/nct-10146502?fl=undefined&ismap=undefined&subpage=&searchCase=&term=cra&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Cranes%20On%20Rent&trkid=21263-mumbai
-wait 2 seconds
+wait for page to load
 # OFF: scroll to b2b_nct_kbn_high_call_pick_up
 # OFF: verify element b2b_nct_kbn_high_call_pick_up is visible
 # OFF: scroll to high_call_pick_up_rate_text

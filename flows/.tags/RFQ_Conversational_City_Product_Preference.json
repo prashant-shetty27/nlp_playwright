@@ -1,6 +1,6 @@
 {
  "version": 1,
- "flow_mtime": 1790951595.519722,
+ "flow_mtime": 1791221399.746869,
  "steps": [
   {
    "line": 12,
@@ -112,54 +112,48 @@
   },
   {
    "line": 33,
-   "text": "wait 3 seconds",
-   "level": "Sy",
-   "manual": false
-  },
-  {
-   "line": 34,
    "text": "wait until element type_your_message_input is visible",
    "level": "Sy",
    "manual": false
   },
   {
-   "line": 35,
+   "line": 34,
    "text": "type \"need executive office chair wholesalers in ahmedabad\" into type_your_message_input",
    "level": "Sy",
    "manual": false
   },
   {
-   "line": 36,
+   "line": 35,
    "text": "click b2b_assist_send",
    "level": "Sy",
    "manual": false
   },
   {
-   "line": 37,
-   "text": "wait 6 seconds",
+   "line": 36,
+   "text": "wait until element type_your_message_input is visible",
    "level": "Sy",
    "manual": false
   },
   {
-   "line": 38,
+   "line": 37,
    "text": "call SG_B2B_Assist_Answer_Until_Results",
    "level": "Sy",
    "manual": false
   },
   {
-   "line": 39,
+   "line": 38,
    "text": "verify element b2b_assist_card_1st contains \"chair\" ignoring case",
    "level": "Sy",
    "manual": false
   },
   {
-   "line": 41,
+   "line": 40,
    "text": "verify element b2b_assist_card_1st contains \"Ahmedabad\"",
    "level": "Sy",
    "manual": false
   },
   {
-   "line": 42,
+   "line": 41,
    "text": "verify all elements b2b_assist_card_call_button have different \"aria-label\"",
    "level": "R",
    "manual": false

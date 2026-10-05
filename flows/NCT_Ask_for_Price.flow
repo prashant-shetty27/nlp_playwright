@@ -7,7 +7,7 @@
 
 call Live_Touch_Chrome_Navigate_to_Homepage_setup_Popup
 open https://www.justdial.com/Mumbai/Cranes-On-Rent-in-Link-Road-Malad-West/nct-10146502?fl=undefined&ismap=undefined&subpage=&searchCase=&term=crane&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Cranes%20On%20Rent&trkid=21263-mumbai
-wait 2 seconds
+wait for page to load
 call PS_Touch_Consent_Popup
 swipe bottom to top until element nct_ask_for_price is visible, max 15 times, wait 1
 verify text "Ask for Price" on page
@@ -23,7 +23,7 @@ type "${otp}" into nct_login_otp_field
 verify element nct_ask_for_price_acknowledgement_toast_msg is visible
 delete all cookies
 open https://www.justdial.com/
-wait 2 seconds
+wait for page to load
 call PS_Touch_Location_Popup
 click touch_signin_home_page
 wait 1 seconds
@@ -32,6 +32,6 @@ wait until element touch_home_hindi_langauge is visible
 click touch_home_hindi_langauge
 wait 2 seconds
 open https://www.justdial.com/Mumbai/Cranes-On-Rent-in-Link-Road-Malad-West/nct-10146502?fl=undefined&ismap=undefined&subpage=&searchCase=&term=crane&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Cranes%20On%20Rent&trkid=21263-mumbai
-wait 3 seconds
+wait until element text_ask_price_in_hindi is visible
 click text_ask_price_in_hindi
 call SG_Ask_for_Price_Non_Login_to_Login_Hindi

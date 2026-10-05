@@ -1,0 +1,42 @@
+{
+ "version": 1,
+ "flow_mtime": 1791199123.5506468,
+ "steps": [
+  {
+   "line": 8,
+   "text": "store \"Mumbai\" as city",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 9,
+   "text": "store \"PVC Pipes\" as category",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 10,
+   "text": "store \"(set by the chat step group)\" as bot_reply",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 11,
+   "text": "call SG_22788_Open_PDP_FAB",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 13,
+   "text": "verify ${bot_reply} matches \"${rfq22788_campaign_started}\" ignoring case",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 14,
+   "text": "take screenshot as nc02_transcript",
+   "level": "F",
+   "manual": false
+  }
+ ]
+}

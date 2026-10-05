@@ -4,13 +4,8 @@
 # Live data: Geared Drilling Machine PRP, Chennai -> Eden Enterprises card (sits deep, ~#65; the test scrolls to it by seller name).
 # Tags: b2b, prp, catalogue, 360, GJDT-22417
 open https://www.justdial.com/jdmart/Chennai/Geared-Drilling-Machine/jdm-1381022-ent-2-17682395
-wait 4 seconds
 # This case only needs the product data from the PRP, so the GVS "Save more on … / Get Wholesale Prices" sheet is closed if it shows (it is not under test here)
-repeat until element prp_eden_card is visible (max 60 times)
-click if visible b2b_prp_gvs_popup_skip
-swipe bottom to top
-wait 1 seconds
-end repeat
+swipe bottom to top until element prp_eden_card is visible, closing b2b_prp_gvs_popup_skip, max 60 times, wait 0.5
 click if visible b2b_prp_gvs_popup_skip
 scroll to prp_eden_card_title
 verify element prp_eden_card_title contains "Radial Drilling Machine"
@@ -23,7 +18,7 @@ store regex "-([a-z0-9]{6,10})\.(?:png|jpe?g|webp)" from img_src as img_id
 store attribute href of pdp_seller_catalogue_link as catalogue_url
 open https://www.justdial.com${catalogue_url}
 wait until url contains "_BZDET"
-wait 3 seconds
+wait until element pdp_tab_photos is visible
 click pdp_tab_photos
 wait until element pdp_photo_tile is visible
 # find the SAME image on the catalogue Photos tab (by file id, not by position)

@@ -1,0 +1,102 @@
+{
+ "version": 1,
+ "flow_mtime": 1791224809.1738436,
+ "steps": [
+  {
+   "line": 9,
+   "text": "store \"Ahmedabad\" as city",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 10,
+   "text": "store \"Roofing Sheets\" as category",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 11,
+   "text": "store \"(set by the chat step group)\" as bot_reply",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 12,
+   "text": "call SG_22788_Open_PRP_Floater",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 14,
+   "text": "verify ${bot_reply} matches \"${rfq22788_campaign_started}\" ignoring case",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 16,
+   "text": "store \"I need rat glue pad 50 pieces for my godown\" as message",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 17,
+   "text": "call SG_22788_Send_Message",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 18,
+   "text": "verify ${bot_reply} matches \"${rfq22788_restricted_alert}\" ignoring case",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 19,
+   "text": "verify ${bot_reply} does not match \"${rfq22788_campaign_or_suggestion}\" ignoring case",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 20,
+   "text": "verify ${bot_reply} does not match \"${rfq22788_substitute_product}\" ignoring case",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 22,
+   "text": "store \"rat glue pad for warehouse pest control, 100 pcs\" as message",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 23,
+   "text": "call SG_22788_Send_Message",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 24,
+   "text": "verify ${bot_reply} matches \"${rfq22788_restricted_alert}\" ignoring case",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 25,
+   "text": "verify ${bot_reply} does not match \"${rfq22788_campaign_or_suggestion}\" ignoring case",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 26,
+   "text": "verify ${bot_reply} does not match \"${rfq22788_substitute_product}\" ignoring case",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 27,
+   "text": "take screenshot as rc16_transcript",
+   "level": "F",
+   "manual": false
+  }
+ ]
+}

@@ -7,7 +7,6 @@
 # OFF: call Live_Touch_Chrome_Navigate_to_Homepage_setup_Popup
 open https://www.justdial.com/jdmart/Mumbai/Ball-Bearing/jdm-1006849-ent-2-5519629?fl=undefined&ismap=undefined&subpage=&searchCase=&term=ball%2520beari&searchLocUpdate=0&newSearch=1&stype=category_list&srcterm=Ball%20Bearing
 wait for page to load
-wait 3 seconds
 call PS_Touch_Consent_Popup
 store text of ps_touch_b2b_prp_searchbox_city as PRP_SearchBox_City
 store text of ps_touch_b2b_city_filter as PRP_City_Filter
@@ -39,4 +38,3 @@ call SG_PRP_GVS_Popup
 swipe bottom to top until element b2b_prp_watch_related_videos_heading is visible, max 15 times, wait 1
 call SG_PRP_Watch_Related_Video
 # OFF: call RFQ_Non_Login_Flow_to_Login_and_Continue_Search
-wait 1 seconds

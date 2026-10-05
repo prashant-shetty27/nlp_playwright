@@ -1,6 +1,6 @@
 {
  "version": 1,
- "flow_mtime": 1790875644.5830283,
+ "flow_mtime": 1791221399.5074546,
  "steps": [
   {
    "line": 9,
@@ -58,7 +58,7 @@
   },
   {
    "line": 19,
-   "text": "wait 2 seconds",
+   "text": "wait until element b2b_catalogue_photos_heading is visible",
    "level": "R",
    "manual": false
   },

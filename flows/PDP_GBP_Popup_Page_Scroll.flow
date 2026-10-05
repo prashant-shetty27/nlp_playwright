@@ -13,4 +13,3 @@
 open https://www.justdial.com/jdmart/Mumbai/Bike-Covers-for-Hero-Xtreme-160R/pid-2102058125/022PXX22-XX22-220118134107-L9E8
 call PS_Touch_Consent_Popup
 call SG_PDP_GBP_POP
-wait 1 seconds

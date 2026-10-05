@@ -7,9 +7,8 @@
 call Live_Touch_Chrome_Navigate_to_Homepage_setup_Popup
 # OFF: call SG_Supplier_Search_Mandal_Co
 open https://www.justdial.com/Delhi/Six-India-Dwarka/011PXX11-XX11-180824185125-M4B8_BZDET
-wait 3 seconds
-refresh page
 wait 2 seconds
+refresh page
 call SG_Touch_B2B_Catalogue_Whatsapp_Strip_Overview
 open https://www.justdial.com/jdmart/Delhi/Six-India-Dwarka/011PXX11-XX11-180824185125-M4B8_BZDET/catalogue
 call SG_Touch_B2B_Catalogue_Whatsapp_Strip_Overview

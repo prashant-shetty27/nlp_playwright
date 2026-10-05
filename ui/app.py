@@ -240,6 +240,23 @@ async def report_detail_page(run_id: str) -> None:
     await render(run_id)
 
 
+@ui.page("/known-issues")
+async def known_issues_page() -> None:
+    """Reports → Known issues: the register of failures the team already knows about."""
+    if not _page_shell():
+        return
+    from ui.pages.known_issues import render
+    await render()
+
+
+@ui.page("/settings/pages")
+async def settings_pages_page() -> None:
+    if not _page_shell():
+        return
+    from ui.pages.settings.pages_kb import render
+    await render()
+
+
 @ui.page("/issues")
 async def issues_page(run_id: str = "", plan_run: str = "") -> None:
     """Failures of a run → review → raise on Jira (Bug / Defect / Concern)."""

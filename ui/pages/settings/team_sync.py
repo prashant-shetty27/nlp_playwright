@@ -21,6 +21,34 @@ def _muted(text: str):
     return ui.label(text).style(f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}")
 
 
+async def _exec_defaults_card() -> None:
+    """Engine defaults (scroll settle, scroll/swipe limits, timeouts) — editable
+    here, stored in config/controllers.json, read live by the runner."""
+    try:
+        d = await api.exec_defaults()
+    except api.ApiError:
+        return
+    ui.label("Execution defaults").style(f"font-size:{TYPOGRAPHY['size_lg']}; font-weight:{TYPOGRAPHY['weight_bold']}")
+    _muted("What the runner uses when a step does not say otherwise. Saved for everyone who runs "
+           "from this portal; a value typed into a step always wins.")
+    with ui.card().classes("w-full").style(f"border:1px solid {COLORS['border']}"):
+        inputs: dict = {}
+        for key, f in d.get("fields", {}).items():
+            with ui.row().classes("w-full items-center gap-3 no-wrap"):
+                inputs[key] = ui.number(f["label"], value=d["values"].get(key), min=f["min"], max=f["max"],
+                                        step=1).props("outlined dense").style("min-width:26rem")
+                _muted(f["help"]).style("flex:1")
+
+        async def save() -> None:
+            try:
+                res = await api.save_exec_defaults({k: int(w.value or 0) for k, w in inputs.items()})
+                ui.notify(res.get("message", "Saved"), type="positive")
+            except api.ApiError as e:
+                ui.notify(f"Could not save: {e.detail}", type="negative")
+
+        ui.button("Save execution defaults", icon="save", on_click=save).props("unelevated")
+
+
 async def render() -> None:
     sidebar(active="/settings")
     topbar(["Settings", "Team sync"])
@@ -29,6 +57,13 @@ async def render() -> None:
         _muted("Your test cases, elements, step groups, suites and plans live in a shared team "
                "repository. Use these two buttons instead of git commands. Private files — "
                "your .env, Test Data, screenshots, reports — never leave this computer.")
+
+        with ui.row().classes("items-center gap-2"):
+            ui.button("Pages — what the runner knows about each page", icon="web",
+                      on_click=lambda: ui.navigate.to("/settings/pages")).props("flat dense")
+            ui.button("Known issues register", icon="rule",
+                      on_click=lambda: ui.navigate.to("/known-issues")).props("flat dense")
+        await _exec_defaults_card()
 
         card = ui.card().classes("w-full").style(f"border:1px solid {COLORS['border']}")
         with card:

@@ -293,6 +293,19 @@ class PlanRunPage:
                         ui.menu_item("Stop after the current test case", on_click=lambda: self.stop(False))
                         ui.menu_item("Stop now (at the next step)", on_click=lambda: self.stop(True))
             n_failed = sum(1 for i in (r.get("items") or []) if i.get("status") == "failed")
+            n_redo = sum(1 for i in (r.get("items") or []) if i.get("status") in ("failed", "not_run")
+                         and not i.get("out_of_scope"))
+            if not running and n_redo and can("run"):
+                async def _rerun_failed() -> None:
+                    try:
+                        res = await api.run_plan(r.get("plan_id", ""), only_failed_from=self.run_id)
+                    except api.ApiError as e:
+                        ui.notify(f"Could not start: {e.detail}", type="negative")
+                        return
+                    ui.navigate.to(f"/plans/run/{res['run_id']}")
+                ui.button(f"Re-run failed only ({n_redo})", icon="replay", on_click=_rerun_failed) \
+                    .props("unelevated dense").tooltip(
+                        "A new run with just the failed / not-run test cases of this run — passed ones are not repeated")
             if not running and n_failed:
                 ui.button(f"Review & raise issues ({n_failed})", icon="bug_report",
                           on_click=lambda: ui.navigate.to(f"/issues?plan_run={quote(self.run_id)}")) \
@@ -408,6 +421,10 @@ class PlanRunPage:
                     _num(n, "total", COLORS["text"])
                     _num(passed, "passed", COLORS["success"])
                     _num(failed, "failed", COLORS["danger"])
+                    known = sum(1 for i in items if i.get("known"))
+                    if known:
+                        _num(failed - known, "new", COLORS["danger"])
+                        _num(known, "known", COLORS["warning"])
                     _num(not_run, "not run", COLORS["text_muted"])
                     if pending:
                         _num(pending, "to run", COLORS["primary"])
@@ -455,6 +472,31 @@ class PlanRunPage:
                   "failed": sum(1 for i in items if i.get("status") == "failed"),
                   "passed": sum(1 for i in items if i.get("status") == "passed"),
                   "not_run": sum(1 for i in items if i.get("status") == "not_run")}
+        clusters = [c for c in (self.rec.get("insights") or []) if c.get("count")]
+        if clusters and self.rec.get("status") != "running":
+            KIND_COL = {"product-defect": COLORS["danger"], "environment": COLORS["text_muted"],
+                        "test-problem": COLORS["primary"], "site-change": COLORS["warning"],
+                        "data": COLORS["warning"], "flaky": COLORS["warning"]}
+            with ui.card().classes("w-full").style(f"border:1px solid {COLORS['border']}; margin-top:6px"):
+                ui.label(f"What this run means — {len(clusters)} cause(s) behind "
+                         f"{sum(c['count'] for c in clusters)} failed test case(s)").style(
+                    f"font-weight:{TYPOGRAPHY['weight_bold']}; font-size:{TYPOGRAPHY['size_md']}")
+                for c in clusters:
+                    col = KIND_COL.get(c.get("kind", ""), COLORS["text"])
+                    with ui.row().classes("w-full items-start gap-2 no-wrap").style(
+                            f"border-top:1px solid {COLORS['border']}; padding:6px 0"):
+                        ui.label(str(c["count"])).style(f"font-weight:700; color:{col}; min-width:2rem; text-align:right")
+                        with ui.column().classes("gap-0").style("flex:1; min-width:0"):
+                            with ui.row().classes("items-center gap-2 no-wrap"):
+                                ui.label(c.get("kind", "")).style(
+                                    f"font-size:{TYPOGRAPHY['size_xs']}; color:{col}; border:1px solid {col};"
+                                    "border-radius:10px; padding:0 8px; white-space:nowrap")
+                                ui.label(c.get("title", "")).style(f"font-size:{TYPOGRAPHY['size_sm']}; white-space:normal")
+                            muted(c.get("action", "")).style("white-space:normal")
+                            muted(", ".join(x[:40] for x in c.get("cases", [])[:6])
+                                  + (f" … +{c['count'] - 6}" if c["count"] > 6 else "")
+                                  + (f"  ·  {', '.join(c.get('browsers') or [])}" if len(c.get("browsers") or []) > 1 else "")) \
+                                .style(f"font-family:{MONO}; white-space:normal")
         with ui.row().classes("w-full items-center gap-1").style("margin-top:6px"):
             ui.label("Test case results").style(
                 f"font-weight:{TYPOGRAPHY['weight_bold']}; font-size:{TYPOGRAPHY['size_md']}; margin-right:12px")
@@ -551,6 +593,15 @@ class PlanRunPage:
                         f"color:{COLORS['danger'] if h.get('stuck') else COLORS['primary']}")
                     if h.get("step_minutes") and h["step_minutes"] >= 1:
                         muted(f"({h['step_minutes']:.0f} min on this step)")
+            if st == "failed" and it.get("known"):
+                k = it["known"]
+                with ui.row().classes("items-center gap-2 no-wrap").style("padding:0 12px 4px 3.2rem"):
+                    ui.label(f"KNOWN · {k.get('kind', '')}").style(
+                        f"font-size:{TYPOGRAPHY['size_xs']}; font-weight:600; color:{COLORS['warning']};"
+                        f"border:1px solid {COLORS['warning']}; border-radius:10px; padding:0 8px")
+                    ui.label((k.get("jira") + " · " if k.get("jira") else "") + (k.get("title") or "")).style(
+                        f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}; white-space:normal") \
+                        .tooltip(k.get("note") or "")
             if st == "failed" and it.get("first_failure") and idx not in self.expanded:
                 ui.label(it["first_failure"]).style(
                     f"padding:0 12px 8px 3.2rem; color:{COLORS['danger']}; white-space:pre-wrap;"

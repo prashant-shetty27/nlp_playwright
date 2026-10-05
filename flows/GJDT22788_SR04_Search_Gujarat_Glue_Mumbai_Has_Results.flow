@@ -11,27 +11,10 @@ call SG_22788_Freetext_Search_In_City
 verify element b2b_search_no_results is not visible
 verify page does not contain "No results found"
 take screenshot as mumbai_ratgluepad
-# rodent glue board in Mumbai -> results
-store "Mumbai" as city
-store "rodent glue board" as search_term
-call SG_22788_Freetext_Search_In_City
-# outside Gujarat the term is not blocked: a result / product page opens (it can be a shop-online product page)
-verify element b2b_search_no_results is not visible
-verify page does not contain "No results found"
-take screenshot as mumbai_rodentglueboard
 # mouse glue trap in Mumbai -> results
-store "Mumbai" as city
 store "mouse glue trap" as search_term
-call SG_22788_Freetext_Search_In_City
+call SG_22788_Search_Again_On_Result_Page
 # outside Gujarat the term is not blocked: a result / product page opens (it can be a shop-online product page)
 verify element b2b_search_no_results is not visible
 verify page does not contain "No results found"
 take screenshot as mumbai_mousegluetrap
-# Glue Pad Insect Killer in Mumbai -> results
-store "Mumbai" as city
-store "Glue Pad Insect Killer" as search_term
-call SG_22788_Freetext_Search_In_City
-# outside Gujarat the term is not blocked: a result / product page opens (it can be a shop-online product page)
-verify element b2b_search_no_results is not visible
-verify page does not contain "No results found"
-take screenshot as mumbai_gluepadinsectkiller

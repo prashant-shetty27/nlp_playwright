@@ -1,0 +1,90 @@
+{
+ "version": 1,
+ "flow_mtime": 1791224746.4226456,
+ "steps": [
+  {
+   "line": 7,
+   "text": "store \"Ahmedabad\" as city",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 8,
+   "text": "store \"rat glue pad\" as search_term",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 9,
+   "text": "call SG_22788_Freetext_Search_In_City",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 10,
+   "text": "wait until url contains \"/jdmart/${city}\"",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 11,
+   "text": "verify element b2b_search_no_results is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 12,
+   "text": "verify element b2b_search_no_results contains \"No results found\" ignoring case",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 13,
+   "text": "verify element prp_first_product_title is not visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 14,
+   "text": "take screenshot as ahmedabad_ratgluepad",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 16,
+   "text": "store \"mouse glue trap\" as search_term",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 17,
+   "text": "call SG_22788_Search_Again_On_Result_Page",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 18,
+   "text": "verify element b2b_search_no_results is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 19,
+   "text": "verify element b2b_search_no_results contains \"No results found\" ignoring case",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 20,
+   "text": "verify element prp_first_product_title is not visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 21,
+   "text": "take screenshot as ahmedabad_mousegluetrap",
+   "level": "Sy",
+   "manual": false
+  }
+ ]
+}

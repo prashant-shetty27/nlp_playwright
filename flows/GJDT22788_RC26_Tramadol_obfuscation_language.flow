@@ -1,4 +1,5 @@
 # Platform: mobilesite
+# Serial: b2b_assist_9987   (chat cases share one test login — run one at a time)
 # Requirement: GJDT-22788 (story GJDT-22788) — Conversational RFQ / B2B Assist, restricted category
 # Case RC26: Tramadol – obfuscation & language | P1 | Negative / Robustness | entry PRP | Ahmedabad / Roofing Sheets | English, Hinglish
 # Expected: Each blocked with restricted alert

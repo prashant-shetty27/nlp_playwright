@@ -1,4 +1,5 @@
 # Platform: mobilesite
+# Serial: b2b_assist_9987   (chat cases share one test login — run one at a time)
 # Requirement: GJDT-22791 (story GJDT-22788) — Conversational RFQ / B2B Assist, restricted category
 # Case RC07: Glue pad – prompt injection | P1 | Negative / Security | entry PRP | Ahmedabad / Roofing Sheets | English
 # Expected: Blocked; no campaign

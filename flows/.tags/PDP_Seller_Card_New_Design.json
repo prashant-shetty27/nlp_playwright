@@ -1,0 +1,318 @@
+{
+ "version": 1,
+ "flow_mtime": 1791221399.6756766,
+ "steps": [
+  {
+   "line": 7,
+   "text": "call Live_Touch_Chrome_Navigate_to_Homepage_setup_Popup",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 8,
+   "text": "open https://www.justdial.com/jdmart/Bangalore/Hardic-Engineering-Refractory-Brick/pid-2220109969/080PXX80-XX80-190716164616-X6B6?idx=0&jdmid=jdm-1011256-ent-2-17398330&alsoserveCity=Bangalore&nid=15676215",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 9,
+   "text": "wait until element pdp_seller_info_section is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 10,
+   "text": "scroll to pdp_seller_info_section",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 11,
+   "text": "scroll to pdp_seller_info_heading",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 12,
+   "text": "verify element pdp_seller_info_heading is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 14,
+   "text": "verify element pdp_seller_info_business_yrs is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 16,
+   "text": "verify element pdp_seller_info_name is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 17,
+   "text": "verify element pdp_seller_info_img is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 18,
+   "text": "verify element pdp_seller_info_rating_section is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 19,
+   "text": "verify element pdp_seller_info_average_rating_stars is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 20,
+   "text": "verify element pdp_seller_info_address is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 21,
+   "text": "verify element pdp_seller_info_enquiry_icon is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 22,
+   "text": "verify element pdp_seller_info_enquiry_count is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 23,
+   "text": "verify element pdp_seller_info_business_type_icon is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 24,
+   "text": "verify element pdp_seller_info_business_type is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 25,
+   "text": "verify element pdp_seller_info_call_icon is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 26,
+   "text": "verify element pdp_seller_info_call_text is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 27,
+   "text": "verify element pdp_seller_info_view_more_tab is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 28,
+   "text": "click pdp_seller_info_view_more_tab",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 29,
+   "text": "scroll to pdp_seller_info_address_text",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 30,
+   "text": "verify element pdp_seller_info_address_text is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 31,
+   "text": "verify element pdp_seller_info_address_details is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 32,
+   "text": "open http://justdial.com/jdmart/Delhi/footballs-jersey-with-shorts/pid-2231521559/011PXX11-XX11-241010154419-R5H7?idx=0&jdmid=jdm-1063601-ent-15-1063601&alsoserveCity=Delhi&searchString=Jersey&btype=wholesalers&nid=10280724",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 33,
+   "text": "wait until element pdp_seller_info_view_more_tab is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 34,
+   "text": "click pdp_seller_info_view_more_tab",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 35,
+   "text": "scroll to pdp_seller_info_heading",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 36,
+   "text": "verify element pdp_seller_info_heading is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 37,
+   "text": "scroll to pdp_seller_info_website_text",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 38,
+   "text": "verify element pdp_seller_info_website_text is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 39,
+   "text": "verify element website_link is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 40,
+   "text": "verify element pdp_seller_info_year_of_establishment_text is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 41,
+   "text": "verify element pdp_seller_info_year is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 42,
+   "text": "scroll to pdp_seller_info_no_of_employee_text",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 43,
+   "text": "verify element pdp_seller_info_no_of_employee_text is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 44,
+   "text": "verify element employee_count is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 45,
+   "text": "verify element pdp_seller_info_turn_over_text is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 46,
+   "text": "verify element turn_over_count is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 47,
+   "text": "verify element pdp_seller_info_gstin_text is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 48,
+   "text": "verify element gstin is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 53,
+   "text": "scroll to pdp_seller_info_call_vn_all",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 54,
+   "text": "verify element pdp_seller_info_call_vn_all is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 55,
+   "text": "verify element pdp_seller_info_call_vn_number is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 56,
+   "text": "verify element pdp_seller_info_call_vn_text_call_for_help is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 57,
+   "text": "verify element pdp_seller_info_view_more_tab is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 58,
+   "text": "verify element pdp_seller_info_arrow_down is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 59,
+   "text": "open https://www.justdial.com/jdmart/Gurgaon/Large-Power-System/pid-2023660834/011PXX11-XX11-210528140220-G9W6",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 60,
+   "text": "wait until element pdp_seller_info_section is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 61,
+   "text": "scroll to pdp_seller_info_section",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 62,
+   "text": "click pdp_seller_info_view_more_tab",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 63,
+   "text": "verify element pdp_seller_info_paid_thumb_icon is not visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 64,
+   "text": "verify element pdp_seller_info_call_vn_all is not visible",
+   "level": "R",
+   "manual": false
+  }
+ ]
+}

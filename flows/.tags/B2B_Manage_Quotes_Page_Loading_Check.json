@@ -1,0 +1,84 @@
+{
+ "version": 1,
+ "flow_mtime": 1790923310.9690943,
+ "steps": [
+  {
+   "line": 7,
+   "text": "call Live_Touch_Chrome_Navigate_to_Homepage_setup_Popup",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 10,
+   "text": "call SG_PS_Touch_Home_Login",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 11,
+   "text": "click touch_signin_home_page",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 12,
+   "text": "click manage_quotes",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 13,
+   "text": "wait until element heading_manage_quotes is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 14,
+   "text": "verify element heading_no_enquiries_found is not visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 15,
+   "text": "click manage_quotes_header_back",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 16,
+   "text": "click sign_out",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 17,
+   "text": "call SG_Touch_Core_Login",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 18,
+   "text": "click touch_signin_home_page",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 19,
+   "text": "click manage_quotes",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 20,
+   "text": "wait until element heading_manage_quotes is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 21,
+   "text": "verify element heading_no_enquiries_found is not visible",
+   "level": "R",
+   "manual": false
+  }
+ ]
+}

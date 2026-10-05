@@ -6,11 +6,11 @@
 
 wait 2 seconds
 open https://www.justdial.com/Bangalore/Akash-Roofing-Solution-Opposite-Nava-Jeevan-Ashram-and-Bheema-Jewelres-Kalyan-Nagar/080PXX80-XX80-121203203315-K8I2_BZDET?pid=2223047492&nid=10413490&jdmid=jdm-1092649-ent-2-13734943&jdmart=1&search=Roofing-Sheets
-wait 2 seconds
+wait until element b2b_catalogue_tab_product is visible
 click b2b_catalogue_tab_product
-wait 1 seconds
+wait until element catalogue_product_tab_store_search is visible
 click catalogue_product_tab_store_search
-wait 1 seconds
+wait until element catalogue_product_tab_store_search_box is visible
 # Live 02-Oct-2026: Akash Roofing sells roofing only - "cctv" gives no suggestion; search what it sells
 type "roofing" into catalogue_product_tab_store_search_box
 wait 2 seconds
@@ -24,17 +24,17 @@ js click catalogue_product_tab_store_search_category_as
 wait 2 seconds
 # OFF: verify element catalogue_product_tab_search_result is visible
 open https://www.justdial.com/Navi-Mumbai/Baldev-Engineering-Nerul/022PXX22-XX22-131219124833-X3Z1_BZDET?showSearch=0
-wait 2 seconds
+wait until element b2b_catalogue_tab_product is visible
 call SG_Product_Store_Search_Tempo_Traveller
 open https://www.justdial.com/Mumbai/Kalsaria-Construction-Malad-East/022PXX22-XX22-200622123529-Q9J8_BZDET
-wait 2 seconds
+wait until element b2b_catalogue_tab_product is visible
 call SG_Product_Store_Search_Crane_Services
 open https://www.justdial.com/Hyderabad/A-S-Industries-Kukatpally/040PXX40-XX40-240221201317-Y9N6_BZDET?pid=800932973&nid=11074360&jdmid=jdm-1078482-ent-6-22730456
-wait 2 seconds
+wait until element b2b_catalogue_tab_product is visible
 click b2b_catalogue_tab_product
 verify element catalogue_product_tab_store_search is visible
 open https://www.justdial.com/Mumbai/Mitsuba-Systems-India-LLP-Factory-Outlet-Andheri-West/022P1908302_BZDET/products?trkid=4300141751&showSearch=0&nid=10384011&tabNid=
-wait 2 seconds
+wait until element b2b_catalogue_tab_product is visible
 click b2b_catalogue_tab_product
 verify element catalogue_product_tab_store_search is visible
 click catalogue_product_tab_1st_category_filter

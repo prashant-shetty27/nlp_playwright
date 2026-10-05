@@ -1,4 +1,5 @@
 # Platform: mobilesite
+# Serial: b2b_assist_9987   (chat cases share one test login — run one at a time)
 # Requirement: GJDT-22791 (story GJDT-22788) — Conversational RFQ / B2B Assist, restricted category
 # Case RC05: Glue pad variants – typo / special char / synonyms | P1 | Negative / Robustness | entry PRP | Ahmedabad / Roofing Sheets | English
 # Expected: Each blocked with restricted alert

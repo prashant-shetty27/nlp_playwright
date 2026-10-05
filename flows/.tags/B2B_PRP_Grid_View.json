@@ -1,0 +1,102 @@
+{
+ "version": 1,
+ "flow_mtime": 1791224249.6405737,
+ "steps": [
+  {
+   "line": 5,
+   "text": "open https://www.justdial.com/jdmart/Mumbai/CCTV/jdm-1016209-ent-2-13630321",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 6,
+   "text": "wait for page to load",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 7,
+   "text": "click grid_view_icon",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 8,
+   "text": "wait for page to load",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 9,
+   "text": "scroll until element grid_view_listing visible, scroll by 600 pixels, scroll count 20, scroll wait 1",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 10,
+   "text": "verify element grid_view_listing is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 11,
+   "text": "verify element item_1st_grid_image is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 12,
+   "text": "verify element item_1st_grid_title is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 13,
+   "text": "verify element item_1st_grid_company_name is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 14,
+   "text": "verify element item_1st_grid_tags is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 15,
+   "text": "verify element item_1st_grid_rating_strip is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 16,
+   "text": "verify element item_1st_grid_catalogue is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 17,
+   "text": "verify element product_swiper_thumb_above_cta_on_grid_view is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 18,
+   "text": "verify element item_1st_grid_cta_s is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 19,
+   "text": "verify element item_1st_request_catalogue_on_grid is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 20,
+   "text": "verify element item_1st_view_catalogue_on_grid is visible",
+   "level": "R",
+   "manual": false
+  }
+ ]
+}

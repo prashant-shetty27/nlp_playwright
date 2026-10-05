@@ -156,7 +156,6 @@
       "scroll to b2b_prp_watch_related_video_play_icon_last",
       "verify element b2b_prp_watch_related_video_play_icon_last is visible",
       "click b2b_prp_watch_related_video_play_icon_1st",
-      "wait 2 seconds",
       "wait for page to load",
       "wait until element b2b_prp_watch_related_video_inner_screen is visible",
       "verify element b2b_prp_watch_related_video_inner_cross is visible",
@@ -173,7 +172,7 @@
       "wait 2 seconds"
     ],
     "created_at": "2026-09-28T20:01:26.695969+00:00",
-    "step_count": 24,
+    "step_count": 23,
     "platform": "mobilesite"
   },
   "RFQ_Non_Login_Flow_to_Login_and_Continue_Search": {
@@ -189,21 +188,16 @@
     "steps": [
       "wait until element rfq_mobile_number_input is visible",
       "click rfq_mobile_div_close",
-      "wait 1 seconds",
+      "wait until element rfq_mobile_div_close_yes_popup is visible",
       "click rfq_mobile_div_close_yes_popup",
-      "wait 1 seconds",
+      "wait until element rfq_mobile_number_input is visible",
       "click rfq_mobile_number_input",
-      "wait 1 seconds",
+      "wait until element rfq_mobile_number_input is visible",
       "type \"${mobile_9987}\" into rfq_mobile_number_input",
-      "wait 1 seconds",
-      "wait 1 seconds",
-      "wait 3 seconds",
-      "wait 5 seconds",
-      "wait 5 seconds",
-      "wait 1 seconds"
+      "wait 16 seconds"
     ],
     "created_at": "2026-09-28T20:01:26.722784+00:00",
-    "step_count": 14,
+    "step_count": 9,
     "platform": "mobilesite"
   },
   "SG_PRP_Request_View_Catalogue_Non_Login_to_Login": {
@@ -223,12 +217,10 @@
   "SG_PRP_Request_Catalogue_Non_Login_to_Login_Flow": {
     "steps": [
       "swipe bottom to top until element prp_request_catalogue_1st is visible, closing b2b_prp_gvs_popup_skip, max 15 times, wait 1",
-      "wait 2 seconds",
-      "wait 3 seconds",
-      "wait 2 seconds"
+      "wait 7 seconds"
     ],
     "created_at": "2026-09-28T20:01:27.973063+00:00",
-    "step_count": 4,
+    "step_count": 2,
     "platform": "mobilesite"
   },
   "SG_PRP_Request_Catalogue_PDP_Seller_Brochure_Not_p": {
@@ -271,16 +263,14 @@
   "SG_PRP_View_Catalogue_Non_Login_to_Login_Flow": {
     "steps": [
       "[ignore 30s] swipe bottom to top until element prp_request_catalogue_1st is visible, closing b2b_prp_gvs_popup_skip, max 15 times, wait 1",
-      "wait 2 seconds",
+      "wait until element prp_view_catalogue_1st is visible",
       "click prp_view_catalogue_1st",
-      "wait 3 seconds",
       "verify element prp_open_rfq_login_pop_jd_logo is visible",
       "verify element prp_view_catalogue_login_div_text is visible",
-      "wait 3 seconds",
-      "wait 2 seconds"
+      "wait 5 seconds"
     ],
     "created_at": "2026-09-28T20:01:28.039361+00:00",
-    "step_count": 8,
+    "step_count": 6,
     "platform": "mobilesite"
   },
   "SG_Touch_Core_Login_Test_Number": {
@@ -325,11 +315,10 @@
       "wait until element ps_touch_b2b_1st_autosuggest is visible",
       "verify element ps_touch_b2b_1st_autosuggest is visible",
       "click ps_touch_b2b_1st_autosuggest",
-      "wait 3 seconds",
       "wait for page to load"
     ],
     "created_at": "2026-09-28T20:01:29.348457+00:00",
-    "step_count": 5,
+    "step_count": 4,
     "platform": "mobilesite"
   },
   "SG_PRP_Brand_Filter": {
@@ -360,7 +349,7 @@
     "steps": [
       "wait until element home_top_all_categories_section is visible",
       "click b2b_search_field",
-      "wait 2 seconds",
+      "wait until element b2b_search_field is visible",
       "click b2b_search_field",
       "wait 2 seconds"
     ],
@@ -444,20 +433,12 @@
     "steps": [
       "open https://www.justdial.com/Mumbai/Chemical-Manufacturers/nct-10094098?fl=undefined&ismap=undefined&subpage=&searchCase=&term=chemical%2520man&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Chemical%2520Manufacturers&trkid=192759-mumbai&mvVal=%5B%7B%22mv%22:%221102%22,%22v%22:%5B%22TGQR%22,%22JDV01%22,%22JDT01%22%5D%7D%5D&attrVal=%5B%7B%22e%22:%224%22,%22v%22:%5B%22TGQR%22,%22JDV01%22,%22JDT01%22%5D%7D%5D&fCatId=&appliedFilter=&pfApplied=1",
       "wait 2 seconds",
-      "swipe bottom to middle",
-      "wait 1 seconds",
-      "swipe bottom to middle",
-      "swipe bottom to middle",
-      "wait 1 seconds",
-      "swipe bottom to middle",
-      "swipe bottom to middle",
-      "wait 1 seconds",
-      "scroll to b2b_nct_shiv_chemicals_seller_name",
+      "swipe bottom to top until element b2b_nct_shiv_chemicals_seller_name is visible, max 11 times, wait 1",
       "verify element b2b_nct_shiv_chemicals_seller_name is visible",
       "verify element b2b_nct_shiv_chemicals_high_call_pick_up_rate is not visible"
     ],
     "created_at": "2026-10-01T17:23:54.071769+00:00",
-    "step_count": 13,
+    "step_count": 5,
     "platform": "mobilesite"
   },
   "B2B_Common_Non_Login_to_Login_via_Only_Mobile_numb": {
@@ -489,12 +470,18 @@
   "SG_Supplier_Search_Flow_Baldev": {
     "steps": [
       "[ignore] call Live_Touch_Chrome_Navigate_to_Homepage_setup_Popup",
-      "call SG_B2B_HK_Flow_Supplier_Search_Box_Click",
-      "type \"baldev engineering nerul\" into b2b_search_field",
+      "scroll to ps_touch_b2b_hotkey",
+      "click if visible ps_touch_b2b_hotkey",
+      "wait until element b2b_search_field is visible",
+      "click b2b_search_field",
+      "# autosuggest (and its Suppliers tab) only appears once something is typed — type as a user does",
+      "type \"baldev engineering nerul\" into focused field",
+      "wait until element b2b_autosuggest_supplier_tab is visible",
+      "click b2b_autosuggest_supplier_tab",
       "call SG_B2B_AS_1st_Selection"
     ],
     "created_at": "2026-10-01T17:24:06.294756+00:00",
-    "step_count": 4,
+    "step_count": 10,
     "platform": "mobilesite"
   },
   "SG_B2B_HK_Flow_Supplier_Search_Box_Click": {
@@ -502,21 +489,19 @@
       "scroll to ps_touch_b2b_hotkey",
       "verify element ps_touch_b2b_hotkey is visible",
       "click if visible ps_touch_b2b_hotkey",
-      "wait 6 seconds",
+      "wait until element b2b_search_field is visible",
       "click b2b_search_field",
-      "wait 6 seconds",
       "wait until element b2b_search_field is visible",
       "wait until element b2b_autosuggest_supplier_tab is visible",
       "wait for page to load",
-      "wait 6 seconds",
+      "wait until element b2b_autosuggest_supplier_tab is visible",
       "click b2b_autosuggest_supplier_tab",
       "wait until element b2b_search_field is visible",
       "click b2b_search_field",
-      "wait 5 seconds",
       "wait for page to load"
     ],
     "created_at": "2026-10-01T17:24:06.308112+00:00",
-    "step_count": 15,
+    "step_count": 13,
     "platform": "mobilesite"
   },
   "SG_Catalogue_Page_Card_Section": {
@@ -552,21 +537,19 @@
       "[ignore] scroll to b2b_catalogue_open_now_text",
       "[ignore] verify element b2b_catalogue_open_now_text is visible",
       "click if visible b2b_catalogue_card_open_now_at",
-      "wait 3 seconds",
       "verify element b2b_catalogue_timing_div_today is visible",
       "verify element b2b_catalogue_suggest_new_timings_div is visible",
       "verify element b2b_catalogue_timing_div_callnow_cta is visible",
       "verify element b2b_catalogue_timing_div_whatsapp_cta is visible",
       "click b2b_catalogue_suggest_timing_link",
-      "wait 3 seconds",
       "verify element b2b_all_maybe_later is visible",
       "click b2b_all_maybe_later",
       "click b2b_catalogue_timing_div_whatsapp_cta",
-      "wait 3 seconds",
+      "wait 2 seconds",
       "refresh page"
     ],
     "created_at": "2026-10-01T17:24:06.337742+00:00",
-    "step_count": 15,
+    "step_count": 13,
     "platform": "mobilesite"
   },
   "SG_Catalogue_Page_Top_CTAs": {
@@ -675,7 +658,6 @@
       "wait until element b2b_catalogue_share_popup is visible",
       "verify element b2b_catalogue_share_popup is visible",
       "refresh page",
-      "wait 2 seconds",
       "scroll to b2b_catalogue_heading_company_catalogue",
       "verify element b2b_catalogue_heading_company_catalogue is visible",
       "click b2b_catalogue_folder_pdf_1st_image",
@@ -700,7 +682,7 @@
       "press back"
     ],
     "created_at": "2026-10-01T17:24:06.425203+00:00",
-    "step_count": 34,
+    "step_count": 33,
     "platform": "mobilesite"
   },
   "SG_Catalogue_Page_Photos_Overview": {
@@ -753,7 +735,7 @@
   "SG_Catalogue_Page_Open_VN_Number_Overview": {
     "steps": [
       "open https://www.justdial.com/Mumbai/Ami-Enterprise-Masjid-Bunder/022PXX22-XX22-140307153118-I6K6_BZDET",
-      "wait 2 seconds",
+      "wait until element b2b_catalogue_call_number is visible",
       "scroll to b2b_catalogue_call_number",
       "verify element b2b_catalogue_call_number is visible",
       "verify element b2b_catalogue_call_for_instant_help is visible",
@@ -766,7 +748,7 @@
   "SG_Catalogue_Page_QuickInfo_Overview": {
     "steps": [
       "open https://www.justdial.com/Navi-Mumbai/Baldev-Engineering-Nerul/022PXX22-XX22-131219124833-X3Z1_BZDET?trkid=4303885681",
-      "wait 3 seconds",
+      "wait until element b2b_catalogue_heading_quick_information is visible",
       "scroll to b2b_catalogue_heading_quick_information",
       "verify element b2b_catalogue_heading_quick_information is visible",
       "scroll to b2b_catalogue_heading_address",
@@ -972,7 +954,7 @@
   },
   "SG_Catalogue_Page_SEO_Footer": {
     "steps": [
-      "scroll to b2b_catalogue_footer_heading_business_information",
+      "swipe bottom to top until element b2b_catalogue_footer_heading_business_information is visible, closing catalogue_skip_bd_category_pop and srp_seller_type_banner_skip, max 25 times, wait 0.5",
       "verify element b2b_catalogue_footer_heading_business_information is visible",
       "[ignore] click srp_seller_type_banner_skip",
       "click b2b_catalogue_footer_heading_business_information",
@@ -985,7 +967,7 @@
       "verify element b2b_catalogue_footer_heading_tractor_dealers_in_nearby_areas is visible",
       "click b2b_catalogue_footer_heading_business_information",
       "click b2b_catalogue_footer_heading_tractor_dealers_in_nearby_areas",
-      "wait 2 seconds",
+      "wait until element b2b_category_footer_tractor_dealers_in_nearby_areas_category_1st is visible",
       "scroll to b2b_category_footer_tractor_dealers_in_nearby_areas_category_1st",
       "verify element b2b_category_footer_tractor_dealers_in_nearby_areas_category_1st is visible",
       "scroll to b2b_category_footer_tractor_dealers_in_nearby_areas_category_last",
@@ -994,7 +976,7 @@
       "verify element b2b_catalogue_footer_heading_explore_more_similar_listings is visible",
       "click b2b_catalogue_footer_heading_tractor_dealers_in_nearby_areas",
       "click b2b_catalogue_footer_heading_explore_more_similar_listings",
-      "wait 2 seconds",
+      "wait until element b2b_catalogue_footer_heading_explore_more_similar_listings_category_1st is visible",
       "scroll to b2b_catalogue_footer_heading_explore_more_similar_listings_category_1st",
       "verify element b2b_catalogue_footer_heading_explore_more_similar_listings_category_1st is visible",
       "scroll to b2b_catalogue_footer_heading_explore_more_similar_listings_category_last",
@@ -1004,7 +986,7 @@
       "click b2b_catalogue_footer_heading_explore_more_similar_listings",
       "[ignore] click srp_seller_type_banner_skip",
       "click b2b_catalogue_footer_heading_tractor_popular_cities",
-      "wait 2 seconds",
+      "wait until element b2b_catalogue_footer_heading_tractor_popular_cities_category_1st is visible",
       "scroll to b2b_catalogue_footer_heading_tractor_popular_cities_category_1st",
       "verify element b2b_catalogue_footer_heading_tractor_popular_cities_category_1st is visible",
       "scroll to b2b_catalogue_footer_heading_tractor_popular_cities_category_last",
@@ -1012,7 +994,7 @@
       "click b2b_catalogue_footer_heading_tractor_popular_cities",
       "click b2b_catalogue_footer_heading_popular_categories",
       "[ignore] click srp_seller_type_banner_skip",
-      "wait 2 seconds",
+      "wait until element b2b_catalogue_footer_heading_popular_categories_category_1st is visible",
       "scroll to b2b_catalogue_footer_heading_popular_categories_category_1st",
       "verify element b2b_catalogue_footer_heading_popular_categories_category_1st is visible",
       "scroll to b2b_catalogue_footer_heading_popular_categories_category_last",
@@ -1020,7 +1002,7 @@
       "click b2b_catalogue_footer_heading_popular_categories",
       "[ignore] click srp_seller_type_banner_skip",
       "click b2b_catalogue_footer_heading_trending_searches",
-      "wait 3 seconds",
+      "wait until element b2b_catalogue_footer_heading_trending_searches_category_1st is visible",
       "scroll to b2b_catalogue_footer_heading_trending_searches_category_1st",
       "verify element b2b_catalogue_footer_heading_trending_searches_category_1st is visible",
       "scroll to b2b_catalogue_footer_heading_trending_searches_category_last",
@@ -1034,56 +1016,56 @@
       "[ignore] verify element b2b_catalogue_footer_heading_deals_and_offers_category_last is visible",
       "[ignore] click b2b_catalogue_footer_heading_deals_and_offers",
       "click b2b_catalogue_footer_heading_explore_jd_collections",
-      "wait 2 seconds",
+      "wait until element b2b_catalogue_footer_heading_explore_jd_collections_category_1st is visible",
       "scroll to b2b_catalogue_footer_heading_explore_jd_collections_category_1st",
       "verify element b2b_catalogue_footer_heading_explore_jd_collections_category_1st is visible",
       "scroll to b2b_catalogue_footer_heading_explore_jd_collections_category_last",
       "verify element b2b_catalogue_footer_heading_explore_jd_collections_category_last is visible",
       "click b2b_catalogue_footer_heading_explore_jd_collections",
       "click b2b_catalogue_footer_heading_popular_cities",
-      "wait 2 seconds",
+      "wait until element b2b_catalogue_footer_heading_popular_cities_category_1st is visible",
       "scroll to b2b_catalogue_footer_heading_popular_cities_category_1st",
       "verify element b2b_catalogue_footer_heading_popular_cities_category_1st is visible",
       "scroll to b2b_catalogue_footer_heading_popular_cities_category_last",
       "verify element b2b_catalogue_footer_heading_popular_cities_category_last is visible",
       "click b2b_catalogue_footer_heading_popular_cities",
       "click b2b_catalogue_footer_heading_quick_links",
-      "wait 2 seconds",
+      "wait until element b2b_catalogue_footer_heading_quick_links_category_1st is visible",
       "scroll to b2b_catalogue_footer_heading_quick_links_category_1st",
       "verify element b2b_catalogue_footer_heading_quick_links_category_1st is visible",
       "scroll to b2b_catalogue_footer_heading_quick_links_category_last",
       "verify element b2b_catalogue_footer_heading_quick_links_category_last is visible",
       "click b2b_catalogue_footer_heading_quick_links",
       "click b2b_catalogue_footer_heading_jd_verticals",
-      "wait 2 seconds",
+      "wait until element b2b_catalogue_footer_heading_jd_verticals_category_1st is visible",
       "scroll to b2b_catalogue_footer_heading_jd_verticals_category_1st",
       "verify element b2b_catalogue_footer_heading_jd_verticals_category_1st is visible",
       "scroll to b2b_catalogue_footer_heading_jd_verticals_category_last",
       "verify element b2b_catalogue_footer_heading_jd_verticals_category_last is visible",
       "click b2b_catalogue_footer_heading_jd_verticals",
       "click b2b_catalogue_footer_heading_featured_links",
-      "wait 2 seconds",
+      "wait until element b2b_catalogue_footer_heading_featured_links_category_1st is visible",
       "scroll to b2b_catalogue_footer_heading_featured_links_category_1st",
       "verify element b2b_catalogue_footer_heading_featured_links_category_1st is visible",
       "scroll to b2b_catalogue_footer_heading_featured_links_category_last",
       "verify element b2b_catalogue_footer_heading_featured_links_category_last is visible",
       "click b2b_catalogue_footer_heading_featured_links",
       "click b2b_catalogue_footer_heading_top_ranked_categories",
-      "wait 2 seconds",
+      "wait until element b2b_catalogue_footer_heading_top_ranked_categories_category_1st is visible",
       "scroll to b2b_catalogue_footer_heading_top_ranked_categories_category_1st",
       "verify element b2b_catalogue_footer_heading_top_ranked_categories_category_1st is visible",
       "scroll to b2b_catalogue_footer_heading_top_ranked_categories_category_last",
       "verify element b2b_catalogue_footer_heading_top_ranked_categories_category_last is visible",
       "click b2b_catalogue_footer_heading_top_ranked_categories",
       "click b2b_catalogue_footer_heading_recently_added_categories",
-      "wait 2 seconds",
+      "wait until element b2b_catalogue_footer_heading_recently_added_categories_category_1st is visible",
       "scroll to b2b_catalogue_footer_heading_recently_added_categories_category_1st",
       "verify element b2b_catalogue_footer_heading_recently_added_categories_category_1st is visible",
       "scroll to b2b_catalogue_footer_heading_recently_added_categories_category_last",
       "verify element b2b_catalogue_footer_heading_recently_added_categories_category_last is visible",
       "click b2b_catalogue_footer_heading_recently_added_categories",
       "click b2b_catalogue_footer_heading_leading_categories",
-      "wait 2 seconds",
+      "wait until element b2b_catalogue_footer_heading_leading_categories_category_1st is visible",
       "scroll to b2b_catalogue_footer_heading_leading_categories_category_1st",
       "verify element b2b_catalogue_footer_heading_leading_categories_category_1st is visible",
       "scroll to b2b_catalogue_footer_heading_leading_categories_category_last",
@@ -1121,13 +1103,11 @@
   "SG_Catalogue_Page_Open_RFQ_Banner_Category_Flow_Tr": {
     "steps": [
       "wait for page to load",
-      "scroll to catalogue_open_rfq_category_flow_banner",
+      "swipe bottom to top until element catalogue_open_rfq_category_flow_banner is visible, closing catalogue_skip_bd_category_pop and srp_seller_type_banner_skip, max 20 times, wait 0.5",
       "verify element catalogue_open_rfq_category_flow_banner is visible",
       "[ignore] click if visible srp_seller_type_banner_skip",
-      "scroll down 1200",
-      "wait 1 seconds",
       "[ignore 30s] scroll until element catalogue_open_rfq_category_flow_get_quotes_now_button visible, scroll by 600 pixels, scroll count 15, scroll wait 1",
-      "wait 1 seconds",
+      "wait until element catalogue_open_rfq_category_flow_img is visible",
       "scroll to catalogue_open_rfq_category_flow_img",
       "verify element catalogue_open_rfq_category_flow_img is visible",
       "verify element catalogue_open_rfq_category_flow_product_name is visible",
@@ -1140,17 +1120,11 @@
       "click b2b_catalogue_tab_product",
       "scroll to catalogue_page_product_tab_tractor",
       "verify element catalogue_page_product_tab_tractor is visible",
-      "scroll down 1200",
-      "wait 2 seconds",
-      "scroll down 2000",
-      "wait 2 seconds",
-      "scroll down 3000",
-      "wait 3 seconds",
-      "scroll to catalogue_open_rfq_category_flow_banner",
+      "scroll until element catalogue_open_rfq_category_flow_banner visible, scroll by 600 pixels, scroll count 20, scroll wait 1",
       "verify element catalogue_open_rfq_category_flow_banner is visible"
     ],
     "created_at": "2026-10-01T17:24:08.043560+00:00",
-    "step_count": 28,
+    "step_count": 20,
     "platform": "mobilesite"
   },
   "SG_Supplier_Search_Mandal_Co": {
@@ -1220,12 +1194,11 @@
       "verify element catalogue_product_tab_store_search_category_as is visible",
       "store text of catalogue_product_store_search_matching_as as store_sr",
       "js click catalogue_product_store_search_matching_as",
-      "wait 2 seconds",
       "verify element catalogue_product_tab_search_result is visible",
       "verify element catalogue_product_tab_post_store_search_filter_tab contains \"${store_sr}\""
     ],
     "created_at": "2026-10-01T17:24:11.007283+00:00",
-    "step_count": 13,
+    "step_count": 12,
     "platform": "mobilesite"
   },
   "SG_Product_Store_Search_Crane_Services": {
@@ -1238,32 +1211,27 @@
       "wait 2 seconds",
       "clear catalogue_product_tab_store_search_box",
       "type \"excavator\" into focused field",
-      "wait 1 seconds",
-      "wait 3 seconds",
+      "wait 4 seconds",
       "verify element catalogue_product_tab_store_search_category_as is visible",
       "store text of catalogue_product_store_search_matching_as as store_sr",
       "js click catalogue_product_store_search_matching_as",
-      "wait 2 seconds",
       "verify element catalogue_product_tab_search_result is visible",
       "verify element catalogue_product_tab_post_store_search_filter_tab contains \"${store_sr}\""
     ],
     "created_at": "2026-10-01T17:24:11.025168+00:00",
-    "step_count": 16,
+    "step_count": 14,
     "platform": "mobilesite"
   },
   "SG_Direct_URL_City_Validation_Delhi_Ncr": {
     "steps": [
       "store text of result_heading_title as heading",
       "verify stored heading contains \"Delhi Ncr\" ignoring case",
-      "swipe bottom to top",
-      "wait 1 seconds",
-      "swipe bottom to top",
-      "wait 1 seconds",
+      "[ignore 30s] swipe bottom to top until element result_card_area_nct is visible, max 10 times, wait 1",
       "[ignore] scroll to result_card_area_nct",
       "[ignore] verify element result_card_area_nct is visible"
     ],
     "created_at": "2026-10-01T17:24:12.573655+00:00",
-    "step_count": 8,
+    "step_count": 5,
     "platform": "mobilesite"
   },
   "SG_Direct_URL_City_Validation_North_24_Parganas": {
@@ -1285,30 +1253,24 @@
     "steps": [
       "store text of result_heading_title as heading",
       "verify stored heading contains \"Dehri On Sone\" ignoring case",
-      "swipe bottom to top",
-      "wait 1 seconds",
-      "swipe bottom to top",
-      "wait 1 seconds",
+      "[ignore 30s] swipe bottom to top until element result_card_area_nct is visible, max 10 times, wait 1",
       "[ignore] scroll to result_card_area_nct",
       "[ignore] verify element result_card_area_nct is visible"
     ],
     "created_at": "2026-10-01T17:24:12.622981+00:00",
-    "step_count": 8,
+    "step_count": 5,
     "platform": "mobilesite"
   },
   "SG_Direct_URL_City_Validation_Sri_Ganganagar_Rajas": {
     "steps": [
       "store text of result_heading_title as heading",
       "verify stored heading contains \"Sri Ganganagar Rajasthan\" ignoring case",
-      "swipe bottom to top",
-      "wait 1 seconds",
-      "swipe bottom to top",
-      "wait 1 seconds",
+      "[ignore 30s] swipe bottom to top until element result_card_area_nct is visible, max 10 times, wait 1",
       "[ignore] scroll to result_card_area_nct",
       "[ignore] verify element result_card_area_nct is visible"
     ],
     "created_at": "2026-10-01T17:24:12.647675+00:00",
-    "step_count": 8,
+    "step_count": 5,
     "platform": "mobilesite"
   },
   "SG_SEO_Footer_Redirection_Leading_Categories": {
@@ -1452,12 +1414,6 @@
       "wait until element rfq_mobile_number_input is visible",
       "verify element rfq_mobile_number_input is visible",
       "type \"${mobile_9987}\" into rfq_mobile_number_input",
-      "wait 1 seconds",
-      "wait 1 seconds",
-      "wait 2 seconds",
-      "wait 1 seconds",
-      "wait 2 seconds",
-      "wait 1 seconds",
       "repeat until element pdp_top_gallery_image_1st is visible (max 4 times)",
       "press back",
       "wait 2 seconds",
@@ -1472,13 +1428,12 @@
       "click pdp_gallery_inner_ask_more_photos",
       "call PDP_Common_Login_Enter_OTP_and_Close_Div_without_L",
       "refresh page",
-      "wait 1 seconds",
       "click pdp_gallery_inner_get_best_price_button",
-      "wait 1 seconds",
+      "wait until element rfq_skip_all_button is visible",
       "js click rfq_skip_all_button"
     ],
     "created_at": "2026-10-01T17:24:23.016781+00:00",
-    "step_count": 41,
+    "step_count": 34,
     "platform": "mobilesite"
   },
   "PDP_Common_Login_Enter_OTP_and_Close_Div_without_L": {
@@ -1508,15 +1463,14 @@
       "js click common_b2b_login_post_mobile_continue",
       "wait 1 seconds",
       "type \"${otp}\" into nct_login_otp_field",
-      "wait 5 seconds",
-      "wait 5 seconds",
+      "wait 10 seconds",
       "scroll to top_photos_requested",
       "verify element top_photos_requested is visible",
       "scroll to pdp_post_photo_requested_sent_button",
       "verify element pdp_post_photo_requested_sent_button is visible"
     ],
     "created_at": "2026-10-01T17:24:23.064166+00:00",
-    "step_count": 17,
+    "step_count": 16,
     "platform": "mobilesite"
   },
   "SG_PDP_Top_Seller_Section_Details_Verification": {
@@ -1528,18 +1482,16 @@
       "verify element pdp_city_top_side is visible",
       "verify element pdp_city_more_link_topside is visible",
       "click pdp_city_more_link_topside",
-      "wait 1 seconds",
       "verify element b2b_catalogue_heading_address is visible",
       "verify element pdp_city_more_link_address_popup_call is visible",
       "verify element pdp_city_more_link_address_popup_direction is visible",
       "click pdp_city_more_link_address_popup_copy_link",
       "click pdp_close_city_more_link_address_popup",
       "click ps_pdp_top_product_name",
-      "wait 1 seconds",
       "verify element seller_card_seller_name is visible"
     ],
     "created_at": "2026-10-01T17:24:23.086133+00:00",
-    "step_count": 16,
+    "step_count": 14,
     "platform": "mobilesite"
   },
   "SG_PDP_Ask_for_Price_Top_Non_Login_to_Login_Verifi": {
@@ -1565,7 +1517,7 @@
       "verify element pdp_description_view_all_arrow is visible",
       "click pdp_description_view_all_arrow",
       "click pdp_header_share",
-      "wait 3 seconds",
+      "wait until element pdp_header_share_copy_link is visible",
       "click pdp_header_share_copy_link",
       "[ignore] wait until element copied_to_clipboard_text is visible",
       "click pdp_inner_header_back",
@@ -1577,7 +1529,7 @@
   },
   "SG_PDP_Customer_Also_Viewed": {
     "steps": [
-      "wait 3 seconds",
+      "wait until element pdp_customer_also_viewed_section is visible",
       "scroll to pdp_customer_also_viewed_section",
       "verify element pdp_customer_also_viewed_section is visible",
       "verify element pdp_heading_customers_also_viewed is visible",
@@ -1595,23 +1547,21 @@
       "verify element pdp_call_now_button_customer_also_viewed is visible",
       "verify element pdp_whatsapp_button_customer_also_viewed is visible",
       "store text of pdp_1st_seller_name_customer_also_viewed as seller_name_customer_also_viewed",
-      "wait 3 seconds",
+      "wait until element pdp_1st_seller_name_customer_also_viewed is visible",
       "click pdp_1st_seller_name_customer_also_viewed",
-      "wait 3 seconds",
       "wait for page to load",
       "verify text \"${seller_name_customer_also_viewed}\" on page",
       "press back",
       "wait for page to load"
     ],
     "created_at": "2026-10-01T17:24:23.161043+00:00",
-    "step_count": 25,
+    "step_count": 24,
     "platform": "mobilesite"
   },
   "SG_PDP_Seller_Brochure_Verification": {
     "steps": [
       "wait 2 seconds",
-      "scroll down 500",
-      "scroll to pdp_seller_brochure_section",
+      "scroll until element pdp_seller_brochure_section visible, scroll by 600 pixels, scroll count 20, scroll wait 1",
       "verify element pdp_seller_brochure_section is visible",
       "verify element pdp_seller_brochure_share is visible",
       "verify element pdp_seller_brochure_image_catalogue_1 is visible",
@@ -1636,7 +1586,7 @@
       "verify element pdp_gallery_1st_img_seller_brochure is visible",
       "verify element pdp_gallery_last_10th_img_seller_brochure is visible",
       "click pdp_gallery_share_seller_brochure",
-      "wait 2 seconds",
+      "wait until element pdp_header_share_copy_link is visible",
       "click pdp_header_share_copy_link",
       "click pdp_gallery_1st_img_seller_brochure",
       "verify element pdp_seller_brochure_inner_img is visible",
@@ -1644,12 +1594,12 @@
       "verify element pdp_seller_brochure_inner_count is visible",
       "click pdp_brochure_inner_back",
       "click intermediate_page_header_back",
-      "wait 1 seconds",
+      "wait until element pdp_seller_brochure_section is visible",
       "scroll to pdp_seller_brochure_section",
       "verify element pdp_seller_brochure_section is visible"
     ],
     "created_at": "2026-10-01T17:24:23.187746+00:00",
-    "step_count": 38,
+    "step_count": 37,
     "platform": "mobilesite"
   },
   "SG_PDP_More_from_this_Seller_Revamp": {
@@ -1685,15 +1635,7 @@
       "wait until element rfq_don_t_know_button is visible",
       "js click rfq_don_t_know_button",
       "wait 2 seconds",
-      "wait 3 seconds",
-      "wait 3 seconds",
-      "wait 1 seconds",
-      "wait 2 seconds",
-      "wait 3 seconds",
-      "wait 1 seconds",
-      "wait 5 seconds",
       "refresh page",
-      "wait 1 seconds",
       "store count of product_tab_products_list as product_Count",
       "create variable j with value \"1\"",
       "if ${j} is less than ${product_Count}",
@@ -1703,18 +1645,18 @@
       "end if",
       "press back",
       "open https://www.justdial.com/jdmart/Thane/Security-Services-For-Office/pid-600008854/022PXX22-XX22-240516185330-I7G4?idx=0&jdmid=jdm-1095755-ent-14-10426677&alsoserveCity=Mumbai&searchString=Security-Services-For-Office&img=smb3r.jpg&nid=10426677",
-      "wait 2 seconds",
+      "wait until element pdp_seller_info_view_more_tab is visible",
       "scroll to pdp_seller_info_view_more_tab",
       "verify element more_from_this_seller_product_list_section is not visible",
       "open https://www.justdial.com/jdmart/Thane/Bulk-Whatsapp-Messaging-Services/pid-600019505/022PXX22-XX22-140815183022-F3Q5?search=Bulk%20Whatsapp%20Messaging%20Services&catId=&city=Thane&nearme=0&sortby=pop&basedon=&nid=11361612&jdmid=&show=false&bc=&srcterm=Bulk%20Whatsapp%20Messaging%20Services",
-      "wait 3 seconds",
+      "wait until element more_from_this_seller_product_list_section is visible",
       "scroll to more_from_this_seller_product_list_section",
       "wait 1 seconds",
       "store text of item_1st_product_more_from_this_seller as serviceName",
       "verify element more_seller_similar_product_icon is not visible"
     ],
     "created_at": "2026-10-01T17:24:23.213270+00:00",
-    "step_count": 58,
+    "step_count": 50,
     "platform": "mobilesite"
   },
   "SG_PDP_More_from_this_Seller": {
@@ -1788,7 +1730,6 @@
       "verify element pdp_list_recommended_categories is visible",
       "store text of pdp_list_recommended_categories as RCNAME",
       "click pdp_list_recommended_categories",
-      "wait 2 seconds",
       "wait for page to load",
       "verify text \"${RCNAME}\" on page",
       "verify element prp_result_page_loading_via_pdp_recommended_category_search_flow is visible",
@@ -1797,7 +1738,7 @@
       "end repeat"
     ],
     "created_at": "2026-10-01T17:24:23.309437+00:00",
-    "step_count": 20,
+    "step_count": 19,
     "platform": "mobilesite"
   },
   "SG_PDP_Ami_Enterprise_Call_popup": {
@@ -1882,7 +1823,7 @@
   },
   "SG_Popular_categories_Need_assistance_SEO_Footer_B": {
     "steps": [
-      "wait 1 seconds",
+      "wait until element pdp_need_assistance_section is visible",
       "scroll to pdp_need_assistance_section",
       "verify element pdp_need_assistance_section is visible",
       "verify element pdp_need_assitance_img is visible",
@@ -1969,13 +1910,12 @@
       "scroll to pdp_similar_business_1st_business_card",
       "verify element pdp_similar_business_1st_business_card is visible",
       "click pdp_similar_business_1st_image",
-      "wait 2 seconds",
       "wait for page to load",
       "press back",
       "wait 1 seconds"
     ],
     "created_at": "2026-10-01T17:24:23.463402+00:00",
-    "step_count": 25,
+    "step_count": 24,
     "platform": "mobilesite"
   },
   "SG_PDP_Top_Seller_Click_Redirection_to_Catalogue": {
@@ -1996,23 +1936,22 @@
       "store text of pdp_top_seller as top_seller",
       "click pdp_top_seller",
       "wait until element catalogue_top_seller_name is visible",
-      "wait 2 seconds",
       "verify text \"${top_seller}\" on page"
     ],
     "created_at": "2026-10-01T17:24:23.516415+00:00",
-    "step_count": 6,
+    "step_count": 5,
     "platform": "mobilesite"
   },
   "SG_PDP_People_Also_Search_for_Section": {
     "steps": [
-      "wait 3 seconds",
+      "wait until element pdp_people_also_search_for_heading is visible",
       "scroll to pdp_people_also_search_for_heading",
       "scroll to pdp_people_also_search_for_1st_img",
       "verify element pdp_people_also_search_for_1st_img is visible",
       "verify element pdp_people_also_search_for_1st_product_name is visible",
       "store text of pdp_people_also_search_for_1st_product_name as 1st_Product",
-      "store attribute alt of pdp_people_also_search_for_1st_img as ts_attribute",
-      "verify stored ts_attribute contains \"${1st_Product}\"",
+      "# live 06-Oct: the card image carries no alt text any more — the name and the card link must still match",
+      "verify element pdp_people_also_search_for_1st_product_name contains \"${1st_Product}\"",
       "scroll to pdp_people_also_search_for_last_buttonn_view_products",
       "verify element pdp_people_also_search_for_last_buttonn_view_products is visible",
       "scroll to pdp_people_also_search_for_last_img",
@@ -2062,12 +2001,11 @@
       "verify element pdp_change_city_link_text is visible",
       "store text of pdp_city_name as pdp_city_name",
       "click pdp_change_city_link_text",
-      "wait 1 seconds",
       "verify element pdp_change_city_search_page is visible",
       "click touch_city_search_box"
     ],
     "created_at": "2026-10-01T17:24:26.447505+00:00",
-    "step_count": 10,
+    "step_count": 9,
     "platform": "mobilesite"
   },
   "SG_NCT_to_PDP_City_Change_Verification": {
@@ -2079,12 +2017,11 @@
       "verify element pdp_change_city_link_text is visible",
       "store text of pdp_city_name as pdp_city_name",
       "click pdp_change_city_link_text",
-      "wait 1 seconds",
       "verify element pdp_change_city_search_page is visible",
       "click touch_city_search_box"
     ],
     "created_at": "2026-10-01T17:24:26.477945+00:00",
-    "step_count": 10,
+    "step_count": 9,
     "platform": "mobilesite"
   },
   "SG_PDP_Change_City_Pune_Cranes": {
@@ -2094,9 +2031,8 @@
       "type \"${CitySearch}\" into focused field",
       "wait 1 seconds",
       "press key Space",
-      "wait 2 seconds",
+      "wait until element pdp_city_change_1st_autosuggest is visible",
       "click pdp_city_change_1st_autosuggest",
-      "wait 2 seconds",
       "verify element prp_search_box_category_name is visible",
       "verify element prp_city_name_in_search_box contains \"${CitySearch}\"",
       "verify element prp_result_heading contains \"${CN_Category}\"",
@@ -2109,7 +2045,7 @@
       "verify element pdp_city_name contains \"${CitySearch}\""
     ],
     "created_at": "2026-10-01T17:24:26.504988+00:00",
-    "step_count": 18,
+    "step_count": 17,
     "platform": "mobilesite"
   },
   "SG_PDP_Change_City_via_Catalogue": {
@@ -2120,12 +2056,11 @@
       "verify element pdp_change_city_link_text is visible",
       "store text of pdp_city_name as pdp_city_name",
       "click pdp_change_city_link_text",
-      "wait 1 seconds",
       "verify element pdp_change_city_search_page is visible",
       "click touch_city_search_box"
     ],
     "created_at": "2026-10-01T17:24:26.531736+00:00",
-    "step_count": 9,
+    "step_count": 8,
     "platform": "mobilesite"
   },
   "SG_PDP_Change_City_Mumbai_Lixo_Chair": {
@@ -2134,9 +2069,8 @@
       "type \"${CitySearch}\" into focused field",
       "wait 3 seconds",
       "press key Space",
-      "wait 3 seconds",
+      "wait until element pdp_city_change_1st_autosuggest is visible",
       "click pdp_city_change_1st_autosuggest",
-      "wait 4 seconds",
       "verify element prp_search_box_category_name is visible",
       "verify element prp_city_name_in_search_box contains \"${CitySearch}\"",
       "verify element prp_result_heading contains \"${CitySearch}\"",
@@ -2146,12 +2080,11 @@
       "verify element pdp_city_name contains \"${CitySearch}\""
     ],
     "created_at": "2026-10-01T17:24:26.559942+00:00",
-    "step_count": 14,
+    "step_count": 13,
     "platform": "mobilesite"
   },
   "SG_Home_Flow_PDP_City_Change": {
     "steps": [
-      "wait 3 seconds",
       "wait for page to load",
       "click b2b_search_field",
       "wait 1 seconds",
@@ -2159,15 +2092,8 @@
       "click b2b_home_city_name",
       "click b2b_home_city_header_back",
       "wait 1 seconds",
-      "scroll down 1200",
-      "wait 5 seconds",
-      "scroll down 2400",
-      "wait 5 seconds",
-      "scroll down 3000",
-      "wait 5 seconds",
-      "create variable pagescroll with value \"100\"",
       "[ignore 30s] swipe bottom to top until element b2b_home_people_looking_for_video_heading is visible, max 15 times, wait 1",
-      "wait 2 seconds",
+      "wait until element b2b_home_people_looking_for_video_1st_product is visible",
       "click b2b_home_people_looking_for_video_1st_product",
       "wait 5 seconds",
       "call SG_PDP_Change_City_via_Home",
@@ -2175,7 +2101,7 @@
       "call SG_Home_to_PDP_PRP_to_PDP_City_Change_Verification"
     ],
     "created_at": "2026-10-01T17:24:26.588286+00:00",
-    "step_count": 22,
+    "step_count": 14,
     "platform": "mobilesite"
   },
   "SG_PDP_Change_City_via_Home": {
@@ -2205,9 +2131,8 @@
       "type \"${CitySearch}\" into focused field",
       "wait 3 seconds",
       "press key Space",
-      "wait 3 seconds",
+      "wait until element pdp_city_change_1st_autosuggest is visible",
       "click pdp_city_change_1st_autosuggest",
-      "wait 2 seconds",
       "verify element prp_search_box_category_name is visible",
       "store text of prp_search_box_category_name as ts_element_text",
       "verify stored ts_element_text is not \"\"",
@@ -2219,7 +2144,7 @@
       "verify element pdp_city_name contains \"${CitySearch}\""
     ],
     "created_at": "2026-10-01T17:24:26.647559+00:00",
-    "step_count": 18,
+    "step_count": 17,
     "platform": "mobilesite"
   },
   "SG_Home_to_PDP_PRP_to_PDP_City_Change_Verification": {
@@ -2244,9 +2169,8 @@
       "type \"${CitySearch}\" into focused field",
       "wait 3 seconds",
       "press key Space",
-      "wait 1 seconds",
+      "wait until element all_india_city is visible",
       "click all_india_city",
-      "wait 3 seconds",
       "verify element prp_search_box_category_name is visible",
       "store text of prp_search_box_category_name as ts_element_text",
       "verify stored ts_element_text is not \"\"",
@@ -2255,7 +2179,7 @@
       "verify element pdp_city_name contains \"All India\""
     ],
     "created_at": "2026-10-01T17:24:26.712757+00:00",
-    "step_count": 13,
+    "step_count": 12,
     "platform": "mobilesite"
   },
   "SG_PDP_Post_Login_GBP_Popup": {
@@ -2279,10 +2203,7 @@
   },
   "SG_PDP_GBP_POP": {
     "steps": [
-      "scroll down 3200",
-      "wait 1 seconds",
       "swipe bottom to top until element pdp_gbp_popup is visible, max 15 times, wait 1",
-      "wait 2 seconds",
       "verify element pdp_gbp_popup is visible",
       "verify element pdp_gbp_popup_heading_get_tailored_quotes_in_a_click is visible",
       "verify element pdp_gbp_popup_image is visible",
@@ -2290,13 +2211,13 @@
       "verify element pdp_gbp_popup_get_best_price_button is visible",
       "verify element catalogue_skip_bd_category_pop is visible",
       "click pdp_gbp_popup_get_best_price_button",
-      "wait 3 seconds",
+      "wait until element rfq_quantity_input is visible",
       "call SG_IF_RFQ_qty_field_is_displayed",
       "call RFQ_Non_Login_Flow_to_Login_Select_2_Option",
       "wait 2 seconds"
     ],
     "created_at": "2026-10-01T17:24:27.616313+00:00",
-    "step_count": 15,
+    "step_count": 12,
     "platform": "mobilesite"
   },
   "SG_IF_RFQ_qty_field_is_displayed": {
@@ -2335,17 +2256,14 @@
   },
   "SG_Need_Assistance_Paid_VN": {
     "steps": [
-      "wait 3 seconds",
-      "scroll down 3200",
-      "wait 1 seconds",
-      "click if visible gbp_popup_skip",
-      "scroll to b2b_catalogue_need_assistance_company_banner_text",
-      "verify element b2b_catalogue_need_assistance_company_banner_text is visible",
+      "# Scroll the PDP the way a user does: swipe screen by screen (the popup is closed if it shows) until the",
+      "# Need Assistance banner is on screen, then check the banner.",
+      "swipe bottom to top until element b2b_catalogue_need_assistance_company_banner_text is visible, closing gbp_popup_skip, max 20 times, wait 0.5",
       "click if visible gbp_popup_skip",
       "call SG_PDP_Page_Need_Assistance_Banner"
     ],
     "created_at": "2026-10-01T17:24:29.456935+00:00",
-    "step_count": 8,
+    "step_count": 5,
     "platform": "mobilesite"
   },
   "SG_PDP_Page_Need_Assistance_Banner": {
@@ -2362,82 +2280,63 @@
   },
   "SG_Need_Assistance_Paid_AN": {
     "steps": [
-      "wait 3 seconds",
-      "scroll down 3200",
-      "wait 1 seconds",
-      "click if visible gbp_popup_skip",
-      "scroll to b2b_catalogue_need_assistance_company_banner_text",
-      "verify element b2b_catalogue_need_assistance_company_banner_text is visible",
+      "# Scroll the PDP the way a user does: swipe screen by screen (the popup is closed if it shows) until the",
+      "# Need Assistance banner is on screen, then check the banner.",
+      "swipe bottom to top until element b2b_catalogue_need_assistance_company_banner_text is visible, closing gbp_popup_skip, max 20 times, wait 0.5",
       "click if visible gbp_popup_skip",
       "call SG_PDP_Page_Need_Assistance_Banner"
     ],
     "created_at": "2026-10-01T17:24:29.527348+00:00",
-    "step_count": 8,
+    "step_count": 5,
     "platform": "mobilesite"
   },
   "SG_Need_Assistance_Paid_DVN_Without_Whatsapp": {
     "steps": [
-      "wait 3 seconds",
-      "scroll down 3200",
-      "wait 3 seconds",
-      "click if visible gbp_popup_skip",
-      "scroll to b2b_catalogue_need_assistance_company_banner_text",
-      "verify element b2b_catalogue_need_assistance_company_banner_text is visible",
+      "# Scroll the PDP the way a user does: swipe screen by screen (the popup is closed if it shows) until the",
+      "# Need Assistance banner is on screen, then check the banner.",
+      "swipe bottom to top until element b2b_catalogue_need_assistance_company_banner_text is visible, closing gbp_popup_skip, max 20 times, wait 0.5",
       "click if visible gbp_popup_skip",
       "call SG_PDP_Page_Need_Assistance_Banner"
     ],
     "created_at": "2026-10-01T17:24:29.557316+00:00",
-    "step_count": 8,
+    "step_count": 5,
     "platform": "mobilesite"
   },
   "SG_Need_Assistance_Non_Paid_AN": {
     "steps": [
-      "wait 3 seconds",
-      "scroll down 3200",
-      "wait 1 seconds",
-      "click if visible gbp_popup_skip",
-      "scroll to b2b_catalogue_need_assistance_company_banner_text",
-      "verify element b2b_catalogue_need_assistance_company_banner_text is visible",
+      "# Scroll the PDP the way a user does: swipe screen by screen (the popup is closed if it shows) until the",
+      "# Need Assistance banner is on screen, then check the banner.",
+      "swipe bottom to top until element b2b_catalogue_need_assistance_company_banner_text is visible, closing gbp_popup_skip, max 20 times, wait 0.5",
       "click if visible gbp_popup_skip",
       "call SG_PDP_Page_Need_Assistance_Banner"
     ],
     "created_at": "2026-10-01T17:24:29.587765+00:00",
-    "step_count": 8,
+    "step_count": 5,
     "platform": "mobilesite"
   },
   "SG_Need_Assistance_Non_Paid_DVN_with_LG": {
     "steps": [
-      "wait 3 seconds",
-      "scroll down 3200",
-      "wait 1 seconds",
-      "click if visible gbp_popup_skip",
-      "scroll to b2b_catalogue_need_assistance_company_banner_text",
-      "verify element b2b_catalogue_need_assistance_company_banner_text is visible",
+      "# Scroll the PDP the way a user does: swipe screen by screen (the popup is closed if it shows) until the",
+      "# Need Assistance banner is on screen, then check the banner.",
+      "swipe bottom to top until element b2b_catalogue_need_assistance_company_banner_text is visible, closing gbp_popup_skip, max 20 times, wait 0.5",
       "click if visible gbp_popup_skip",
       "call SG_PDP_Page_Need_Assistance_Banner"
     ],
     "created_at": "2026-10-01T17:24:29.617352+00:00",
-    "step_count": 8,
+    "step_count": 5,
     "platform": "mobilesite"
   },
   "SG_Touch_PDP_No_Call_Popular_Categories_Section_Ve": {
     "steps": [
-      "wait 3 seconds",
-      "scroll down 1200",
-      "wait 2 seconds",
-      "[ignore] click gbp_popup_skip",
-      "scroll down 3200",
-      "wait 2 seconds",
-      "[ignore] click gbp_popup_skip",
-      "scroll down 4800",
-      "wait 2 seconds",
-      "[ignore] click if visible gbp_popup_skip",
-      "verify element pdp_need_assistance_section is not visible",
+      "# No banner expected on this PDP: scroll the Overview the way a user does, screen by screen, until the",
+      "# SEO footer (every PDP ends with it), closing popups on the way — the Need Assistance banner must never be shown.",
+      "swipe bottom to top until element b2b_catalogue_footer_heading_trending_categories is visible, closing gbp_popup_skip, max 25 times, wait 0.5",
       "click if visible gbp_popup_skip",
+      "verify element pdp_need_assistance_section is not visible",
       "verify element b2b_catalogue_need_assistance_company_banner_text is not visible"
     ],
     "created_at": "2026-10-01T17:24:29.647228+00:00",
-    "step_count": 13,
+    "step_count": 6,
     "platform": "mobilesite"
   },
   "SG_RFQ_Post_Login_All_verification_Products": {
@@ -2620,12 +2519,11 @@
       "js click common_b2b_login_post_mobile_continue",
       "wait 1 seconds",
       "type \"${otp}\" into bd_popup_otp_field",
-      "wait 5 seconds",
-      "wait 3 seconds",
+      "wait 8 seconds",
       "[ignore] verify element bd_popup_otp_field is visible"
     ],
     "created_at": "2026-10-01T17:24:23.284905+00:00",
-    "step_count": 7,
+    "step_count": 6,
     "platform": "mobilesite"
   },
   "SG_B2B_Assist_Login_In_Chat": {
@@ -2647,7 +2545,6 @@
   "SG_B2B_Assist_Answer_Until_Results": {
     "steps": [
       "wait until element type_your_message_input is visible",
-      "wait 4 seconds",
       "repeat until element b2b_assist_result_call_now is visible (max 8 times)",
       "if element b2b_assist_latest_first_option is visible",
       "click b2b_assist_latest_first_option",
@@ -2661,7 +2558,7 @@
     ],
     "platform": "mobilesite",
     "created_at": "2026-10-02T13:40:00+00:00",
-    "step_count": 12
+    "step_count": 11
   },
   "SG_RFQ_Old_Form_Or_Blue_Page_Opened": {
     "steps": [
@@ -2680,11 +2577,7 @@
   },
   "SG_NCT_Scroll_To_Send_Enquiry_Skipping_Job_Sheet": {
     "steps": [
-      "repeat until element send_enquiry_button_1st is visible (max 20 times)",
-      "click if visible get_best_price_header_back",
-      "scroll down 500",
-      "wait 1 seconds",
-      "end repeat",
+      "swipe bottom to top until element send_enquiry_button_1st is visible, closing get_best_price_header_back, max 20 times, wait 0.5",
       "click if visible get_best_price_header_back",
       "scroll to send_enquiry_button_1st",
       "wait 2 seconds",
@@ -2693,7 +2586,7 @@
     ],
     "platform": "mobilesite",
     "created_at": "2026-10-02T15:10:00+00:00",
-    "step_count": 10
+    "step_count": 6
   },
   "SG_22788_Chat_Login": {
     "steps": [
@@ -2746,7 +2639,6 @@
       "# JDMart search as a user: ${category} product suggestion in ${city} -> PRP",
       "call SG_22788_Open_Search_In_City",
       "type \"${category}\" into focused field",
-      "wait 3 seconds",
       "wait until element jdmart_search_first_product_suggestion is visible within 15 seconds",
       "# the suggestion that is exactly the category if there is one, otherwise the top suggestion (as a user would tap)",
       "if element jdmart_search_product_suggestion is visible",
@@ -2759,18 +2651,14 @@
     ],
     "platform": "mobilesite",
     "created_at": "2026-10-05T10:38:45+00:00",
-    "step_count": 13
+    "step_count": 12
   },
   "SG_22788_Open_PRP_Floater": {
     "steps": [
       "# PRP -> bottom floater -> B2B Assist chat (logged in), opening reply kept as ${bot_reply}",
       "call SG_22788_Search_Product_In_City",
       "# The 'Save more on ...' mobile-number sheet is not under test here; it is closed only so the floater can be reached",
-      "repeat until element prp_rfq_floater is visible (max 10 times)",
-      "click if visible b2b_prp_gvs_popup_skip",
-      "swipe bottom to top",
-      "wait 2 seconds",
-      "end repeat",
+      "swipe bottom to top until element prp_rfq_floater is visible, closing b2b_prp_gvs_popup_skip, max 10 times, wait 0.5",
       "click if visible b2b_prp_gvs_popup_skip",
       "click prp_rfq_floater",
       "wait until url contains \"bestdeals_chatbot\"",
@@ -2780,7 +2668,6 @@
       "store url as chat_url",
       "# the first chat card is either the login gate or the bot's opening reply — wait for it before deciding",
       "wait until element b2b_assist_last_bot_reply is visible within 30 seconds",
-      "wait 2 seconds",
       "if element b2b_assist_chat_login_link is visible",
       "call SG_22788_Chat_Login",
       "end if",
@@ -2789,7 +2676,7 @@
     ],
     "platform": "mobilesite",
     "created_at": "2026-10-05T10:38:45+00:00",
-    "step_count": 23
+    "step_count": 18
   },
   "SG_22788_Open_PDP_FAB": {
     "steps": [
@@ -2799,11 +2686,7 @@
       "store text of prp_first_product_title as pdp_product",
       "click prp_first_product_title",
       "wait until url contains \"/pid-\"",
-      "wait 4 seconds",
-      "repeat until element pdp_ask_me_anything_fab is visible (max 10 times)",
-      "swipe bottom to top",
-      "wait 2 seconds",
-      "end repeat",
+      "swipe bottom to top until element pdp_ask_me_anything_fab is visible, max 10 times, wait 0.5",
       "click pdp_ask_me_anything_fab",
       "wait until url contains \"bestdeals_chatbot\"",
       "wait until url contains \"pagename=b2b_pdp\"",
@@ -2811,7 +2694,6 @@
       "store url as chat_url",
       "# the first chat card is either the login gate or the bot's opening reply — wait for it before deciding",
       "wait until element b2b_assist_last_bot_reply is visible within 30 seconds",
-      "wait 2 seconds",
       "if element b2b_assist_chat_login_link is visible",
       "call SG_22788_Chat_Login",
       "end if",
@@ -2820,7 +2702,7 @@
     ],
     "platform": "mobilesite",
     "created_at": "2026-10-05T10:38:45+00:00",
-    "step_count": 24
+    "step_count": 19
   },
   "SG_22788_Freetext_Search_In_City": {
     "steps": [
@@ -2881,5 +2763,29 @@
     "platform": "mobilesite",
     "created_at": "2026-10-05T10:38:45+00:00",
     "step_count": 39
+  },
+  "SG_22788_Search_Again_On_Result_Page": {
+    "steps": [
+      "# Next ${search_term} from the result page that is already open in ${city}: the page's own search box",
+      "# searches in that city, so the city is not picked again. Falls back to the full city flow if the box is missing.",
+      "click if visible b2b_prp_gvs_popup_skip",
+      "if element prp_header_search_box is visible",
+      "click prp_header_search_box",
+      "wait until element jdmart_search_input is visible",
+      "clear jdmart_search_input",
+      "click jdmart_search_input",
+      "else",
+      "call SG_22788_Open_Search_In_City",
+      "end if",
+      "type \"${search_term}\" into focused field",
+      "press key Enter",
+      "# the search panel closes when the search is submitted; then the new result page loads",
+      "wait until element jdmart_search_input is not visible",
+      "wait for page to load",
+      "click if visible b2b_prp_gvs_popup_skip"
+    ],
+    "created_at": "2026-10-05T19:30:00+00:00",
+    "step_count": 17,
+    "platform": "mobilesite"
   }
 }

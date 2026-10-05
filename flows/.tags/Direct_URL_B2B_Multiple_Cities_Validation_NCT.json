@@ -1,0 +1,84 @@
+{
+ "version": 1,
+ "flow_mtime": 1791223249.4555588,
+ "steps": [
+  {
+   "line": 7,
+   "text": "open https://www.justdial.com/Delhi-NCR/CCTV-Wholesalers/nct-10887700?fl=undefined&ismap=undefined&subpage=&searchCase=&term=cctv%2520whole&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=CCTV%20Wholesalers&trkid=213287-delhi",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 8,
+   "text": "call SG_Direct_URL_City_Validation_Delhi_Ncr",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 9,
+   "text": "open https://www.justdial.com/West-Godavari/Chair-Manufacturers/nct-10089962?fl=undefined&ismap=&subpage=&searchCase=&term=chair%20manu&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Chair%20Manufacturers&trkid=25478-remotecity",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 10,
+   "text": "wait 2 seconds",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 11,
+   "text": "store text of result_heading_title as heading",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 12,
+   "text": "verify stored heading contains \"West Godavari\" ignoring case",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 13,
+   "text": "[ignore 30s] swipe bottom to top until element nct_result_card_only_details is visible, max 10 times, wait 1",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 14,
+   "text": "[ignore] scroll to nct_result_card_only_details",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 15,
+   "text": "[ignore] verify element nct_result_card_only_details is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 18,
+   "text": "open https://www.justdial.com/Dehri-On-Sone/CCTV-Wholesalers/nct-10887700?fl=undefined&ismap=undefined&subpage=&searchCase=&term=&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=CCTV%20Wholesalers&trkid=28126-remotecity",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 19,
+   "text": "call SG_Direct_URL_City_Validation_Dehri_On_Sone",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 20,
+   "text": "open https://www.justdial.com/Sri-Ganganagar-Rajasthan/Tile-Manufacturers/nct-10482071?fl=undefined&ismap=undefined&subpage=&searchCase=&term=tiles%2520manu&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Tile%20Manufacturers&trkid=27631-remotecity",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 21,
+   "text": "call SG_Direct_URL_City_Validation_Sri_Ganganagar_Rajas",
+   "level": "R",
+   "manual": false
+  }
+ ]
+}

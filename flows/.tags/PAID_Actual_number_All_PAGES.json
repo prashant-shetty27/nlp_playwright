@@ -1,0 +1,204 @@
+{
+ "version": 1,
+ "flow_mtime": 1791223249.5348155,
+ "steps": [
+  {
+   "line": 5,
+   "text": "call PS_Touch_Location_Popup",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 6,
+   "text": "click if visible touch_login_popup_may_be_later",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 7,
+   "text": "open https://www.justdial.com/jdmart/Udaipur-Rajasthan/Motor/jdm-1073774-ent-2-13733553?srcterm=Motor",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 8,
+   "text": "wait until element ps_touch_b2b_prp_1st_product is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 9,
+   "text": "repeat until element prp_chirag_enterprise is visible (max 50 times)",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 10,
+   "text": "refresh page",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 11,
+   "text": "open https://www.justdial.com/jdmart/Udaipur-Rajasthan/Motor/jdm-1073774-ent-2-13733553?srcterm=Motor",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 12,
+   "text": "wait 3 seconds",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 13,
+   "text": "end repeat",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 14,
+   "text": "wait until element chirag_enterprises_call_button is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 15,
+   "text": "click chirag_enterprises_call_button",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 16,
+   "text": "wait 1 seconds",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 17,
+   "text": "verify text \"+(91)-9414146454\" on page",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 18,
+   "text": "verify text \"+(91)-9828392626\" on page",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 19,
+   "text": "open https://www.justdial.com/jdmart/Udaipur-Rajasthan/Crompton-V-5-Water-filled-Motor/pid-2183812957/9999PX294-X294-101122091036-N2E7?idx=0&jdmid=jdm-1073774-ent-2-13733553&alsoserveCity=Udaipur-Rajasthan&searchString=Motor&btype=dealers&nid=11536045",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 20,
+   "text": "wait 6 seconds",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 21,
+   "text": "swipe bottom to top until element footer_call_now_button is visible, max 10 times, wait 1",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 22,
+   "text": "click footer_call_now_button",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 23,
+   "text": "wait 2 seconds",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 24,
+   "text": "verify text \"+(91)-9414146454\" on page",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 25,
+   "text": "verify text \"+(91)-9828392626\" on page",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 26,
+   "text": "open https://www.justdial.com/Udaipur-Rajasthan/Chirag-Enterprises-In-Front-Of-JC-Boys-Hostel-Tekri/9999PX294-X294-101122091036-N2E7_BZDET?pid=2183812957&nid=11536045&jdmid=jdm-1073774-ent-2-13733553",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 27,
+   "text": "wait until element b2b_catalogue_card_cta_call_now is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 28,
+   "text": "click b2b_catalogue_card_cta_call_now",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 29,
+   "text": "wait 1 seconds",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 30,
+   "text": "verify text \"09414146454\" on page",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 31,
+   "text": "verify text \"09828392626\" on page",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 32,
+   "text": "open https://www.justdial.com/Udaipur-Rajasthan/Chirag-Enterprises-In-Front-Of-JC-Boys-Hostel-Tekri/9999PX294-X294-101122091036-N2E7_BZDET/photos?newAddress=In+Front+Of+JC+Boys+Hostel+Tekri&cname=Chirag+Enterprises&paid=1&datacity=&ds=0&stxt=&nid=11536045&stype=&docid=9999PX294-X294-101122091036-N2E7&source=detail_page&click=banner&pselect=192899931&tab=all&isImageFullView=1",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 33,
+   "text": "wait until element gallery_footer_call_now_button is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 34,
+   "text": "click gallery_footer_call_now_button",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 35,
+   "text": "wait 2 seconds",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 36,
+   "text": "verify text \"09414146454\" on page",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 37,
+   "text": "verify text \"09828392626\" on page",
+   "level": "R",
+   "manual": false
+  }
+ ]
+}

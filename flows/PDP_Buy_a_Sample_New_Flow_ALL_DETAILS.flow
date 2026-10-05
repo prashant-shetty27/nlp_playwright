@@ -17,11 +17,9 @@ type "v" into focused field
 wait 1 seconds
 clear b2b_search_field
 type "cctv" into focused field
-wait 3 seconds
 wait until element b2b_as_cctv is visible
-wait 3 seconds
+wait until element b2b_as_cctv is visible
 click b2b_as_cctv
-wait 2 seconds
 wait until element ps_touch_b2b_prp_1st_product is visible
 scroll to prp_royal_securitycamera_contract
 click prp_royal_securitycamera_contract
@@ -29,9 +27,7 @@ wait 3 seconds
 # OFF: click ps_touch_b2b_prp_1st_product
 # OFF: wait until element pdp_top_seller is visible
 open https://www.justdial.com/jdmart/Mumbai/Aditya-Birla-Cement-50-kg/pid-2227957773/022PXX22-XX22-131231120443-E6D7
-wait 2 seconds
 # OFF: click pdp_buy_a_sample
-wait 3 seconds
 # OFF: wait until element buy_sample_pay_on_delivery_button is visible
 # OFF: verify text "Request Sample" on page
 # OFF: verify element header_back_buy_sample_popup is visible
@@ -56,10 +52,7 @@ wait 3 seconds
 # OFF: verify text "Total Order Cost" on page
 # OFF: verify text "Pay by Cash / UPI on delivery" on page
 # OFF: click buy_sample_pay_on_delivery_button
-wait 2 seconds
 # OFF: call PS_Touch_B2B_Common_Non_Login_to_Login
 # OFF: js click b2b_all_login_text_button
-wait 3 seconds
 # OFF: verify element item_1st_otp_b2b_common_login is visible
-wait 3 seconds
 # OFF: verify element buy_sample_thank_you is visible

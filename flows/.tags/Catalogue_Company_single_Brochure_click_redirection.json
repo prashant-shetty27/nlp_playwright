@@ -1,6 +1,6 @@
 {
  "version": 1,
- "flow_mtime": 1791215955.5889823,
+ "flow_mtime": 1791221399.5027752,
  "steps": [
   {
    "line": 8,
@@ -10,42 +10,36 @@
   },
   {
    "line": 9,
-   "text": "wait 3 seconds",
-   "level": "S",
-   "manual": false
-  },
-  {
-   "line": 10,
    "text": "[ignore 30s] scroll until element b2b_catalogue_heading_company_catalogue visible, scroll by 600 pixels, scroll count 15, scroll wait 1",
    "level": "S",
    "manual": false
   },
   {
-   "line": 11,
-   "text": "wait 1 seconds",
+   "line": 10,
+   "text": "wait until element pdf_catalogue_1st_img is visible",
    "level": "S",
    "manual": false
   },
   {
-   "line": 12,
+   "line": 11,
    "text": "click pdf_catalogue_1st_img",
    "level": "S",
    "manual": false
   },
   {
-   "line": 13,
-   "text": "wait 1 seconds",
+   "line": 12,
+   "text": "wait until element pdf_catalogue_inner_img_gallery is visible",
    "level": "S",
    "manual": false
   },
   {
-   "line": 14,
+   "line": 13,
    "text": "scroll to pdf_catalogue_inner_img_gallery",
    "level": "S",
    "manual": false
   },
   {
-   "line": 15,
+   "line": 14,
    "text": "verify element pdf_catalogue_inner_img_gallery is visible",
    "level": "S",
    "manual": false

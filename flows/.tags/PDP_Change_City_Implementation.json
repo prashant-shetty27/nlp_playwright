@@ -1,0 +1,318 @@
+{
+ "version": 1,
+ "flow_mtime": 1791221399.6546495,
+ "steps": [
+  {
+   "line": 7,
+   "text": "call PS_Touch_Location_Popup",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 8,
+   "text": "open https://www.justdial.com/jdmart/Mumbai/Tiles/jdm-1107294-ent-4-48734?srcterm=Tiles",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 9,
+   "text": "wait for page to load",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 10,
+   "text": "store text of prp_search_box_city_name as searched_city",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 11,
+   "text": "create variable CN_Category with value \"Tiles\"",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 12,
+   "text": "click ps_b2b_prp_1st_product",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 13,
+   "text": "wait 3 seconds",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 14,
+   "text": "call SG_PRP_to_PDP_City_Change_Verification",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 24,
+   "text": "create variable CitySearch with value \"Bangalore\"",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 25,
+   "text": "type \"${CitySearch}\" into focused field",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 26,
+   "text": "wait 3 seconds",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 27,
+   "text": "press key Space",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 28,
+   "text": "wait until element pdp_city_change_1st_autosuggest is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 29,
+   "text": "click pdp_city_change_1st_autosuggest",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 30,
+   "text": "verify element prp_search_box_category_name is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 31,
+   "text": "verify element prp_city_name_in_search_box contains \"${CitySearch}\"",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 32,
+   "text": "verify element prp_result_heading contains \"${CN_Category}\"",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 33,
+   "text": "verify element prp_result_heading contains \"${CitySearch}\"",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 34,
+   "text": "verify text \"${CN_Category}\" on page",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 35,
+   "text": "verify element ps_touch_b2b_city_filter contains \"${CitySearch}\"",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 36,
+   "text": "click ps_touch_b2b_prp_1st_product",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 37,
+   "text": "wait 3 seconds",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 38,
+   "text": "verify element pdp_city_name contains \"${CitySearch}\"",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 39,
+   "text": "open https://www.justdial.com/Bangalore/Crane-Manufacturers/nct-10146272?fl=undefined&ismap=undefined&subpage=&searchCase=&term=crane%2520&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=0&stype=category_list&srcterm=Crane%20Manufacturers&trkid=1240815-bangalore",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 40,
+   "text": "wait for page to load",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 41,
+   "text": "call PS_Touch_Consent_Popup",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 42,
+   "text": "wait for page to load",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 43,
+   "text": "store text of b2b_nct_city_name as B2B_NCT_CityName",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 45,
+   "text": "create variable CN_Category with value \"Crane\"",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 46,
+   "text": "scroll to nct_recommended_products_carousel_section",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 47,
+   "text": "click nct_recommended_products_1st_product",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 48,
+   "text": "wait 3 seconds",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 49,
+   "text": "call SG_NCT_to_PDP_City_Change_Verification",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 50,
+   "text": "call SG_PDP_Change_City_Pune_Cranes",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 51,
+   "text": "open https://www.justdial.com/Delhi/Robocura-Opp-Pillar-No-119-Ghitorni/011PXX11-XX11-190725175424-B1S6_BZDET?pid=219902361&nid=12408409&jdmid=jdm-1572310-ent-4-13136228",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 52,
+   "text": "wait until element catalogue_products_tab is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 53,
+   "text": "scroll to catalogue_products_tab",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 54,
+   "text": "click catalogue_products_tab",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 55,
+   "text": "wait until element catalogue_products_tab_1st_product is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 56,
+   "text": "scroll to catalogue_products_tab_1st_product",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 57,
+   "text": "create variable CitySearch with value \"Pune\"",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 59,
+   "text": "create variable Catalogue_City with value \"Delhi\"",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 60,
+   "text": "store text of catalogue_products_tab_1st_product as catalogue_popular_product_1st",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 61,
+   "text": "click catalogue_products_tab_1st_product",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 62,
+   "text": "wait 3 seconds",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 63,
+   "text": "verify element pdp_product_name_heading contains \"${catalogue_popular_product_1st}\"",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 64,
+   "text": "verify element pdp_city_name contains \"${Catalogue_City}\"",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 65,
+   "text": "call SG_PDP_Change_City_via_Catalogue",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 66,
+   "text": "call SG_PDP_Change_City_Mumbai_Lixo_Chair",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 67,
+   "text": "open https://www.justdial.com/jdmart",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 68,
+   "text": "call SG_Home_Flow_PDP_City_Change",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 69,
+   "text": "call SG_PDP_Change_City_All_India",
+   "level": "R",
+   "manual": false
+  }
+ ]
+}

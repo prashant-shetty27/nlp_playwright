@@ -1162,6 +1162,14 @@ def last_setup(flow: str):
         return {}
 
 
+@router.get("/insight/{flow}")
+def flow_insight(flow: str):
+    """Pass rate, median duration, fail streak and the usual first failing step
+    of one test case over its recent reports (core/run_insights.history)."""
+    from core import run_insights
+    return run_insights.history(flow)
+
+
 @router.get("/history")
 def run_history(limit: int = 50, flow: str = ""):
     """

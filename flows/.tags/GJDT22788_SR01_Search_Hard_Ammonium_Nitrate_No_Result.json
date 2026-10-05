@@ -1,0 +1,54 @@
+{
+ "version": 1,
+ "flow_mtime": 1791204624.767198,
+ "steps": [
+  {
+   "line": 7,
+   "text": "store \"Mumbai\" as city",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 8,
+   "text": "store \"Ammonium Nitrate\" as search_term",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 9,
+   "text": "call SG_22788_Freetext_Search_In_City",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 10,
+   "text": "wait until url contains \"/jdmart/${city}\"",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 11,
+   "text": "verify element b2b_search_no_results is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 12,
+   "text": "verify element b2b_search_no_results contains \"No results found\" ignoring case",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 13,
+   "text": "verify element prp_first_product_title is not visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 14,
+   "text": "take screenshot as mumbai_ammoniumnitrate",
+   "level": "Sy",
+   "manual": false
+  }
+ ]
+}

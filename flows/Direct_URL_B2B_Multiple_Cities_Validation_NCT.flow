@@ -10,10 +10,7 @@ open https://www.justdial.com/West-Godavari/Chair-Manufacturers/nct-10089962?fl=
 wait 2 seconds
 store text of result_heading_title as heading
 verify stored heading contains "West Godavari" ignoring case
-swipe bottom to top
-wait 1 seconds
-swipe bottom to top
-wait 1 seconds
+[ignore 30s] swipe bottom to top until element nct_result_card_only_details is visible, max 10 times, wait 1
 [ignore] scroll to nct_result_card_only_details
 [ignore] verify element nct_result_card_only_details is visible
 # OFF: open https://www.justdial.com/North-24-Parganas/Tile-Wholesalers/nct-10482503?fl=undefined&ismap=&subpage=&searchCase=&term=tiles%20w&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Tile%20Wholesalers&trkid=27632-remotecity

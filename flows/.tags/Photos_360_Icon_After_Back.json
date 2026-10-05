@@ -1,0 +1,102 @@
+{
+ "version": 1,
+ "flow_mtime": 1790972130.240587,
+ "steps": [
+  {
+   "line": 6,
+   "text": "open ${prot3_pdp_360_photos}",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 7,
+   "text": "wait for page to load",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 8,
+   "text": "wait until element pdp_first_photo is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 9,
+   "text": "store count of pdp_photo_360_icon as icons_before",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 10,
+   "text": "click pdp_first_photo",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 12,
+   "text": "wait until element gallery_slide_image is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 13,
+   "text": "wait 2 seconds",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 14,
+   "text": "verify element gallery_360_icon is not visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 15,
+   "text": "go back",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 16,
+   "text": "wait until element pdp_photos_heading is visible",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 17,
+   "text": "verify element pdp_photos_heading is visible",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 18,
+   "text": "verify element pdp_photo_360_icon is visible",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 19,
+   "text": "store count of pdp_photo_360_icon as icons_after",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 20,
+   "text": "verify stored icons_after equals \"${icons_before}\"",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 21,
+   "text": "verify element pdp_photo_360_icon is inside every pdp_photo_tile_image",
+   "level": "F",
+   "manual": false
+  },
+  {
+   "line": 22,
+   "text": "take screenshot as photos_section_after_back",
+   "level": "F",
+   "manual": false
+  }
+ ]
+}

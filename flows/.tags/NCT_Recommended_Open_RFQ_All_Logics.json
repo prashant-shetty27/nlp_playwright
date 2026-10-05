@@ -1,0 +1,210 @@
+{
+ "version": 1,
+ "flow_mtime": 1791224250.1159737,
+ "steps": [
+  {
+   "line": 7,
+   "text": "call Live_Touch_Chrome_Navigate_to_Homepage_setup_Popup",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 8,
+   "text": "open https://www.justdial.com/Mumbai/Pin-Wholesalers-in-Paras-Nagar-Kandivali-West/nct-10367185?stype=category_list&ismap=&term=pin%2520wholesalers&frt=1&searchLocUpdate=0&jdxflag=&ll=searchbox&srcterm=Pin%20Wholesalers&trkid=13290779-mumbai-fcat-cate",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 9,
+   "text": "wait 3 seconds",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 10,
+   "text": "scroll until element recommeded_product_carousel_img visible, scroll by 600 pixels, scroll count 20, scroll wait 1",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 11,
+   "text": "scroll to nct_recommended_products_carousel_section",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 12,
+   "text": "verify element nct_recommended_products_carousel_section is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 13,
+   "text": "scroll to nct_open_rfq_section",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 14,
+   "text": "verify element nct_open_rfq_section is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 15,
+   "text": "open https://www.justdial.com/Kolkata/Wire-Wholesalers/nct-10541446?trkid=208031-kolkata&term=wire%20wholesalers&cbflg=1",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 16,
+   "text": "wait 3 seconds",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 17,
+   "text": "scroll until element recommeded_product_carousel_img visible, scroll by 600 pixels, scroll count 20, scroll wait 1",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 18,
+   "text": "scroll to nct_people_also_searched_for_section",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 19,
+   "text": "verify element nct_people_also_searched_for_section is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 20,
+   "text": "scroll to nct_open_rfq_section",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 21,
+   "text": "verify element nct_open_rfq_section is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 22,
+   "text": "open https://www.justdial.com/Mumbai/CCTV-Dealers-CP-Plus-in-Ayojan-Nagar/nct-10951547?fl=undefined&ismap=undefined&subpage=&searchCase=&term=cctv%2520&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=3&stype=category_list&srcterm=CCTV%20Dealers-CP%20Plus&trkid=14027-mumbai",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 23,
+   "text": "wait 3 seconds",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 24,
+   "text": "scroll until element nct_bd7_banner visible, scroll by 600 pixels, scroll count 20, scroll wait 1",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 27,
+   "text": "verify element nct_bd7_banner is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 28,
+   "text": "scroll to nct_result_card_6th",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 29,
+   "text": "wait 1 seconds",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 30,
+   "text": "swipe middle to top",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 31,
+   "text": "swipe middle to top",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 32,
+   "text": "wait 1 seconds",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 33,
+   "text": "verify element nct_open_rfq_section is not visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 34,
+   "text": "open https://www.justdial.com/Mumbai/Aluminium-Dealers-Jindal-in-Paras-Nagar-Kandivali-West/nct-13058691?fl=undefined&ismap=undefined&subpage=&searchCase=&term=Jindal%2520Aluminium%2520Profile%2520Dealers&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Aluminium%20Dealers-Jindal&trkid=281948997-mumbai",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 35,
+   "text": "wait 3 seconds",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 36,
+   "text": "swipe bottom to top",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 37,
+   "text": "swipe middle to top",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 39,
+   "text": "swipe bottom to top",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 40,
+   "text": "swipe bottom to top",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 41,
+   "text": "verify element nct_bd7_banner is not visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 42,
+   "text": "scroll until element nct_open_rfq_section visible, scroll by 600 pixels, scroll count 20, scroll wait 1",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 43,
+   "text": "verify element nct_open_rfq_section is visible",
+   "level": "R",
+   "manual": false
+  }
+ ]
+}

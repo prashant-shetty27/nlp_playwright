@@ -1,0 +1,174 @@
+{
+ "version": 1,
+ "flow_mtime": 1791224957.9246352,
+ "steps": [
+  {
+   "line": 7,
+   "text": "call PS_Touch_Location_Popup",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 10,
+   "text": "open https://www.justdial.com/jdmart/Mumbai/Brick/jdm-1011256-ent-2-17398330?fl=undefined&ismap=undefined&subpage=&searchCase=&term=&searchLocUpdate=0&stype=category_list&srcterm=Brick",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 11,
+   "text": "wait until element ps_touch_b2b_prp_1st_product is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 12,
+   "text": "verify element whatsapp_button is not visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 13,
+   "text": "open https://www.justdial.com/jdmart/Mumbai/Office-Chair-Repair-Services/jdm-1771503-ent-14-10965295?fl=undefined&ismap=undefined&subpage=&searchCase=&term=office&searchLocUpdate=0&stype=category_list&srcterm=Office%20Chair%20Repair%20%2526%20Services",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 14,
+   "text": "call PS_Touch_Consent_Popup",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 15,
+   "text": "call SG_Service_Category_WA_Removed_Non_Login",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 16,
+   "text": "open https://www.justdial.com/jdmart/Mumbai/cct?stype=company_list&ismap=&term=cct&frt=1&searchLocUpdate=0&asflg=6&enid=13630321&enflg=2&ncatid=&srcterm=cct",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 17,
+   "text": "call PS_Touch_Consent_Popup",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 18,
+   "text": "call SG_Freetext_Category_WA_Removed_Non_Login",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 19,
+   "text": "[ignore 30s] swipe bottom to top until element best_price_button_12th is visible, max 15 times, wait 1",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 20,
+   "text": "verify element whatsapp_button is not visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 22,
+   "text": "open https://www.justdial.com/",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 23,
+   "text": "wait for page to load",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 24,
+   "text": "call SG_Touch_Core_Login_Test_Number",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 25,
+   "text": "wait 1 seconds",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 26,
+   "text": "open https://www.justdial.com/jdmart/Mumbai/Brick/jdm-1011256-ent-2-17398330?fl=undefined&ismap=undefined&subpage=&searchCase=&term=&searchLocUpdate=0&stype=category_list&srcterm=Brick",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 27,
+   "text": "wait until element ps_touch_b2b_prp_1st_product is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 28,
+   "text": "verify element whatsapp_button is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 29,
+   "text": "open https://www.justdial.com/jdmart/Mumbai/Office-Chair-Repair-Services/jdm-1771503-ent-14-10965295?fl=undefined&ismap=undefined&subpage=&searchCase=&term=office&searchLocUpdate=0&stype=category_list&srcterm=Office%20Chair%20Repair%20%2526%20Services",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 30,
+   "text": "wait until element ps_touch_b2b_prp_1st_product is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 31,
+   "text": "scroll to whatsapp_button",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 32,
+   "text": "verify element whatsapp_button is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 33,
+   "text": "open https://www.justdial.com/jdmart/Mumbai/cct?stype=company_list&ismap=&term=cct&frt=1&searchLocUpdate=0&asflg=6&enid=13630321&enflg=2&ncatid=&srcterm=cct",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 34,
+   "text": "wait until element ps_touch_b2b_prp_1st_product is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 35,
+   "text": "scroll to whatsapp_button",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 36,
+   "text": "verify element whatsapp_button is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 37,
+   "text": "delete all cookies",
+   "level": "R",
+   "manual": false
+  }
+ ]
+}

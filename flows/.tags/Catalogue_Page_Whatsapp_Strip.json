@@ -1,0 +1,96 @@
+{
+ "version": 1,
+ "flow_mtime": 1791221399.5140383,
+ "steps": [
+  {
+   "line": 7,
+   "text": "call Live_Touch_Chrome_Navigate_to_Homepage_setup_Popup",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 9,
+   "text": "open https://www.justdial.com/Delhi/Six-India-Dwarka/011PXX11-XX11-180824185125-M4B8_BZDET",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 10,
+   "text": "wait 2 seconds",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 11,
+   "text": "refresh page",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 12,
+   "text": "call SG_Touch_B2B_Catalogue_Whatsapp_Strip_Overview",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 13,
+   "text": "open https://www.justdial.com/jdmart/Delhi/Six-India-Dwarka/011PXX11-XX11-180824185125-M4B8_BZDET/catalogue",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 14,
+   "text": "call SG_Touch_B2B_Catalogue_Whatsapp_Strip_Overview",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 15,
+   "text": "wait until element b2b_catalogue_whatsapp_strip_text is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 16,
+   "text": "wait 1 seconds",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 17,
+   "text": "[ignore] scroll to b2b_catalogue_whatsapp_strip_product_name",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 18,
+   "text": "[ignore] verify element b2b_catalogue_whatsapp_strip_product_name is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 19,
+   "text": "scroll to b2b_catalogue_whatsapp_strip_icon",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 20,
+   "text": "verify element b2b_catalogue_whatsapp_strip_icon is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 21,
+   "text": "[ignore] scroll to b2b_catalogue_whatsapp_strip_text",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 22,
+   "text": "[ignore] verify element b2b_catalogue_whatsapp_strip_text is visible",
+   "level": "R",
+   "manual": false
+  }
+ ]
+}

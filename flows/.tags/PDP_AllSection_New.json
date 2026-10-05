@@ -1,0 +1,408 @@
+{
+ "version": 1,
+ "flow_mtime": 1791224975.469701,
+ "steps": [
+  {
+   "line": 8,
+   "text": "call PS_Touch_Location_Popup",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 9,
+   "text": "open https://www.justdial.com/jdmart/Mumbai/Skf-Ball-Bearing-Deep-Groove-Single-Row-6205-2Z-1-Nos/pid-272203217/022PXX22-XX22-140307153118-I6K6?idx=0&jdmid=jdm-1008206-ent-4-7192762&alsoserveCity=Mumbai&nid=10034271",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 10,
+   "text": "wait for page to load",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 11,
+   "text": "verify element pdp_product_name_heading is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 12,
+   "text": "call SG_PDP_Header_Verifications",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 13,
+   "text": "refresh page",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 15,
+   "text": "click pdp_top_gallery_image_1st",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 16,
+   "text": "wait for page to load",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 17,
+   "text": "call SG_PDP_Inner_Gallery",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 18,
+   "text": "delete all cookies",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 19,
+   "text": "open https://www.justdial.com/jdmart/Thane/High-Performance-Spherical-Plain-Bearing-1-5-in/pid-801321625/022PXX22-XX22-091011181025-V8E3?idx=0&jdmid=jdm-1100190-ent-2-6849543&alsoserveCity=Mumbai&searchString=Spherical-Plain-Bearing&btype=dealers&img=q28556ho.jpg&nid=10447286",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 20,
+   "text": "wait until element pdp_top_seller is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 21,
+   "text": "call SG_PDP_Ask_More_Photos_Button_Top_Gallery",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 22,
+   "text": "delete all cookies",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 23,
+   "text": "open https://www.justdial.com/jdmart/Thane/High-Performance-Spherical-Plain-Bearing-1-5-in/pid-801321625/022PXX22-XX22-091011181025-V8E3?idx=0&jdmid=jdm-1100190-ent-2-6849543&alsoserveCity=Mumbai&searchString=Spherical-Plain-Bearing&btype=dealers&img=q28556ho.jpg&nid=10447286",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 24,
+   "text": "wait until element ps_pdp_top_product_name is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 25,
+   "text": "wait for page to load",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 26,
+   "text": "call SG_PDP_Top_Seller_Section_Details_Verification",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 27,
+   "text": "call SG_PDP_Ask_for_Price_Top_Non_Login_to_Login_Verifi",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 28,
+   "text": "delete all cookies",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 29,
+   "text": "refresh page",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 30,
+   "text": "wait for page to load",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 31,
+   "text": "call SG_PDP_Specification_Description",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 32,
+   "text": "open https://www.justdial.com/jdmart/Sri-Ganganagar-Rajasthan/Alumina-Hanger-Brick/pid-803183283/9999PX154-X154-150525151756-H7A9?idx=0&jdmid=jdm-1011256-ent-2-17398330&alsoserveCity=Sri%20Ganganagar-Rajasthan&btype=manufacturers&img=nt2ehp66.jpg&flow=result&searchfrom=b2b_prsltpg&bd=1",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 33,
+   "text": "call SG_PDP_Customer_Also_Viewed",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 34,
+   "text": "open https://www.justdial.com/jdmart/Mumbai/Skf-Ball-Bearing-Deep-Groove-Single-Row-6205-2Z-1-Nos/pid-272203217/022PXX22-XX22-140307153118-I6K6?idx=0&jdmid=jdm-1006869-ent-4-14748988&alsoserveCity=Mumbai&searchString=SKF-Ball-Bearing&btype=manufacturers&nid=10034271",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 35,
+   "text": "call SG_PDP_Seller_Brochure_Verification",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 36,
+   "text": "call SG_PDP_More_from_this_Seller_Revamp",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 38,
+   "text": "delete all cookies",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 39,
+   "text": "open https://www.justdial.com/jdmart/Mumbai/Skf-Ball-Bearing-Deep-Groove-Single-Row-6205-2Z-1-Nos/pid-272203217/022PXX22-XX22-140307153118-I6K6?idx=0&jdmid=jdm-1008206-ent-4-7192762&alsoserveCity=Mumbai&nid=10034271&slider=0&initialIndex=3&sellers=0&isLogin=1",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 40,
+   "text": "call SG_PDP_Send_Requirement_on_Whatsapp",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 42,
+   "text": "open https://www.justdial.com/jdmart/Mumbai/Skf-Ball-Bearing-Deep-Groove-Single-Row-6205-2Z-1-Nos/pid-272203217/022PXX22-XX22-140307153118-I6K6?idx=0&jdmid=jdm-1006869-ent-4-14748988&alsoserveCity=Mumbai&searchString=SKF-Ball-Bearing&btype=manufacturers&nid=10034271&isLogin=1",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 43,
+   "text": "wait for page to load",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 44,
+   "text": "call SG_PDP_Recommended_Categories",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 45,
+   "text": "wait for page to load",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 46,
+   "text": "delete all cookies",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 47,
+   "text": "refresh page",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 48,
+   "text": "swipe bottom to top until element catalogue_seller_call_pop is visible, max 15 times, wait 1",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 49,
+   "text": "call SG_PDP_Ami_Enterprise_Call_popup",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 50,
+   "text": "call SG_Product_Photos_Seller_Video",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 51,
+   "text": "scroll to pdp_heading_seller_rating",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 52,
+   "text": "scroll to pdp_rating_section",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 53,
+   "text": "verify element pdp_rating_section is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 54,
+   "text": "scroll to pdp_show_number_section",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 55,
+   "text": "verify element pdp_show_number_section is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 56,
+   "text": "verify element pdp_show_number_section_call_icon is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 57,
+   "text": "scroll to pdp_show_number_section_text",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 58,
+   "text": "verify element pdp_show_number_section_text is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 59,
+   "text": "call SG_PDP_Review_Rating_Section",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 60,
+   "text": "call SG_Popular_categories_Need_assistance_SEO_Footer_B",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 62,
+   "text": "open https://www.justdial.com/jdmart/Mumbai/Bike-Covers-for-Hero-Xtreme-160R/pid-2102058125/022PXX22-XX22-220118134107-L9E8",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 63,
+   "text": "call SG_PDP_Non_Piad_Similar_Business_Recommended_Produ",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 64,
+   "text": "open https://www.justdial.com/jdmart/Thane/Clay-Cuboidal-Red-Brick-9X4X4inch-LXWXH/pid-2224547603/022PXX22-XX22-190915090932-H6G4",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 65,
+   "text": "call SG_PDP_Top_Seller_Click_Redirection_to_Catalogue",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 66,
+   "text": "open https://www.justdial.com/jdmart/Mumbai/Rectangular-Clay-Brick/pid-2216331084/022PXX22-XX22-170719220002-C5M6",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 67,
+   "text": "call SG_PDP_Top_Seller_Name_click_verificaiton",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 68,
+   "text": "open https://www.justdial.com/jdmart/Mumbai/Premium-Heated-Massage-Chair-1-4-mtr-Velvet/pid-802452491/022PXX22-XX22-101125162001-D9Y7?idx=0&jdmid=jdm-1070639-ent-6-30578745&alsoserveCity=Mumbai&searchString=lixo-massage-chair-li6001b&btype=dealers&img=uk68h0xk.jpg&nid=10313638",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 69,
+   "text": "call SG_PDP_Top_Seller_Name_click_verificaiton",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 70,
+   "text": "open https://www.justdial.com/jdmart/Bhiwandi/Eco-friendly-Mud-Block-Sustainable-Construction/pid-2008726478/022PXX22-XX22-180605213240-N5E3",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 71,
+   "text": "call SG_PDP_People_Also_Search_for_Section",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 72,
+   "text": "delete all cookies",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 73,
+   "text": "open https://www.justdial.com/jdmart/Kalyan/Silica-Brick-Red-/pid-2230876882/022PXX22-XX22-241228152700-D4G2",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 74,
+   "text": "wait until element pdp_heading_send_requirement_on_whatsapp is visible",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 75,
+   "text": "scroll to pdp_heading_send_requirement_on_whatsapp",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 76,
+   "text": "swipe bottom to top until element pdp_popular_cat is visible, closing catalogue_skip_bd_category_pop, max 10 times, wait 0.5",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 77,
+   "text": "[ignore] click catalogue_skip_bd_category_pop",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 78,
+   "text": "verify page does not contain \"People Also Search For\"",
+   "level": "Sy",
+   "manual": false
+  }
+ ]
+}

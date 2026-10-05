@@ -1,0 +1,150 @@
+{
+ "version": 1,
+ "flow_mtime": 1791221399.6891873,
+ "steps": [
+  {
+   "line": 5,
+   "text": "call Live_Touch_Chrome_Navigate_to_Homepage_setup_Popup",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 6,
+   "text": "click touch_signin_home_page",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 7,
+   "text": "click touch_contextual_signin",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 8,
+   "text": "wait 2 seconds",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 9,
+   "text": "type \"${mobile_9987}\" into rfq_mobile_number_input",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 10,
+   "text": "wait 2 seconds",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 11,
+   "text": "js click allpages_login_mobile_continue",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 12,
+   "text": "wait until element touch_home_otp_1stfield is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 13,
+   "text": "type if visible \"${otp}\" into touch_home_otp_1stfield",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 14,
+   "text": "wait 2 seconds",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 15,
+   "text": "open https://www.justdial.com/jdmart/Delhi/Scrap/jdm-1094774-ent-15-1094774?fl=undefined&ismap=undefined&subpage=&searchCase=&term=scrap&searchLocUpdate=0&stype=category_list&srcterm=Scrap",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 16,
+   "text": "scroll until element prp_what_are_you_looking_for_seller_type_banner visible, scroll by 600 pixels, scroll count 15, scroll wait 1",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 17,
+   "text": "scroll to prp_what_are_you_looking_for_seller_type_banner",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 18,
+   "text": "scroll to prp_open_rfq_seller_type_section",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 19,
+   "text": "verify element prp_open_rfq_seller_type_section is visible",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 20,
+   "text": "verify element prp_open_rfq_seller_type_section contains \"All\"",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 21,
+   "text": "verify element prp_open_rfq_seller_type_section contains \"Wholesalers\"",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 22,
+   "text": "verify element prp_open_rfq_seller_type_section contains \"Importers\"",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 23,
+   "text": "verify element prp_open_rfq_seller_type_section contains \"Distributors\"",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 24,
+   "text": "verify element prp_open_rfq_seller_type_section contains \"Exporters\"",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 25,
+   "text": "verify element prp_open_rfq_seller_type_section contains \"Dealers\"",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 26,
+   "text": "verify element prp_open_rfq_seller_type_section contains \"Buyer\"",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 27,
+   "text": "click prp_open_rfq_seller_type_wholesaler",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 28,
+   "text": "verify text \"Results updated successfully and your details have been sent to the relevant sellers.\" on page",
+   "level": "R",
+   "manual": false
+  }
+ ]
+}

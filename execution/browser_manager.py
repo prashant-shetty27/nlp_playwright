@@ -73,7 +73,8 @@ def get_standard_timeout_ms() -> int:
 def get_default_scroll_count() -> int:
     cfg = load_playwright_config()
     try:
-        return int(cfg.get("run", {}).get("default_scroll_count", settings.DEFAULT_SCROLL_COUNT))
+        return int(cfg.get("run", {}).get("default_scroll_count",
+                                           settings.live("default_scroll_count", settings.DEFAULT_SCROLL_COUNT)))
     except Exception:
         return settings.DEFAULT_SCROLL_COUNT
 

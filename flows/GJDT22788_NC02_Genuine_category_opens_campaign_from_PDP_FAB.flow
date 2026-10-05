@@ -1,4 +1,5 @@
 # Platform: mobilesite
+# Serial: b2b_assist_9987   (chat cases share one test login — run one at a time)
 # Requirement: GJDT-22788 (story GJDT-22788) — Conversational RFQ / B2B Assist, normal category
 # Case NC02: Genuine category opens campaign from PDP FAB | P1 | Positive | entry PDP | Mumbai / PVC Pipes | English
 # Expected: First bot reply starts campaign (asks length/type)

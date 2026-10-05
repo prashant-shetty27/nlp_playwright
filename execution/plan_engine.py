@@ -18,6 +18,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import threading
 import time
 from datetime import datetime, timezone
@@ -224,11 +225,14 @@ def _is_positive_case(path: str) -> bool:
     return False
 
 
-def start(plan_id: str, *, trigger: str = "manual", user: str = "", run_type: str = "") -> dict:
+def start(plan_id: str, *, trigger: str = "manual", user: str = "", run_type: str = "",
+          only_failed_from: str = "") -> dict:
     """Create the run record and execute it on a worker thread.
 
     run_type overrides the plan's execution type for this one run (e.g. "Run now
     as Smoke"); the type's defaults (stop / retry / screenshots) come with it.
+    only_failed_from = a previous run id: run only the test cases (per device)
+    that failed or did not run there — passed ones are left out.
     """
     from core import plans, run_types, suites
 
@@ -260,6 +264,10 @@ def start(plan_id: str, *, trigger: str = "manual", user: str = "", run_type: st
             # the main browsers get the full suite, the rest a happy-path check.
             if prof.get("coverage") == "positive" and not _is_positive_case(suites.script_path(tc["script"])):
                 continue
+            # "sample": this browser runs only the test cases named on it
+            # (one per page type, say) — the main browser runs the full suite.
+            if prof.get("coverage") == "sample" and tc["name"] not in (prof.get("only") or []):
+                continue
             item = {"suite": suite["name"], "suite_id": suite["id"],
                     "test_case": tc["name"], "script": tc["script"],
                     "platform": tc.get("platform") or suite["platform"],
@@ -281,7 +289,14 @@ def start(plan_id: str, *, trigger: str = "manual", user: str = "", run_type: st
                 except OSError:
                     pass
             items.append(item)
+    if only_failed_from:
+        prev = get_run(only_failed_from)
+        redo = {(i.get("test_case"), (i.get("device") or {}).get("browser_identity", ""))
+                for i in prev.get("items") or [] if i.get("status") in ("failed", "not_run")}
+        items = [i for i in items if (i.get("test_case"), (i.get("device") or {}).get("browser_identity", "")) in redo]
+        rt = prev.get("run_type") or rt
     rec = {"id": run_id, "plan_id": plan_id, "plan_name": plan["name"],
+           "rerun_of": only_failed_from or "",
            "trigger": trigger, "triggered_by": user or ("scheduler" if trigger == "schedule" else "system"),
            "status": "queued", "queued_at": _now(), "started_at": "", "finished_at": "",
            "execution": execution, "run_type": rt, "notify": plan["notify"], "items": items,
@@ -499,11 +514,31 @@ def _run_parallel(rec: dict, ex: dict, lanes: int) -> None:
     import sys
     import time
 
+    from core import suites
+
     base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     lane_dir = os.path.join(RUNS_DIR, rec["id"] + "_lanes")
     os.makedirs(lane_dir, exist_ok=True)
     todo = [i for i, it in enumerate(rec["items"]) if it["status"] == "pending"]
     todo.sort(key=lambda i: -_expected_seconds(rec["items"][i]))
+    # Test cases that share a login / session ("# Serial: <group>" header in
+    # the .flow, e.g. the B2B Assist chat cases on one test number) must not
+    # run at the same time: a second login logs the first one out. Items of
+    # one group run one after another, in any free lane.
+    serial_of: dict[int, str] = {}
+    for i in todo:
+        try:
+            with open(suites.script_path(rec["items"][i]["script"]), encoding="utf-8") as fh:
+                for raw in fh:
+                    m = re.match(r"^#\s*Serial\s*:\s*(\S+)", raw.strip(), re.I)
+                    if m:
+                        serial_of[i] = m.group(1).lower()
+                        break
+                    if raw.strip() and not raw.startswith("#"):
+                        break
+        except OSError:
+            pass
+    busy_groups: set[str] = set()
     rec["parallel"] = lanes
     _save(rec)
     running: dict[int, tuple] = {}            # item index -> (Popen, out path, log handle)
@@ -519,7 +554,12 @@ def _run_parallel(rec: dict, ex: dict, lanes: int) -> None:
     while todo or running:
         aborted = rec["id"] in _abort or stop_rest
         while todo and len(running) < lanes and not aborted:
-            i = todo.pop(0)
+            i = next((x for x in todo if serial_of.get(x, "") not in busy_groups), None)
+            if i is None:
+                break                      # every waiting item's group is busy
+            todo.remove(i)
+            if serial_of.get(i):
+                busy_groups.add(serial_of[i])
             out = os.path.join(lane_dir, f"item_{i}.json")
             log = open(os.path.join(lane_dir, f"item_{i}.log"), "w", encoding="utf-8")
             proc = subprocess.Popen([sys.executable, "-m", "execution.plan_worker", rec["id"], str(i), out],
@@ -546,6 +586,7 @@ def _run_parallel(rec: dict, ex: dict, lanes: int) -> None:
                           reason=("stopped by user" if rec["id"] in _abort
                                   else f"worker exited with code {proc.returncode} — see {os.path.basename(out)[:-5]}.log"))
             it.pop("lane_pid", None)
+            busy_groups.discard(serial_of.get(i, ""))
             del running[i]
             if it.get("status") == "failed" and ex.get("stop_on_first_failure"):
                 stop_rest = True
@@ -585,6 +626,14 @@ def _run(rec: dict) -> None:
     t["failed"] = sum(1 for i in rec["items"] if i["status"] == "failed")
     t["not_run"] = sum(1 for i in rec["items"] if i["status"] == "not_run" and not i.get("out_of_scope"))
     t["out_of_scope"] = sum(1 for i in rec["items"] if i.get("out_of_scope"))
+    # Known issues (data/known_issues.json): a failure that matches an open
+    # entry is reported as known, so the report shows what is NEW.
+    try:
+        from core import known_issues
+        t["known"] = known_issues.annotate(rec["items"])
+        t["new_failures"] = t["failed"] - t["known"]
+    except Exception:  # noqa: BLE001
+        logger.exception("known-issues annotation failed")
     if not (t["passed"] or t["failed"] or t["not_run"]):
         rec["reason"] = "No test case in this plan has steps tagged for this run type."
     rec["status"] = ("stopped" if rec["id"] in _abort
