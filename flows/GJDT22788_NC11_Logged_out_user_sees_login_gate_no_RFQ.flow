@@ -1,0 +1,30 @@
+# Platform: mobilesite
+# Requirement: GJDT-22788 — Conversational RFQ / B2B Assist
+# Case NC11: Logged-out user sees login gate (no RFQ) | P3 | Negative / Auth | Mumbai / Roofing Sheets — fresh browser, NOT logged in
+# Expected: Chat shows "Log in to begin!" and Log In button opens login
+# Last staging result in the sheet: OBS (05-Oct) – Log In button does nothing when chatbot URL is opened standalone
+# Tags: b2b, rfq, b2b-assist, GJDT-22788, normal, P3
+store "Mumbai" as city
+store "Roofing Sheets" as category
+store "(set by the chat step group)" as bot_reply
+call SG_22788_Search_Product_In_City
+# The 'Save more on ...' mobile-number sheet is not under test here; it is closed only so the floater can be reached
+repeat until element prp_rfq_floater is visible (max 10 times)
+click if visible b2b_prp_gvs_popup_skip
+swipe bottom to top
+wait 2 seconds
+end repeat
+click if visible b2b_prp_gvs_popup_skip
+click prp_rfq_floater
+wait until url contains "bestdeals_chatbot"
+wait until element b2b_assist_login_gate is visible within 20 seconds
+verify page contains "Log in to begin!"
+verify element b2b_assist_chat_login_link is visible
+# no campaign question before login
+verify element type_your_message_input is not enabled
+take screenshot as login_gate
+click b2b_assist_chat_login_link
+# the Log In button opens the login sheet (not a dead click)
+wait until element rfq_mobile_number_input is visible within 15 seconds
+take screenshot as login_sheet_open
+take screenshot as nc11_transcript

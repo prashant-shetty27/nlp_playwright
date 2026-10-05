@@ -1706,6 +1706,24 @@
     "pdp_main_image_matching": "(//img[contains(@class,'b2bimgswiper__img')][contains(@src,'${img_id}')])[1]",
     "pdp_gallery_360_tab_active": "//span[contains(@class,'b2bpswiper__tab') and contains(@class,'active')][normalize-space(.)='360°']",
     "gallery_view_more_details_for_product": "//a[contains(@class,'vmDetails')][contains(@href,'pid-${pid}')]",
-    "catalogue_looking_for_sheet_skip": "(//div[.//*[starts-with(normalize-space(text()),'Looking for')]]//*[normalize-space(text())='Skip'])[last()]"
+    "catalogue_looking_for_sheet_skip": "(//div[.//*[starts-with(normalize-space(text()),'Looking for')]]//*[normalize-space(text())='Skip'])[last()]",
+    "catalogue_looking_for_sheet_title": "//*[starts-with(normalize-space(text()),'Looking for')]",
+    "catalogue_photo_last_tile": "(//div[contains(@class,'photos_tab_imgcontainer')])[last()]"
+  },
+  "b2b_assist_restricted_22788": {
+    "_platform": "mobilesite",
+    "jdmart_home_search_box": "//div[contains(@class,'hdrSearchMain')]//input[@aria-label='search']",
+    "jdmart_search_input": "//input[@id='srchInpId']",
+    "jdmart_search_city": "//div[contains(@class,'hdrLogoWpr')][.//span[contains(@class,'hdradrs')]]",
+    "jdmart_search_product_suggestion": "(//div[contains(@class,'b2bautosgtwpr')]//ul[contains(@class,'rntsrchs')]//*[contains(@class,'prdname')][translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')=translate('${category}','ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')])[1]",
+    "prp_rfq_floater": "//*[contains(@class,'ama__strip')]",
+    "pdp_ask_me_anything_fab": "//*[contains(@class,'ai-fab-wrapper')]",
+    "jdmart_city_option": "(//span[contains(@class,'mvdtname')][normalize-space(.)='${city}'])[1]",
+    "b2b_assist_login_gate": "//div[contains(@class,'rfq-login-gate-card')]",
+    "b2b_assist_last_bot_reply": "(//div[contains(@class,'rfq-chat-history')]/div[not(.//div[contains(@class,'rfq-user-msg')])])[last()]",
+    "b2b_assist_last_user_message": "(//div[contains(@class,'rfq-user-msg__bubble')])[last()]",
+    "b2b_assist_typing_loader": "//*[not(*)][contains(normalize-space(.),'Getting things ready') or contains(normalize-space(.),'Almost there')]",
+    "prp_first_product_title": "(//div[contains(@class,'b2bprdctcel')]//h2)[1]",
+    "jdmart_search_first_product_suggestion": "(//div[contains(@class,'b2bautosgtwpr')]//ul[contains(@class,'rntsrchs')]//*[contains(@class,'prdname')])[1]"
   }
 }

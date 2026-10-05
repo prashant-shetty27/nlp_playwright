@@ -2694,5 +2694,143 @@
     "platform": "mobilesite",
     "created_at": "2026-10-02T15:10:00+00:00",
     "step_count": 10
+  },
+  "SG_22788_Chat_Login": {
+    "steps": [
+      "# Logs in from the chat's own login gate (\"Log in to begin!\") with test number 9987",
+      "wait until element b2b_assist_chat_login_link is visible within 20 seconds",
+      "click b2b_assist_chat_login_link",
+      "wait until element rfq_mobile_number_input is visible",
+      "type \"${mobile_9987}\" into rfq_mobile_number_input",
+      "click b2b_assist_login_continue",
+      "wait 3 seconds",
+      "type \"${otp_b2b}\" into focused field",
+      "wait 1 seconds",
+      "click if visible b2b_assist_otp_login_button",
+      "wait until element b2b_assist_login_gate is not visible",
+      "verify page does not contain \"Log in to begin!\""
+    ],
+    "platform": "mobilesite",
+    "created_at": "2026-10-05T10:38:45+00:00",
+    "step_count": 12
+  },
+  "SG_22788_Wait_Bot_Reply": {
+    "steps": [
+      "# Waits for the AI reply to finish (typing loader gone, then 3 s settle) and keeps it as ${bot_reply}",
+      "wait 3 seconds",
+      "wait until element b2b_assist_typing_loader is not visible",
+      "wait until element b2b_assist_last_bot_reply is visible within 30 seconds",
+      "wait 3 seconds",
+      "store text of b2b_assist_last_bot_reply as bot_reply",
+      "verify ${bot_reply} does not contain \"Something glitched on our side\""
+    ],
+    "platform": "mobilesite",
+    "created_at": "2026-10-05T10:38:45+00:00",
+    "step_count": 7
+  },
+  "SG_22788_Send_Message": {
+    "steps": [
+      "# Types ${message} in the chat, sends it, waits for the reply (${bot_reply})",
+      "wait until element type_your_message_input is visible",
+      "click type_your_message_input",
+      "type \"${message}\" into type_your_message_input",
+      "click b2b_assist_send",
+      "call SG_22788_Wait_Bot_Reply"
+    ],
+    "platform": "mobilesite",
+    "created_at": "2026-10-05T10:38:45+00:00",
+    "step_count": 6
+  },
+  "SG_22788_Search_Product_In_City": {
+    "steps": [
+      "# JDMart search as a user: pick ${city} in the search header, then the ${category} product suggestion -> PRP",
+      "open https://www.justdial.com/jdmart",
+      "wait until element jdmart_home_search_box is visible within 20 seconds",
+      "click jdmart_home_search_box",
+      "wait until element jdmart_search_city is visible",
+      "click jdmart_search_city",
+      "click jdmart_search_input",
+      "type \"${city}\" into focused field",
+      "wait until element jdmart_city_option is visible within 15 seconds",
+      "click jdmart_city_option",
+      "wait until element jdmart_home_search_box is visible within 15 seconds",
+      "click jdmart_home_search_box",
+      "click jdmart_search_input",
+      "type \"${category}\" into focused field",
+      "wait 3 seconds",
+      "wait until element jdmart_search_first_product_suggestion is visible within 15 seconds",
+      "# the suggestion that is exactly the category if there is one, otherwise the top suggestion (as a user would tap)",
+      "if element jdmart_search_product_suggestion is visible",
+      "click jdmart_search_product_suggestion",
+      "else",
+      "click jdmart_search_first_product_suggestion",
+      "end if",
+      "wait until url contains \"/jdmart/${city}/\"",
+      "wait 4 seconds"
+    ],
+    "platform": "mobilesite",
+    "created_at": "2026-10-05T10:38:45+00:00",
+    "step_count": 24
+  },
+  "SG_22788_Open_PRP_Floater": {
+    "steps": [
+      "# PRP -> bottom floater -> B2B Assist chat (logged in), opening reply kept as ${bot_reply}",
+      "call SG_22788_Search_Product_In_City",
+      "# The 'Save more on ...' mobile-number sheet is not under test here; it is closed only so the floater can be reached",
+      "repeat until element prp_rfq_floater is visible (max 10 times)",
+      "click if visible b2b_prp_gvs_popup_skip",
+      "swipe bottom to top",
+      "wait 2 seconds",
+      "end repeat",
+      "click if visible b2b_prp_gvs_popup_skip",
+      "click prp_rfq_floater",
+      "wait until url contains \"bestdeals_chatbot\"",
+      "wait until url contains \"pagename=b2b_prsltpg\"",
+      "wait until url contains \"position=floating_conversational_rfq\"",
+      "wait until url contains \"city=${city}\"",
+      "store url as chat_url",
+      "# the first chat card is either the login gate or the bot's opening reply — wait for it before deciding",
+      "wait until element b2b_assist_last_bot_reply is visible within 30 seconds",
+      "wait 2 seconds",
+      "if element b2b_assist_chat_login_link is visible",
+      "call SG_22788_Chat_Login",
+      "end if",
+      "verify page does not contain \"Log in to begin!\"",
+      "call SG_22788_Wait_Bot_Reply"
+    ],
+    "platform": "mobilesite",
+    "created_at": "2026-10-05T10:38:45+00:00",
+    "step_count": 23
+  },
+  "SG_22788_Open_PDP_FAB": {
+    "steps": [
+      "# PRP -> first product -> PDP 'Ask Me Anything' button -> B2B Assist chat (logged in), opening reply kept as ${bot_reply}",
+      "call SG_22788_Search_Product_In_City",
+      "click if visible b2b_prp_gvs_popup_skip",
+      "store text of prp_first_product_title as pdp_product",
+      "click prp_first_product_title",
+      "wait until url contains \"/pid-\"",
+      "wait 4 seconds",
+      "repeat until element pdp_ask_me_anything_fab is visible (max 10 times)",
+      "swipe bottom to top",
+      "wait 2 seconds",
+      "end repeat",
+      "click pdp_ask_me_anything_fab",
+      "wait until url contains \"bestdeals_chatbot\"",
+      "wait until url contains \"pagename=b2b_pdp\"",
+      "wait until url contains \"position=floating_conversational_rfq\"",
+      "store url as chat_url",
+      "# the first chat card is either the login gate or the bot's opening reply — wait for it before deciding",
+      "wait until element b2b_assist_last_bot_reply is visible within 30 seconds",
+      "wait 2 seconds",
+      "if element b2b_assist_chat_login_link is visible",
+      "call SG_22788_Chat_Login",
+      "end if",
+      "verify page does not contain \"Log in to begin!\"",
+      "call SG_22788_Wait_Bot_Reply"
+    ],
+    "platform": "mobilesite",
+    "created_at": "2026-10-05T10:38:45+00:00",
+    "step_count": 24
   }
 }

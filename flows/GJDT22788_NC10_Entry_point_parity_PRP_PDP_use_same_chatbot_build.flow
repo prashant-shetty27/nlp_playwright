@@ -1,0 +1,18 @@
+# Platform: mobilesite
+# Requirement: GJDT-22788 — Conversational RFQ / B2B Assist
+# Case NC10: Entry-point parity: PRP & PDP use same chatbot build | P2 | Config | Mumbai / Roofing Sheets
+# Expected: smartver URL param identical for PRP floater and PDP FAB
+# Last staging result in the sheet: FAIL (05-Oct) – PRP 260409 vs PDP 261001
+# Tags: b2b, rfq, b2b-assist, GJDT-22788, normal, P2
+store "Mumbai" as city
+store "Roofing Sheets" as category
+store "(set by the chat step group)" as bot_reply
+call SG_22788_Open_PRP_Floater
+store regex "smartver=([0-9]+)" from chat_url as prp_smartver
+take screenshot as prp_floater_chat
+call SG_22788_Open_PDP_FAB
+store regex "smartver=([0-9]+)" from chat_url as pdp_smartver
+take screenshot as pdp_fab_chat
+# both entry points should load the same chatbot build
+verify ${prp_smartver} equals ${pdp_smartver}
+take screenshot as nc10_transcript

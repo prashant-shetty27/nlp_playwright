@@ -1,0 +1,14 @@
+# Platform: mobilesite
+# Requirement: GJDT-22788 (story GJDT-22788) — Conversational RFQ / B2B Assist, normal category
+# Case NC02: Genuine category opens campaign from PDP FAB | P1 | Positive | entry PDP | Mumbai / PVC Pipes | English
+# Expected: First bot reply starts campaign (asks length/type)
+# Last staging result in the sheet: PASS (05-Oct)
+# AI replies: assertions use the regex families from the sheet (Test Data rfq22788_*), not exact text.
+# Tags: b2b, rfq, b2b-assist, GJDT-22788, normal, P1
+store "Mumbai" as city
+store "PVC Pipes" as category
+store "(set by the chat step group)" as bot_reply
+call SG_22788_Open_PDP_FAB
+# opening reply for a genuine page category starts the campaign
+verify ${bot_reply} matches "${rfq22788_campaign_started}" ignoring case
+take screenshot as nc02_transcript
