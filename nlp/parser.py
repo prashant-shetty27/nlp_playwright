@@ -612,6 +612,12 @@ def parse_step(step: str) -> Command:
     m = re.match(r'^wait\s+until\s+element\s+(\S+)\s+text\s+is\s+not\s+"(.*?)"$', s, re.I)
     if m:
         return Command(type="wait_until_text_not", target=m.group(1), text=m.group(2))
+    # wait until element <locator> does not contain "<value>"  (a loader / placeholder text going away)
+    m = re.match(r'^wait\s+until\s+element\s+(\S+)\s+(?:text\s+)?does\s+not\s+contain\s+"(.*?)"'
+                 r'(?:\s+within\s+(\d+)\s*(?:s|sec|secs|seconds?))?$', s, re.I)
+    if m:
+        return Command(type="wait_until_text_not_contains", target=m.group(1), text=m.group(2),
+                       wait=float(m.group(3)) if m.group(3) else None)
 
     # =============================
     # WAIT UNTIL ELEMENT IS VISIBLE  (condition-based wait, not a sleep)

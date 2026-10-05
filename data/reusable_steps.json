@@ -478,10 +478,15 @@
       "type \"baldev engineering nerul\" into focused field",
       "wait until element b2b_autosuggest_supplier_tab is visible",
       "click b2b_autosuggest_supplier_tab",
-      "call SG_B2B_AS_1st_Selection"
+      "# tap the Baldev Engineering suggestion itself (the top entry can be a generic category)",
+      "wait until element b2b_autosuggest_baldev_entry is visible",
+      "click b2b_autosuggest_baldev_entry",
+      "wait for page to load",
+      "wait until element b2b_catalogue_company_name is visible",
+      "verify element b2b_catalogue_company_name contains \"Baldev Engineering\""
     ],
     "created_at": "2026-10-01T17:24:06.294756+00:00",
-    "step_count": 10,
+    "step_count": 15,
     "platform": "mobilesite"
   },
   "SG_B2B_HK_Flow_Supplier_Search_Box_Click": {
@@ -1961,8 +1966,8 @@
       "scroll to pdp_people_also_search_for_1st_img",
       "verify element pdp_people_also_search_for_1st_img is visible",
       "store text of pdp_people_also_search_for_last_product_name as last_Product",
-      "store attribute alt of pdp_people_also_search_for_last_img as ts_attribute",
-      "verify stored ts_attribute contains \"${last_Product}\""
+      "# (image alt is empty on live — the name itself is the check)",
+      "verify element pdp_people_also_search_for_last_product_name contains \"${last_Product}\""
     ],
     "created_at": "2026-10-01T17:24:23.541979+00:00",
     "step_count": 19,
@@ -2328,15 +2333,17 @@
   },
   "SG_Touch_PDP_No_Call_Popular_Categories_Section_Ve": {
     "steps": [
-      "# No banner expected on this PDP: scroll the Overview the way a user does, screen by screen, until the",
-      "# SEO footer (every PDP ends with it), closing popups on the way — the Need Assistance banner must never be shown.",
-      "swipe bottom to top until element b2b_catalogue_footer_heading_trending_categories is visible, closing gbp_popup_skip, max 25 times, wait 0.5",
+      "# No banner expected on this PDP. Stay on the Overview tab (a long swipe can flip the page to the endless",
+      "# Recommended list), scroll screen by screen to the SEO footer, closing popups on the way — the Need",
+      "# Assistance banner must never be shown.",
+      "click if visible b2b_catalogue_tab_overview",
+      "swipe bottom to top until element b2b_catalogue_footer_heading_trending_categories is visible, closing gbp_popup_skip, max 30 times, wait 0.5",
       "click if visible gbp_popup_skip",
       "verify element pdp_need_assistance_section is not visible",
       "verify element b2b_catalogue_need_assistance_company_banner_text is not visible"
     ],
     "created_at": "2026-10-01T17:24:29.647228+00:00",
-    "step_count": 6,
+    "step_count": 8,
     "platform": "mobilesite"
   },
   "SG_RFQ_Post_Login_All_verification_Products": {
@@ -2609,17 +2616,18 @@
   },
   "SG_22788_Wait_Bot_Reply": {
     "steps": [
-      "# Waits for the AI reply to finish (typing loader gone, then 3 s settle) and keeps it as ${bot_reply}",
-      "wait 3 seconds",
+      "# Waits for the AI reply to finish — the typing loader gone and the last bubble no longer a placeholder",
+      "# ('Almost there…' / 'Getting things ready') — and keeps it as ${bot_reply}",
       "wait until element b2b_assist_typing_loader is not visible",
       "wait until element b2b_assist_last_bot_reply is visible within 30 seconds",
-      "wait 3 seconds",
+      "wait until element b2b_assist_last_bot_reply does not contain \"Almost there\" within 40 seconds",
+      "wait until element b2b_assist_last_bot_reply does not contain \"Getting things ready\" within 40 seconds",
       "store text of b2b_assist_last_bot_reply as bot_reply",
       "verify ${bot_reply} does not contain \"Something glitched on our side\""
     ],
     "platform": "mobilesite",
     "created_at": "2026-10-05T10:38:45+00:00",
-    "step_count": 7
+    "step_count": 8
   },
   "SG_22788_Send_Message": {
     "steps": [

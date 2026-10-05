@@ -323,6 +323,13 @@ KEYWORD_MAP = {
         "template": "wait until element {locator} is visible"
     },
 
+    "wait_until_element_text_not_contains": {
+        "phrases": ["wait until element does not contain", "wait until text goes away",
+                    "wait until placeholder is replaced", "wait for loader text to go"],
+        "action": "wait_until_text_not_contains",
+        "help": "waits until the element's text no longer contains the value (a 'loading…' placeholder replaced by real content)",
+        "template": "wait until element {locator} does not contain \"{text}\""
+    },
     "wait_until_element_text_not": {
         "phrases": [
             "wait until element text is not", "wait for text to change",

@@ -289,6 +289,7 @@ def _execute_step_from_command(cmd, page):
         "wait_until_visible":        lambda: svc.wait_until_element_visible(
                                          ep, target, (cmd.wait * 1000) if cmd.wait else None),
         "wait_until_text_not":       lambda: svc.wait_until_element_text_not(ep, target, text),
+        "wait_until_text_not_contains": lambda: svc.wait_until_element_text_not_contains(ep, target, text, int(cmd.wait * 1000) if cmd.wait else None),
         "enter_otp":                 lambda: svc.enter_otp(ep, text, target),
         "fetch_otp":                 lambda: svc.fetch_otp_from_portal(
                                          ep, text, cmd.variable_name, after=target),

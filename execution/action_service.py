@@ -1644,14 +1644,24 @@ def swipe_until_element_visible(page, target: str, span: str = "bottom_top",
     size = page.viewport_size or {"width": 412, "height": 915}
 
     def seen() -> bool:
-        loc = page.locator(xpath).first
+        # Any matching element that is on screen counts — the first match in
+        # the DOM can be a hidden template while the real one is further down.
         try:
-            if loc.count() == 0 or not loc.is_visible(timeout=300):
-                return False
-            box = loc.bounding_box(timeout=300)
+            loc = page.locator(xpath)
+            n = min(loc.count(), 6)
         except Exception:  # noqa: BLE001
             return False
-        return bool(box) and box["y"] < size["height"] and box["y"] + box["height"] > 0
+        for k in range(n):
+            el = loc.nth(k)
+            try:
+                if not el.is_visible(timeout=200):
+                    continue
+                box = el.bounding_box(timeout=200)
+            except Exception:  # noqa: BLE001
+                continue
+            if box and box["y"] < size["height"] and box["y"] + box["height"] > 0:
+                return True
+        return False
 
     sluggish = _page_slow(page)
     for i in range(int(max_swipes) + 1):
@@ -4223,6 +4233,27 @@ def verify_stored_variable_not_equals(variable_name, unexpected_text, ignore_cas
         )
     logger.info("✅ Stored '%s' differs from '%s' (actual: '%s').",
                 variable_name, unexpected_text, stored)
+
+
+def wait_until_element_text_not_contains(page, locator_name, text, timeout_ms: int | None = None):
+    """Wait until the element's text no longer CONTAINS `text` (ignoring case) —
+    e.g. a chat's 'Almost there…' typing placeholder replaced by the real reply."""
+    selector = _resolve_locator_or_raise(locator_name, page)
+    timeout = int(timeout_ms or settings.ACTION_TIMEOUT_MS)
+    logger.info("⏳ Waiting up to %dms for '%s' to stop containing '%s'", timeout, locator_name, text)
+    deadline = time.time() + timeout / 1000
+    needle = str(text).lower()
+    last = ""
+    while time.time() < deadline:
+        try:
+            last = _get_locator_root(page).locator(selector).first.inner_text(timeout=1000) or ""
+        except Exception:  # noqa: BLE001
+            last = ""
+        if last and needle not in last.lower():
+            logger.info("✅ '%s' no longer contains '%s'", locator_name, text)
+            return
+        page.wait_for_timeout(300)
+    raise Exception(f"'{locator_name}' still contains '{text}' after {timeout}ms (text: {last[:120]!r})")
 
 
 def wait_until_element_text_not(page, locator_name, unexpected_text, timeout_ms: int | None = None):
