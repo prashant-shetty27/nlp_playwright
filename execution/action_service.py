@@ -411,12 +411,34 @@ def _raise_if_blocked(page, safe_url: str) -> None:
 # CLICK
 # ─────────────────────────────────────────────────────────────────────────────
 @with_retry(max_attempts=2, delay=1.0)
+def _visible_match(loc):
+    """The first VISIBLE match of a locator — the first match in the DOM can be a
+    hidden copy (a template, a collapsed duplicate) while the one a user sees
+    comes later. Falls back to .first when none is visible yet, so the normal
+    wait / heal path still applies."""
+    try:
+        n = min(loc.count(), 8)
+    except Exception:  # noqa: BLE001
+        return loc.first
+    if n <= 1:
+        return loc.first
+    for k in range(n):
+        try:
+            if loc.nth(k).is_visible(timeout=150):
+                if k:
+                    logger.info("👁️ Using match #%d — the first match is hidden", k + 1)
+                return loc.nth(k)
+        except Exception:  # noqa: BLE001
+            continue
+    return loc.first
+
+
 def click_element(page, locator_name):
     primary_xpath, dna = _resolve_live(page, locator_name)
 
     try:
         logger.info(f"🖱️ Attempting click on: {locator_name}")
-        target = _get_locator_root(page).locator(primary_xpath).first
+        target = _visible_match(_get_locator_root(page).locator(primary_xpath))
         try:
             is_select = target.evaluate("el => el.tagName === 'SELECT'", timeout=2000)
         except (PlaywrightTimeoutError, PlaywrightError, TypeError):
@@ -3455,7 +3477,9 @@ def verify_element_visible(page, locator_name):
     selector = _resolve_locator_or_raise(locator_name, page)
     logger.info("🔎 Verifying element '%s' is visible", locator_name)
     try:
-        expect(_get_locator_root(page).locator(selector).first).to_be_visible(timeout=settings.ACTION_TIMEOUT_MS)
+        # Any match the user can see counts (the first DOM match may be a hidden copy).
+        expect(_get_locator_root(page).locator(selector).filter(visible=True).first).to_be_visible(
+            timeout=settings.ACTION_TIMEOUT_MS)
     except AssertionError as e:
         raise Exception(
             f"Visibility assertion failed for '{locator_name}' ({selector}): {e}"
