@@ -46,6 +46,10 @@ PROMPT_KIND = "prompt"
 PROMPT_FILENAME = "draft.json"
 
 
+#: Bump whenever the drafting prompt / context changes shape (see prompt_source.py).
+DRAFTER_VERSION = "2026-10-06.platform-scoped"
+
+
 def prompt_source_id(prompt: str, platform: str = "", max_testcases: int = 0) -> str:
     """
     The content address of a drafted prompt.
@@ -56,8 +60,11 @@ def prompt_source_id(prompt: str, platform: str = "", max_testcases: int = 0) ->
     for the mobile site are two different drafts, and hashing the prompt alone
     made the second silently overwrite the first under a shared id.
     """
+    # DRAFTER_VERSION is part of the key: when the drafting rules change (what
+    # the model is told about elements, test data, environments) an old cached
+    # answer to the same prompt is no longer the answer, so it is drafted afresh.
     key = "\u0000".join([(prompt or "").strip(), (platform or "").strip(),
-                          str(max_testcases or 0)])
+                          str(max_testcases or 0), DRAFTER_VERSION])
     return "src_" + hashlib.sha256(key.encode("utf-8")).hexdigest()[:12]
 
 
