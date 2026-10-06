@@ -163,10 +163,11 @@
       "owner": "prashantshetty",
       "opened": "2026-10-06",
       "expires": "2026-10-20",
-      "note": "PDP_PDP_Ask_Anything via Ask me anything: typing into 'Type your message' is reset by the page. Confirm manually on live; may be the new chat build.",
+      "note": "PDP_PDP_Ask_Anything via Ask me anything: typing into 'Type your message' is reset by the page. Confirm manually on live; may be the new chat build. WITHDRAWN 06-Oct: with the Ask-me-anything locator fixed the whole case passes 15/15 — the \"input resets\" failure was a consequence of the wrong element, not a product issue.",
       "match": {
         "error": "Could not put .{0,10} into 'type_your_message_input'"
-      }
+      },
+      "closed": true
     },
     {
       "id": "KI-013",
