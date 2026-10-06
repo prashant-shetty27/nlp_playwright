@@ -66,14 +66,13 @@
   "Live_Touch_Chrome_Navigate_to_Homepage_setup_Popup": {
     "steps": [
       "open https://www.justdial.com/",
-      "wait 5 seconds",
-      "[ignore] scroll to touch_login_popup_may_be_later",
-      "[ignore] click touch_login_popup_may_be_later",
-      "call Location_Popup",
-      "wait for page to load"
+      "wait for page to load",
+      "# 06-Oct: the login sheet and the consent strip are optional - 'click if visible' checks once and moves on (the old 'wait 5 s' + '[ignore] scroll to' + '[ignore] click' spent 20-40 s per case when the sheet was absent)",
+      "click if visible touch_login_popup_may_be_later",
+      "call Location_Popup"
     ],
     "created_at": "2026-09-28T20:01:29.322310+00:00",
-    "step_count": 6,
+    "step_count": 5,
     "platform": "mobilesite"
   },
   "PS_Touch_Location_Popup": {

@@ -17,7 +17,20 @@ import os
 import sys
 
 
+def _die_cleanly(signum, frame):  # noqa: ARG001
+    """SIGTERM from the plan engine: close the browser before exiting so no
+    Chromium / WebKit / driver process outlives the lane."""
+    try:
+        from execution import browser_manager as B
+        B.close_all()
+    except Exception:  # noqa: BLE001
+        pass
+    os._exit(143)
+
+
 def main() -> int:
+    import signal
+    signal.signal(signal.SIGTERM, _die_cleanly)
     run_id, idx, out = sys.argv[1], int(sys.argv[2]), sys.argv[3]
     base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     sys.path.insert(0, base)

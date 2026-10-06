@@ -267,6 +267,22 @@ def build_context_options(capabilities: dict | None, devices) -> dict:
 # open_site() consults this so it never falls back to embedding credentials in a URL.
 CONTEXT_AUTH_DOMAINS: set[str] = set()
 
+#: Every (browser, driver) this process launched, so a SIGTERM handler can take
+#: them all down — a worker killed mid-step must not leave Chromium behind.
+_LIVE: list = []
+
+
+def close_all() -> None:
+    """Close every browser and driver this process launched (used on SIGTERM)."""
+    while _LIVE:
+        browser, pw = _LIVE.pop()
+        for closer in (getattr(browser, "close", None), getattr(pw, "stop", None)):
+            try:
+                if closer:
+                    closer()
+            except Exception:  # noqa: BLE001
+                pass
+
 
 def apply_http_credentials(options: dict, capabilities: dict | None) -> dict:
     """
@@ -437,6 +453,7 @@ def open_browser(session: TestSession | None = None, record_video: bool = False,
                 pass
         raise
 
+    _LIVE.append((browser, playwright_instance))
     if session is not None:
         session.playwright_instance = playwright_instance
         session.browser = browser

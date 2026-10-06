@@ -183,6 +183,14 @@ def recover_orphans() -> int:
         for it in rec.get("items") or []:
             if it.get("status") in ("running", "pending"):
                 was = it["status"]
+                pid = it.pop("lane_pid", None)
+                if pid:
+                    # the old server's lane worker (and its browser) may still be alive
+                    import signal
+                    try:
+                        os.killpg(int(pid), signal.SIGTERM)
+                    except (ProcessLookupError, PermissionError, OSError, ValueError):
+                        pass
                 it["status"] = "not_run"
                 it["reason"] = ("interrupted — the server restarted while this test case was running"
                                 if was == "running" else "not reached — the server restarted")
@@ -307,6 +315,28 @@ def start(plan_id: str, *, trigger: str = "manual", user: str = "", run_type: st
     _save(rec)
     threading.Thread(target=_execute, args=(rec,), name=f"plan-{run_id}", daemon=True).start()
     return rec
+
+
+def _terminate_lane(proc) -> None:
+    """SIGTERM the worker's whole process group (python + browser + driver);
+    SIGKILL whatever is still there a few seconds later."""
+    import signal
+    try:
+        os.killpg(proc.pid, signal.SIGTERM)
+    except (ProcessLookupError, PermissionError, OSError):
+        try:
+            proc.terminate()
+        except OSError:
+            return
+    def _reap() -> None:
+        try:
+            proc.wait(timeout=8)
+        except subprocess.TimeoutExpired:
+            try:
+                os.killpg(proc.pid, signal.SIGKILL)
+            except OSError:
+                pass
+    threading.Thread(target=_reap, daemon=True).start()
 
 
 def rerun_failed(run_id: str, *, user: str = "") -> dict:
@@ -626,8 +656,13 @@ def _run_parallel(rec: dict, ex: dict, lanes: int) -> None:
                 busy_groups.add(serial_of[i])
             out = os.path.join(lane_dir, f"item_{i}.json")
             log = open(os.path.join(lane_dir, f"item_{i}.log"), "w", encoding="utf-8")
+            # Own process group: "Stop now" must take the worker AND its browser
+            # (Chromium/WebKit + the Playwright driver) down together. Terminating
+            # only the python left the browsers running — a day of stops and
+            # restarts ended in "Too many open files in system" on the Mac.
             proc = subprocess.Popen([sys.executable, "-m", "execution.plan_worker", rec["id"], str(i), out],
-                                    cwd=base, stdout=log, stderr=subprocess.STDOUT)
+                                    cwd=base, stdout=log, stderr=subprocess.STDOUT,
+                                    start_new_session=True)
             rec["items"][i].update(status="running", started_at=_now(), lane_pid=proc.pid)
             running[i] = (proc, out, log)
         if aborted:
@@ -640,7 +675,7 @@ def _run_parallel(rec: dict, ex: dict, lanes: int) -> None:
             if proc.poll() is None:
                 _merge(i, out)                 # attempt / run_id while it runs
                 if rec["id"] in _abort and rec["id"] in _abort_now:
-                    proc.terminate()
+                    _terminate_lane(proc)
                 continue
             log.close()
             _merge(i, out)
