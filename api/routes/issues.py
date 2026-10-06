@@ -11,6 +11,7 @@ POST   /issues/raise                       create tickets (tester's own token)
 POST   /issues/prefill                     Jira Create-form links (no token needed)
 POST   /issues/csv                         bulk-upload CSV
 """
+import os
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
 from pydantic import BaseModel
@@ -46,6 +47,32 @@ def jira_search(jql: str, max_results: int = 10):
         if r.status_code >= 400:
             raise HTTPException(status_code=502, detail=f"Jira answered {r.status_code} for {key}: {r.text[:300]}")
         f = r.json().get("fields", {})
+        # Comments carry the test env / data the description leaves out; the
+        # attachments (screenshots) are saved under data/logs/jira_attachments/<key>/
+        # so they can be opened from the run machine (read-only download).
+        comments = [{"author": (c.get("author") or {}).get("displayName", ""),
+                     "created": (c.get("created") or "")[:16].replace("T", " "),
+                     "body": c.get("body") or ""}
+                    for c in ((f.get("comment") or {}).get("comments") or [])]
+        saved = []
+        att_dir = os.path.join("data", "logs", "jira_attachments", key)
+        for a in f.get("attachment") or []:
+            fn = os.path.basename(a.get("filename") or "")
+            url = a.get("content")
+            if not fn or not url:
+                continue
+            dest = os.path.join(att_dir, fn)
+            if not os.path.exists(dest):
+                try:
+                    ar = ji._server().get(url, timeout=30)
+                    if ar.status_code < 400:
+                        os.makedirs(att_dir, exist_ok=True)
+                        with open(dest, "wb") as fh:
+                            fh.write(ar.content)
+                except Exception:  # noqa: BLE001
+                    continue
+            if os.path.exists(dest):
+                saved.append(dest)
         return {"total": 1, "issues": [{
             "key": key, "type": f.get("issuetype", {}).get("name", ""),
             "status": f.get("status", {}).get("name", ""), "created": (f.get("created") or "")[:10],
@@ -55,6 +82,8 @@ def jira_search(jql: str, max_results: int = 10):
             "components": [c.get("name", "") for c in f.get("components") or []],
             "fix_versions": [v.get("name", "") for v in f.get("fixVersions") or []],
             "attachments": [a.get("filename", "") for a in f.get("attachment") or []],
+            "attachment_files": saved,
+            "comments": comments,
             "subtasks": [f"{t.get('key')} {t.get('fields', {}).get('summary', '')}" for t in f.get("subtasks") or []]}]}
     try:
         r = ji._server().get(f"{ji.base_url()}/rest/api/2/search",

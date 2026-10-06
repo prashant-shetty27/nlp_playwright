@@ -335,6 +335,23 @@ def _session_secret() -> str:
         return val
 
 
+def _port_already_serving(host: str, port: int) -> bool:
+    """True when something already answers on the port (GET /health)."""
+    import socket
+    import urllib.request
+    probe = "127.0.0.1" if host in ("0.0.0.0", "", "::") else host
+    try:
+        with socket.create_connection((probe, port), timeout=1.5):
+            pass
+    except OSError:
+        return False
+    try:
+        with urllib.request.urlopen(f"http://{probe}:{port}/health", timeout=3) as r:
+            return r.status < 500
+    except Exception:  # noqa: BLE001 — something is listening even if it is not us
+        return True
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="Codeless automation UI")
     import config.settings  # noqa: F401 — loads .env (UI_HOST, UI_PORT) before reading them
@@ -342,6 +359,13 @@ def main() -> None:
     ap.add_argument("--host", default=os.getenv("UI_HOST", "127.0.0.1"))
     ap.add_argument("--show", action="store_true", help="open a browser on start")
     args = ap.parse_args()
+    # One portal per port. macOS lets a second uvicorn bind the same port, so two
+    # copies started a minute apart both answered: code changes landed in one,
+    # plan lanes ran twice, and the Mac ran out of file handles. Refuse instead.
+    if _port_already_serving(args.host, args.port):
+        print(f"Codeless Automation is already running on port {args.port} — "
+              f"use that window (or quit it first).", file=sys.stderr)
+        sys.exit(2)
     # reconnect_timeout: unsaved steps live in server memory for the page; with
     # the 3 s default a Wi-Fi blip or a closed lid dropped the page and its edits.
     ui.run_with(fastapi_app, title="Codeless Automation", favicon="🧪",

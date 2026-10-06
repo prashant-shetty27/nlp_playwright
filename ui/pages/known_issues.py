@@ -96,6 +96,13 @@ async def render(prefill: dict | None = None) -> None:
                                 ("sub-tasks: " + "; ".join(i.get("subtasks") or [])) if i.get("subtasks") else "") if x)
                             if meta:
                                 _muted(meta)
+                            for c in i.get("comments") or []:
+                                _muted(f"comment · {c.get('author', '')} · {c.get('created', '')}")
+                                ui.label(c.get("body", "")).style(
+                                    f"font-size:{TYPOGRAPHY['size_xs']}; white-space:pre-wrap; border-left:3px solid "
+                                    f"{COLORS['border']}; padding:4px 8px; max-height:20rem; overflow:auto")
+                            if i.get("attachment_files"):
+                                _muted("saved attachments: " + ", ".join(i["attachment_files"]))
                             ui.label(i["description"] or "(no description)").props('id="jira-issue-description"').style(
                                 f"font-size:{TYPOGRAPHY['size_xs']}; white-space:pre-wrap; border:1px solid "
                                 f"{COLORS['border']}; border-radius:6px; padding:8px; max-height:28rem; overflow:auto")
