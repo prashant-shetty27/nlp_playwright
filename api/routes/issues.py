@@ -25,6 +25,31 @@ def _err(e: Exception):
     raise HTTPException(status_code=422, detail=str(e)) from e
 
 
+@router.get("/search")
+def jira_search(jql: str, max_results: int = 10):
+    """Read-only Jira search with the portal's saved login (GET only). Returns
+    key, type, status, created, summary — nothing else, so nothing sensitive
+    travels to the page."""
+    from core import jira_issues as ji
+    if not jql or len(jql) > 600:
+        raise HTTPException(status_code=422, detail="Give a JQL query (max 600 chars).")
+    try:
+        r = ji._server().get(f"{ji.base_url()}/rest/api/2/search",
+                             params={"jql": jql, "maxResults": max(1, min(int(max_results), 50)),
+                                     "fields": "summary,status,created,issuetype,resolutiondate"},
+                             timeout=25)
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(status_code=502, detail="Jira is not reachable from this machine (VPN?).") from e
+    if r.status_code >= 400:
+        raise HTTPException(status_code=502, detail=f"Jira answered {r.status_code}.")
+    d = r.json()
+    return {"total": d.get("total", 0),
+            "issues": [{"key": i["key"], "type": i["fields"]["issuetype"]["name"],
+                        "status": i["fields"]["status"]["name"], "created": (i["fields"].get("created") or "")[:10],
+                        "resolved": (i["fields"].get("resolutiondate") or "")[:10],
+                        "summary": i["fields"].get("summary", "")} for i in d.get("issues", [])]}
+
+
 @router.get("/draft")
 def get_draft(run_id: str = Query(""), plan_run: str = Query(""),
               user: str = Depends(acting_user)):

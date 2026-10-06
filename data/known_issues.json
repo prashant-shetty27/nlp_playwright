@@ -8,7 +8,7 @@
       "owner": "prashantshetty",
       "opened": "2026-10-06",
       "expires": "",
-      "note": "Rat glue pad / ammonium nitrate / gun powder etc. get the generic no-results text on live. Story says restricted alert. Raised with dev.",
+      "note": "Rat glue pad / ammonium nitrate / gun powder etc. get the generic no-results text on live. Story says restricted alert. Raised with dev. Jira 06-Oct: GJDT-22791 'Still allowing for restricted categories' (Defect) was CLOSED on 01-Oct, yet live still shows no alert on 06-Oct — re-open/ask dev for the fix build.",
       "match": {
         "test_case": "^GJDT22788_(RC|NC0[4-9])",
         "error": "couldn.{0,3}t find any results|koi results nahi"
@@ -76,11 +76,11 @@
       "id": "KI-006",
       "kind": "site-change",
       "title": "Multinational Companies NCT shows Ask for Price / Get Best Price cards, no 'Send Enquiry'",
-      "jira": "",
+      "jira": "GJDT-22177",
       "owner": "prashantshetty",
       "opened": "2026-10-06",
       "expires": "2026-10-20",
-      "note": "NCT_Job_related_Questions: the send-enquiry flow needs a category that still has Send Enquiry.",
+      "note": "NCT_Job_related_Questions: the send-enquiry flow needs a category that still has Send Enquiry. Jira 06-Oct: GJDT-22177 (Defect, closed 05-Aug) says the company-card CTA should read 'Get Best Price' and 'Send Enquiry' on live was the defect; GJDT-22700 (closed 24-Sep) removed Send Enquiry from Recommended-Products CTAs too. So this is an INTENDED change, not a site break — rewrite the test for the Get Best Price / Ask for Price flow.",
       "match": {
         "test_case": "^NCT_Job_related_Questions",
         "element": "send_enquiry_button_1st"
@@ -103,11 +103,11 @@
       "id": "KI-008",
       "kind": "data",
       "title": "SR02 'AN prills' free-text shows unrelated listings (trade abbreviation not in the misspelling rule)",
-      "jira": "GJDT-22788",
+      "jira": "GJDT-22635",
       "owner": "prashantshetty",
       "opened": "2026-10-05",
       "expires": "",
-      "note": "Confirm with PO whether abbreviations are in scope.",
+      "note": "Confirm with PO whether abbreviations are in scope. Jira 06-Oct: GJDT-22635 'Handle Blacklisted Category Variations in B2B Free-Text Searches' is still Backlog — abbreviations are a separate, unbuilt story; keep SR02 as data/pending, not a defect.",
       "match": {
         "test_case": "^GJDT22788_SR02",
         "step": "b2b_search_no_results"
@@ -177,7 +177,7 @@
       "owner": "prashantshetty",
       "opened": "2026-10-06",
       "expires": "",
-      "note": "Confirmed manually on live mobile 06-Oct. Catalogue tests open the catalogue URL directly until this is back. Ask PO whether seller search was removed on purpose.",
+      "note": "Confirmed manually on live mobile 06-Oct. Catalogue tests open the catalogue URL directly until this is back. Jira 06-Oct: no GJDT ticket in the last 120 days mentions removing seller/supplier autosuggest (only GJDT-22645 about Ammonium Nitrate autosuggest, closed). Ask PO whether seller search was removed on purpose.",
       "match": {
         "error": "b2b_autosuggest_(supplier_tab|baldev_entry)"
       }

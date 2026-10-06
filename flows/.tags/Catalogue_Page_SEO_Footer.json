@@ -1,33 +1,21 @@
 {
  "version": 1,
- "flow_mtime": 1791224249.8111043,
+ "flow_mtime": 1791234260.2953658,
  "steps": [
   {
-   "line": 7,
-   "text": "call SG_Supplier_Search_Flow_Baldev",
-   "level": "R",
-   "manual": false
-  },
-  {
    "line": 8,
-   "text": "call SG_Catalogue_Page_SEO_Footer",
-   "level": "R",
-   "manual": false
-  },
-  {
-   "line": 10,
    "text": "open https://www.justdial.com/Navi-Mumbai/Baldev-Engineering-Nerul/022PXX22-XX22-131219124833-X3Z1_BZDET?trkid=4303885681&newAddress=Opposite+D+Y+Patil+Stadium%2C+MIDC+Industrial+Area+Nerul&galtype=All&cname=Baldev+Engineering&paid=1&ds=0&datacity=&catalogueType=",
    "level": "S",
    "manual": false
   },
   {
-   "line": 11,
-   "text": "scroll until element b2b_catalogue_footer_heading_business_information visible, scroll by 600 pixels, scroll count 20, scroll wait 1",
+   "line": 9,
+   "text": "swipe bottom to top until element b2b_catalogue_footer_heading_business_information is visible, closing catalogue_skip_bd_category_pop and srp_seller_type_banner_skip, max 25 times, wait 0.5",
    "level": "S",
    "manual": false
   },
   {
-   "line": 12,
+   "line": 10,
    "text": "call SG_Catalogue_Page_SEO_Footer",
    "level": "S",
    "manual": false

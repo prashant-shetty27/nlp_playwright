@@ -564,6 +564,11 @@ async def system_info() -> dict:
     return await _call("GET", "/system/info")
 
 
+async def jira_search(jql: str, max_results: int = 10) -> dict:
+    """Read-only Jira search through the portal (saved login, GET only)."""
+    return await _call("GET", "/issues/search", params={"jql": jql, "max_results": max_results})
+
+
 async def known_issues() -> dict:
     return await _call("GET", "/system/known-issues")
 

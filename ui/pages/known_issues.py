@@ -41,6 +41,33 @@ async def render(prefill: dict | None = None) -> None:
         _muted("A failure that matches an open entry is shown as KNOWN on plan reports and counted apart from new "
                "failures. Match rules are regular expressions (ignoring case); every non-empty rule must match. "
                "An entry with an expiry date stops matching after it; 'Close' stops it at once.")
+        # Look a finding up on Jira before registering it (read-only).
+        with ui.card().classes("w-full").style(f"border:1px solid {COLORS['border']}; padding:8px 12px"):
+            with ui.row().classes("w-full items-center gap-2 no-wrap"):
+                jql_in = ui.input("Search Jira (JQL)", placeholder='text ~ "send enquiry" AND project = GJDT ORDER BY created DESC') \
+                    .props("outlined dense").classes("flex-grow")
+                jira_btn = ui.button("Search", icon="search").props("unelevated dense")
+            jira_out = ui.column().classes("w-full gap-0").props('id="jira-search-out"')
+
+            async def do_search() -> None:
+                jira_out.clear()
+                try:
+                    res = await api.jira_search(jql_in.value or "", 10)
+                except api.ApiError as e:
+                    with jira_out:
+                        ui.label(str(e.detail)).style(f"color:{COLORS['danger']}; font-size:{TYPOGRAPHY['size_xs']}")
+                    return
+                with jira_out:
+                    _muted(f"{res.get('total', 0)} match(es)")
+                    for i in res.get("issues", []):
+                        with ui.row().classes("items-center gap-2 no-wrap"):
+                            ui.link(i["key"], f"https://jdjira.justdial.com/browse/{i['key']}", new_tab=True) \
+                                .style(f"font-family:{TYPOGRAPHY['mono']}; font-size:{TYPOGRAPHY['size_xs']}")
+                            ui.label(f"{i['type']} · {i['status']} · {i['created']}").style(
+                                f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}; white-space:nowrap")
+                            ui.label(i["summary"]).style(f"font-size:{TYPOGRAPHY['size_xs']}; white-space:normal")
+            jira_btn.on("click", do_search)
+            jql_in.on("keydown.enter", do_search)
         box = ui.column().classes("w-full gap-2")
 
     async def load() -> None:
