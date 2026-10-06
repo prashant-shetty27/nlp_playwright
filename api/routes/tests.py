@@ -370,6 +370,16 @@ def _run_flow_sync_unlocked(run_id: str, flow_path: str, headless: bool,
         shots.after_step(page_, entry_, step_, row_)
         timing["capture_s"] += time.perf_counter() - t
 
+    # Steps inside a step group get their own frame too (same mode / cap), so a
+    # row under "Step group — N steps" is clickable like a top-level row.
+    from execution import group_trace as _gt
+
+    def _capture_inner(page_, row_, tag_):
+        t = time.perf_counter()
+        shots.after_step(page_, row_, row_.get("step", ""), None, tag=tag_)
+        timing["capture_s"] += time.perf_counter() - t
+    _gt.set_capture(_capture_inner)
+
     try:
         page = open_browser(session, capabilities=capabilities or None)
         if _svc.SITE_ENV:
@@ -521,6 +531,7 @@ def _run_flow_sync_unlocked(run_id: str, flow_path: str, headless: bool,
     finally:
         # Before the browser closes: in failure mode this deletes the rolling
         # window that no failure ever claimed.
+        _gt.clear_capture()
         shots.finish()
         _svc.SITE_ENV = None
         if page is not None:

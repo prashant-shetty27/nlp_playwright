@@ -217,7 +217,7 @@ class StepCapture:
 
     # ── the one call the run loop makes ──────────────────────────────────────
     def after_step(self, page, entry: dict, step: str,
-                   report_row: dict | None = None) -> None:
+                   report_row: dict | None = None, tag: str = "") -> None:
         """
         Record this step's frame, if the mode wants it.
 
@@ -239,7 +239,7 @@ class StepCapture:
             if self.mode == "key" and not failed and not self._is_key(page, step):
                 return
             path = self._shoot(page, entry.get("line", self.kept_count + 1), step=step,
-                               failed=entry.get("status") == "failed")
+                               failed=entry.get("status") == "failed", tag=tag)
             if path:
                 self._keep(entry, report_row, path)
         except Exception as e:  # noqa: BLE001 — never fail a step over a picture
@@ -297,7 +297,7 @@ class StepCapture:
         return False
 
     # ── files ───────────────────────────────────────────────────────────────
-    def _shoot(self, page, index: int, step: str = "", failed: bool = False) -> str:
+    def _shoot(self, page, index: int, step: str = "", failed: bool = False, tag: str = "") -> str:
         # `failure` mode is bounded by its ring buffer (context + 1 frames), so
         # the cap does not apply to it — applying it would silence exactly the
         # frames it exists to keep.
@@ -308,7 +308,9 @@ class StepCapture:
                                "no frame.", MAX_PER_RUN)
             return ""
         os.makedirs(self.dir, exist_ok=True)
-        path = os.path.join(self.dir, f"step_{int(index):04d}.jpg")
+        # `tag` keeps a frame taken INSIDE a step group apart from the frame of
+        # the top-level line with the same number (step_0004_g007.jpg).
+        path = os.path.join(self.dir, f"step_{int(index):04d}{tag}.jpg")
         # The ACTIVE page, not the one the run started with: a step that switched
         # tab must photograph the tab it is now on.
         target = page

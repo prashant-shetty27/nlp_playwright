@@ -27,9 +27,18 @@ def _counts(children: list[dict]) -> str:
     return " · ".join(bits)
 
 
-def render_children(children: list[dict], *, indent: str = "3.2rem", open_: bool = False) -> None:
+def _open_frame(rel_path: str) -> None:
+    ui.navigate.to(f"/screenshots/{rel_path.lstrip('/')}", new_tab=True)
+
+
+def render_children(children: list[dict], *, indent: str = "3.2rem", open_: bool = False,
+                    on_frame=None) -> None:
+    """`on_frame(rel_path, child)` is called when a row that has a screenshot is
+    clicked (the live view shows it in its viewer); without it the frame opens
+    in a new tab."""
     if not children:
         return
+    show = on_frame or (lambda path, _c: _open_frame(path))
     failed = any(c.get("status") == "failed" for c in children)
     with ui.expansion(f"Step group — {len(children)} steps · {_counts(children)}",
                       icon="account_tree", value=open_ or failed) \
@@ -40,7 +49,13 @@ def render_children(children: list[dict], *, indent: str = "3.2rem", open_: bool
             st = c.get("status", "")
             icon, tone = _MARK.get(st, ("radio_button_unchecked", "text_muted"))
             colour = COLORS.get(tone, COLORS["text_muted"])
-            with ui.row().classes("w-full items-start no-wrap gap-2").style("padding:3px 8px"):
+            has_frame = bool(c.get("screenshot"))
+            row_el = ui.row().classes("w-full items-start no-wrap gap-2" + (" cursor-pointer" if has_frame else "")) \
+                .style("padding:3px 8px")
+            if has_frame:
+                row_el.tooltip("Click to see this step's screenshot")
+                row_el.on("click", lambda _, p=c["screenshot"], c=c: show(p, c))
+            with row_el:
                 ui.label(str(i)).style(
                     f"width:1.4rem; text-align:right; color:{COLORS['text_muted']};"
                     f"font-family:{TYPOGRAPHY['mono']}; font-size:{TYPOGRAPHY['size_xs']}")
@@ -60,4 +75,4 @@ def render_children(children: list[dict], *, indent: str = "3.2rem", open_: bool
                         f"color:{COLORS['text_muted']}; font-size:{TYPOGRAPHY['size_xs']};"
                         f"font-family:{TYPOGRAPHY['mono']}; white-space:nowrap")
             if c.get("children"):
-                render_children(c["children"], indent="1.6rem")
+                render_children(c["children"], indent="1.6rem", on_frame=on_frame)

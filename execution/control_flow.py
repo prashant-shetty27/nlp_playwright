@@ -878,6 +878,7 @@ def run_lines(lines, page, execute, logger=None, numbered=None, probe=None) -> N
                 kids = gt.end()
                 if kids:
                     row["children"] = kids
+                gt.capture(page, row)
                 gt.record(row)
                 # The group stops here: say which of its steps never ran.
                 for rest in prog.items[it.index + 1:]:
@@ -889,6 +890,7 @@ def run_lines(lines, page, execute, logger=None, numbered=None, probe=None) -> N
             kids = gt.end()
             if kids:
                 row["children"] = kids
+            gt.capture(page, row)
             gt.record(row)
         else:
             said = prog.decide(it)

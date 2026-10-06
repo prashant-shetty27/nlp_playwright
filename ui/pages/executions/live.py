@@ -305,6 +305,31 @@ class LiveView:
         ui.notify("No screenshot for that step (its mode kept none, or it has "
                   "not run yet)", type="info")
 
+    def _show_child_frame(self, rel_path: str, child: dict) -> None:
+        """A step inside a step group: show its frame in the viewer."""
+        try:
+            self.tabs.set_value(self.t_shot)
+        except Exception:  # noqa: BLE001
+            pass
+        self.shots.clear()
+        with self.shots:
+            st = child.get("status", "")
+            colour = COLORS["danger"] if st == "failed" else COLORS["text"]
+            ui.label(f"inside step group · {child.get('step', '')}").style(
+                f"font-family:{TYPOGRAPHY['mono']}; font-size:{TYPOGRAPHY['size_xs']}; color:{colour};"
+                "white-space:pre-wrap; word-break:break-all")
+            if child.get("error"):
+                ui.label(child["error"]).style(
+                    f"font-family:{TYPOGRAPHY['mono']}; font-size:{TYPOGRAPHY['size_xs']};"
+                    f"color:{COLORS['danger']}; white-space:pre-wrap; max-height:4.8em; overflow-y:auto")
+            src = f"/screenshots/{rel_path.lstrip('/')}"
+            ui.element("img").props(f'src="{src}"').style(
+                "display:block; margin:0 auto; max-width:100%;"
+                "max-height:calc(100vh - 190px); object-fit:contain;"
+                f"border:1px solid {COLORS['border']}; border-radius:6px") \
+                .on("click", lambda s=src: ui.navigate.to(s, new_tab=True)) \
+                .classes("cursor-pointer").tooltip("Open full size in a new tab")
+
     def _draw_frame(self) -> None:
         self.shots.clear()
         with self.shots:
@@ -405,7 +430,7 @@ class LiveView:
                             f"word-break:break-all" + ("; opacity:.6" if skipped else ""))
                     if entry.get("children"):
                         from ui.components.group_children import render_children
-                        render_children(entry["children"])
+                        render_children(entry["children"], on_frame=self._show_child_frame)
                     if entry.get("error") and skipped:
                         ui.label(entry["error"]).style(
                             f"padding:0 8px 6px 3.2rem; color:{COLORS['text_muted']};"

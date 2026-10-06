@@ -38,3 +38,27 @@ def record(item: dict) -> None:
     st = _stack()
     if st:
         st[-1].append(item)
+
+
+# ── screenshots for inner steps ──────────────────────────────────────────────
+# The run loop installs a capture function for the duration of a run; the group
+# driver calls capture() after each inner step so a step inside a group gets its
+# own frame (clickable in the live view / report) like a top-level step does.
+def set_capture(fn) -> None:
+    _tl.capture = fn
+    _tl.frame_no = 0
+
+
+def clear_capture() -> None:
+    _tl.capture = None
+
+
+def capture(page, row: dict) -> None:
+    fn = getattr(_tl, "capture", None)
+    if fn is None or page is None:
+        return
+    _tl.frame_no = getattr(_tl, "frame_no", 0) + 1
+    try:
+        fn(page, row, f"_g{_tl.frame_no:03d}")
+    except Exception:  # noqa: BLE001 — a picture never fails a step
+        pass
