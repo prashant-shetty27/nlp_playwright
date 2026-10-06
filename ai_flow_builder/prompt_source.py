@@ -133,6 +133,16 @@ their element names and step patterns; do not duplicate a case that already exis
 
 {existing}
 
+THE SAME FEATURE ALREADY AUTOMATED ON ANOTHER PLATFORM (reference only). Read these \
+for WHAT they cover and what was learnt — the acceptance criteria they map, the Back \
+control they use, scope notes in their comments ("not to be done"), the listing / \
+data that has the feature, negative cases that turned out to need other data. Do NOT \
+reuse their element names, step groups or ${{…}} values: those belong to the other \
+site. Cover at least the same ground here, with this platform's own elements, and \
+do not ask questions those cases already answer:
+
+{siblings}
+
 Reusable step groups already saved on this platform. When the request describes a \
 sequence one of these already covers — opening the site and dismissing the login \
 popup, signing in, and so on — emit the single step `call <name>` instead of \
@@ -622,6 +632,55 @@ def _existing_cases_block(platform: str, prompt: str, brief: str, limit: int = 3
         return "  (none related)"
 
 
+def _sibling_cases_block(platform: str, prompt: str, brief: str, limit: int = 3) -> str:
+    """
+    The same feature already automated on ANOTHER platform (the mobile-site
+    360° cases when drafting the website story, and vice versa). Their value is
+    what they cover and what was learnt — the Back control, the data that has
+    the feature, the scope notes — not their elements or URLs, which belong to
+    the other site. Scored like _existing_cases_block, platform inverted, with a
+    strong bonus for a shared Jira key or a matching feature phrase in the name.
+    """
+    try:
+        from config import settings
+
+        flows_dir = settings.FLOWS_DIR
+        words = set(re.findall(r"[a-z]{4,}", (prompt + " " + brief).lower()))
+        keys = set(re.findall(r"\b[A-Z][A-Z0-9]+-\d+\b", prompt + " " + brief))
+        scored = []
+        for fn in os.listdir(flows_dir):
+            if not fn.endswith(".flow") or fn.startswith("_"):
+                continue
+            path = os.path.join(flows_dir, fn)
+            with open(path, "r", encoding="utf-8") as f:
+                text = f.read()
+            head = text[:300].lower()
+            if platform and f"# platform: {platform}" in head:
+                continue                      # same platform: _existing_cases_block has it
+            m = re.search(r"# platform:\s*(\w+)", head)
+            other = m.group(1) if m else "website"
+            body = set(re.findall(r"[a-z]{4,}", (fn + " " + text).lower()))
+            score = len(words & body)
+            if keys & set(re.findall(r"\b[A-Z][A-Z0-9]+-\d+\b", text[:600])):
+                score += 20
+            if score >= 6:
+                scored.append((score, fn[:-5], other, text))
+        scored.sort(reverse=True)
+        out = []
+        for _score, name, other, text in scored[:limit]:
+            lines = text.splitlines()
+            notes = [ln for ln in lines if ln.startswith("#") and len(ln) > 12][:6]
+            steps = [ln for ln in lines if ln.strip() and not ln.startswith("#")]
+            out.append(f"  == {name}  [{other}] ({len(steps)} steps)")
+            out += [f"     {ln}" for ln in notes]
+            out += [f"     {ln}" for ln in steps[:25]]
+            if len(steps) > 25:
+                out.append(f"     … (+{len(steps) - 25} more)")
+        return "\n".join(out) or "  (none)"
+    except Exception:  # noqa: BLE001
+        return "  (none)"
+
+
 def _extend_block(flow_name: str) -> str:
     """A saved test case, in full, that the drafted steps will be appended to."""
     from config import settings
@@ -743,6 +802,7 @@ def draft_testcases(prompt: str, platform: str = "website",
         testdata=_testdata_block(platform),
         environments=_environments_block(platform),
         existing=_existing_cases_block(platform, prompt, brief_text),
+        siblings=_sibling_cases_block(platform, prompt, brief_text),
         stepgroups=group_lines,
     )
 

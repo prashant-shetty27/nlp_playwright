@@ -47,7 +47,7 @@ PROMPT_FILENAME = "draft.json"
 
 
 #: Bump whenever the drafting prompt / context changes shape (see prompt_source.py).
-DRAFTER_VERSION = "2026-10-06.platform-scoped.2"
+DRAFTER_VERSION = "2026-10-06.platform-scoped.3"
 
 
 def prompt_source_id(prompt: str, platform: str = "", max_testcases: int = 0) -> str:
