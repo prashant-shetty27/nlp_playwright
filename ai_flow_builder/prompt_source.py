@@ -111,10 +111,20 @@ listed:
 
 {locators}
 
-TEST DATA ALREADY SAVED (name → what it holds). Reference these as ${{name}} instead \
-of inventing a new variable for the same thing — a saved value needs no typing:
+TEST DATA ALREADY SAVED FOR THIS PLATFORM (name → what it holds). Reference these as \
+${{name}} instead of inventing a new variable for the same thing — a saved value needs \
+no typing. Values of other platforms are not listed and must not be used:
 
 {testdata}
+
+ENVIRONMENTS (test servers) FOR THIS PLATFORM — the names a ticket comment may use \
+("available on staging2", "check on prot4") and the host each one is. A test case \
+never hardcodes a host: it opens www.justdial.com URLs and the run's Environment \
+setting maps them to the server. Mention the environment the ticket names in \
+`assumptions` (e.g. "run with Environment = staging2"), and never pick a server that \
+belongs to another platform:
+
+{environments}
 
 EXISTING TEST CASES on this platform that touch the same feature. Their steps show \
 which elements and patterns already work (auth, API calls, ordering checks). Reuse \
@@ -524,12 +534,28 @@ def _locators_block(platform: str, known: list[str]) -> str:
             else "  (none on file yet — name elements descriptively)")
 
 
-def _testdata_block() -> str:
-    """Saved values by name, masked — enough to reuse, never enough to leak."""
+def _environments_block(platform: str) -> str:
+    """Test servers that belong to this platform (config/environments.json
+    `platforms`), so a Website ticket saying "staging2" is not drafted against a
+    Mobile-Site port like prot3."""
+    try:
+        from config.environment_manager import site_environments
+        envs = site_environments(platform)
+    except Exception:  # noqa: BLE001
+        return "  (none on file)"
+    lines = [f"  {e['name']} → {e['host']}" + ("  (login needed)" if e.get("needs_login") else "")
+             for e in envs]
+    return "\n".join(lines) or "  (none on file)"
+
+
+def _testdata_block(platform: str = "") -> str:
+    """Saved values by name, masked — enough to reuse, never enough to leak.
+    Only this platform's values: a Mobile-Site URL offered to a Website draft
+    sends the whole case to the wrong site."""
     try:
         from execution.test_data import get_all
 
-        rows = get_all("")
+        rows = get_all("", module=platform or None)
     except Exception:  # noqa: BLE001
         return "  (none)"
     def shown(n: str, v: dict) -> str:
@@ -704,7 +730,8 @@ def draft_testcases(prompt: str, platform: str = "website",
         shapes="\n".join(f"  {s}" for s in step_vocabulary()),
         legacy="\n".join(f"  {s}" for s in STEP_SHAPES),
         locators=_locators_block(platform, known),
-        testdata=_testdata_block(),
+        testdata=_testdata_block(platform),
+        environments=_environments_block(platform),
         existing=_existing_cases_block(platform, prompt, brief_text),
         stepgroups=group_lines,
     )

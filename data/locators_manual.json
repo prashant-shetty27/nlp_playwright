@@ -520,7 +520,8 @@
     "otp": {
       "xpath": "//input[@name=\"otp1\"]",
       "dna": {}
-    }
+    },
+    "_platform": "website"
   },
   "core_autosuggest": {
     "_platform": "website",
@@ -1683,7 +1684,8 @@
     "b2b_assist_card_1st": "((//div[contains(@class,'rfq-chat-history')]/div[.//button[starts-with(@aria-label,'Call ')]])[last()]//div[contains(concat(' ',normalize-space(@class),' '),' rfq-product-card ')])[1]",
     "b2b_assist_card_2nd": "((//div[contains(@class,'rfq-chat-history')]/div[.//button[starts-with(@aria-label,'Call ')]])[last()]//div[contains(concat(' ',normalize-space(@class),' '),' rfq-product-card ')])[2]",
     "b2b_assist_card_call_button": "(//div[contains(@class,'rfq-chat-history')]/div[.//button[starts-with(@aria-label,'Call ')]])[last()]//div[contains(concat(' ',normalize-space(@class),' '),' rfq-product-card ')]//button[starts-with(@aria-label,'Call ')]",
-    "b2b_assist_fresh_chat_yes": "//button[normalize-space()='Yes, proceed']"
+    "b2b_assist_fresh_chat_yes": "//button[normalize-space()='Yes, proceed']",
+    "_platform": "mobilesite"
   },
   "b2b_360_match": {
     "pdp_main_image": "(//img[contains(@class,'b2bimgswiper__img')])[1]",
@@ -1709,7 +1711,8 @@
     "gallery_view_more_details_for_product": "//a[contains(@class,'vmDetails')][contains(@href,'pid-${pid}')]",
     "catalogue_looking_for_sheet_skip": "(//div[.//*[starts-with(normalize-space(text()),'Looking for')]]//*[normalize-space(text())='Skip'])[last()]",
     "catalogue_looking_for_sheet_title": "//*[starts-with(normalize-space(text()),'Looking for')]",
-    "catalogue_photo_last_tile": "(//div[contains(@class,'photos_tab_imgcontainer')])[last()]"
+    "catalogue_photo_last_tile": "(//div[contains(@class,'photos_tab_imgcontainer')])[last()]",
+    "_platform": "mobilesite"
   },
   "b2b_assist_restricted_22788": {
     "_platform": "mobilesite",
@@ -1745,6 +1748,7 @@
     "pdp22821_ask_me_anything_fab": "//a[contains(@class,'ai-fab-wrapper')]",
     "pdp22821_whatsapp_login_sheet": "//div[contains(@class,'newlogin lgnpopup')]",
     "pdp22821_login_maybe_later": "//span[contains(text(),'Maybe Later')]",
-    "pdp22821_call_popup_skip": "//div[contains(@class,'popup__cnt--wrp')]//div[contains(@class,'skip_btn')] | //span[contains(@class,'thankyou__cnt-crossicn')]"
+    "pdp22821_call_popup_skip": "//div[contains(@class,'popup__cnt--wrp')]//div[contains(@class,'skip_btn')] | //span[contains(@class,'thankyou__cnt-crossicn')]",
+    "_platform": "mobilesite"
   }
 }
