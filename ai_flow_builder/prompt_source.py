@@ -139,7 +139,10 @@ control they use, scope notes in their comments ("not to be done"), the listing 
 data that has the feature, negative cases that turned out to need other data. Do NOT \
 reuse their element names, step groups or ${{…}} values: those belong to the other \
 site. Cover at least the same ground here, with this platform's own elements, and \
-do not ask questions those cases already answer:
+do not ask questions those cases already answer. USE THE SAME LISTING / SELLER / \
+PRODUCT they test (same docid or pid) in this platform's own URL form, so both \
+platforms are verified on the same data — and put that URL in `values_found` so it \
+is saved as test data, never invent a different listing:
 
 {siblings}
 
