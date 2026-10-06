@@ -2814,5 +2814,24 @@
     "created_at": "2026-10-06T09:00:00+00:00",
     "step_count": 6,
     "note": "Same as SG_NCT_Scroll_To_Send_Enquiry_Skipping_Job_Sheet but for the Get Best Price CTA that replaced Send Enquiry on company cards (GJDT-22177)."
+  },
+  "SG_22821_Login_Genuine_Number": {
+    "steps": [
+      "wait 2 seconds",
+      "if element rfq_mobile_number_input is not visible",
+      "click touch_signin_home_page",
+      "click touch_contextual_signin",
+      "end if",
+      "wait until element rfq_mobile_number_input is visible",
+      "type \"${mobile_9324}\" into rfq_mobile_number_input",
+      "js click allpages_login_mobile_continue",
+      "wait until element touch_home_otp_1stfield is visible",
+      "type \"${otp}\" into touch_home_otp_1stfield",
+      "wait 2 seconds"
+    ],
+    "created_at": "2026-10-06T13:40:00+00:00",
+    "step_count": 11,
+    "platform": "mobilesite",
+    "note": "GJDT-22821: login with the genuine lead number ${mobile_9324} (real leads allowed on prot4)."
   }
 }
