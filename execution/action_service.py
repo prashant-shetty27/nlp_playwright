@@ -1440,44 +1440,64 @@ def _finger_scroll_to(page, loc, max_swipes: int = 25) -> bool:
 
 
 #: Classes that mean "content is still coming": spinners, loaders, skeleton shimmers.
-_BUSY_JS = r"""() => {
+_BUSY_JS = r"""(ignore) => {
+  // Returns '' when no loader is on screen, else the signature (tag.class) of
+  // the loader that is — so a loader that never goes away can be remembered
+  // and not waited for again on this page.
   const rx = /(^|[\s_-])(loader|loading|spinner|spin|shimmer|skeleton|progress)([\s_-]|$)/i;
   const vh = window.innerHeight, vw = window.innerWidth;
+  const skip = new Set(ignore || []);
   for (const el of document.querySelectorAll('[class*="load"],[class*="spin"],[class*="shimmer"],[class*="skeleton"],[role="progressbar"],[aria-busy="true"]')) {
     const c = (typeof el.className === 'string' ? el.className : (el.getAttribute('class') || ''));
     if (!(rx.test(c) || el.getAttribute('role') === 'progressbar' || el.getAttribute('aria-busy') === 'true')) continue;
+    const sig = el.tagName.toLowerCase() + '.' + c.trim().split(/\s+/).join('.');
+    if (skip.has(sig)) continue;
     const r = el.getBoundingClientRect();
     if (r.width < 8 || r.height < 8 || r.bottom < 0 || r.top > vh || r.right < 0 || r.left > vw) continue;
     const st = getComputedStyle(el);
     if (st.visibility === 'hidden' || st.display === 'none' || parseFloat(st.opacity) === 0) continue;
-    return false;
+    return sig;
   }
-  return true;
+  return '';
 }"""
+
+#: Loaders that stayed on screen for a whole settle budget, per page: they are
+#: decorative / permanent (a shimmer placeholder that never fills, an always-on
+#: progress bar), so later scrolls on that page do not wait for them again.
+_STUCK_LOADERS: dict = {}
 
 
 def _settle_after_scroll(page, max_ms: int | None = None) -> None:
     """
-    After a scroll or swipe: wait until no loader / spinner / skeleton is on
-    screen and the network is quiet — content loaded by the scroll (infinite
-    lists, lazy sections) is in place before the next step looks at the page.
-    Condition-based, bounded (SCROLL_SETTLE_MS, default 8 s), never fails a step.
+    After a scroll or swipe: if (and only if) a loader / spinner / skeleton is
+    on screen, wait for it to go — content loaded by the scroll (infinite lists,
+    lazy sections) is then in place before the next step looks at the page.
+    No loader → no wait at all. A loader that is still there when the budget
+    (SCROLL_SETTLE_MS) runs out is remembered for this page and never waited
+    for again: a permanent shimmer used to cost the full budget on EVERY scroll
+    (49 s to reach a PDP footer). Never fails a step.
     """
     budget = int(max_ms if max_ms is not None else settings.live("scroll_settle_ms", settings.SCROLL_SETTLE_MS))
     if budget <= 0:
         return
+    key = id(page)
+    stuck = _STUCK_LOADERS.setdefault(key, [])
+    try:
+        page.wait_for_timeout(120)            # let the scroll fire its lazy-load request
+        sig = page.evaluate(_BUSY_JS, stuck)
+    except Exception:  # noqa: BLE001
+        return
+    if not sig:
+        return                                # nothing loading — carry on at once
     started = time.perf_counter()
     try:
-        page.wait_for_timeout(150)            # let the scroll fire its lazy-load request
-        page.wait_for_function(_BUSY_JS, timeout=budget)
-    except Exception:  # noqa: BLE001 — still loading at the budget: carry on, the next step decides
-        logger.info("⏳ A loader was still on screen after %d ms of scrolling settle", budget)
-    left = budget - int((time.perf_counter() - started) * 1000)
-    if left > 0:
-        try:
-            page.wait_for_load_state("networkidle", timeout=min(left, 2500))
-        except Exception:  # noqa: BLE001
-            pass
+        page.wait_for_function(f"(ig) => ({_BUSY_JS})(ig) === ''", arg=stuck, timeout=budget)
+        logger.info("⏳ Waited %.1f s for a loader (%s) to clear after scrolling",
+                    time.perf_counter() - started, sig[:60])
+    except Exception:  # noqa: BLE001
+        stuck.append(sig)
+        logger.info("⏳ Loader '%s' stayed on screen for %d ms — treated as permanent on this page, "
+                    "not waited for again", sig[:60], budget)
 
 def _scroll_by(page, dx, dy) -> None:
     """Every "scroll by N" goes through here: finger drag on a phone page,
