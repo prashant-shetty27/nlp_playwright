@@ -194,8 +194,14 @@ def draft_from_prompt(body: PromptRequest):
         from ai_flow_builder.jira_source import find_keys
         keys = set(find_keys(text))
         if keys and not body.extend_flow:      # extending a case: the case is the baseline
+            from ai_flow_builder.storage import DRAFTER_VERSION
             for rec in default_store.list():
                 if rec.kind != "prompt" or not (set(k.get("key") for k in rec.extra.get("jira", [])) & keys):
+                    continue
+                # Only a draft made for THIS platform under the CURRENT rules is a
+                # usable baseline: an old one would be carried over verbatim
+                # (that is how a Website draft kept Mobile-Site URLs and elements).
+                if rec.extra.get("platform") != platform or rec.extra.get("drafter_version") != DRAFTER_VERSION:
                     continue
                 with open(rec.path, "r", encoding="utf-8") as f:
                     previous = (json.load(f) or {}).get("draft")
