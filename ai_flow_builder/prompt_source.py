@@ -632,7 +632,7 @@ def _existing_cases_block(platform: str, prompt: str, brief: str, limit: int = 3
         return "  (none related)"
 
 
-def _sibling_cases_block(platform: str, prompt: str, brief: str, limit: int = 3) -> str:
+def _sibling_cases_block(platform: str, prompt: str, brief: str, limit: int = 4) -> str:
     """
     The same feature already automated on ANOTHER platform (the mobile-site
     360° cases when drafting the website story, and vice versa). Their value is
@@ -663,6 +663,13 @@ def _sibling_cases_block(platform: str, prompt: str, brief: str, limit: int = 3)
             score = len(words & body)
             if keys & set(re.findall(r"\b[A-Z][A-Z0-9]+-\d+\b", text[:600])):
                 score += 20
+            # The case NAME is the strongest signal: a sibling named after the
+            # feature (Photos_360_Icon_After_Back) beats a long journey case
+            # that merely mentions the same words in its steps.
+            name_words = set(re.findall(r"[a-z0-9]{3,}", fn[:-5].lower()))
+            score += 4 * len(words & name_words)
+            # Short, single-purpose cases describe the acceptance criteria best.
+            score -= len(text) // 4000
             if score >= 6:
                 scored.append((score, fn[:-5], other, text))
         scored.sort(reverse=True)
