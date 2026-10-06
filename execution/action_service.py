@@ -390,6 +390,26 @@ def open_site(page, url: str):
                            f"{_reachability_hint(parsed_url.hostname or '')}"
                            f"Details: {detail}")
     _raise_if_blocked(page, safe_url)
+    _raise_if_left_env(page, safe_url)
+
+
+def _raise_if_left_env(page, safe_url: str) -> None:
+    """Environment = staging2 / prot3 … but the server bounced the page back to
+    live (a non-canonical URL on staging2 302s to www.justdial.com?via=old).
+    Without this the rest of the test silently ran on production."""
+    if not SITE_ENV or not SITE_ENV.get("host"):
+        return
+    from urllib.parse import urlparse
+    try:
+        now = (urlparse(page.url).hostname or "").lower()
+    except Exception:  # noqa: BLE001
+        return
+    if now and now != SITE_ENV["host"].lower() and now in _PROD_HOSTS:
+        raise RuntimeError(
+            f"Environment {SITE_ENV.get('name')} redirected this page to {now} "
+            f"({page.url}). The test would have run on live, not on {SITE_ENV['host']}. "
+            f"Usually the URL is not the listing's canonical one (missing slug / "
+            f"_XXXX suffix) — use the exact URL {SITE_ENV.get('name')} serves.")
 
 
 def _raise_if_blocked(page, safe_url: str) -> None:
