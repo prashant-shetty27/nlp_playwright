@@ -433,6 +433,30 @@ def _visible_match(loc):
     return loc.first
 
 
+def _why(err: BaseException) -> str:
+    """The useful first line of a Playwright error — 'Timeout 5000ms exceeded',
+    'element is not visible', 'intercepts pointer events' — so a failure says
+    what the browser saw instead of a generic 'element broken'."""
+    msg = str(err).strip().splitlines()
+    head = msg[0] if msg else err.__class__.__name__
+    for line in msg[1:8]:
+        line = line.strip(" -")
+        if any(k in line for k in ("intercepts pointer", "not visible", "not stable", "detached",
+                                   "outside of the viewport", "disabled", "retrying")):
+            head += f" — {line}"
+            break
+    return head[:220]
+
+
+def _action_timeout() -> int:
+    """Element timeout from Settings → Execution defaults (action_timeout_ms).
+    Clicks and fills used a fixed 5 s, which a page that is slow to respond to
+    touch (VPN, 4 parallel lanes) blew through while the element was plainly on
+    screen — and the failure then read 'element broken'."""
+    from config import settings as _s
+    return int(_s.live("action_timeout_ms", 15000))
+
+
 def click_element(page, locator_name):
     primary_xpath, dna = _resolve_live(page, locator_name)
 
@@ -451,10 +475,12 @@ def click_element(page, locator_name):
             target.focus(timeout=5000)
             logger.info("✅ '%s' is a dropdown — focused (use 'select option' to pick).", locator_name)
             return
-        target.click(timeout=5000)
+        target.click(timeout=_action_timeout())
         logger.info("✅ Click successful.")
         _stabilize_page(page)
-    except (PlaywrightTimeoutError, PlaywrightError):
+    except (PlaywrightTimeoutError, PlaywrightError) as click_err:
+        why = _why(click_err)
+        logger.warning("⚠️ Click on '%s' failed: %s", locator_name, why)
         # ── Second chance: innerText exact-text locator ───────────────────────
         inner_text = (dna or {}).get("innerText", "") if dna else ""
         inner_text = (inner_text or "").strip()
@@ -472,14 +498,14 @@ def click_element(page, locator_name):
 
         # ── Third chance: ML self-healer ──────────────────────────────────────
         if not dna:
-            raise Exception(f"Element broken and no ML DNA available: {locator_name}")
+            raise Exception(f"Could not click '{locator_name}': {why}")
         try:
             healed_xpath = ml_heal_element(page, dna, locator_name)
         except Exception as ml_err:
             raise Exception(f"Self-healing match failed: {ml_err}")
 
         if healed_xpath:
-            _get_locator_root(page).locator(healed_xpath).first.click(timeout=5000)
+            _get_locator_root(page).locator(healed_xpath).first.click(timeout=_action_timeout())
             confirm_heal(locator_name)
             logger.info(f"🏥 Successfully healed and clicked '{locator_name}' via {healed_xpath}")
             _stabilize_page(page)
@@ -539,7 +565,7 @@ def fill_element(page, text, locator_name):
             return True
 
         try:
-            loc.fill(want, timeout=3000)
+            loc.fill(want, timeout=_action_timeout())
             if landed():
                 return True
             logger.warning("⚠️  fill() left '%s' holding %r — retyping as keystrokes.",
@@ -556,7 +582,7 @@ def fill_element(page, text, locator_name):
         # field is empty.
         try:
             loc.click(timeout=2000)
-            loc.press_sequentially(want, delay=20, timeout=5000)
+            loc.press_sequentially(want, delay=20, timeout=_action_timeout())
             if landed():
                 return True
         except PlaywrightError as e:
@@ -592,10 +618,11 @@ def fill_element(page, text, locator_name):
         execute_robust_fill(primary_xpath)
         logger.info("✅ Fill successful.")
         _stabilize_page(page)
-    except (PlaywrightTimeoutError, PlaywrightError):
-        logger.warning("⚠️ Primary input failed. Triggering ML Healer...")
+    except (PlaywrightTimeoutError, PlaywrightError) as fill_err:
+        why = _why(fill_err)
+        logger.warning("⚠️ Typing into '%s' failed: %s. Triggering ML Healer...", locator_name, why)
         if not dna:
-            raise Exception(f"Element broken and no ML DNA available to heal: {locator_name}")
+            raise Exception(f"Could not type into '{locator_name}': {why}")
         try:
             healed_xpath = ml_heal_element(page, dna, locator_name)
         except Exception as ml_err:
@@ -1042,7 +1069,7 @@ def verify_global_exact_text(page, text: str, ignore_case=False, exact_match=Fal
     # The text must be SHOWN somewhere. `.first` alone picked the first match in
     # the DOM, often a copy in a closed menu or filter sheet, and failed while
     # the same text was plainly on screen.
-    expect(loc.filter(visible=True).first).to_be_visible(timeout=5000)
+    expect(loc.filter(visible=True).first).to_be_visible(timeout=_action_timeout())
     logger.info(f"Global {match_mode.lower()} match confirmed.")
 
 
@@ -1053,7 +1080,7 @@ def verify_element_exact_text(page, locator_name, expected_text, ignore_case=Fal
         f"(Ignore Case: {ignore_casing})"
     )
     loc = _get_healed_element_locator(page, locator_name)
-    expect(loc).to_have_text(str(expected_text), ignore_case=ignore_casing, timeout=5000)
+    expect(loc).to_have_text(str(expected_text), ignore_case=ignore_casing, timeout=_action_timeout())
     logger.info("Element exact match confirmed.")
 
 
@@ -1064,7 +1091,7 @@ def verify_element_contains_text(page, locator_name, partial_text, ignore_case=F
         f"(Ignore Case: {ignore_casing})"
     )
     loc = _get_healed_element_locator(page, locator_name)
-    expect(loc).to_contain_text(str(partial_text), ignore_case=ignore_casing, timeout=5000)
+    expect(loc).to_contain_text(str(partial_text), ignore_case=ignore_casing, timeout=_action_timeout())
     logger.info("Element partial match confirmed.")
 
 
@@ -1080,7 +1107,7 @@ def verify_multiple_global_texts(page, comma_separated_texts: str, ignore_case=F
                 loc = page.get_by_text(re.compile(re.escape(text), re.IGNORECASE)).first
             else:
                 loc = page.get_by_text(text, exact=False).first
-            expect(loc).to_be_visible(timeout=5000)
+            expect(loc).to_be_visible(timeout=_action_timeout())
             logger.info(f"Found: '{text}'")
         except AssertionError:
             raise Exception(f"Verification Failed: Could not find '{text}' on the page.")
@@ -1768,7 +1795,7 @@ def scroll_until_element_visible(page, target: str, pixels=None, direction="down
             if _is_touch_page(page):
                 _finger_scroll_to(page, loc)
             else:
-                loc.scroll_into_view_if_needed(timeout=5000)
+                loc.scroll_into_view_if_needed(timeout=_action_timeout())
         except Exception:  # noqa: BLE001
             return False
         _settle_after_scroll(page)
