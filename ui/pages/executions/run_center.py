@@ -295,6 +295,10 @@ class RunCenter:
                         "step is attempted — misleading for anything that submits a form.")
                 self.record_video = ui.switch("Record video", value=False).props("dense") \
                     .tooltip("Saves a .webm under Reports → Video — for a re-run to attach to a ticket.")
+                self.ai_capture = ui.switch("Record missing elements with AI", value=True).props("dense") \
+                    .tooltip("An element the test names but nobody recorded is recorded from the page the "
+                             "step is on (the model picks the node, the locator is validated and saved under "
+                             "Elements with the platform tag). Off: the step fails as 'not found'.")
             with ui.row().classes("w-full items-start no-wrap gap-2"):
                 self.shot_mode = ui.select(
                     {"all": "Screenshot every step",
@@ -705,6 +709,7 @@ class RunCenter:
                     browser_identity=ident,
                     site_env=(getattr(self, "site_env", None) and self.site_env.value) or "",
                     run_type=(getattr(self, "run_type", None) and self.run_type.value) or "",
+                    ai_capture=bool(getattr(self, "ai_capture", None) is None or self.ai_capture.value),
                 )
             except api.ApiError as e:
                 ui.notify(f"Could not start ({ident or 'default'}): {e.detail}", type="negative")

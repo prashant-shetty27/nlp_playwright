@@ -142,6 +142,10 @@ class RunRequest(BaseModel):
     screenshot_mode: str = "all"
     #: For screenshot_mode="failure": how many steps BEFORE the failure to keep.
     screenshot_context: int = 5
+    #: Record elements the test names but nobody has recorded yet, from the page
+    #: the step is on (locators/ai_capture.py). On by default: a drafted case
+    #: runs end to end on its first try instead of stopping at its first element.
+    ai_capture: bool = True
     #: Record the whole browser session as a .webm (data/videos/completed/).
     #: Off by default — a video per run is heavy; switch it on for a re-run that
     #: is meant to be attached to a ticket.
@@ -219,7 +223,8 @@ def _run_flow_sync_unlocked(run_id: str, flow_path: str, headless: bool,
                    stop_on_failure: bool = True,
                    screenshot_mode: str = "all",
                    screenshot_context: int = 5,
-                   run_type: str = "") -> dict:
+                   run_type: str = "",
+                   ai_capture: bool = True) -> dict:
     """
     Runs the NLP flow in a thread, captures step results,
     persists a JSON report, and returns the summary dict.
@@ -380,6 +385,14 @@ def _run_flow_sync_unlocked(run_id: str, flow_path: str, headless: bool,
         timing["capture_s"] += time.perf_counter() - t
     _gt.set_capture(_capture_inner)
 
+    # Elements the test names but nobody recorded: recorded by the model from
+    # the live page when the step reaches them (per-feature group, platform tag).
+    from locators import ai_capture as _aic
+    if ai_capture:
+        _aic.enable(_svc.RUN_PLATFORM, project_name)
+    else:
+        _aic.disable()
+
     try:
         page = open_browser(session, capabilities=capabilities or None)
         if _svc.SITE_ENV:
@@ -532,6 +545,7 @@ def _run_flow_sync_unlocked(run_id: str, flow_path: str, headless: bool,
         # Before the browser closes: in failure mode this deletes the rolling
         # window that no failure ever claimed.
         _gt.clear_capture()
+        _aic.disable()
         shots.finish()
         _svc.SITE_ENV = None
         if page is not None:
@@ -819,6 +833,7 @@ def _start_run_thread(run_id: str, flow_path: str, body: RunRequest, caps: dict,
             "stop_on_failure": getattr(body, "stop_on_failure", True),
             "screenshot_mode": getattr(body, "screenshot_mode", "all"),
             "screenshot_context": getattr(body, "screenshot_context", 5),
+            "ai_capture": bool(getattr(body, "ai_capture", True)),
             "triggered_by": triggered_by,
             "run_type": getattr(body, "run_type", "") or "",
         },

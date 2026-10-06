@@ -447,6 +447,11 @@ def _interpret_core(step: str, page):
     """Pre-processes variables, then parses and executes one NLP step."""
     normalized = step.strip()
     logger.info("👉 Interpreting: %s", normalized)
+    try:
+        from locators import ai_capture as _aic
+        _aic.set_step(normalized)          # the step text helps the model pick the node
+    except Exception:  # noqa: BLE001
+        pass
 
     # Apply active environment domain replacement to URL steps
     try:

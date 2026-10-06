@@ -494,8 +494,10 @@ async def run(project: str, platform: str, *, headless: bool = True,
         record_video: bool = False,
         browser_identity: str = "",
         site_env: str = "",
-        run_type: str = "") -> dict:
+        run_type: str = "",
+        ai_capture: bool = True) -> dict:
     return await _call("POST", "/tests/run", json={
+        "ai_capture": bool(ai_capture),
         "site_env": site_env or "",
         "run_type": run_type or "",
         "record_video": bool(record_video),

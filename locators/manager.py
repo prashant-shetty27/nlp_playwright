@@ -209,6 +209,19 @@ def get_locator_and_dna(locator_name: str) -> tuple:
     """Locator for a name, with any ${value} in it filled in (e.g. `[${round}]`
     inside a `repeat` block) — every step type gets the same resolved XPath."""
     xpath, dna = _get_locator_and_dna_raw(locator_name)
+    if not xpath:
+        # Never recorded: when the run has "Record missing elements with AI"
+        # on, record it now from the page the step is looking at.
+        try:
+            from locators import ai_capture
+            if ai_capture.active():
+                from execution.action_service import _TEST_SESSION
+                page = _TEST_SESSION.active_page
+                got = ai_capture.capture(page, locator_name)
+                if got:
+                    xpath, dna = got
+        except Exception as e:  # noqa: BLE001 — a failed recording is just "not found"
+            logger.debug("AI capture skipped for %s: %s", locator_name, e)
     if isinstance(xpath, str) and "${" in xpath:
         try:
             from nlp.variable_manager import resolve_variables
