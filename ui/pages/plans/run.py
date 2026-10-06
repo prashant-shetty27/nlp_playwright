@@ -285,6 +285,14 @@ class PlanRunPage:
                     n_re = len(r["rerun_history"])
                     muted(f"Failed cases re-run {n_re}× (last {ist(r['rerun_history'][-1].get('at'), '%d %b %H:%M')} by "
                           f"{r['rerun_history'][-1].get('by') or '—'}) — one report: first pass + re-run outcome")
+                if r.get("disabled"):
+                    dis = r["disabled"]
+                    with ui.expansion(f"{len(dis)} test case(s) disabled on the suite — not run",
+                                      icon="pause_circle").props("dense").classes("w-full") \
+                            .style(f"font-size:{TYPOGRAPHY['size_sm']}"):
+                        for x in dis:
+                            muted(f"{x.get('test_case', '')} — {x.get('reason', '')} "
+                                  f"({x.get('by', '')} {ist(x.get('since'), '%d %b')})")
                 muted(f"Run {r.get('id')} · {trig} · by {r.get('triggered_by') or '—'} · "
                       f"started {ist(r.get('started_at') or r.get('queued_at'), '%d %b %Y %H:%M:%S')}"
                       + (f" · finished {ist(r.get('finished_at'), '%H:%M:%S')}" if r.get("finished_at") else ""))

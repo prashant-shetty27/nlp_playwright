@@ -6,8 +6,9 @@
 
 # OFF: call Live_Touch_Chrome_Navigate_to_Homepage_setup_Popup
 # OFF: open https://rt_D3v3l0pm3nT@designtest.justdial.com/
-# Live 06-Oct-2026: JDMart search no longer suggests the seller "Baldev Engineering" (only categories) — known issue KI-013. The catalogue is opened directly until search-by-seller is back.
-open https://www.justdial.com/Navi-Mumbai/Baldev-Engineering-Nerul/022PXX22-XX22-131219124833-X3Z1_BZDET
+# 06-Oct-2026: seller search works when typing "baldev engineering" (the earlier "… nerul" text gave no seller) — search path restored.
+call SG_Supplier_Search_Flow_Baldev
+# OFF (fallback if seller search breaks again): open https://www.justdial.com/Navi-Mumbai/Baldev-Engineering-Nerul/022PXX22-XX22-131219124833-X3Z1_BZDET
 click if visible catalogue_skip_bd_category_pop
 call SG_Catalogue_Page_Card_Section
 call SG_Catalogue_Page_Timings_Sections

@@ -1,0 +1,17 @@
+{
+  "created_by": "prashantshetty",
+  "created_at": "2026-10-06T08:46:06+00:00",
+  "_format": 2,
+  "suite_name": "B2B mobilesite — VPN only (internal APIs)",
+  "description": "Cases whose API bands call internal hosts (192.168.x) — run with the VPN ON. Live-site-only cases stay in b2b_mobilesite_regression (VPN OFF).",
+  "platform": "mobilesite",
+  "scripts": [
+    "flows/Nct_Recommended_Products_For_You_Newlogic.flow"
+  ],
+  "updated_by": "prashantshetty",
+  "updated_at": "2026-10-06T08:46:06+00:00",
+  "execution": {
+    "stop_on_failure": false
+  },
+  "disabled": []
+}

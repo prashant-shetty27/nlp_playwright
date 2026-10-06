@@ -1,0 +1,39 @@
+{
+  "created_by": "prashantshetty",
+  "created_at": "2026-10-06T08:46:19+00:00",
+  "_format": 2,
+  "plan_name": "b2b_touch_vpn",
+  "description": "Run with the VPN ON: cases that call internal APIs (192.168.x). The main b2b_touch plan runs with the VPN OFF.",
+  "platform": "mobilesite",
+  "selected_suites": [
+    "suites/b2b_mobilesite_vpn_only_internal_apis.json"
+  ],
+  "execution": {
+    "headless": false,
+    "retry_failed": true,
+    "retry_mode": "flaky",
+    "run_type": "full",
+    "screenshot_mode": "all",
+    "stop_on_failure": false,
+    "stop_on_first_failure": false,
+    "devices": [
+      {
+        "label": "Chrome on Android (Pixel 7) — full suite",
+        "device_name": "Pixel 7",
+        "browser": "chromium",
+        "browser_identity": "android_chrome",
+        "coverage": "full"
+      }
+    ],
+    "site_env": "",
+    "parallel": 1
+  },
+  "schedule": {},
+  "notify": {
+    "slack": true,
+    "channel": "C0AAP4882H4",
+    "when": "always"
+  },
+  "updated_by": "prashantshetty",
+  "updated_at": "2026-10-06T08:46:19+00:00"
+}

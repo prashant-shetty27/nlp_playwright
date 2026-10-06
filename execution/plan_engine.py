@@ -247,9 +247,12 @@ def start(plan_id: str, *, trigger: str = "manual", user: str = "", run_type: st
     if os.path.exists(_path(run_id)):          # double-click / schedule in the same second
         run_id += "_" + datetime.now(timezone.utc).strftime("%f")
     items = []
+    disabled = []          # cases kept on a suite but switched off, shown on the report
     for s in plan["suites"]:
         try:
             suite = suites.get(s["id"])
+            for x in suite.get("disabled") or []:
+                disabled.append({"suite": s["name"], "suite_id": s["id"], **x})
         except suites.SuiteError:
             items.append({"suite": s["name"], "suite_id": s["id"], "test_case": "(missing suite)",
                           "status": "not_run", "reason": "suite no longer exists"})
@@ -299,6 +302,7 @@ def start(plan_id: str, *, trigger: str = "manual", user: str = "", run_type: st
            "trigger": trigger, "triggered_by": user or ("scheduler" if trigger == "schedule" else "system"),
            "status": "queued", "queued_at": _now(), "started_at": "", "finished_at": "",
            "execution": execution, "run_type": rt, "notify": plan["notify"], "items": items,
+           "disabled": disabled,
            "totals": {"test_cases": len(items), "passed": 0, "failed": 0, "not_run": 0}}
     _save(rec)
     threading.Thread(target=_execute, args=(rec,), name=f"plan-{run_id}", daemon=True).start()
@@ -314,7 +318,35 @@ def rerun_failed(run_id: str, *, user: str = "") -> dict:
     if rec.get("status") in ("running", "queued"):
         raise ValueError("This run is still going.")
     redo = 0
+    off, gone = {}, set()
+    for sid in {it.get("suite_id") for it in rec.get("items") or [] if it.get("suite_id")}:
+        try:
+            sv = suites.get(sid)
+        except suites.SuiteError:
+            continue
+        for x in sv.get("disabled") or []:
+            off[(sid, x.get("test_case"))] = x
+        now_on = {tc["name"] for tc in sv.get("test_cases") or []}
+        for it in rec.get("items") or []:
+            if it.get("suite_id") == sid and it.get("test_case") not in now_on \
+                    and (sid, it.get("test_case")) not in off:
+                gone.add((sid, it.get("test_case")))
+                off[(sid, it.get("test_case"))] = {"test_case": it.get("test_case"),
+                                                   "reason": "removed from the suite after the first pass"}
+    rec["disabled"] = [{"suite_id": k[0], **x} for k, x in off.items() if k not in gone]
     for it in rec.get("items") or []:
+        if it.get("status") in ("failed", "not_run") and not it.get("out_of_scope") \
+                and (it.get("suite_id"), it.get("test_case")) in off:
+            x = off[(it.get("suite_id"), it.get("test_case"))]
+            it.setdefault("reruns", []).append({
+                "status": it.get("status"), "run_id": it.get("run_id", ""),
+                "first_failure": it.get("first_failure") or it.get("reason", ""),
+                "finished_at": it.get("finished_at", ""), "duration_s": it.get("duration_s")})
+            it["status"] = "not_run"
+            it["out_of_scope"] = True
+            it["reason"] = (x["reason"] if (it.get("suite_id"), it.get("test_case")) in gone
+                            else f"disabled on the suite: {x.get('reason', '')}")
+            continue
         if it.get("status") in ("failed", "not_run") and not it.get("out_of_scope"):
             it.setdefault("reruns", []).append({
                 "status": it.get("status"), "run_id": it.get("run_id", ""),

@@ -1,0 +1,8 @@
+{
+  "_note": "Jira project keys per module. Tickets for a module are not all in one project: mobilesite uses GJDT, website / android app / ios app / API tasks have their own projects. Fill the keys in (comma-free, as on Jira) — the Known-issues Jira search pre-fills 'project in (...)' from here and the coverage review uses it to look tickets up for the right module.",
+  "mobilesite": ["GJDT"],
+  "website": [],
+  "android": [],
+  "ios": [],
+  "api": []
+}

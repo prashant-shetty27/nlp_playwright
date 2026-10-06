@@ -128,7 +128,8 @@ async def render_edit(suite_id: str = "", module: str = "") -> None:
             ui.label(e.detail).style(f"color:{COLORS['danger']}")
             return
     writable = can("write")
-    state = {"cases": [c["name"] for c in data.get("test_cases", [])], "picked": set()}
+    state = {"cases": [c["name"] for c in data.get("test_cases", [])], "picked": set(),
+             "disabled": list(data.get("disabled") or [])}
 
     with ui.column().classes("w-full gap-3 p-4").style("max-width:60rem"):
         with ui.row().classes("w-full items-center"):
@@ -150,6 +151,8 @@ async def render_edit(suite_id: str = "", module: str = "") -> None:
             bulk = ui.row().classes("items-center gap-2")
         box = ui.column().classes("w-full gap-0").style(
             f"border:1px solid {COLORS['border']}; border-radius:6px")
+        dbox = ui.column().classes("w-full gap-0").style(
+            f"border:1px dashed {COLORS['warning']}; border-radius:6px; background:{COLORS['surface']}")
         # Add several at once: tick test cases, or pick whole folders (PDP, PRP …,
         # sub-folders included) — added in name order after the ones already here.
         with ui.row().classes("w-full items-center gap-2").style("flex-wrap:wrap"):
@@ -168,7 +171,9 @@ async def render_edit(suite_id: str = "", module: str = "") -> None:
             except api.ApiError:
                 names = []
             names = [n if isinstance(n, str) else n.get("name", "") for n in names]
-            names = [n for n in names if n and not n.startswith("_") and n not in state["cases"]]
+            off = {x.get("test_case") for x in state["disabled"]}
+            names = [n for n in names if n and not n.startswith("_") and n not in state["cases"]
+                     and n not in off]
             picker.set_options(names, value=[v for v in (picker.value or []) if v in names])
             try:
                 fd = await api.folders(plat.value or "")
@@ -194,6 +199,11 @@ async def render_edit(suite_id: str = "", module: str = "") -> None:
                 ui.button(f"Remove {len(state['picked'])} selected", icon="playlist_remove",
                           on_click=remove_picked) \
                     .props("flat dense color=negative").set_enabled(bool(state["picked"]))
+                if suite_id:
+                    ui.button(f"Disable {len(state['picked'])} selected", icon="pause_circle",
+                              on_click=lambda: ask_disable(sorted(state["picked"]))) \
+                        .props("flat dense color=warning").set_enabled(bool(state["picked"])) \
+                        .tooltip("Keep on the suite but out of execution, with a reason (saved at once)")
 
         async def remove_picked() -> None:
             state["cases"] = [c for c in state["cases"] if c not in state["picked"]]
@@ -228,8 +238,80 @@ async def render_edit(suite_id: str = "", module: str = "") -> None:
                                 .props("flat dense size=sm").set_enabled(i > 0)
                             ui.button(icon="keyboard_arrow_down", on_click=lambda i=i: move(i, 1)) \
                                 .props("flat dense size=sm").set_enabled(i < len(state["cases"]) - 1)
+                            if suite_id:
+                                ui.button(icon="pause_circle", on_click=lambda c=c: ask_disable([c])) \
+                                    .props("flat dense size=sm color=warning") \
+                                    .tooltip("Disable: keep on the suite but skip in execution (needs a reason)")
                             ui.button(icon="close", on_click=lambda i=i: remove(i)) \
                                 .props("flat dense size=sm color=negative").tooltip("Remove from suite")
+            draw_disabled()
+
+        def draw_disabled() -> None:
+            dbox.clear()
+            dis = state["disabled"]
+            if not dis:
+                dbox.set_visibility(False)
+                return
+            dbox.set_visibility(True)
+            with dbox:
+                ui.label(f"Disabled ({len(dis)}) — kept on the suite, skipped in every plan run") \
+                    .style(f"font-weight:{TYPOGRAPHY['weight_bold']}; padding:8px 10px 2px")
+                for x in dis:
+                    with ui.row().classes("w-full items-center gap-2 no-wrap").style(
+                            f"padding:4px 10px; border-top:1px solid {COLORS['border']}"):
+                        ui.icon("pause_circle").style(f"color:{COLORS['warning']}")
+                        with ui.column().classes("flex-grow gap-0"):
+                            ui.label(x.get("test_case", "")).style(
+                                f"font-family:{TYPOGRAPHY['mono']}; font-size:{TYPOGRAPHY['size_sm']}")
+                            muted(f"{x.get('reason', '')} · {x.get('by', '')} {ist(x.get('since'))}")
+                        ui.button(icon="open_in_new", on_click=lambda c=x.get("test_case", ""): ui.navigate.to(
+                            f"/platform/{plat.value}?flow={quote(c)}")).props("flat dense size=sm") \
+                            .tooltip("Open the test case")
+                        if writable:
+                            ui.button("Enable", icon="play_circle",
+                                      on_click=lambda c=x.get("test_case", ""): do_enable([c])) \
+                                .props("flat dense size=sm color=positive")
+
+        def ask_disable(cases: list[str]) -> None:
+            if not cases:
+                return
+            with ui.dialog() as dlg, ui.card().style("min-width:28rem"):
+                ui.label(f"Disable {len(cases)} test case(s)").style(
+                    f"font-weight:{TYPOGRAPHY['weight_bold']}")
+                muted("Kept on the suite and shown with this reason; every plan using the suite skips "
+                      "them until you press Enable. Saved immediately.")
+                reason = ui.textarea("Reason (required)").props("outlined dense autogrow").classes("w-full")
+
+                async def go() -> None:
+                    try:
+                        res = await api.disable_suite_cases(suite_id, cases, reason.value or "")
+                    except api.ApiError as e:
+                        ui.notify(e.detail, type="negative", timeout=8000)
+                        return
+                    dlg.close()
+                    state["cases"] = [c["name"] for c in res.get("test_cases", [])]
+                    state["disabled"] = res.get("disabled", [])
+                    state["picked"].clear()
+                    draw()
+                    await load_choices()
+                    ui.notify(f"Disabled {len(cases)} test case(s)", type="positive")
+
+                with ui.row().classes("w-full justify-end gap-2"):
+                    ui.button("Cancel", on_click=dlg.close).props("flat")
+                    ui.button("Disable", icon="pause_circle", on_click=go).props("unelevated color=warning")
+            dlg.open()
+
+        async def do_enable(cases: list[str]) -> None:
+            try:
+                res = await api.enable_suite_cases(suite_id, cases)
+            except api.ApiError as e:
+                ui.notify(e.detail, type="negative", timeout=8000)
+                return
+            state["cases"] = [c["name"] for c in res.get("test_cases", [])]
+            state["disabled"] = res.get("disabled", [])
+            draw()
+            await load_choices()
+            ui.notify(f"Enabled {len(cases)} test case(s) — back at the end of the list", type="positive")
 
         def move(i: int, d: int) -> None:
             c = state["cases"]

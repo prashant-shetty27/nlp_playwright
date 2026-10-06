@@ -659,6 +659,15 @@ async def suite(suite_id: str) -> dict:
     return await _call("GET", f"/testsuites/{suite_id}")
 
 
+async def disable_suite_cases(suite_id: str, test_cases: list[str], reason: str) -> dict:
+    return await _call("POST", f"/testsuites/{suite_id}/disable",
+                       json={"test_cases": test_cases, "reason": reason})
+
+
+async def enable_suite_cases(suite_id: str, test_cases: list[str]) -> dict:
+    return await _call("POST", f"/testsuites/{suite_id}/enable", json={"test_cases": test_cases})
+
+
 async def save_suite(name: str, platform: str, test_cases: list[str], description: str = "",
                      suite_id: str = "") -> dict:
     body = {"name": name, "platform": platform, "test_cases": test_cases, "description": description}

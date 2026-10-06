@@ -55,8 +55,10 @@ click catalogue_products_tab
 wait until element catalogue_products_tab_1st_product is visible
 scroll to catalogue_products_tab_1st_product
 create variable CitySearch with value "Pune"
-# GJDT-8598 Case-2: opening a catalogue URL directly makes the URL's city the default city
-create variable Catalogue_City with value "Delhi"
+# GJDT-8598 Case-2 originally expected the catalogue URL's city (Delhi) to become the default city.
+# Live 06-Oct-2026: the PDP keeps the session city (Pune, set just above) — expectation changed to Pune on
+# Prashant's call 06-Oct. If the URL-city rule comes back, set this to "Delhi" again.
+create variable Catalogue_City with value "Pune"
 store text of catalogue_products_tab_1st_product as catalogue_popular_product_1st
 click catalogue_products_tab_1st_product
 wait 3 seconds

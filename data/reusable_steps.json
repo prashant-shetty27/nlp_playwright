@@ -479,10 +479,10 @@
       "wait until element b2b_search_field is visible",
       "click b2b_search_field",
       "# autosuggest (and its Suppliers tab) only appears once something is typed — type as a user does",
-      "type \"baldev engineering nerul\" into focused field",
+      "type \"baldev engineering\" into focused field",
       "wait until element b2b_autosuggest_supplier_tab is visible",
       "click b2b_autosuggest_supplier_tab",
-      "# tap the Baldev Engineering suggestion itself (the top entry can be a generic category)",
+      "# tap the \"Baldev Engineering / Nerul Navi Mumbai\" suggestion (several Baldev Engineering sellers are listed). Manual check 06-Oct: typing \"baldev engineering\" (without \"nerul\") lists the sellers on the Suppliers tab.",
       "wait until element b2b_autosuggest_baldev_entry is visible",
       "click b2b_autosuggest_baldev_entry",
       "wait for page to load",
@@ -2800,5 +2800,19 @@
     "created_at": "2026-10-05T19:30:00+00:00",
     "step_count": 17,
     "platform": "mobilesite"
+  },
+  "SG_NCT_Scroll_To_Get_Best_Price_Skipping_Job_Sheet": {
+    "steps": [
+      "swipe bottom to top until element get_best_price_any_button is visible, closing get_best_price_header_back, max 20 times, wait 0.5",
+      "click if visible get_best_price_header_back",
+      "scroll to get_best_price_any_button",
+      "wait 2 seconds",
+      "click if visible get_best_price_header_back",
+      "scroll to get_best_price_any_button"
+    ],
+    "platform": "mobilesite",
+    "created_at": "2026-10-06T09:00:00+00:00",
+    "step_count": 6,
+    "note": "Same as SG_NCT_Scroll_To_Send_Enquiry_Skipping_Job_Sheet but for the Get Best Price CTA that replaced Send Enquiry on company cards (GJDT-22177)."
   }
 }

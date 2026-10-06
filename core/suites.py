@@ -92,6 +92,7 @@ def _view(suite_id: str, d: dict) -> dict:
     return {"id": suite_id, "name": d.get("suite_name") or suite_id,
             "description": d.get("description", ""), "platform": d.get("platform", ""),
             "test_cases": cases, "count": len(cases),
+            "disabled": list(d.get("disabled") or []),
             "execution": d.get("execution", {}), "legacy": d.get("_format") != 2,
             "created_by": d.get("created_by", ""), "created_at": d.get("created_at", ""),
             "updated_by": d.get("updated_by", ""), "updated_at": d.get("updated_at", "")}
@@ -168,10 +169,74 @@ def save(name: str, platform: str, cases: list[str], *, description: str = "",
                   "platform": platform, "scripts": [f"flows/{c}.flow" for c in clean],
                   "updated_by": user or "system", "updated_at": _now()})
         d.setdefault("execution", {})["stop_on_failure"] = bool(stop_on_failure)
+        # a case that is back in the active list is no longer disabled
+        d["disabled"] = [x for x in d.get("disabled") or [] if x.get("test_case") not in clean]
         tmp = _path(suite_id) + ".tmp"
         with open(tmp, "w", encoding="utf-8") as f:
             json.dump(d, f, indent=2, ensure_ascii=False)
         os.replace(tmp, _path(suite_id))
+        return _view(suite_id, d)
+
+
+def _write(suite_id: str, d: dict) -> None:
+    tmp = _path(suite_id) + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(d, f, indent=2, ensure_ascii=False)
+    os.replace(tmp, _path(suite_id))
+
+
+def disable(suite_id: str, cases: list[str], reason: str, *, user: str = "") -> dict:
+    """Take test cases out of the suite's execution list but keep them on the
+    suite as 'disabled' (with the reason, who and when) so a plan run skips them
+    and the report / suite page still show why. The .flow files are untouched."""
+    reason = (reason or "").strip()
+    if not reason:
+        raise SuiteError("Give a reason — it is shown on the suite and in run reports.")
+    with _lock:
+        p = _path(suite_id)
+        if not os.path.exists(p):
+            raise SuiteError(f"No suite '{suite_id}'.")
+        d = _read(p)
+        want = [c.strip() for c in cases if c and c.strip()]
+        active = {_script_to_case(sc): sc for sc in d.get("scripts") or []}
+        missing = [c for c in want if c not in active]
+        if missing:
+            raise SuiteError("Not in this suite: " + ", ".join(missing))
+        d["scripts"] = [sc for sc in d["scripts"] if _script_to_case(sc) not in want]
+        dis = [x for x in d.get("disabled") or [] if x.get("test_case") not in want]
+        for c in want:
+            dis.append({"test_case": c, "script": active[c], "reason": reason,
+                        "since": _now(), "by": user or "system"})
+        d["disabled"] = dis
+        d["updated_by"] = user or "system"
+        d["updated_at"] = _now()
+        _write(suite_id, d)
+        return _view(suite_id, d)
+
+
+def enable(suite_id: str, cases: list[str], *, user: str = "") -> dict:
+    """Put disabled test cases back on the suite's execution list (at the end)."""
+    with _lock:
+        p = _path(suite_id)
+        if not os.path.exists(p):
+            raise SuiteError(f"No suite '{suite_id}'.")
+        d = _read(p)
+        want = {c.strip() for c in cases if c and c.strip()}
+        keep, back = [], []
+        for x in d.get("disabled") or []:
+            (back if x.get("test_case") in want else keep).append(x)
+        if not back:
+            raise SuiteError("None of those test cases is disabled on this suite.")
+        d["disabled"] = keep
+        scripts = list(d.get("scripts") or [])
+        for x in back:
+            sc = x.get("script") or f"flows/{x['test_case']}.flow"
+            if sc not in scripts:
+                scripts.append(sc)
+        d["scripts"] = scripts
+        d["updated_by"] = user or "system"
+        d["updated_at"] = _now()
+        _write(suite_id, d)
         return _view(suite_id, d)
 
 

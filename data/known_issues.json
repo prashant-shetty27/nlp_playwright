@@ -177,10 +177,11 @@
       "owner": "prashantshetty",
       "opened": "2026-10-06",
       "expires": "",
-      "note": "Confirmed manually on live mobile 06-Oct. Catalogue tests open the catalogue URL directly until this is back. Jira 06-Oct: no GJDT ticket in the last 120 days mentions removing seller/supplier autosuggest (only GJDT-22645 about Ammonium Nitrate autosuggest, closed). Ask PO whether seller search was removed on purpose.",
+      "note": "Confirmed manually on live mobile 06-Oct. Catalogue tests open the catalogue URL directly until this is back. Jira 06-Oct: no GJDT ticket in the last 120 days mentions removing seller/supplier autosuggest (only GJDT-22645 about Ammonium Nitrate autosuggest, closed). Ask PO whether seller search was removed on purpose. CORRECTION 06-Oct (Prashant checked manually, iPhone emulation): typing 'baldev engineering' lists the sellers on the Suppliers tab (Baldev Engineering – Nerul Navi Mumbai, Wada Palghar, …). The automation typed 'baldev engineering nerul', which returns no seller. Not a site change — test data fixed, search path restored in the catalogue cases. Note: the Products tab ideally should not show seller entries, but it is acceptable if it does (no check added).",
       "match": {
         "error": "b2b_autosuggest_(supplier_tab|baldev_entry)"
-      }
+      },
+      "closed": true
     }
   ]
 }

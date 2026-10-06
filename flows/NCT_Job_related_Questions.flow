@@ -11,40 +11,24 @@
 open https://www.justdial.com/Mumbai/Multinational-Companies-in-Link-Road-Malad-West/nct-10332493?fl=undefined&ismap=undefined&subpage=&searchCase=&term=multinat&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Multinational%20Companies&trkid=13116826-mumbai
 wait for page to load
 call PS_Touch_Consent_Popup
+# Live 06-Oct-2026 (GJDT-22177 / GJDT-22700): the company-card CTA is now "Get Best Price" instead of "Send Enquiry"
+# (a card still shows Send Enquiry only for some seller plans - data, not something to depend on).
+# Logged out, Get Best Price opens the login sheet; the lead itself is never sent from here.
 # Live 02-Oct-2026: the 'Are you looking for job?' sheet pops up on scroll (GJDT-22010) - group skips it
-call SG_NCT_Scroll_To_Send_Enquiry_Skipping_Job_Sheet
-click send_enquiry_button_1st
-verify element heading_send_enquiry_ps is visible
-verify text "Get the free contact details in seconds for Multinational Companies" on page
-verify element heading_free_contact_details_ps is visible
-# OFF: verify element heading_need_immediate_assistance is visible
-# OFF: verify element image_vendor_image is visible
-# OFF: verify element call_now_free_button1 is visible
-click send_enquiry_back_ps
-wait 3 seconds
-verify element call_popup_seller_name is visible
-verify element seller_call_pop_image is visible
-verify element seller_call_pop_rating is visible
-verify element seller_call_pop_area is visible
-verify element seller_call_pop_heading_just_a_call_away is visible
-verify element seller_call_pop_get_your_answers_instantly is visible
-verify element seller_user_details_form is visible
-verify element enquiry_default_text is visible
-click enquiry_seller_pop_skip
-wait 1 seconds
-# Live 02-Oct-2026: the 'Are you looking for job?' sheet pops up on scroll (GJDT-22010) - group skips it
-call SG_NCT_Scroll_To_Send_Enquiry_Skipping_Job_Sheet
-click send_enquiry_button_1st
-wait 1 seconds
-# OFF: type "Prashant" into enquiry_form_name
-type "${mobile_7738}" into enquiry_form_mobile
-click enquiry_form_no
-# OFF: js click enquiry_submit_button
-# OFF: wait until element otp_1st_field is visible
-# OFF: enter otp "${otp}" into otp_fields
-# OFF: wait 1 seconds
-# OFF: verify text "Dear Prashant" on page
-click send_enquiry_back_ps
+call SG_NCT_Scroll_To_Get_Best_Price_Skipping_Job_Sheet
+click get_best_price_any_button
+wait until element nct_login_ask_for_price is visible
+verify element prp_open_rfq_login_pop_jd_logo is visible
+verify element nct_login_text_ask_for_price is visible
+verify element prp_login_mobile is visible
+click touch_login_popup_may_be_later
+wait until element nct_login_ask_for_price is not visible
+click if visible enquiry_seller_pop_skip
+# OFF (Send Enquiry page gone with the CTA change): verify element heading_send_enquiry_ps is visible
+# OFF (Send Enquiry page gone with the CTA change): verify text "Get the free contact details in seconds for Multinational Companies" on page
+# OFF (Send Enquiry page gone with the CTA change): verify element heading_free_contact_details_ps is visible
+# OFF (Send Enquiry page gone with the CTA change): seller call pop-up checks (call_popup_seller_name, seller_call_pop_*, seller_user_details_form, enquiry_default_text)
+# OFF (Send Enquiry form gone with the CTA change): type "${mobile_7738}" into enquiry_form_mobile / click enquiry_form_no / submit + OTP
 open https://www.justdial.com/Mumbai/Corporate-Companies-in-Link-Road-Malad-West/nct-10138533?fl=undefined&ismap=undefined&subpage=&searchCase=&term=corporate%2520com&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Corporate%20Companies&trkid=13702-mumbai
 wait 4 seconds
 scroll until text "Placement Services" visible, scroll count 20, scroll wait 1
@@ -66,11 +50,10 @@ click if visible get_best_price_header_back
 click if visible enquiry_seller_pop_skip
 open https://www.justdial.com/Mumbai/Multinational-Companies-in-Link-Road-Malad-West/nct-10332493?fl=undefined&ismap=undefined&subpage=&searchCase=&term=multinat&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Multinational%20Companies&trkid=13116826-mumbai
 wait for page to load
-# Live 02-Oct-2026: the 'Are you looking for job?' sheet pops up on scroll (GJDT-22010) - group skips it
-call SG_NCT_Scroll_To_Send_Enquiry_Skipping_Job_Sheet
-click send_enquiry_button_1st
-wait 3 seconds
-verify element heading_send_enquiry_ps is visible
-verify text "Get the free contact details in seconds for Multinational Companies" on page
-verify element heading_free_contact_details_ps is visible
+# Live 06-Oct-2026: Send Enquiry replaced by Get Best Price on the company card (GJDT-22177) - same check as above
+call SG_NCT_Scroll_To_Get_Best_Price_Skipping_Job_Sheet
+click get_best_price_any_button
+wait until element nct_login_ask_for_price is visible
+verify element nct_login_text_ask_for_price is visible
 verify page does not contain "Need Immediate Assistance"
+click touch_login_popup_may_be_later

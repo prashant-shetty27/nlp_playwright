@@ -916,7 +916,7 @@
     "_platform": "mobilesite",
     "ps_touch_b2b_hotkey": "//a[@title='B2B']",
     "b2b_autosuggest_supplier_tab": "//div[contains(text(),'Suppliers')]",
-    "b2b_autosuggest_baldev_entry": "(//*[contains(@class,'prdname')][contains(normalize-space(),'Baldev')])[1]",
+    "b2b_autosuggest_baldev_entry": "(//*[self::div or self::li or self::a][.//*[normalize-space()='Baldev Engineering'] and .//*[contains(normalize-space(),'Nerul')]])[last()] | (//*[contains(@class,'prdname')][contains(normalize-space(),'Baldev')])[1]",
     "b2b_catalogue_jd_logo": "//span[@class='hdrLogoIcn']",
     "b2b_catalogue_page_top_share": "//div[@class='iconbox hdrMnushare']",
     "b2b_catalogue_top_3dots": "//div[@class='iconbox hdrShowMoreIcn']",

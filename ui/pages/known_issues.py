@@ -29,6 +29,26 @@ def _muted(t: str):
     return ui.label(t).style(f"color:{COLORS['text_muted']}; font-size:{TYPOGRAPHY['size_xs']}")
 
 
+def _default_jql() -> str:
+    """Pre-fill the search with the Jira projects of the current module
+    (config/jira_projects.json — mobilesite is GJDT; website, android, ios and
+    API tasks live in their own projects, filled in by the team)."""
+    import json as _json
+    try:
+        with open("config/jira_projects.json", encoding="utf-8") as f:
+            cfg = _json.load(f)
+    except (OSError, ValueError):
+        cfg = {}
+    try:
+        mod = (ui.context.client.request.query_params.get("module") or "").lower()
+    except Exception:
+        mod = ""
+    keys = [k for k in (cfg.get(mod or "mobilesite") or []) if isinstance(k, str) and k.strip()]
+    if not keys:
+        return ""
+    return f'text ~ "" AND project in ({", ".join(keys)}) AND created >= -180d ORDER BY created DESC'
+
+
 async def render(prefill: dict | None = None) -> None:
     sidebar(active="/reports")
     topbar(["Reports", "Known issues"])
@@ -44,7 +64,8 @@ async def render(prefill: dict | None = None) -> None:
         # Look a finding up on Jira before registering it (read-only).
         with ui.card().classes("w-full").style(f"border:1px solid {COLORS['border']}; padding:8px 12px"):
             with ui.row().classes("w-full items-center gap-2 no-wrap"):
-                jql_in = ui.input("Search Jira (JQL)", placeholder='text ~ "send enquiry" AND project = GJDT ORDER BY created DESC') \
+                jql_in = ui.input("Search Jira (JQL)", value=_default_jql(),
+                                  placeholder='text ~ "send enquiry" AND project = GJDT ORDER BY created DESC') \
                     .props("outlined dense").classes("flex-grow")
                 jira_btn = ui.button("Search", icon="search").props("unelevated dense")
             jira_out = ui.column().classes("w-full gap-0").props('id="jira-search-out"')

@@ -33,6 +33,11 @@ class SuiteBody(BaseModel):
     stop_on_failure: bool = False
 
 
+class DisableBody(BaseModel):
+    test_cases: list[str]
+    reason: str = ""
+
+
 class PlanBody(BaseModel):
     name: str
     suites: list[str]
@@ -74,6 +79,25 @@ def update_suite(suite_id: str, body: SuiteBody, user: str = Depends(acting_user
     try:
         return suites.save(body.name, body.platform, body.test_cases, description=body.description,
                            user=user, suite_id=suite_id, stop_on_failure=body.stop_on_failure)
+    except suites.SuiteError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
+
+
+@router.post("/testsuites/{suite_id}/disable")
+def disable_suite_cases(suite_id: str, body: DisableBody, user: str = Depends(acting_user)):
+    """Keep the test cases on the suite but out of execution, with a reason."""
+    require(user, "write")
+    try:
+        return suites.disable(suite_id, body.test_cases, body.reason, user=user)
+    except suites.SuiteError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
+
+
+@router.post("/testsuites/{suite_id}/enable")
+def enable_suite_cases(suite_id: str, body: DisableBody, user: str = Depends(acting_user)):
+    require(user, "write")
+    try:
+        return suites.enable(suite_id, body.test_cases, user=user)
     except suites.SuiteError as e:
         raise HTTPException(status_code=422, detail=str(e)) from e
 
