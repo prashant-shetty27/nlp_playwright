@@ -289,7 +289,10 @@ def run_plan(plan_id: str, run_type: str = "", only_failed_from: str = "",
     except plans.PlanError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
     busy = plan_engine.active_run()
-    rec = plan_engine.start(plan_id, trigger="manual", user=user, run_type=run_type,
-                            only_failed_from=only_failed_from)
+    try:
+        rec = plan_engine.start(plan_id, trigger="manual", user=user, run_type=run_type,
+                                only_failed_from=only_failed_from)
+    except ValueError as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
     return {"run_id": rec["id"], "status": rec["status"],
             "queued_behind": busy or None}

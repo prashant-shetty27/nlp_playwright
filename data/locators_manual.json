@@ -1574,7 +1574,7 @@
     "confirm_send_button": "//button[text()[normalize-space() = \"Confirm & Send\"]]",
     "requirement_verified_your_request_is_live_you_will": "//div[contains(@class, 'rfq-chatbot')]/div[1]/div[2]/div[1]/div[1]",
     "close_button": "//button[@aria-label=\"Close\"]",
-    "ask_me_anything": "//span[text()[normalize-space() = \"Ask Me Anything?\"]]",
+    "ask_me_anything": "//a[contains(@class,'ai-fab-wrapper')] | //div[contains(@class,'ai-fab')][.//span[contains(normalize-space(),'Ask Me Anything')]]",
     "i_need_mrf_zapper_nylogrip_tubeless_tyre_for_scooter": "//div[text()[normalize-space() = \"I need MRF Zapper Nylogrip Tubeless Tyre for Scooter N4 90/100-10 53J at best price\"]]",
     "suv_for_sport_utility_vehicles_and_crossovers_button": "//div[contains(@class, 'rfq-chat-history')]/div[2]/div[1]/div[2]/button[3]",
     "explain_the_options_button": "//button[text()[normalize-space() = \"Explain the options\"]]",

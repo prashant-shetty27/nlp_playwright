@@ -65,11 +65,12 @@
       "owner": "prashantshetty",
       "opened": "2026-10-06",
       "expires": "2026-10-20",
-      "note": "PDP_PDP_Ask_Anything: confirm with PO whether the button was removed or the product changed.",
+      "note": "PDP_PDP_Ask_Anything: confirm with PO whether the button was removed or the product changed. CORRECTION 06-Oct: the button IS on the PDP (span.ai-fab__text \"Ask Me Anything?\" inside a collapsed FAB); the locator targeted the inner text, now the FAB wrapper. Not a site change.",
       "match": {
         "test_case": "^PDP_PDP_Ask_Anything",
         "error": "ask_me_anything"
-      }
+      },
+      "closed": true
     },
     {
       "id": "KI-006",

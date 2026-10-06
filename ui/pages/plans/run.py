@@ -281,6 +281,10 @@ class PlanRunPage:
                             f"font-size:{TYPOGRAPHY['size_xs']}; border:1px solid {COLORS['border']};"
                             "border-radius:10px; padding:1px 9px")
                 trig = "Scheduled" if r.get("trigger") == "schedule" else "Manual"
+                if r.get("rerun_history"):
+                    n_re = len(r["rerun_history"])
+                    muted(f"Failed cases re-run {n_re}× (last {ist(r['rerun_history'][-1].get('at'), '%d %b %H:%M')} by "
+                          f"{r['rerun_history'][-1].get('by') or '—'}) — one report: first pass + re-run outcome")
                 muted(f"Run {r.get('id')} · {trig} · by {r.get('triggered_by') or '—'} · "
                       f"started {ist(r.get('started_at') or r.get('queued_at'), '%d %b %Y %H:%M:%S')}"
                       + (f" · finished {ist(r.get('finished_at'), '%H:%M:%S')}" if r.get("finished_at") else ""))
@@ -593,6 +597,14 @@ class PlanRunPage:
                         f"color:{COLORS['danger'] if h.get('stuck') else COLORS['primary']}")
                     if h.get("step_minutes") and h["step_minutes"] >= 1:
                         muted(f"({h['step_minutes']:.0f} min on this step)")
+            if it.get("reruns"):
+                hist = " → ".join(("passed" if r.get("status") == "passed" else "failed") for r in it["reruns"]) \
+                       + f" → {'passed' if st == 'passed' else st}"
+                with ui.row().classes("items-center gap-2 no-wrap").style("padding:0 12px 2px 3.2rem"):
+                    ui.label(f"RE-RUN ×{len(it['reruns'])}").style(
+                        f"font-size:{TYPOGRAPHY['size_xs']}; font-weight:600; color:{COLORS['primary']};"
+                        f"border:1px solid {COLORS['primary']}; border-radius:10px; padding:0 8px")
+                    muted(hist).tooltip("\n".join((r.get("first_failure") or "")[:160] for r in it["reruns"]))
             if st == "failed" and it.get("known"):
                 k = it["known"]
                 with ui.row().classes("items-center gap-2 no-wrap").style("padding:0 12px 4px 3.2rem"):

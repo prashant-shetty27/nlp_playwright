@@ -290,19 +290,50 @@ def start(plan_id: str, *, trigger: str = "manual", user: str = "", run_type: st
                     pass
             items.append(item)
     if only_failed_from:
-        prev = get_run(only_failed_from)
-        redo = {(i.get("test_case"), (i.get("device") or {}).get("browser_identity", ""))
-                for i in prev.get("items") or [] if i.get("status") in ("failed", "not_run")}
-        items = [i for i in items if (i.get("test_case"), (i.get("device") or {}).get("browser_identity", "")) in redo]
-        rt = prev.get("run_type") or rt
+        # Re-run of the failed cases INSIDE the original run: same record, same
+        # report. Each failed / not-run item goes back to pending (its earlier
+        # result is kept under "reruns"); passed items are untouched. The plan
+        # then has ONE result: first pass + re-run outcome.
+        return rerun_failed(only_failed_from, user=user)
     rec = {"id": run_id, "plan_id": plan_id, "plan_name": plan["name"],
-           "rerun_of": only_failed_from or "",
            "trigger": trigger, "triggered_by": user or ("scheduler" if trigger == "schedule" else "system"),
            "status": "queued", "queued_at": _now(), "started_at": "", "finished_at": "",
            "execution": execution, "run_type": rt, "notify": plan["notify"], "items": items,
            "totals": {"test_cases": len(items), "passed": 0, "failed": 0, "not_run": 0}}
     _save(rec)
     threading.Thread(target=_execute, args=(rec,), name=f"plan-{run_id}", daemon=True).start()
+    return rec
+
+
+def rerun_failed(run_id: str, *, user: str = "") -> dict:
+    """Re-run the failed / not-run test cases of a finished run, in that same
+    run record. Earlier outcomes of each re-run item are kept in item["reruns"]
+    (list of {status, run_id, first_failure, finished_at}) so the report can
+    show 'failed first, passed on re-run'. Returns the updated record."""
+    rec = get_run(run_id)
+    if rec.get("status") in ("running", "queued"):
+        raise ValueError("This run is still going.")
+    redo = 0
+    for it in rec.get("items") or []:
+        if it.get("status") in ("failed", "not_run") and not it.get("out_of_scope"):
+            it.setdefault("reruns", []).append({
+                "status": it.get("status"), "run_id": it.get("run_id", ""),
+                "first_failure": it.get("first_failure") or it.get("reason", ""),
+                "finished_at": it.get("finished_at", ""), "duration_s": it.get("duration_s")})
+            for k in ("run_id", "first_failure", "reason", "report_file", "finished_at", "started_at",
+                      "duration_s", "passed_steps", "failed_steps", "skipped_steps", "note", "attempt",
+                      "attempts", "attempts_s", "known", "lane_pid"):
+                it.pop(k, None)
+            it["status"] = "pending"
+            redo += 1
+    if not redo:
+        raise ValueError("Nothing to re-run — no failed test case in this run.")
+    rec["status"] = "queued"
+    rec["finished_at"] = ""
+    rec.setdefault("rerun_history", []).append({"at": _now(), "by": user, "test_cases": redo})
+    rec["rerun_count"] = len(rec["rerun_history"])
+    _save(rec)
+    threading.Thread(target=_execute, args=(rec,), name=f"plan-{rec['id']}-rerun", daemon=True).start()
     return rec
 
 
@@ -602,7 +633,9 @@ def _run(rec: dict) -> None:
 
     ex = rec.get("execution") or {}
     rec["status"] = "running"
-    rec["started_at"] = _now()
+    if not rec.get("started_at"):
+        rec["started_at"] = _now()
+    rec["pass_started_at"] = _now()          # this pass (first run or a re-run)
     _save(rec)
     logger.info("📋 Plan run %s — %s (%d test cases)", rec["id"], rec["plan_name"], len(rec["items"]))
     stop_rest = False
@@ -641,8 +674,12 @@ def _run(rec: dict) -> None:
                      else "failed" if (t["failed"] or t["not_run"]) else "passed")
     rec["finished_at"] = _now()
     try:
-        a = datetime.fromisoformat(rec["started_at"]); b = datetime.fromisoformat(rec["finished_at"])
-        rec["duration_s"] = int((b - a).total_seconds())
+        # Execution time = sum of the passes (first run + re-runs), not the
+        # wall-clock gap between them.
+        a = datetime.fromisoformat(rec.get("pass_started_at") or rec["started_at"])
+        b = datetime.fromisoformat(rec["finished_at"])
+        this_pass = int((b - a).total_seconds())
+        rec["duration_s"] = (int(rec.get("duration_s") or 0) if rec.get("rerun_history") else 0) + this_pass
     except ValueError:
         pass
     _save(rec)
