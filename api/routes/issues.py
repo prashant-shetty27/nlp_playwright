@@ -31,8 +31,31 @@ def jira_search(jql: str, max_results: int = 10):
     key, type, status, created, summary — nothing else, so nothing sensitive
     travels to the page."""
     from core import jira_issues as ji
+    import re as _re
     if not jql or len(jql) > 600:
         raise HTTPException(status_code=422, detail="Give a JQL query (max 600 chars).")
+    key = jql.strip().upper()
+    if _re.fullmatch(r"[A-Z][A-Z0-9]+-\d+", key):
+        # A bare key: return that one issue WITH its description (read-only) so a
+        # story can be read from the portal without opening Jira.
+        try:
+            r = ji._server().get(f"{ji.base_url()}/rest/api/2/issue/{key}",
+                                 timeout=25)
+        except Exception as e:  # noqa: BLE001
+            raise HTTPException(status_code=502, detail="Jira is not reachable from this machine (VPN?).") from e
+        if r.status_code >= 400:
+            raise HTTPException(status_code=502, detail=f"Jira answered {r.status_code} for {key}: {r.text[:300]}")
+        f = r.json().get("fields", {})
+        return {"total": 1, "issues": [{
+            "key": key, "type": f.get("issuetype", {}).get("name", ""),
+            "status": f.get("status", {}).get("name", ""), "created": (f.get("created") or "")[:10],
+            "resolved": (f.get("resolutiondate") or "")[:10], "summary": f.get("summary", ""),
+            "description": f.get("description") or "",
+            "labels": f.get("labels") or [],
+            "components": [c.get("name", "") for c in f.get("components") or []],
+            "fix_versions": [v.get("name", "") for v in f.get("fixVersions") or []],
+            "attachments": [a.get("filename", "") for a in f.get("attachment") or []],
+            "subtasks": [f"{t.get('key')} {t.get('fields', {}).get('summary', '')}" for t in f.get("subtasks") or []]}]}
     try:
         r = ji._server().get(f"{ji.base_url()}/rest/api/2/search",
                              params={"jql": jql, "maxResults": max(1, min(int(max_results), 50)),

@@ -87,6 +87,18 @@ async def render(prefill: dict | None = None) -> None:
                             ui.label(f"{i['type']} · {i['status']} · {i['created']}").style(
                                 f"font-size:{TYPOGRAPHY['size_xs']}; color:{COLORS['text_muted']}; white-space:nowrap")
                             ui.label(i["summary"]).style(f"font-size:{TYPOGRAPHY['size_xs']}; white-space:normal")
+                        if i.get("description") is not None:
+                            meta = " · ".join(x for x in (
+                                ("labels: " + ", ".join(i.get("labels") or [])) if i.get("labels") else "",
+                                ("components: " + ", ".join(i.get("components") or [])) if i.get("components") else "",
+                                ("fix: " + ", ".join(i.get("fix_versions") or [])) if i.get("fix_versions") else "",
+                                ("attachments: " + ", ".join(i.get("attachments") or [])) if i.get("attachments") else "",
+                                ("sub-tasks: " + "; ".join(i.get("subtasks") or [])) if i.get("subtasks") else "") if x)
+                            if meta:
+                                _muted(meta)
+                            ui.label(i["description"] or "(no description)").props('id="jira-issue-description"').style(
+                                f"font-size:{TYPOGRAPHY['size_xs']}; white-space:pre-wrap; border:1px solid "
+                                f"{COLORS['border']}; border-radius:6px; padding:8px; max-height:28rem; overflow:auto")
             jira_btn.on("click", do_search)
             jql_in.on("keydown.enter", do_search)
         box = ui.column().classes("w-full gap-2")
