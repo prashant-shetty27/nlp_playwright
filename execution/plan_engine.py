@@ -314,6 +314,7 @@ def rerun_failed(run_id: str, *, user: str = "") -> dict:
     run record. Earlier outcomes of each re-run item are kept in item["reruns"]
     (list of {status, run_id, first_failure, finished_at}) so the report can
     show 'failed first, passed on re-run'. Returns the updated record."""
+    from core import suites
     rec = get_run(run_id)
     if rec.get("status") in ("running", "queued"):
         raise ValueError("This run is still going.")
