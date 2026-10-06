@@ -478,11 +478,12 @@
       "click if visible ps_touch_b2b_hotkey",
       "wait until element b2b_search_field is visible",
       "click b2b_search_field",
-      "# autosuggest (and its Suppliers tab) only appears once something is typed — type as a user does",
-      "type \"baldev engineering\" into focused field",
+      "# tapping the home search box opens the search page with its own input (#srchInpId) - typing before it is there loses the first letters (seen 06-Oct: only 'neering' reached the box)",
+      "wait until element b2b_search_field_2 is visible",
+      "type \"baldev engineering\" into b2b_search_field_2",
       "wait until element b2b_autosuggest_supplier_tab is visible",
       "click b2b_autosuggest_supplier_tab",
-      "# tap the \"Baldev Engineering / Nerul Navi Mumbai\" suggestion (several Baldev Engineering sellers are listed). Manual check 06-Oct: typing \"baldev engineering\" (without \"nerul\") lists the sellers on the Suppliers tab.",
+      "# tap the \"Baldev Engineering / Nerul Navi Mumbai\" suggestion (several Baldev Engineering sellers are listed). Manual check 06-Oct: typing \"baldev engineering\" lists the sellers on the Suppliers tab.",
       "wait until element b2b_autosuggest_baldev_entry is visible",
       "click b2b_autosuggest_baldev_entry",
       "wait for page to load",
@@ -490,7 +491,7 @@
       "verify element b2b_catalogue_company_name contains \"Baldev Engineering\""
     ],
     "created_at": "2026-10-01T17:24:06.294756+00:00",
-    "step_count": 15,
+    "step_count": 16,
     "platform": "mobilesite"
   },
   "SG_B2B_HK_Flow_Supplier_Search_Box_Click": {

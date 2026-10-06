@@ -35,10 +35,17 @@ scroll until text "Placement Services" visible, scroll count 20, scroll wait 1
 verify text "Placement Services" on page
 scroll until text "Get Best Price" visible, scroll count 10, scroll wait 1
 click if visible enquiry_seller_pop_skip
-scroll to gbp_button_11
-js click gbp_button_11
-wait until element get_best_price_any_button is visible
-js click get_best_price_any_button
+# Live 06-Oct-2026: logged out, Get Best Price first asks to log in; the job sheet comes after login.
+# (the old 11th-card click depended on 11 cards being loaded - not needed)
+click get_best_price_any_button
+wait until element nct_login_ask_for_price is visible
+type "${mobile_9987}" into prp_login_mobile
+js click nct_login_pop_continue_button
+type "${otp}" into nct_login_otp_field
+wait until element nct_login_ask_for_price is not visible
+# after login the list is shown again - tap Get Best Price once more to get the job sheet
+click get_best_price_any_button
+wait until element gbp_sheet_heading is visible
 verify element gbp_sheet_heading is visible
 # OFF: click gbp_submit_now_button
 # OFF: verify text "Please select one option" on page
@@ -50,10 +57,10 @@ click if visible get_best_price_header_back
 click if visible enquiry_seller_pop_skip
 open https://www.justdial.com/Mumbai/Multinational-Companies-in-Link-Road-Malad-West/nct-10332493?fl=undefined&ismap=undefined&subpage=&searchCase=&term=multinat&searchLocUpdate=0&jdxflag=0&ll=searchbox&cbflg=1&stype=category_list&srcterm=Multinational%20Companies&trkid=13116826-mumbai
 wait for page to load
-# Live 06-Oct-2026: Send Enquiry replaced by Get Best Price on the company card (GJDT-22177) - same check as above
+# Live 06-Oct-2026: Send Enquiry replaced by Get Best Price on the company card (GJDT-22177).
+# Signed in now (login above), so Get Best Price opens the job sheet straight away.
 call SG_NCT_Scroll_To_Get_Best_Price_Skipping_Job_Sheet
 click get_best_price_any_button
-wait until element nct_login_ask_for_price is visible
-verify element nct_login_text_ask_for_price is visible
+wait until element gbp_sheet_heading is visible
 verify page does not contain "Need Immediate Assistance"
-click touch_login_popup_may_be_later
+click if visible get_best_price_header_back
