@@ -1731,5 +1731,20 @@
     "prp_city_filter_input": "//div[@id='5003_popup']//input[@id='srchInpId']",
     "prp_city_filter_option": "(//div[@id='5003_popup']//span[contains(@class,'mvdtname')][normalize-space(.)='${city}' or starts-with(normalize-space(.),'${city}-')])[1]",
     "prp_header_search_box": "//div[contains(@class,'hdrSearchMain')]//span[contains(@class,'hdrvend')]"
+  },
+  "ts_gjdt22821_pdp_docid": {
+    "pdp22821_footer_call_now": "//div[@id='hideB2bFooter']//button[contains(normalize-space(),'Call Now')]",
+    "pdp22821_footer_get_best_price": "//div[@id='hideB2bFooter']//button[contains(normalize-space(),'Get Best Price')]",
+    "pdp22821_footer_whatsapp": "//div[@id='hideB2bFooter']//button[contains(normalize-space(),'WhatsApp')]",
+    "pdp22821_seller_card_call": "(//div[contains(@class,'seller-card__media')]//button)[1]",
+    "pdp22821_need_assistance_call_now": "(//div[contains(@class,'callcard__actnbtn')]//button)[1]",
+    "pdp22821_get_quote_1st": "(//div[contains(@class,'productcard__rfqbtn')]//button)[1]",
+    "pdp22821_productcard_whatsapp_1st": "(//div[contains(@class,'productcard__whatsappbtn')]//button)[1]",
+    "pdp22821_similar_call_now_1st": "(//div[contains(@class,'carousel_view3-call-button')])[1]",
+    "pdp22821_similar_whatsapp_1st": "(//div[contains(@class,'carousel_view3-wts-button')])[1]",
+    "pdp22821_ask_me_anything_fab": "//a[contains(@class,'ai-fab-wrapper')]",
+    "pdp22821_whatsapp_login_sheet": "//div[contains(@class,'newlogin lgnpopup')]",
+    "pdp22821_login_maybe_later": "//span[contains(text(),'Maybe Later')]",
+    "pdp22821_call_popup_skip": "//div[contains(@class,'popup__cnt--wrp')]//div[contains(@class,'skip_btn')] | //span[contains(@class,'thankyou__cnt-crossicn')]"
   }
 }
