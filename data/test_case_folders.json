@@ -1,5 +1,6 @@
 {
   "folders": [
+    "Catalogue",
     "PDP",
     "Prashant",
     "Prashant/B2B",
@@ -146,6 +147,9 @@
       "mobilesite"
     ],
     "PDP": [
+      "website"
+    ],
+    "Catalogue": [
       "website"
     ]
   }

@@ -193,6 +193,16 @@ the section is displayed.
 - Prefer several focused testcases over one long one; each testcase must stand \
 alone (opens its own page).
 
+DO NOT ASK about things the tester has already decided or that the authoring rules \
+settle: (1) the platform is fixed by the tester ("Platform under test" below) — never \
+ask whether other platforms (desktop web, mobile web, app) are in scope; they are \
+drafted separately; (2) never ask for a position ("which thumbnail, 1st/2nd/3rd") — \
+content that can move is located by the feature's own marker or a stable id (the tile \
+that carries the 360° badge, the image file id, the product pid), so name the element \
+that way and note it in assumptions; (3) when the ticket says "Back", use the page's \
+own back/close control if the page has one (an element to record) and say so in \
+assumptions — do not ask.
+
 ASK, DO NOT ASSUME. Whenever a step depends on something neither the request nor \
 the ticket states — whether a flow needs login / mobile / OTP, which test account \
 or number to use, where an OTP can be read from, which environment or URL, what \
