@@ -1,141 +1,147 @@
 {
  "version": 1,
- "flow_mtime": 1791221399.5074546,
+ "flow_mtime": 1791276858.60787,
  "steps": [
   {
-   "line": 9,
+   "line": 10,
    "text": "call SG_Supplier_Search_Flow_Baldev",
    "level": "R",
    "manual": false
   },
   {
-   "line": 10,
-   "text": "call SG_Catalogue_Page_Card_Section",
-   "level": "R",
-   "manual": false
-  },
-  {
-   "line": 11,
-   "text": "call SG_Catalogue_Page_Timings_Sections",
-   "level": "R",
-   "manual": false
-  },
-  {
    "line": 12,
-   "text": "call SG_Catalogue_Page_Top_CTAs",
+   "text": "click if visible catalogue_skip_bd_category_pop",
    "level": "R",
    "manual": false
   },
   {
    "line": 13,
-   "text": "call SG_Catalogue_Page_Tabs",
+   "text": "call SG_Catalogue_Page_Card_Section",
    "level": "R",
    "manual": false
   },
   {
    "line": 14,
-   "text": "call SG_Catalogue_Page_Ratings_Stars",
+   "text": "call SG_Catalogue_Page_Timings_Sections",
    "level": "R",
    "manual": false
   },
   {
    "line": 15,
-   "text": "call SG_Catalogue_Page_Popular_Product_Overview",
+   "text": "call SG_Catalogue_Page_Top_CTAs",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 16,
+   "text": "call SG_Catalogue_Page_Tabs",
    "level": "R",
    "manual": false
   },
   {
    "line": 17,
-   "text": "call SG_Catalogue_Page_PDF_Catalogue_Images_Overview",
+   "text": "call SG_Catalogue_Page_Ratings_Stars",
    "level": "R",
    "manual": false
   },
   {
    "line": 18,
-   "text": "click b2b_catalogue_tab_overview",
-   "level": "R",
-   "manual": false
-  },
-  {
-   "line": 19,
-   "text": "wait until element b2b_catalogue_photos_heading is visible",
+   "text": "call SG_Catalogue_Page_Popular_Product_Overview",
    "level": "R",
    "manual": false
   },
   {
    "line": 20,
-   "text": "call SG_Catalogue_Page_Photos_Overview",
+   "text": "call SG_Catalogue_Page_PDF_Catalogue_Images_Overview",
    "level": "R",
    "manual": false
   },
   {
    "line": 21,
-   "text": "call SG_Catalogue_Page_Open_VN_Number_Overview",
+   "text": "click b2b_catalogue_tab_overview",
    "level": "R",
    "manual": false
   },
   {
    "line": 22,
+   "text": "wait until element b2b_catalogue_photos_heading is visible",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 23,
+   "text": "call SG_Catalogue_Page_Photos_Overview",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 24,
+   "text": "call SG_Catalogue_Page_Open_VN_Number_Overview",
+   "level": "R",
+   "manual": false
+  },
+  {
+   "line": 25,
    "text": "call SG_Catalogue_Page_QuickInfo_Overview",
    "level": "S",
    "manual": false
   },
   {
-   "line": 23,
+   "line": 26,
    "text": "call SG_Catalogue_Page_Whatsapp_Banner",
    "level": "S",
    "manual": false
   },
   {
-   "line": 24,
+   "line": 27,
    "text": "call SG_Catalogue_Page_Categories_from_the_Seller",
    "level": "S",
    "manual": false
   },
   {
-   "line": 25,
+   "line": 28,
    "text": "call SG_Catalogue_Page_Open_RFQ_Section",
    "level": "S",
    "manual": false
   },
   {
-   "line": 26,
+   "line": 29,
    "text": "call SG_Catalogue_Page_Review_Rating_Section",
    "level": "S",
    "manual": false
   },
   {
-   "line": 27,
-   "text": "[ignore] click if visible srp_seller_type_banner_skip",
-   "level": "S",
-   "manual": false
-  },
-  {
-   "line": 28,
-   "text": "call SG_Catalogue_Page_Also_Listed_In",
-   "level": "S",
-   "manual": false
-  },
-  {
-   "line": 29,
-   "text": "[ignore] click if visible srp_seller_type_banner_skip",
-   "level": "S",
-   "manual": false
-  },
-  {
    "line": 30,
-   "text": "call SG_Catalogue_Page_Report_Error_Footer",
+   "text": "[ignore] click if visible srp_seller_type_banner_skip",
    "level": "S",
    "manual": false
   },
   {
    "line": 31,
-   "text": "[ignore] click if visible srp_seller_type_banner_skip",
+   "text": "call SG_Catalogue_Page_Also_Listed_In",
    "level": "S",
    "manual": false
   },
   {
    "line": 32,
+   "text": "[ignore] click if visible srp_seller_type_banner_skip",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 33,
+   "text": "call SG_Catalogue_Page_Report_Error_Footer",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 34,
+   "text": "[ignore] click if visible srp_seller_type_banner_skip",
+   "level": "S",
+   "manual": false
+  },
+  {
+   "line": 35,
    "text": "call SG_Catalogue_Page_Need_Assistance_Banner",
    "level": "S",
    "manual": false

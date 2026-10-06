@@ -1,6 +1,6 @@
 {
  "version": 1,
- "flow_mtime": 1791221399.6546495,
+ "flow_mtime": 1791276379.0671735,
  "steps": [
   {
    "line": 7,
@@ -249,67 +249,67 @@
    "manual": false
   },
   {
-   "line": 59,
-   "text": "create variable Catalogue_City with value \"Delhi\"",
-   "level": "Sy",
-   "manual": false
-  },
-  {
-   "line": 60,
-   "text": "store text of catalogue_products_tab_1st_product as catalogue_popular_product_1st",
-   "level": "Sy",
-   "manual": false
-  },
-  {
    "line": 61,
-   "text": "click catalogue_products_tab_1st_product",
+   "text": "create variable Catalogue_City with value \"Pune\"",
    "level": "Sy",
    "manual": false
   },
   {
    "line": 62,
-   "text": "wait 3 seconds",
+   "text": "store text of catalogue_products_tab_1st_product as catalogue_popular_product_1st",
    "level": "Sy",
    "manual": false
   },
   {
    "line": 63,
-   "text": "verify element pdp_product_name_heading contains \"${catalogue_popular_product_1st}\"",
+   "text": "click catalogue_products_tab_1st_product",
    "level": "Sy",
    "manual": false
   },
   {
    "line": 64,
+   "text": "wait 3 seconds",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 65,
+   "text": "verify element pdp_product_name_heading contains \"${catalogue_popular_product_1st}\"",
+   "level": "Sy",
+   "manual": false
+  },
+  {
+   "line": 66,
    "text": "verify element pdp_city_name contains \"${Catalogue_City}\"",
    "level": "R",
    "manual": false
   },
   {
-   "line": 65,
+   "line": 67,
    "text": "call SG_PDP_Change_City_via_Catalogue",
    "level": "R",
    "manual": false
   },
   {
-   "line": 66,
+   "line": 68,
    "text": "call SG_PDP_Change_City_Mumbai_Lixo_Chair",
    "level": "R",
    "manual": false
   },
   {
-   "line": 67,
+   "line": 69,
    "text": "open https://www.justdial.com/jdmart",
    "level": "R",
    "manual": false
   },
   {
-   "line": 68,
+   "line": 70,
    "text": "call SG_Home_Flow_PDP_City_Change",
    "level": "R",
    "manual": false
   },
   {
-   "line": 69,
+   "line": 71,
    "text": "call SG_PDP_Change_City_All_India",
    "level": "R",
    "manual": false

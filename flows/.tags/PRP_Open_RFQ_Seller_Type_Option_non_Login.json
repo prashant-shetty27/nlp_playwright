@@ -1,6 +1,6 @@
 {
  "version": 1,
- "flow_mtime": 1791224957.9493678,
+ "flow_mtime": 1791229416.9233344,
  "steps": [
   {
    "line": 7,
@@ -71,61 +71,55 @@
   {
    "line": 18,
    "text": "click prp_open_rfq_seller_type_wholesaler",
-   "level": "R",
+   "level": "Sy",
    "manual": false
   },
   {
    "line": 19,
    "text": "click if visible prp_open_rfq_seller_type_submit",
-   "level": "R",
+   "level": "Sy",
    "manual": false
   },
   {
    "line": 20,
    "text": "wait 2 seconds",
-   "level": "R",
+   "level": "Sy",
    "manual": false
   },
   {
    "line": 21,
    "text": "call SG_PRP_Request_View_Catalogue_Non_Login_to_Login",
-   "level": "R",
+   "level": "Sy",
    "manual": false
   },
   {
    "line": 22,
    "text": "wait 2 seconds",
-   "level": "R",
+   "level": "Sy",
    "manual": false
   },
   {
    "line": 23,
    "text": "if element prp_open_rqq_seller_type_post_login_mobile is not visible",
-   "level": "R",
+   "level": "Sy",
    "manual": false
   },
   {
    "line": 24,
    "text": "click if visible prp_open_rfq_seller_type_submit",
-   "level": "R",
+   "level": "Sy",
    "manual": false
   },
   {
    "line": 25,
    "text": "end if",
-   "level": "R",
-   "manual": false
-  },
-  {
-   "line": 26,
-   "text": "wait until element prp_open_rfq_seller_type_toast_msg is visible",
-   "level": "R",
+   "level": "Sy",
    "manual": false
   },
   {
    "line": 27,
    "text": "[ignore] verify element prp_open_rfq_seller_type_toast_msg is visible",
-   "level": "R",
+   "level": "Sy",
    "manual": false
   },
   {

@@ -1,39 +1,39 @@
 {
  "version": 1,
- "flow_mtime": 1791199123.5192473,
+ "flow_mtime": 1791229446.0995793,
  "steps": [
   {
-   "line": 8,
+   "line": 9,
    "text": "store \"Ahmedabad\" as city",
    "level": "S",
    "manual": false
   },
   {
-   "line": 9,
+   "line": 10,
    "text": "store \"Roofing Sheets\" as category",
    "level": "S",
    "manual": false
   },
   {
-   "line": 10,
+   "line": 11,
    "text": "store \"(set by the chat step group)\" as bot_reply",
    "level": "S",
    "manual": false
   },
   {
-   "line": 11,
+   "line": 12,
    "text": "call SG_22788_Open_PRP_Floater",
    "level": "S",
    "manual": false
   },
   {
-   "line": 13,
+   "line": 14,
    "text": "verify ${bot_reply} matches \"${rfq22788_campaign_started}\" ignoring case",
    "level": "S",
    "manual": false
   },
   {
-   "line": 14,
+   "line": 15,
    "text": "take screenshot as nc01_transcript",
    "level": "F",
    "manual": false

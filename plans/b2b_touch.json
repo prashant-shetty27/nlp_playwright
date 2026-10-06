@@ -22,10 +22,11 @@
         "device_name": "Pixel 7",
         "browser": "chromium",
         "browser_identity": "android_chrome",
-        "coverage": "full"
+        "coverage": "full",
+        "only": []
       },
       {
-        "label": "Safari on iPhone (iPhone 15, WebKit) — one case per page type",
+        "label": "Safari on iPhone (iPhone 15, WebKit) — picked test cases",
         "device_name": "iPhone 15",
         "browser": "webkit",
         "browser_identity": "ios_safari",
@@ -42,7 +43,7 @@
       }
     ],
     "site_env": "",
-    "parallel": 4
+    "parallel": 2
   },
   "schedule": {
     "enabled": false,
@@ -67,5 +68,5 @@
     "email_to": ""
   },
   "updated_by": "prashantshetty",
-  "updated_at": "2026-10-05T16:43:16+00:00"
+  "updated_at": "2026-10-06T15:29:11+00:00"
 }
