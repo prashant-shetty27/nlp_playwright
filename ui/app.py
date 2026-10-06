@@ -352,6 +352,32 @@ def _port_already_serving(host: str, port: int) -> bool:
         return True
 
 
+_INSTANCE_LOCK = None     # kept open for the life of the process
+
+
+def _take_instance_lock(port: int) -> bool:
+    """Exclusive lock on data/.portal-<port>.lock. Two copies started within the
+    same few seconds both see the port free (the app takes ~4 s to bind); the
+    lock is taken at once, so the second copy still stops."""
+    global _INSTANCE_LOCK
+    try:
+        import fcntl
+    except ImportError:          # Windows: the port check above has to do
+        return True
+    from config.settings import DATA_DIR
+    os.makedirs(DATA_DIR, exist_ok=True)
+    fh = open(os.path.join(DATA_DIR, f".portal-{port}.lock"), "w")
+    try:
+        fcntl.flock(fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        fh.close()
+        return False
+    fh.write(str(os.getpid()))
+    fh.flush()
+    _INSTANCE_LOCK = fh
+    return True
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="Codeless automation UI")
     import config.settings  # noqa: F401 — loads .env (UI_HOST, UI_PORT) before reading them
@@ -362,7 +388,7 @@ def main() -> None:
     # One portal per port. macOS lets a second uvicorn bind the same port, so two
     # copies started a minute apart both answered: code changes landed in one,
     # plan lanes ran twice, and the Mac ran out of file handles. Refuse instead.
-    if _port_already_serving(args.host, args.port):
+    if _port_already_serving(args.host, args.port) or not _take_instance_lock(args.port):
         print(f"Codeless Automation is already running on port {args.port} — "
               f"use that window (or quit it first).", file=sys.stderr)
         sys.exit(2)
